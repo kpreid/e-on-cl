@@ -1,0 +1,115 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.disable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def RefAuthor {
+  # XXX map args?
+  # Stamped rather than audited deep-frozen since DeepFrozen is nonprimitive and uses Ref itself in the course of auditing. XXX have DeepFrozenAuthor use primitives?
+  to run(makePromise, refState, refIsResolved, eeqIsSettled, makeUnconnectedRef, refIsPassByCopy, refOptProblem, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
+    def Ref0 := def "$Ref" implements DeepFrozenStamp {
+      to promise() :any { makePromise() }
+      to isBroken(r) :any { refState(r) == sElibBroken }
+      to isNear(r) :any { refState(r) == sElibNear }
+      to isEventual(r) :any { refState(r) == sElibEventual }
+      to isFar(r) :any { refState(r) == sElibEventual && refIsResolved(r) }
+      to isSettled(r) :any { eeqIsSettled(r) }
+      
+      to broken(p) :any { 
+        # The new exception-sealing system means that broken references must be able to hold arbitrary values. However, current E programs (and our test suite) expect Ref.broken("foo") to make an exception object. Thus this guard.
+        makeUnconnectedRef(p :<import:org.cubik.cle.prim.Throwable>)
+      }
+      
+      to isPassByCopy(r) :any { refIsPassByCopy(r) }
+      to whenResolved(ref, reactor) :any {
+        # XXX does this match the semantics of the standard E whenResolved?
+        #traceln(`entering whenResolved`)
+        def [resultPromise, resultResolver] := makePromise()
+        def safeWhenResolvedReactor(_) :void {
+          #traceln(`entering safeWhenResolvedReactor (ref is $ref)`)
+          if (refIsResolved(ref)) {
+            #traceln(`  is-resolved branch ($resultResolver)`)
+            if (!resultResolver.isDone()) {
+              #traceln(`  resolving reactor`)
+              resultResolver.resolve(reactor <- run(ref))
+            } else {
+              #traceln(`  duplicate reactor invocation`)
+            }
+            #traceln(`  finished`)
+          } else {
+            #traceln(`  not-resolved branch`)
+            ref <- __whenMoreResolved(safeWhenResolvedReactor)
+            #traceln(`  sent next __whenMoreResolved to $ref`)
+          }
+        }
+        safeWhenResolvedReactor(null)
+        resultPromise
+      }
+      to isResolved(r) :any { refIsResolved(r) }
+      to fulfillment(r) :any { 
+        if (refOptProblem(r) =~ p ? (p != null)) {
+          throw(p)
+        } else if (refIsResolved(r)) {
+          r
+        } else {
+          throw("not resolved (Ref#fulfillment)")
+        }
+      }
+      to optProblem(r) :any { refOptProblem(r) }
+    }
+  }
+}
+
+# This is the Lisp code which this file replaced, preserved in case we have some need to switch back.
+# 
+# (defvar +ref-kit+ (e-named-lambda "org.cubik.cle.prim.Ref"
+#   :stamped +deep-frozen-stamp+
+#   (:|promise/0| ()
+#     (multiple-value-call #'vector (make-promise)))
+#   (:|isBroken/1| (ref)
+#     (as-e-boolean (eql (elib:ref-state ref) 'elib:broken)))
+#   (:|isNear/1| (ref)
+#     (as-e-boolean (eql (elib:ref-state ref) 'elib:near)))
+#   (:|isEventual/1| (ref)
+#     (as-e-boolean (eql (elib:ref-state ref) 'elib:eventual)))
+#   (:|isFar/1| (ref)
+#     (as-e-boolean (and (eql (elib:ref-state ref) 'elib:eventual)
+#                        (elib:ref-is-resolved ref))))
+#   (:|isSettled/1| (ref)
+#     (as-e-boolean (elib:eeq-is-settled ref)))
+#   (:|broken/1| (problem)
+#     (elib:make-unconnected-ref problem))
+#   (:|isPassByCopy/1| (ref)
+#     ; XXX surely this list should be automatically derived from ...something.
+#     (as-e-boolean (typep ref 
+#       '(or (satisfies elib:eeq-is-transparent-selfless)
+#            null
+#            string
+#            character
+#            integer
+#            float64
+#            elib:e-boolean))))
+#   (:|whenResolved/2| (ref reactor &aux done)
+#     ; XXX does this match the semantics of the standard E whenResolved?
+#     (multiple-value-bind (result-promise result-resolver) (make-promise)
+#       (labels ((resolve-loop (now-ref)
+#                 (if (ref-is-resolved ref)
+#                   (unless done
+#                     (setf done t)
+#                     (e. result-resolver |resolve|
+#                       (e. reactor |run| (ref-shorten ref))))
+#                   (e<- now-ref |__whenMoreResolved| (e-named-lambda 
+#                     "org.cubik.cle.prim.SafeWhenResolvedReactor"
+#                     (:|run/1| (response)
+#                       (resolve-loop response)))))))
+#         (resolve-loop ref)
+#         result-promise)))
+#   (:|isResolved/1| (ref)
+#     (as-e-boolean (ref-is-resolved ref)))
+#   (:|fulfillment/1| (ref)
+#     (if (ref-is-resolved ref)
+#       ref
+#       (error (or (ref-opt-problem ref)
+#                  "not resolved (Ref#fulfillment)"))))
+#   (:|optProblem/1| #'ref-opt-problem)))

@@ -1,0 +1,67 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeMapShell := <elib:tables.makeMapShell>
+
+/** Makes a full FlexMap given an object implementing the data storage. */
+def makeFlexMapShell implements DeepFrozen {
+  # XXX probably should have self arg
+  to run(impl) {
+    # XXX should not delegate to the impl
+    def flexMap := def "org.erights.e.elib.tables.FlexMap" extends makeMapShell(flexMap, impl) { # implements FlexMap
+      
+      to __printOn(out :TextWriter) {
+        # XXX should call the shared e syntax printer
+        if (flexMap.size() == 0) {
+          out.write("[].asMap()")
+        } else {
+          flexMap.printOn("[", " => ", ", ", "]", out)
+        }
+        out.write(".diverge()")
+      }
+      
+      to __optUncall() {
+        # XXX for general use this should be parameterizable, since nonstandard FlexMaps aren't just diverge(). OR should we have no uncall at all and expect the client to write a delegating wrapper?
+        # XXX guards should be local variables
+        return [flexMap.snapshot(), "diverge", [flexMap.keyType(), flexMap.valueType()]]
+      }
+      
+      to put(key, value) {
+        impl.put(key, value, false, null) }
+      to put(key, value, strict :boolean) {
+        impl.put(key, value, strict, null) }
+      to put(key, value, strict :boolean, optEjector) {
+        impl.put(key, value, strict, optEjector) }
+      
+      to removeKey(key) {
+        impl.removeKey(key, false) }
+      to removeKey(key, strict :boolean) {
+        impl.removeKey(key, strict) }
+      
+      to removeKeys(mask) {
+        flexMap.removeKeys(mask, false) }
+      to removeKeys(mask, strict :boolean) {
+        for key => _ in mask {
+          flexMap.removeKey(key, strict)
+        }
+      }
+      
+      to putAll(new) {
+        flexMap.putAll(new, false, null) }
+      to putAll(new, strict) {
+        flexMap.putAll(new, strict, null) }
+      to putAll(new, strict :boolean, optEjector) {
+        # XXX should new be coerced to EMap? or to a soft Iteratable?
+        for key => value in new {
+          flexMap.put(key, value, strict, optEjector)
+        }
+      }
+      
+      
+    }
+    return flexMap
+  }
+}

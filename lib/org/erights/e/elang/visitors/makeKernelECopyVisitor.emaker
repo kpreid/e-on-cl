@@ -1,0 +1,49 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+#def vmMakers := <elang:evm.*>
+
+def makeKernelECopyVisitor implements DeepFrozen { # XXX write tests and documentation for this
+  to __printOn(out :TextWriter) {
+    out.print("<import:org.erights.e.elang.visitors.makeKernelECopyVisitor>")
+  }
+  
+  to run(self) {
+    def kernelECopyVisitor {
+      to run(node) {
+        return switch (node) {
+          match list :List {
+            accum [] for x in list { _.with(self.run(x)) }
+          }
+          match ==null { null }
+          match _ {
+            node.welcome(self)
+          }
+        }
+      }
+    
+      match [`visit@kind`, [optOriginal] + args] {
+        # xxx package-loaders are currently not DeepFrozen
+        # def maker := vmMakers[kind]
+        def maker := <import>["org.erights.e.elang.evm." + kind]
+        
+        def subnodeFlags := maker.getParameterSubnodeFlags()
+        # XXX preserve source span and scope layout
+        E.call(maker, "run",
+          accum [null] for i => arg in args { _.with(
+            if (subnodeFlags[i]) {
+              self.run(arg)
+            } else {
+              arg
+            }
+          )} + [null]
+        )
+      }
+    }
+    return kernelECopyVisitor
+  }
+}

@@ -1,0 +1,51 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def primParser := <import:org.cubik.cle.prim.parser>
+
+def makeEParser implements DeepFrozen {
+  to __printOn(out :TextWriter) {
+    out.print("<import:org.erights.e.elang.syntax.makeEParser>")
+  }
+
+  to valueMaker(quasiSource) {
+    return primParser(quasiSource)
+  }
+
+  to run(source) {
+    return primParser(source)
+  }
+  
+  /** no tests yet */
+  to make(optProps :nullOk[Map[String, String]], 
+          lexer :any, # LexerFace?
+          warnout :TextWriter,
+          debugFlag :boolean,
+          onlyOneExprFlag :boolean) {
+          
+    def feeder := lexer.getFeeder() # because our 'lexer' is a stub
+    var done := false
+    
+    def eParser {
+      to isEndOfFile() {
+        return done
+      }
+      to parse() {
+        # XXX thoroughly broken - ignores parameters, etc.
+        return primParser(feeder._readText())
+        done := true
+      }
+    }
+    return eParser
+  }
+  
+  /** Reports the problem via 'optEjector' if the parse fails.
+    * 
+    * XXX To be renamed once we have a uniform and compatible naming scheme for EParser methods. */
+  to xTryParse(source :Twine, optEjector) :any {
+    return primParser(source, optEjector)
+  }
+}

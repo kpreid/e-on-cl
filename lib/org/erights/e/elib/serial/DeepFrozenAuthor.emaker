@@ -1,0 +1,301 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+pragma.enable("one-method-object")
+
+/** Non-coercing guard wrapper. */
+def Really {
+  to get(guard) {
+    return def reallyGuard {
+      to coerce(specimen, optEjector) {
+        def coerced := guard.coerce(specimen, optEjector)
+        if (coerced != specimen) {
+          throw.eject(optEjector, E.toQuote(coerced) + " must be same as original specimen " + E.toQuote(specimen))
+        }
+        return coerced
+      }
+    }
+  }
+}
+
+/** Version of safeScope["require"] that has fewer dependencies. */
+def requireDF(condition, problemThunk) :void {
+  if (!condition) { throw(problemThunk()) }
+}
+
+# /** Version of e__quasiParser that doesn't depend on DeepFrozen itself. */
+# def makeSubstituter := importCode["org.erights.e.elang.visitors.makeQuasiSubstituteVisitor"].eval(safeScope.with("DeepFrozen" => def stubAuditor {to audit(_, _) {return false}}))
+# def ep__quasiParser {
+#   to valueMaker(text) {
+#     def parsed := primParser(text)
+#     def substituter {
+#       to substitute(args) {
+#         return makeSubstituter(args)(parsed)
+#       }
+#     }
+#     return substituter
+#   }
+# }
+
+def DeepFrozenAuthor(DeepFrozenStamp, 
+                     key) { # makeTraversalKey
+
+  def DeepFrozen0
+  def OptionallyDeepFrozen
+  def EventuallyDeepFrozen
+
+  # lazily load the brand, because requireDeepFrozen must be initially loadable with no import dependencies, since it is used in <import>'s cache check '
+  var getPeekBrandKit := null
+  getPeekBrandKit := thunk {
+    def kit := <import:org.erights.e.elib.sealing.Brand>("EventuallyDeepFrozen state peeking")
+    getPeekBrandKit := thunk { kit }
+    kit
+  }
+  
+  def &peekSealer := def _.getValue() { return getPeekBrandKit().getSealer() }
+  def &peekUnsealer := def _.getValue() { return getPeekBrandKit().getUnsealer() }
+  def &peekBrand := def _.getValue() { return getPeekBrandKit().getBrand() }
+
+  def rtrace(x) {
+    #traceln(x)
+  }
+
+  # XXX sofar should be a set instead, but those aren't implemented yet
+  def requireDeepFrozen(specimen, sofar, optEjector, root) :void {
+    rtrace("requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root))
+    def specimenKey := key(specimen)
+    if (sofar.maps(specimenKey)) {
+      # recursion check
+      return
+    } else {
+      def sofarther := sofar.with(specimenKey, null)
+      
+      if (__auditedBy(DeepFrozen0, specimen) || 
+          __auditedBy(OptionallyDeepFrozen, specimen) || 
+          __auditedBy(DeepFrozenStamp, specimen)) {
+        # atomic DeepFrozenness
+        rtrace("--rDF atomic")
+        return
+
+      } else if (Ref.isPassByCopy(specimen)) {
+        # transparent
+        
+        def optUncall := specimen.__optUncall()
+        
+        # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
+        if (optUncall =~ uncall ? (uncall != null)) {
+          def spreadUncall := uncall(0,2) + uncall[2]
+          
+          for component in spreadUncall {
+            requireDeepFrozen(component, sofarther, optEjector, root)
+          }
+          rtrace("--rDF selfless")
+          return
+        } else {
+          throw("can't happen: PassByCopy object " + E.toQuote(specimen) + " returned null from __optUncall and is not stamped DeepFrozen")
+        }
+        
+      } else if (__auditedBy(EventuallyDeepFrozen, specimen)) {
+        rtrace("-rDF entering EventuallyDeepFrozen case")
+        # translucent
+        
+        # XXX For efficiency, we should allow the object to carry a cached flag indicating that it has been proven deep-frozen.
+        # We can tell it to set the flag if and only if this entire requireDeepFrozen operation completes; or, more precisely, once the specimen has been accepted and we have reached a point where sofar is empty. If sofar is not empty, it is possible that the specimen contains a reference to something whose DeepFrozenness is still being checked.
+        
+        
+        # The auditor ensures that this will not fail.
+        def state := peekUnsealer.unseal(specimen.__optSealedDispatch(peekBrand))
+        
+        # XXX should be lazy+cached
+        def acceptableSpecialCases :=
+          [__makeFinalSlot(peekBrand),
+           __makeFinalSlot(peekSealer)].asSet()
+        
+        escape ejectorForTranslucent {
+          # using optEjector in the recursion would lead to revealing to our client some contents of the object being checked
+          for component in state.getValues() {
+            
+            # XXX nasty special case because Brands/Sealers are not (yet?) DeepFrozen and they end up in the meta.getState() - we should allow the specimen to not return them, either by &! or by a different semantics for meta.getState()
+            if (Ref.isSettled(component) \
+                && acceptableSpecialCases.contains(component)) {
+              continue
+            }
+            
+            
+            requireDeepFrozen(component, sofarther, ejectorForTranslucent, root)
+          }
+        } catch p {
+          # XXX make the fallthrough else below eject a typed exception that we use in generating this message, so the client can know whether this is unsettled ('change your code to wait longer') or definitely not DeepFrozen ('sorry, hopeless')
+          # xxx future extensions: make this exception contain (sealed) the full details of what chain of subobjects led to the non-DeepFrozen object.
+          rtrace("--rDF exiting and discarding subexception for privacy: " + E.toQuote(p))
+          throw.eject(optEjector, E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " contains references that are unsettled or not DeepFrozen")
+        }
+        rtrace("--rDF amplified")
+        return
+      
+      } else {
+        rtrace("--rDF opaque")
+        throw.eject(optEjector, 
+          if (__equalizer.sameYet(specimen, root)) {
+            E.toQuote(root) + " is not DeepFrozen"
+          } else {
+            E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " is not"
+          }
+        )
+      }
+    }
+    throw("can't happen")
+  }
+
+  
+
+  def requireAudit implements DeepFrozenStamp {
+    to run(objectExpr, witness, fail) :void {
+      for name => _ in objectExpr.staticScope().namesUsed() {
+        # # XXX figure out how to bootstrap so that the witness doesn't need a method so specific
+        # if (!witness.slotIsDeepFrozen(name)) {
+        #   throw("reference to non-DeepFrozen binding: " + E.toQuote(name))
+        # }
+        
+        def slot := witness.getSlot(name)
+        requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
+          out.quote(name)
+          out.print(" in the lexical scope of ")
+          out.print(objectExpr.getQualifiedName()) 
+        }})
+      }
+    }
+  }
+
+  bind OptionallyDeepFrozen implements DeepFrozenStamp {
+    to audit(objectExpr, witness) {
+      escape fail {
+        requireAudit(objectExpr, witness, fail)
+        return true
+      }
+      return false
+    }
+  }
+  
+  bind EventuallyDeepFrozen := 
+  /** Allows objects to be verified as DeepFrozen without requiring either transparency or that their components be settled at audit time, by having them implement a method to ...XXX finish writing this documentation */
+  def "$EventuallyDeepFrozen" implements DeepFrozenStamp {
+    to getPeekBrand() { return peekBrand }
+    to getPeekSealer() { return peekSealer }
+  
+    to audit(objectExpr, witness) {
+      # xxx I am well aware that this code is an awful mess. I do plan to do something about it.
+    
+      def label := "EventuallyDeepFrozen: " + objectExpr.getQualifiedName()
+      def <vm> := <elang:evm.*>
+      def NounExpr := <elang:evm.type.NounExpr>
+      def EExpr := <elang:evm.type.EExpr>
+      def ENode := <elang:evm.type.ENode>
+      def FinalPattern := <elang:evm.type.FinalPattern>
+      def IfExpr := <elang:evm.type.IfExpr>
+      
+      /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'. */
+      def expressionWillHaveValue(expr :Really[EExpr], 
+                                  slot :any,
+                                  precedingNodes :Really[List[ENode]]) :boolean {
+        return expr =~ nounExpr :NounExpr \
+               && witness.getSlot(nounExpr.name()) == slot \
+               && accum true for p in precedingNodes {
+                    _ & !(p.staticScope().outNames().maps(nounExpr.name())) }
+      }
+
+      def script := objectExpr.getScript()
+      def auditorExprs := objectExpr.getAuditorExprs()
+      
+      # The matcher is irrelevant provided that our method exists
+      if (script.getOptMethods() =~ methds :Really[List]) {
+        # both 'method' and 'methods' are E keywords
+
+        requireDF(
+          for methd ? (methd.getVerb() == "__optSealedDispatch" \
+                        && methd.getPatterns().size() == 1) in methds {
+            
+            def optResultGuard := methd.getOptResultGuard()
+            requireDF((optResultGuard == null \
+                     || expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs())), 
+              thunk{label + ": __optSealedDispatch result guard is not any"})
+            requireDF(methd.getPatterns() =~ [brandPattern :Really[FinalPattern] ? (brandPattern.getOptGuardExpr() == null)], 
+              thunk{label + ": __optSealedDispatch argument pattern is not simple"})
+            # XXX We haven't implemented node pattern matching yet. Once EventuallyDeepFrozen is working, test and implement pattern matching and reenable this.
+            # requireDF(methd.getBody() =~ \
+            #     e`if ($brandPattern == @{auditorExpr ? expressionWillHaveValue(auditorExpr, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard) {[optResultGuard]} else {[]})}.getPeekBrand()) { meta.getState() }`, 
+            #   thunk{`$label: __optSealedDispatch body is not suitably formed`})
+            requireDF(methd.getBody() =~ ifExpr :Really[IfExpr], thunk{label + ": __optSealedDispatch body is not an if"})
+            
+            # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
+            requireDF(ifExpr.getTest() == <vm:CallExpr>(null, e`__equalizer`, "sameEver", [brandPattern.getNoun(), e`EventuallyDeepFrozen.getPeekBrand()`], null) \
+                      && expressionWillHaveValue(e`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
+                      && expressionWillHaveValue(e`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
+              thunk{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
+              
+            # overly restrictive in the same way as the previous
+            requireDF(ifExpr.getThen() == e`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())` \
+                    && expressionWillHaveValue(e`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
+              thunk{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
+            
+            break true
+          } != null, 
+          thunk{label + ": no __optSealedDispatch/1 method found"})
+      } else {
+        throw(label + ": auditing plumbing not yet supported")
+      }
+      
+      return true
+    }
+  }
+
+  # makeBaseGuard is itself DeepFrozen but does not have access to the DeepFrozenStamp; therefore we must allow it to get its stamp before invoking it to use as our own base.
+  def optRealBase := null
+
+  def myBase match msg {
+    if (optRealBase == null) {
+      optRealBase := __makeGuard(DeepFrozen0)
+    }
+    E.callWithPair(optRealBase, msg)
+  }
+
+  bind DeepFrozen0 extends myBase implements DeepFrozenStamp {
+    to __printOn(out :TextWriter) :void {
+      out.print("DeepFrozen")
+    }
+    
+    to audit(objectExpr, witness) :boolean {
+      requireAudit(objectExpr, witness, null)
+      return true
+    }
+    
+    to isDeepFrozen(specimen) :boolean {
+      escape notOk { 
+        requireDeepFrozen(specimen, [].asMap(), notOk, specimen)
+        return true
+      }
+      return false
+    }
+    
+    to coerce(specimen, optEjector) :any {
+      # XXX allow coercion?
+      requireDeepFrozen(specimen, [].asMap(), optEjector, specimen)
+      return specimen
+    }
+    
+    /** Audits as DeepFrozen, but does not throw an exception if the object is unacceptable. */
+    to optionally() {
+      return OptionallyDeepFrozen
+    }
+    
+    /** Returns the eventually-DeepFrozen author, which allows objects to be verified as DeepFrozen without requiring either transparency or that their components be settled at audit time. */
+    to "eventually"() {
+      return EventuallyDeepFrozen
+    }
+  }
+  
+  return DeepFrozen0
+}

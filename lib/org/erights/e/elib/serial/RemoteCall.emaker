@@ -1,0 +1,12 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+/** Currently, this exists only to make serial.makeUncaller import successfully.
+  *
+  * XXX is this in JavaE a remnant of JOSS serialization or is it useful? */
+def makeRemoteCall {
+  to optUncall(specimen) {}
+}

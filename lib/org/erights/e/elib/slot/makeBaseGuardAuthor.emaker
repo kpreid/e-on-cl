@@ -1,0 +1,137 @@
+# Copyright 2003 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+# XXX this would be reasonably straightforward to actually audit selfless
+
+# Stamped DeepFrozen because this is a self-referential object (baseGuard#optUncall) and therefore has a promise to itself at audit time, and BaseGuard is (currently) depended on by the EventuallyDeepFrozen audit process.
+
+def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
+  def makeBaseGuard implements DeepFrozenStamp {
+    to run(valueGuard) {
+      def baseGuard implements SelflessStamp {
+  
+        to __optUncall() {
+          return [makeBaseGuard, "run", [valueGuard]]
+        }
+      
+        # The method documentation here is copied from the Guard interface in Java-E, even though BaseGuard there doesn't have it. This way, interactive use of guards has documentation.
+      
+        to __printOn(out :TextWriter) {
+          out.print("__makeGuard(")
+          out.quote(valueGuard)
+          out.print(")")
+        }
+        
+        to coerce(specimen, optEjector) {
+          throw(E.toQuote(valueGuard.__getAllegedType().getFQName()) + " " + E.toQuote(valueGuard) + " failed to implement coerce/2")
+        }
+        
+        /** guard.coerce(x) should be equivalent to guard.coerce(x, null)
+          */
+        to coerce(specimen) {
+          return valueGuard.coerce(specimen, null)
+        }
+        
+        /** Would coerce(specimen, ...) succeed?
+          * <p/>
+          * Yes means the specimen is acceptable input to the guard, not that it is
+          * a possible output.
+          */
+        to accepts(specimen) :boolean {
+          def acceptsReturn := __return
+        
+          valueGuard.coerce(specimen, def negatedGuardSuccess(_) {
+            acceptsReturn(false)
+          })
+          return true
+        }
+        
+        /** guard[] should return a guard that coerces a ConstList to a ConstList
+          * in which every element has been coerced by guard.
+          */
+        to get() { return List[valueGuard] }
+        
+        /** Union type.
+          * <p/>
+          * <tt>(x | y | z).coerce(specimen)</tt> tries x, y, and z in left to right
+          * order on specimen until one succeeds or they all fail. It yield the last
+          * outcome.
+          *
+          * @return
+          */
+        to or(other :ValueGuard) { return <elib:slot.makeUnionGuard>([valueGuard, other]) }
+        
+        /** Coercion pipe, or function composition of guards.
+          * <p/>
+          * <tt>(x & y & z).coerce(specimen)</tt> is equivalent to<pre>
+          * z.coerce(y.coerce(x.coerce(specimen)))</pre>
+          * When x and y are non-transforming guards (either failing or passing
+          * specimen through as is), then this effectively forms an intersection
+          * type.
+          *
+          * @return
+          */
+        to and(other :ValueGuard) { return <elib:slot.makeIntersectionGuard>([valueGuard, other]) }
+  
+        /** (!x).coerce(specimen) succeeds exactly when x.coerce(specimen) fails.
+          * <p/>
+          * (!x) is a non-transforming guard, whether or not x is.
+          *
+          * @return
+          */
+        to not() {
+          # XXX this perhaps should be a separate emaker, but we don't need it yet.
+          def negatedGuard extends __makeGuard(negatedGuard) {
+            to __printOn(out :TextWriter) {
+              out.print("!(")
+              out.quote(valueGuard)
+              out.print(")")
+            }
+  
+            to coerce(specimen, optEjector) {
+              def coerceReturn := __return
+            
+              valueGuard.coerce(specimen, def negatedGuardSuccess(_) {
+                coerceReturn(specimen)
+              })
+              
+              # If we reach here, then the valueGuard did not fail, so we do.
+              throw.eject(optEjector, E.toQuote(specimen) + " must not be a " + E.toQuote(valueGuard)) # XXX aan
+            }
+          }
+          
+          return negatedGuard
+        }
+        
+        /** (x &! y) is equivalent to (x & !y).
+          *
+          * @return
+          */
+        to butNot(other) {
+          return valueGuard & !other
+        }
+  
+        /**
+         * (x ^ y) is equivalent to ((x &! y) | (!x & y)).
+         *
+         * @return
+         */
+        to xor(other) {
+          # XXX are these orderings of the intersections appropriate? should define some use cases
+          # XXX do we rely on other#not/0 to give appropriate results?
+          def makeIntersectionGuard := <elib:slot.makeIntersectionGuard>
+          return makeIntersectionGuard([valueGuard, !other]) | makeIntersectionGuard([!valueGuard, other])
+        }
+  
+        /** Implementation convenience for the "any" guard, which is a native object but uses this emaker. */
+        to _getMakeUnionGuard() { return <elib:slot.makeUnionGuard> }
+      }
+      
+      return baseGuard
+    }
+  }
+  return makeBaseGuard
+}

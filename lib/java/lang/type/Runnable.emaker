@@ -1,0 +1,14 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def Runnable extends __makeGuard(Runnable) {
+  to coerce(specimen, optEjector) {
+    if (!specimen.__respondsTo("run", 0)) {
+      traceln("java.lang.Runnable guard could reject " + E.toQuote(specimen))
+    }
+    return specimen
+  }
+}

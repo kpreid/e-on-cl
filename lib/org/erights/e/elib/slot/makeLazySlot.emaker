@@ -1,0 +1,79 @@
+# Copyright 2004 Hewlett Packard, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# Modified by Kevin Reid on 2005-03-14:
+#   * Safe against nonlocal exits by the value maker
+#   * makeLazySlot is DeepFrozen
+
+def Slot := <type:org.erights.e.elib.slot.Slot>
+
+def makeLazySlot implements DeepFrozen {
+    to run(maker) :Slot {
+        var getter := null
+    
+        def firstGetter() :any {
+            def v
+            getter := thunk { v }
+            try {
+              bind v := maker()
+            } catch p {
+              v__Resolver.resolveRace(getter := Ref.broken(p))
+              throw(p)
+            } finally {
+              v__Resolver.resolveRace(getter := Ref.broken("nonlocal exit by lazy slot's maker"))
+            }
+            return v
+        }
+        getter := firstGetter
+    
+        def lazySlot implements Slot {
+            to getValue()    :any { return getter() }
+            to setValue(_)  :void { throw("this lazy Slot may not be changed") }
+            to isFinal() :boolean { return true }
+        }
+        return lazySlot
+    }
+}
+
+  ? def makeLazySlot := <import:org.erights.e.elib.slot.makeLazySlot>
+  # value: <makeLazySlot>
+  
+  ? makeLazySlot :DeepFrozen
+  # value: <makeLazySlot>
+  
+  ? # Normal
+  > def &foo := makeLazySlot(thunk { println("foof"); "food" })
+  # value: <lazySlot>
+  
+  ? foo.isFinal()
+  # value: true
+  
+  ? foo.setValue("mood")
+  # problem: this lazy Slot may not be changed
+  
+  ? foo
+  # stdout: foof
+  
+  # value: "food"
+
+  ? foo
+  # value: "food"
+  
+  ? # Throwing by maker
+  > def &bar := makeLazySlot(thunk { println("barn"); throw("bare") })
+  # value: <lazySlot>
+  
+  ? bar
+  # stdout: barn
+  
+  # problem: bare
+  
+  ? bar
+  # problem: bare
+  
+  ? # Ejecting by maker
+  > def baz; eject out { bind baz := makeLazySlot(thunk { out("bass") }); baz.getValue() }
+  # value: "bass"
+  
+  ? baz.getValue()
+  # problem: nonlocal exit by lazy slot's maker

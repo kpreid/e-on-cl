@@ -1,0 +1,35 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+def Tuple0 {
+  to __printOn(out :TextWriter) {
+    out.print("Tuple")
+  }
+
+  match [=="get", elementGuards] {
+    def Tuple1 extends __makeGuard(Tuple1) {
+      to __printOn(out :TextWriter) {
+        out.quote(Tuple0)
+        out.quote(elementGuards)
+      }
+      
+      to coerce(specimen, optEjector) {
+        # XXX should we do specimen.__conformTo(Tuple1)? As it is, the specimen cannot tell it's coercing to a List-of-specific-element-type.
+        def trueList := List.coerce(specimen, optEjector)
+        
+        if (trueList.size() != elementGuards.size()) {
+          throw.eject(optEjector, `Need ${elementGuards.size()} element list: ${E.toQuote(trueList)}`)
+        } else {
+          return accum [] \
+            for i => element in trueList {
+              _.with(elementGuards[i].coerce(element, optEjector))
+            }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+#def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def makeMapShell
+
+## XXX I expect to move this to a separate emaker.
+#def makeReadOnlyMap implements EventuallyDeepFrozen {
+#  method __optSealedDispatch(brand) :any {
+#    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+#      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+#    }
+#  }
+#
+#  to run(rwImpl) {
+#    return makeMapShell(def readOnlyMapImpl {
+#      method fetch(k, t) { rwImpl.fetch(k, t) }
+#      method getPair() { rwImpl.getPair() }
+#      method getKeys() { rwImpl.getKeys() }
+#      method getValues() { rwImpl.getValues() }
+#      method snapshot() { rwImpl.snapshot() }
+#    })
+#  }
+#}
+
+/** Implements the full Map interface given an object implementing the data storage. */
+bind makeMapShell implements DeepFrozen {
+  to run(self, impl) {
+    # XXX should not delegate to the impl
+    def map := def "org.erights.e.elib.tables.Map" extends impl { # implements Map
+      
+      #to readOnly() {
+      #  return makeReadOnlyMap(impl)
+      #}
+    }
+    return map
+  }
+}

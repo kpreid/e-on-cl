@@ -1,0 +1,33 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeUnionGuard {
+  to run(subGuards) {
+    def unionGuard extends __makeGuard(unionGuard) implements DeepFrozen.optionally() {
+      to __printOn(out :TextWriter) {
+        out.print("any")
+        out.quote(subGuards)
+      }
+      
+      to or(other) {
+        return makeUnionGuard(subGuards.with(other))
+      }
+      
+      to coerce(specimen, optEjector) {
+        for guard in subGuards {
+          return guard.coerce(specimen, __continue)
+        }
+        # XXX this is unlike Java-E's UnionGuard, but provides a more informative message, but hides information about individual failures. fix this once we have fancy exception structure.
+        throw.eject(optEjector, `doesn't match any of $subGuards`)
+      }
+    }
+    
+    return unionGuard
+  }
+}
+
+# XXX unneeded check
+# XXX flatten check

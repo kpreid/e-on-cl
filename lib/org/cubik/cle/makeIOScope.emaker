@@ -1,0 +1,156 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("exporter")
+pragma.enable("importer")
+
+def makeLazySlot   := <elib:slot.makeLazySlot>
+def makeScope      := <elang:scope.makeScope>
+def makePathLoader := <import:org.cubik.cle.prim.makePathLoader>
+
+def Scope := makeScope.asType()
+
+# XXX document what keys in vatPrivScope and exits are used
+def makeIOScope(fqnPrefix :String, 
+                vatPrivScope :Scope,
+                exits :Map[String, any]) :Scope {
+
+  # --- Setting up ---
+  
+  def ioScope
+  
+  # Bindings to be added to the underlying scope.
+  var ioAdd := ["privilegedScope" => ioScope]
+
+  def addLazy(name, thun) :void {
+    ioAdd with= ("&" + name, makeLazySlot(thun))
+  }
+
+  # --- Adding entries ---
+
+  # Things which are simply copied into the scope
+  # (Note that names starting with & are special in ioAdd)
+  for copyName ? exits.maps(copyName) in 
+      ["timer", "file__uriGetter", "stdin", "stdout", "stderr", "interp", "lisp"] {
+    ioAdd with= (copyName, exits[copyName])
+  }
+
+  def props := exits["props"]
+
+  # XXX throw out defaultInterp once all uses of IOScopes supply their own
+  if (!ioAdd.maps("interp")) {
+    def gc := exits.fetch("gc", thunk{thunk{}})
+    ioAdd with= ("interp", def defaultInterp {
+      /** not yet implemented */
+      to waitAtTop(ref :any) :void {}
+      
+      # we don't have getResult yet, but don't forget to clear its list then
+      to gc() :void { gc() }
+  
+      /** Stub originally written to support Java-E's elang.interp.rune. Always returns an empty ConstMap. This will change eventually. */      
+      to getProps() :any {
+        # XXX this has no tests
+        return props
+      }
+    })
+  }
+
+
+  if (exits =~ [=> stdout] | _) {
+    ioAdd with= ("print", {def print {
+                            match [=="run", args] {
+                              stdout.printAll(args) }}})
+  
+    ioAdd with= ("println", {def println {
+                              match [=="run", args] {
+                                stdout.printAll(args)
+                                stdout.println() }}})
+  }
+
+  def <unsafe>
+  
+  ioAdd with= ("unsafe__uriGetter", <unsafe>)
+
+  # XXX make this accept lack of std* etc.
+  addLazy("rune", thunk{
+    def [=> stdout, => stderr] | _ := exits
+    def runeAuthor := <elang:cmd.runeAuthor>
+    #def runeAuthor := <import:org.cubik.cle.simpleRuneAuthor>
+    runeAuthor(["metaout" => stdout,
+                "metaerr" => stderr,
+                "defaultProps" => ioScope["interp"].getProps()
+               ] | runeAuthor.defaultAuths(<unsafe>))
+  })
+  
+  # --- Unsafe imports and <unsafe:*> ---
+  
+  var unsafeImports := makeScope.fromState([
+    "org.cubik.cle.boot.privilegedScope" => ioScope,
+    
+    "java.lang.System" => {def system {
+      /** stub for now */
+      to getProperties() :any { return def fakeProperties { } }
+    }},
+    
+    "org.erights.e.elang.interp.ScopeSetup" => {
+      /** semi-stub for now */
+      def makeScopeSetup {
+        to privileged(fqnPrefix :String, altout :TextWriter, alterr :TextWriter, props :Map[String, String], interpVow :vow, optVat) {
+          # XXX this isn't actually tested, just referenced by JE-rune
+          # XXX optVat guard
+          # XXX we need more exits corresponding to ones that are implicit in the java version interface
+          # XXX handle props, interpVow, optVat
+          return makeIOScope(fqnPrefix, 
+                             vatPrivScope,
+                             ["stdout" => altout,
+                              "stderr" => alterr,
+                              "interp" => interpVow,
+                              => props])
+        }
+      }
+    },
+    
+    "&org.erights.e.elib.vat.Vat" => 
+      makeLazySlot(thunk{
+        <import:org.erights.e.elib.vat.makeVatAuthor>() })
+        
+  ], "__unsafeImportScope$")
+  
+  unsafeImports with= ("org.cubik.cle.boot.privilegedScope", ioScope)
+
+  if (exits =~ [=> stdin, => stdout, => stderr] | _) {
+    unsafeImports withSlot= ("org.erights.e.develop.exception.PrintStreamWriter", 
+      makeLazySlot(thunk{
+        <import:org.erights.e.develop.exception.makePrintStreamWriterAuthor>(stdin, stdout, stderr) }))
+    
+
+  }
+  
+  if (exits =~ [=> makeWeakRef] | _) {
+    unsafeImports with= ("org.erights.e.elib.vat.makeWeakRef", makeWeakRef)
+    unsafeImports with= ("org.erights.e.elib.vat.WeakPtr", makeWeakRef)
+  }
+  
+  if (exits =~ [=> <file>] | _) {
+    unsafeImports with= ("org.erights.e.meta.java.io.FileGetter", 
+      /** Java-E compatibility - just provides file__uriGetter access. */
+      def "org.erights.e.meta.java.io.makeFileGetter" {
+        to getTHE_ONE() :any { return <file> }
+      })
+  }
+  
+  bind <unsafe> := makePathLoader("unsafe", [
+    unsafeImports,
+    def unsafeInheritLoader {
+      to fetch(fqn :String, absentThunk) :any {
+        def result := <import>.fetch(fqn, absentThunk)
+        traceln(`warning: loading safe ${E.toQuote(fqn)} via unsafe loader`)
+        return result
+      }
+    },
+  ])
+  
+  return bind ioScope := makeScope.fromState(ioAdd, fqnPrefix) | vatPrivScope
+}

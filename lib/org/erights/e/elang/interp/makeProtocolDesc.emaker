@@ -1,0 +1,95 @@
+# Translated to E by Kevin Reid from Java source which is:
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ...............
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+/**
+ * A type description object, as would be created by an <tt>interface</tt>
+ * expression.
+ * <p>
+ * A type so defined is used both as an auditor, to check type conformance,
+ * and as a Guard to check that the value provided is an instance of an audited
+ * type.
+ */
+def makeProtocolDesc implements DeepFrozen {
+  /**
+   * Makes a single type description object that can be used both as a
+   * rubber-stamping auditor and as a guard.
+   * <p>
+   * This can be used for the object-equivalent of single-key
+   * authentication.
+   */
+  to run(docComment :String,
+         optFQName  :nullOk[String],
+         supers     :List,   # XXX of what?
+         auditors   :List,   # XXX [Auditor] but we don't have that yet
+         mTypes     :List) { # XXX of MessageDesc
+
+    def fqName := if (optFQName == null) { "_" } else { optFQName }
+                  
+
+    def protocolDesc implements EventuallyDeepFrozen { # extends makeTypeDesc(docComment, optFQName, supers, auditors, mTypes)
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+    
+      to audit(objectExpr, witness) {
+        return true
+      }
+    
+      to __printOn(out :TextWriter) {
+        if (optFQName != null) {
+          out.print(simplifyFQName(optFQName))
+        } else {
+          out.print("<Anonymous ProtocolDesc>")
+        }
+      }
+      
+      to getFQName() { 
+        return fqName
+      }
+      
+      to coerce(specimen, optEjector) {
+        # using __conformTo would reveal our 'single key'
+        if (__auditedBy(protocolDesc, specimen)) {
+          return specimen
+        } else {
+          # XXX simple__quasiParser not DeepFrozen
+          # throw.eject(optEjector, `Not stamped by $protocolDesc`)
+          throw.eject(optEjector, "Not stamped by " + E.toQuote(protocolDesc))
+        }
+      }
+    }
+    return protocolDesc
+  }
+  
+  # XXX see notes on more specific types above
+  # XXX write independent tests for makePair
+  to makePair(docComment :String, optFQName :nullOk[String], supers :List, auditors :List, mTypes :List) {
+    # XXX methods
+    def guard {
+    }
+    def stamp {
+      /** Rubber-stamping auditor - accepts anything. */
+      to audit(_, _) { return true }
+    }
+    return [guard, stamp]
+  }
+}
+
+#        # from TypeDesc.java. this algorithm should be extracted somewhere
+#        def problem := escape notSimple {
+#          return tryCoerceR(specimen, notSimple)
+#        }
+#        escape notCoerced {
+#          return tryCoerceR(specien.__conformTo(this), notCoerced)
+#        }
+#        throw(problem)

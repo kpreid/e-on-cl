@@ -1,0 +1,135 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeConstSetAuthor(SelflessStamp) {
+  def ConstSetStamp implements DeepFrozen { 
+    to audit(_, _) { return true }
+  }
+  
+  def ConstSet {
+    # XXX use some sort of BaseAuditGuard (or ProtocolDesc)
+    to coerce(specimen, optEjector) {
+      if (__auditedBy(ConstSetStamp, specimen)) {
+        return specimen
+      } else {
+        def coerced := specimen.__conformTo(ConstSet)
+        if (__auditedBy(ConstSetStamp, coerced)) {
+          return coerced
+        } else {
+          # xxx exception type?
+          throw.eject(optEjector, "not a ConstSet: " + E.toQuote(specimen))
+        }
+      }
+    }
+  }
+ 
+  def makeConstSet {
+    /** Return the guard for ConstSets. */
+    to asType() {
+      return ConstSet
+    }
+    
+    /** Return the empty ConstSet. */
+    to getEmptySet() {
+      # XXX cache
+      return makeConstSet.make([].asMap())
+    }
+    
+    # XXX Map[any, void] once we have parameterizable map guards
+    # XXX documentation
+    to make(itemMap :Map) {
+      def itemList := itemMap.getKeys()
+      def constSet implements ConstSetStamp, SelflessStamp { # , PassByCopyStamp
+        to __printOn(tw :TextWriter) {
+          tw.quote(itemList)
+          tw.print(".asSet()")
+        }
+        
+        to __optUncall() {
+          return [itemList, "asSet", []]
+        }
+        
+        /** Return the number of elements in this set. */
+        to size() { return itemList.size() }
+        /** Return the elements in this set as a ConstList. */
+        to getElements() { return itemList }
+        /** Return 'any', since element type restrictions are not part of our visible state. */
+        to elementType() { return any }
+        
+        # Idea:
+        # /** Coerce all elements of this set by the given guard and return a new set. May be optimized for sets already known to be of primitive types. */
+        # To actually provide this we'd have to define what happens if the guard returns the same result for several elements.
+        # to coerceElements(guard, optEjector)
+
+        /** Return whether this set contains the given element. */
+        to contains(element) :boolean { return itemMap.maps(element) }
+
+        /** this.getElements().iterate */
+        to iterate(f) { itemList.iterate(f) }
+
+        /** Return self, since this is already an immutable set. */
+        to snapshot() { return constSet }
+        /** Return self, since this is already an immutable set. */
+        to readOnly() { return constSet }
+
+        to printOn(left, sep, right, out) { 
+          itemList.printOn(left, sep, right, out)
+        }
+        
+        /** Return a new set with the element added if it is not already present. */
+        to with(element) {
+          return if (constSet.contains(element)) {
+            constSet
+          } else {
+            makeConstSet.make(itemMap.with(element, null))
+          }
+        }
+        
+        /** Return a new set with the element removed if it is present. */
+        to without(element) {
+          return if (constSet.contains(element)) {
+            makeConstSet.make(itemMap.without(element))
+          } else {
+            constSet
+          }
+        }
+        
+        /** Return the intersection of two sets. The returned set has XXX document ordering */
+        to and(other :ConstSet) :ConstSet {
+          # XXX do this more efficiently with an asKeys or amplified-get-internal-map method
+          return makeConstSet.make(itemMap & __makeMap.fromColumns(other.getElements(), [null] * other.size()))
+        }
+        
+        /** Return the ... of two sets. The returned set has XXX document ordering */
+        to butNot(other :ConstSet) :ConstSet {
+          # XXX do this more efficiently with an asKeys or amplified-get-internal-map method
+          return makeConstSet.make(itemMap &! __makeMap.fromColumns(other.getElements(), [null] * other.size()))
+        }
+        
+        /** this.or(other, false) */
+        to or(other :ConstSet) :ConstSet {
+          return constSet.or(other, false)
+        }
+        
+        # xxx or/3 with optEjector
+
+        /** Return the union of two sets. The returned set has this set's elements followed by those of the other which are not already present. */
+        to or(other :ConstSet, strict :boolean) :ConstSet {
+          # XXX do this more efficiently with an asKeys or amplified-get-internal-map method
+          escape conflict {
+            return makeConstSet.make(itemMap.or(__makeMap.fromColumns(other.getElements(), [null] * other.size()), strict, conflict))
+          } catch _ {
+            # XXX this is inefficient/silly. the exception should include the key, instead.
+            def member := (constSet & other).getElements()[0]
+            throw(`both sets contain ${E.toQuote(member)}, in strict union of ${E.toQuote(constSet)} and ${E.toQuote(other)}`)
+          }
+        }
+      }
+      return constSet
+    }
+  }
+  return makeConstSet
+}

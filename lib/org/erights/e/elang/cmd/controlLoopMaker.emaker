@@ -1,0 +1,185 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+def makeQueue := <elib:vat.Queue>
+def ControlLoop := <type:org.erights.e.elang.interp.ControlLoop>
+def Throwable := <type:java.lang.Throwable>
+
+/**
+ * Is it's broken or true
+ */
+def isFinal(exitStatus) :boolean {
+    Ref.isBroken(exitStatus) || (Ref.isNear(exitStatus) && exitStatus == true)
+}
+
+def controlLoopMaker() :ControlLoop {
+
+    # Is there a 'internalLoop <- ()' in the air?
+    var myIsAlarmSet := false
+
+    # myNextExitStatusVow unresolved, false, true, or broken
+    # unresolved means we should block
+    # false means success, and we should continue
+    # true means success, and we are done
+    # broken means failure, and we are done
+    var myNextExitStatusVow := false
+    var myOptNextExitStatusResolver := null
+
+    # myFinalExitStatusVow is unresolved, true, or broken
+    def [myFinalExitStatusVow, myFinalExitStatusResolver] := Ref.promise()
+
+    # A queue of Runnables to run in order, each in their own
+    # turn. If null, we *have* exitted.
+    var myOptQueue := makeQueue()
+
+    var servingTicket := 0
+    var nextTicket := 1
+
+    def myStatusReactors := [].diverge()
+
+    def internalLoop
+    def controlLoop
+
+    def notifier {
+        match [verb, args] {
+            for reactor in myStatusReactors {
+                E.sendOnly(reactor, verb, args)
+            }
+            traceln(`controlLoop $controlLoop notification $verb$args`)
+        }
+    }
+
+    /**
+     * Make sure we're going to wake up if we should
+     */
+    def setAlarm() :void {
+        if (! myIsAlarmSet &&
+              Ref.isResolved(myNextExitStatusVow) &&
+              myOptQueue != null) {
+
+            myIsAlarmSet := true
+            internalLoop <- ()
+        }
+    }
+
+    bind internalLoop() :void {
+        myIsAlarmSet := false
+        if (Ref.isEventual(myNextExitStatusVow)) {
+            # do nothing
+            notifier.reactToBlock(servingTicket)
+
+        } else if (isFinal(myNextExitStatusVow)) {
+            if (myOptQueue != null) {
+                myOptQueue := null
+                myFinalExitStatusResolver.resolve(myNextExitStatusVow)
+                notifier.reactToExit(servingTicket, myNextExitStatusVow)
+            }
+
+        } else if (myOptQueue.optDequeue() =~ runnable ? (runnable != null)) {
+            servingTicket += 1
+            try {
+                runnable()
+                notifier.reactToSuccess(servingTicket, myNextExitStatusVow)
+            } catch problem {
+                controlLoop.exitAtTop(problem)
+            }
+            setAlarm()
+
+        } else {
+            notifier.reactToQueueEmpty(servingTicket)
+            # queue is empty, do nothing
+        }
+    }
+
+    bind controlLoop implements ControlLoop {
+
+        to blockAtTop() :void {
+            if (Ref.isNear(myNextExitStatusVow) &&
+                  myNextExitStatusVow == false) {
+
+                # Don't block if we should exit. We won't execute any more
+                # runnables anyway.
+
+                def [p,r] := Ref.promise()
+                myNextExitStatusVow := p
+                myOptNextExitStatusResolver := r
+            }
+        }
+
+        to continueAtTop() :void {
+            if (myOptNextExitStatusResolver != null) {
+                myOptNextExitStatusResolver.resolve(false)
+                myOptNextExitStatusResolver := null
+            }
+            setAlarm()
+        }
+
+        to waitAtTop(ref) :void {
+            controlLoop.blockAtTop()
+            def done(_) :void {
+                controlLoop.continueAtTop()
+            }
+            Ref.whenResolvedOnly(ref, done)
+        }
+
+        /**
+         * Exit reporting successful completion
+         */
+        to exitAtTop() :void {
+            controlLoop.exitAtTop(null)
+        }
+
+        /**
+         * Exit reporting optProblem as the reason for termination.
+         * <p>
+         * If optProblem is null, this indicates successful completion.
+         * If optProblem isn't null, it's the alleged reason for unsuccessful
+         * termination.
+         */
+        to exitAtTop(optProblem :nullOk[Throwable]) :void {
+            if (! isFinal(myNextExitStatusVow)) {
+                # first exit request wins. Others lose silently.
+                def nextStatus := if (optProblem == null) {
+                    true
+                } else {
+                    Ref.broken(optProblem)
+                }
+                if (myOptNextExitStatusResolver == null) {
+                    myNextExitStatusVow := nextStatus
+                } else {
+                    myOptNextExitStatusResolver.resolve(nextStatus)
+                    myOptNextExitStatusResolver := null
+                }
+            }
+            setAlarm()
+        }
+
+        to getNextExitStatus() :vow[boolean] {
+            myNextExitStatusVow
+        }
+
+        to getFinalExitStatusVow() :vow[boolean] {
+            myFinalExitStatusVow
+        }
+
+        /**
+         * @return Whether runnable was enqueued. If false, this means
+         *         the controlLoop has already exited.
+         */
+        to enqueue(runnable) :boolean {
+            notifier.reactToEnqueue(nextTicket)
+            nextTicket += 1
+            if (myOptQueue == null) {
+                false
+            } else {
+                myOptQueue.enqueue(runnable)
+                setAlarm()
+                true
+            }
+        }
+
+        to addStatusReactor(reactor) :void {
+            myStatusReactors.push(reactor)
+        }
+    }
+}

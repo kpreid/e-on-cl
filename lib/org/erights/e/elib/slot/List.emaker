@@ -1,0 +1,48 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+
+def List0 extends __makeGuard(List0) {
+  to __printOn(out :TextWriter) {
+    out.print("List")
+  }
+
+  to coerce(specimen, optEjector) {
+    if (specimen =~ [] + list) {
+      return list
+    } else {
+      # XXX exception type?
+      # XXX this won't be quite the same behavior as builtin type-errors
+      throw.eject(optEjector, "the " + simplifyFQName(specimen.__getAllegedType().getFQName()) + " " + E.toQuote(specimen) + " doesn't coerce to a ConstList")
+    }
+  }
+
+  to get(elementGuard) {
+    def List1 extends __makeGuard(List1) {
+
+      to coerce(var specimen, optEjector) {
+        specimen := List0.coerce(specimen, optEjector)
+        
+        # XXX we need a more efficient way of doing this which doesn't require accumulating a new list for non-coercing cases
+        return accum [] for subSpecimen in specimen {
+          _.with(elementGuard.coerce(subSpecimen, optEjector))
+        }
+      }
+    
+      to __printOn(out :TextWriter) {
+        out.print("List[")
+        out.quote(elementGuard)
+        out.print("]")
+      }
+    }
+    
+    return List1
+  }
+  
+  to getTheTrivialValue() { return [] }
+}

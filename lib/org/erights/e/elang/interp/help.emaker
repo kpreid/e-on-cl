@@ -1,0 +1,71 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeUnQuote := <elib:oldeio.makeUnQuote>
+def makeTextWriter := <elib:oldeio.makeTextWriter>
+
+def mirandaMethods := null.__getAllegedType().getMessageTypes()
+
+def formatType implements DeepFrozen {
+  to run(type) :any {
+    def [tw, sb] := makeTextWriter.makeBufferingPair()
+    
+    # XXX produce nice explanations in the event the type misbehaves
+    # XXX should delegate this printing to ProtocolDesc, or some general 'E-syntax printer'
+    # XXX extends, implements
+    
+    # XXX use the routine for this in elang.lisp (we need to expose it)
+    if ((def s :String := type.getDocComment()) != "") {
+      tw.print("/** ", s, " */\n")
+    }
+    
+    tw.print("interface ")
+    tw.quote(type.getFQName() :String)
+    tw.print(" {")
+    def twBody := tw.indent()
+    for mverb ? !mirandaMethods.maps(mverb) \
+        => messageDesc in type.getMessageTypes() { # XXX MessageDesc guard 
+      twBody.lnPrint(messageDesc) # or guard here
+    }
+    tw.lnPrint("}")
+    
+    return makeUnQuote(sb.snapshot())
+  }
+}
+
+def "$help" implements DeepFrozen {
+  to run(specimen) :any {
+    if (Ref.isNear(specimen)) {
+      return formatType(specimen.__getAllegedType())
+      
+    } else if (!Ref.isResolved(specimen)) {
+      return makeUnQuote("This is an unresolved reference; no other information is available. You can use a 'when' expression or Ref.whenResolved to wait for it to become resolved.")
+      
+    } else if (Ref.isFar(specimen)) {
+    
+      # This won't work because we have no print()-or-similar authority to display the help in another turn.
+      # when (specimen <- __getAllegedType()) -> gotType(t) {
+      #   print(formatType(t))
+      # } catch p {
+      # }
+      
+      # return makeUnQuote("This is a Far reference. Sending request...")
+      # return makeUnQuote("This is a Far reference. Currently, help() is not capable of retrieving interface information for it.")
+      
+      return when (specimen <- __getAllegedType()) -> gotType(t) {
+        return formatType(t)
+      } catch p {
+        throw(p)
+      }
+      
+    } else if (Ref.optProblem(specimen) =~ p :notNull) {
+      # XXX once we have stack traces and the authority here to view them, include it
+      return makeUnQuote(`This is a broken reference resulting from $p.`)
+    } else {
+      return makeUnQuote(`Sorry, ${E.toQuote(specimen)} is a kind of reference that this help function doesn't know about.`)
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+# XXX make this a TypeDesc or similar
+def Guard0 extends __makeGuard(Guard0) {
+  to audit(objectExpr, witness) :any {
+    return true
+  }
+  
+  to coerce(specimen, _) {
+    return specimen
+  }
+
+  to __printOn(out :TextWriter) :void {
+    out.print("Guard")
+  }
+}

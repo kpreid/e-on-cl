@@ -1,0 +1,29 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+# XXX EventuallyDeepFrozen needs to be made prettier
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def makeUnQuote implements EventuallyDeepFrozen {
+
+  /** For DeepFrozen#eventually */
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
+  to run(text :Twine) {
+    def unQuote implements DeepFrozen {
+      to __printOn(out :TextWriter) {
+        out.print(text)
+      }
+      
+      to __optUncall() { return [makeUnQuote, "run", [text]] }
+    }
+    return unQuote
+  }
+}

@@ -1,0 +1,15 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+# XXX document
+# XXX boolean result guards?
+def comparer implements DeepFrozen {
+  method lessThan   (a, b) { a.op__cmp(b).belowZero  () }
+  method leq        (a, b) { a.op__cmp(b).atMostZero () }
+  method asBigAs    (a, b) { a.op__cmp(b).isZero     () }
+  method geq        (a, b) { a.op__cmp(b).atLeastZero() }
+  method greaterThan(a, b) { a.op__cmp(b).aboveZero  () }
+}
