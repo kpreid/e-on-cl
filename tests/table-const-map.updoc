@@ -1,0 +1,115 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? def cm := ["a" => "b", 'c' => 'd']
+# value: ["a" => "b", 'c' => 'd']
+
+? cm.readOnly()
+# value: ["a" => "b", 'c' => 'd']
+
+? cm.readOnly() == cm
+# value: true
+
+? cm.__optUncall()(1)
+# value: ["fromColumns", [["a", 'c'], ["b", 'd']]]
+
+? [def v := cm.__optUncall()[0], v == __makeMap]
+# value: [__makeMap, true]
+
+? cm == ["a" => "b", 'c' => 'd']
+# value: true
+
+? cm.snapshot() == cm
+# value: true
+
+XXX this ordering matches the Java-E implementation, but is surprising
+? ["x" => 1] | ["y" => 1]
+# value: ["y" => 1, "x" => 1]
+
+? cm['c']
+# value: 'd'
+
+? cm.with(5, 6)
+# value: ["a" => "b", 'c' => 'd', 5 => 6]
+
+? __makeMap.asType() == Map
+# value: true
+
+or/3
+
+  XXX this error should be caught and rewritten to be helpful in 'or'
+
+  ? escape ej { cm.or(["a" => "a"], true, ej); true }
+  # value: problem: "a" already in under-construction ConstMap as "a"
+
+and/1
+
+  ? ["x" => 1, "y" => 2] & ["y" => 3, "z" => 4]
+  # value: ["y" => 2]
+
+with/2
+
+ nonstrict
+  ? ["x" => 1].with("x", 2)
+  # value: ["x" => 2]
+
+without/1
+
+  ? ["x" => -1, "c" => -2, "v" => -3, "b" => -4].without("c")
+  # value: ["x" => -1, "b" => -4, "v" => -3]
+
+butNot/1
+
+  ? cm &! ["a" => "q"]
+  # value: ['c' => 'd']
+  
+  ? ["x" => 1, "y" => 2] &! ["y" => 3, "z" => 4]
+  # value: ["x" => 1]
+
+implementation type not visible
+
+  ? [false => true].__getAllegedType().getFQName()
+  # value: "org.erights.e.elib.tables.ConstMap"
+
+  xxx once we have other kinds of const maps (e.g. with-accumulator) test that they're compatible in this way '
+
+sameness is order-dependent
+
+  ? [1 => 10, 2 => 20] == [1 => 10, 2 => 20]
+  # value: true
+
+  ? [1 => 10, 2 => 20] == [2 => 20, 1 => 10]
+  # value: false
+
+__makeMap.fromIteratable
+
+  ? __makeMap.fromIteratable("abc", true) 
+  # value: [0 => 'a', 1 => 'b', 2 => 'c']
+  
+  ? __makeMap.fromIteratable(def _ { to iterate(f) :void { f(1, 10)
+  >                                                        f(1, 20) }},
+  >                          true)
+  # problem: 1 already in under-construction ConstMap as 10
+  
+  ? __makeMap.fromIteratable(def _ { to iterate(f) :void { f(1, 10)
+  >                                                        f(2, 'b')
+  >                                                        f(1, 20) }},
+  >                          false)
+  # value: [1 => 20, 2 => 'b']
+
+  ? def captureAssocFunc
+  > def map := __makeMap.fromIteratable(def _ { to iterate(bind captureAssocFunc) :void {}}, false)
+  # value: [].asMap()
+  
+  ? captureAssocFunc("key", "value")
+  # problem: ConstMap construction already finished
+  
+  ? map
+  # value: [].asMap()
+  
+  XXX disabling of assocfunc
+  XXX key conflicts
+
+XXX test all map methods
+XXX specific tests for keyType, valueType
+XXX what if map maker gets duplicate entries

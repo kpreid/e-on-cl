@@ -1,0 +1,38 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+XXX move simple__quasiParser testing elsewhere
+
+  ? def `abc` := "abc"
+  # value: "abc"
+  
+  ? def `abc` := "abcdef"
+  # problem: extra text at end of specimen: def
+  
+  ? {def `abc@x` := "abcdef"; x}
+  # value: "def"
+  
+  ? {def `abc@{x}ghi` := "abcdghefghi"; x}
+  # value: "dghef"
+
+
+XXX this is a rather implementation-specific test result (but the implementation is E code from Java-E)
+? rx__quasiParser
+# value: <PerlMatchMakerMaker>
+
+? def rx`abc` := "abc"
+# value: "abc"
+
+? def rx`abc?` := "ab"
+# value: "ab"
+
+? {def rx`x=(@x.*)` := "x=y"; x}
+# value: "y"
+
+part of the expansion of the above - for tracking down a "such-that expression was false" bug
+? rx__quasiParser.matchMaker("x=(@{0}.*)").matchBind(__makeList.run(), "x=y", null)
+# value: ["y"]
+
+? {def rx`(@{a}a.)(@{b}b.)?(@{c}c.)*(@{d}d.)+(@{e}e.)` := "a1c2c3d4d5e6"; [a,b,c,d,e]}
+# value: ["a1", null, "c3", "d5", "e6"]
+

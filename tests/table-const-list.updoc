@@ -1,0 +1,31 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? [1, 2] + [3, 4]
+# value: [1, 2, 3, 4]
+
+XXX better print for the maker
+? __makeList
+# value: <a make-e-list>
+
+? __makeList :DeepFrozen
+# value: <a make-e-list>
+
+? [1, 2, 2].asMap()
+# value: [0 => 1, 1 => 2, 2 => 2]
+
+? [1, 2, 2].asKeys()
+# value: [1 => null, 2 => null]
+
+? [1, 2, 2].asSet()
+# value: [1, 2].asSet()
+
+? ["a", 'b', 3].last()
+# value: 3
+
+? ["a", ['b'], 3].__optUncall()
+# value: [<a make-e-list>, "run", ["a", ['b'], 3]]
+
+coercion
+  ? ['a', 'b'][def _ { to __conformTo(_) :any { return 1 }}]
+  # value: 'b'

@@ -1,0 +1,55 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? var xStore := 0
+# value: 0
+
+? var yStore := 0.0
+# value: 0.0
+
+? def autoPropObj {
+>   to getX() :any { return xStore }
+>   to setX(new) :void { xStore := new }
+>   to getY() :any { return yStore }
+> }
+# value: <autoPropObj>
+
+? def &xx := autoPropObj.__getPropertySlot("x")
+# value: _::&x
+
+? xx
+# value: 0
+
+? xx := 2
+# value: 2
+
+? xStore
+# value: 2
+
+? (&xx).isFinal()
+# value: false
+
+? def &yy := autoPropObj.__getPropertySlot("y")
+# value: _::&y
+
+? yy
+# value: 0.0
+
+? yy := 3.14
+# problem: No such method: __main$autoPropObj__C#setY/1
+
+? yStore := 3.14
+# value: 3.14
+
+? yy
+# value: 3.14
+
+XXX isFinal is being interpreted as 'cannot be set through this interface' by the miranda property slot impl - is that the intended definition of isFinal?
+? (&yy).isFinal()
+# value: true
+
+? autoPropObj.__getPropertySlot(43)
+# problem: the int 43 doesn't coerce to a String
+
+x ? autoPropObj.__getPropertySlot("name syntax test")
+x # value: _::&"name syntax test"

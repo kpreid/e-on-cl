@@ -1,0 +1,149 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+EProxyResolver/EProxyHandler, or at least our version thereof
+
+  ? def tk := <elib:tables.makeTraversalKey>
+  # value: <makeTraversalKey>
+
+--- Far Ref
+
+  ? var i := 0
+  # value: 0
+
+  ? def farHandler {
+  >   to handleSendAll(verb, args) :any {
+  >     println(`handleSendAll $verb $args`)
+  >     return [i += 1, verb, args]
+  >   }
+  >   to handleResolution(newTarget) :any {
+  >     println(`handleResolution $newTarget`)
+  >   }
+  > }
+  # value: <farHandler>
+
+The second argument to makeProxyResolver is the identity of the far reference, for which we use the farHandler itself for this test.
+
+  ? def farResolver := makeProxyResolver(farHandler, farHandler)
+  # value: <Proxy Resolver>
+  
+  ? def remote := farResolver.getProxy()
+  # value: <Far ref>
+  
+  ? remote.hi()
+  # problem: not synchronously callable
+  
+  ? pragma.enable("accumulator")
+  > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remote])) }
+  # value: [false, false, true, true, true, true, null]
+
+  ? def remoteKey := tk(remote)
+  # value: <key:<Far ref>>
+
+-- Send on Far ref
+
+  ? def firstResponse := remote <- first()
+  # value: <Promise>
+  
+  # stdout: handleSendAll first []
+  #         
+  
+Notice that even though the handler is written to resolve it immediately, the response remains a promise during the first turn. This is done deliberately so that E-implemented proxies cannot have synchronous effects during an E.send.
+
+  ? interp.waitAtTop(firstResponse)
+  
+  ? Ref.fulfillment(firstResponse)
+  # value: [1, "first", []]
+
+-- Breaking Far ref
+
+  ? [Ref.optProblem(remote), 
+  >  farResolver.smash("gone away"),
+  >  Ref.optProblem(remote)]
+  # stdout: handleResolution <ref broken by gone away>
+  #         
+  
+  # value: [null, null, "gone away"]
+
+XXX should breakage be not synchronously visible instead?
+  
+  ? remote <- msg()
+  # value: <ref broken by gone away>
+
+  confirm sameness as best we can
+  ? tk(remote) == remoteKey
+  # value: true
+
+(The synchronous visibility of <- on a broken reference is a separate issue, and works the same way for Ref.broken/1)
+
+--- Remote Promise
+  
+  ? def promiseHandler {}
+  # value: <promiseHandler>
+  
+  ? def promiseResolver := makeProxyResolver(promiseHandler, null)
+  # value: <Proxy Resolver>
+  
+  ? def remotePromise := promiseResolver.getProxy()
+  # value: <Promise>
+  
+  ? remotePromise.hi()
+  # problem: not synchronously callable
+  
+  ? pragma.enable("accumulator")
+  > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remotePromise])) }
+  # value: [false, false, true, false, false, false, null]
+
+--- Sameness of Far refs
+
+  ? def stubHandler {}
+  # value: <stubHandler>
+
+  different proxies, same identity
+  ? makeProxyResolver(stubHandler, def fi1 {}).getProxy() == makeProxyResolver(stubHandler, fi1).getProxy()
+  # value: true
+
+  different proxies, different identity
+  ? makeProxyResolver(stubHandler, fi1).getProxy() == makeProxyResolver(stubHandler, def fi2 {}).getProxy()
+  # value: false
+
+  different proxies, different instantiation of same Selfless identity
+  ? makeProxyResolver(stubHandler, [fi1]).getProxy() == makeProxyResolver(stubHandler, [fi1]).getProxy()
+  # value: true
+  
+  unresolved one
+  ? makeProxyResolver(stubHandler, null).getProxy() == makeProxyResolver(stubHandler, [fi1]).getProxy()
+  # problem: <InsufficientlySettledException: not sufficiently settled: <Promise> == <Far ref>>
+
+  unresolved both
+  ? makeProxyResolver(stubHandler, null).getProxy() == makeProxyResolver(stubHandler, null).getProxy()
+  # problem: <InsufficientlySettledException: not sufficiently settled: <Promise> == <Promise>>
+
+  unresolved-but-same
+  ? (def pr := makeProxyResolver(stubHandler, null)).getProxy() == pr.getProxy()
+  # value: true
+
+--- Odd cases
+
+  Unsettled argument
+
+  ? makeProxyResolver(stubHandler, Ref.promise())
+  # problem: <NotSettledException: not settled: optIdentity [<Promise>, <Resolver>]>
+  
+  Duplicate smash
+  
+  ? def resolver := makeProxyResolver(farHandler, farHandler)
+  # value: <Proxy Resolver>
+  
+  ? resolver.smash("foo")
+  # stdout: handleResolution <ref broken by foo>
+  #         
+  
+  ? resolver.smash("bar")
+  # problem: already resolved
+  
+
+XXX explicitly test hash code is preserved across breakage, so hash tables/TraversalKey etc. work
+XXX sends
+XXX optSealedDispatch/conformTo
+XXX resolution to near/other-promise targets

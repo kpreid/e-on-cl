@@ -1,0 +1,190 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Premises
+
+  ? def a {}
+  # value: <a>
+  
+  ? def b {}
+  # value: <b>
+  
+  ? __equalizer
+  # value: <equalizer>
+  
+Algorithm checking
+  
+  ? __equalizer.optSame(a, b)
+  # value: false
+  
+  ? __equalizer.optSame(a, a)
+  # value: true
+  
+  ? [1, 1000000000000000000001 - 1000000000000000000000]
+  # value: [1, 1]
+  
+  ? __equalizer.optSame(1, 1.0)
+  # value: false
+  
+  ? __equalizer.optSame(1, 1000000000000000000001 - 1000000000000000000000)
+  # value: true
+  
+  ? __equalizer.optSame([1], [1])
+  # value: true
+  
+  ? __equalizer.optSame([1], [2])
+  # value: false
+  
+  ? def unresolved := Ref.promise()[0]
+  # value: <Promise>
+  
+  ? [__equalizer.optSame(1, unresolved)]
+  # value: [null]
+  
+  ? [__equalizer.optSame(unresolved, unresolved)]
+  # value: [true]
+  
+  ? [__equalizer.optSame([unresolved], [unresolved])]
+  # value: [true]
+  
+  ? [__equalizer.optSame(unresolved, Ref.promise()[0])]
+  # value: [null]
+  
+  ? [__equalizer.optSame(def circle := [circle], def loop := [loop])]
+  # value: [true]
+  
+  ? [__equalizer.optSame(def circle := [1, [1, circle]], def loop := [1,  loop])]
+  # value: [true]
+  
+  ? [__equalizer.optSame('q', 'q')]
+  # value: [true]
+  
+  ? [__equalizer.optSame('q', 'w')]
+  # value: [false]
+  
+  ? "a" + "bc"
+  # value: "abc"
+  
+  ? [__equalizer.optSame("abc", "a" + "bc")]
+  # value: [true]
+  
+  ? [__equalizer.optSame(['a', 'b', 'c'], "a" + "bc")]
+  # value: [false]
+
+User-level conveniences etc.  We assume that they derive from optSame properly.
+
+sameEver
+  
+  ? 1 == 1
+  # value: true
+  
+  ? 1 == 2
+  # value: false
+  
+  ? 1 == unresolved
+  # problem: <InsufficientlySettledException: not sufficiently settled: 1 == <Promise>>
+  
+  ? a == unresolved
+  # problem: <InsufficientlySettledException: not sufficiently settled: <a> == <Promise>>
+
+sameYet
+  
+  ? __equalizer.sameYet(1, 1)
+  # value: true
+  
+  ? __equalizer.sameYet(1, 2)
+  # value: false
+  
+  ? __equalizer.sameYet(1, unresolved)
+  # value: false
+
+TraversalKey
+
+  ? def makeTraversalKey := <elib:tables.TraversalKey>
+  # value: <makeTraversalKey>
+  
+  ? def k83 := makeTraversalKey(83)
+  # value: <key:83>
+  
+  ? def k84 := makeTraversalKey(84)
+  # value: <key:84>
+  
+  ? k84 == k84
+  # value: true
+  
+  ? k84 == k83
+  # value: false
+  
+  ? k83 == 83
+  # value: false
+  
+  ? k83 == makeTraversalKey(83)
+  # value: true
+  
+  ? makeTraversalKey(unresolved) == k84
+  # value: false
+  
+  ? makeTraversalKey(unresolved) == makeTraversalKey(unresolved)
+  # value: true
+  
+  ? makeTraversalKey([unresolved, 5]) == makeTraversalKey([unresolved, 5])
+  # value: true
+  
+  ? makeTraversalKey([unresolved, 5]) == makeTraversalKey([unresolved, 6])
+  # value: false
+
+PassByCopy
+
+  ? a :PassByCopy
+  # problem: not PassByCopy: <a>
+
+  ? 1 :PassByCopy
+  # value: 1
+  
+  ? [1,2,any] :PassByCopy
+  # value: [1, 2, any]
+  
+  ? any :PassByCopy
+  # problem: not PassByCopy: any
+
+Making sure that the sameness algorithm doesn't fail for lack of settledness if it doesn't need to:
+
+ Premises
+  ? def al := [1, 2, 3]
+  # value: [1, 2, 3]
+  
+  ? def p
+  # value: <Resolver>
+  
+ Different length of uncall list is sufficient
+  ? al == [1, 2, 3, p]
+  # value: false
+  
+ -- from beginning or end
+  ? al == [p, 2, 3, 4]
+  # value: false
+
+ Promise doesn't require failure, if other elements are different '
+  ? al == [p, 2, 4]
+  # value: false
+  
+ -- but if they're the same, do fail '
+  ? al == [p, 2, 3]
+  # problem: <InsufficientlySettledException: not sufficiently settled: [1, 2, 3] == [<Promise>, 2, 3]>
+
+
+sameness of UnconnectedRefs
+
+  xxx expect this to change later
+  ? def Exception := <type:java.lang.Exception>
+  # value: Throwable
+
+  ? def p := "blip" :Exception
+  # value: problem: blip
+  
+  ? Ref.broken(p) == Ref.broken(p)
+  # value: false
+  
+  should this be true?
+  x ? p == "blip" :Exception
+  x # value: true

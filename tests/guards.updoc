@@ -1,0 +1,339 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.enable("accumulator")
+  > def testGuardMany(things, Thing) :any {
+  >   return accum [] for thing :Thing in things { _.with(thing) }
+  > }
+  # value: <testGuardMany>
+
+__makeGuard
+
+  ? __makeGuard
+  # value: <makeBaseGuard>
+  
+  ? def testGuard extends __makeGuard(testGuard) {
+  >   to coerce(specimen, optEjector) :any {
+  >     return switch (specimen) {
+  >       match ==1 { return specimen }
+  >       match x ? x >= 2 { return 2 }
+  >       match _ { throw.eject(optEjector, "nope") }
+  >     }
+  >   }
+  > }
+  # value: <testGuard>
+
+  ? testGuard[]
+  # value: List[<testGuard>]
+
+  ? testGuardMany(-1..3, testGuard)
+  # value: [1, 2, 2]
+
+  ? testGuardMany(-1..3, !testGuard)
+  # value: [-1, 0]
+
+  ? testGuard.accepts(0)
+  # value: false
+
+  ? testGuard.accepts(1)
+  # value: true
+
+  ? testGuard.accepts(2)
+  # value: true
+
+  ? testGuard.coerce(1)
+  # value: 1
+  
+  ? testGuard.coerce(0)
+  # problem: nope
+
+any
+
+  ? any
+  # value: any
+  
+  ? any[int, float64]
+  # value: any[int, float64]
+  
+  ? any[]
+  # value: List[any]
+
+void
+
+  ? void
+  # value: void
+  
+  ? void :DeepFrozen
+  # value: void
+  
+  XXX void-coerces-anything property
+  XXX void has BaseGuard methods
+
+near
+XXX test with far refs (eventual resolved)
+
+  ? near
+  # value: near
+  
+  ? {def t :near := 1; t}
+  # value: 1
+  
+  ? {def t :near := def x {}; t}
+  # value: <x>
+  
+  ? {def t :near := Ref.promise()[0]; t}
+  # problem: must be near
+  
+vow
+
+  ? vow
+  # value: vow
+  
+  XXX more tests (we're using existing vow.emaker, so we assume for now it's correct)
+  
+nullOk base
+
+  ? nullOk
+  # value: nullOk
+  
+  ? {def t :nullOk := 1; t}
+  # problem: must be null
+  
+  ? [{def t :nullOk := null; t}]
+  # value: [null]
+  
+  nullOk will not transform
+  ? {def t :nullOk := def _ { to __conformTo(_) :any {} }; t}
+  # problem: must be null
+  
+  ? [nullOk.getTheTrivialValue()]
+  # value: [null]
+  
+nullOk parameterized
+
+  ? nullOk[float64]
+  # value: nullOk[float64]
+  
+  ? {def t :nullOk[float64] := 3254.5; t}
+  # value: 3254.5
+  
+  ? [{def t :nullOk[float64] := null; t}]
+  # value: [null]
+  
+  nullOk[...] will not transform null (is this correct behavior?)--
+  ? {def t :nullOk[float64] := def _ { to __conformTo(_) :any {} }; t}
+  # problem: the "__main$_" <_> doesn't coerce to a float64
+  
+  --but its subguard may coerce
+  ? {def t :nullOk[float64] := 144; t}
+  # value: 144.0
+  
+boolean
+
+  ? boolean
+  # value: boolean
+  
+  ? testGuardMany([false, true, 1, 0, 42,  def _ { to __conformTo(_) :any {true} }], boolean)
+  # value: [false, true, true]
+  
+  ? boolean.getTheTrivialValue()
+  # value: false
+  
+  XXX more tests
+  XXX should this be a space?
+
+ test that native guards don't throw on nonnear refs '
+ 
+  ? testGuardMany([Ref.promise()[0]], boolean)
+  # value: []
+
+char
+
+  ? char
+  # value: char
+  
+  XXX more tests
+  XXX is a space
+
+int
+
+  ? int
+  # value: int
+
+ (indirectly) check that int is a space
+ 
+  ? int + 3
+  # value: (int + 3)
+  
+  ? int.getTheTrivialValue()
+  # value: 0
+
+float64
+
+  ? float64
+  # value: float64
+  
+  ? float64.getTheTrivialValue()
+  # value: 0.0
+  
+  XXX more tests
+  XXX is a space
+
+String
+
+  ? String
+  # value: String
+  
+ check that builtinType[] works. 
+ 
+  ? String[]
+  # value: List[String]
+  
+  XXX more tests
+
+Guard
+
+  ? Guard
+  # value: Guard
+  
+  XXX more tests
+
+Twine
+
+  ? Twine
+  # value: Twine
+  
+  XXX more tests
+
+notNull
+
+  ? notNull
+  # value: notNull
+  
+  notNull comes from a standard .emaker so we need not test it here
+    XXX make sure it has its own tests
+
+Tuple
+
+  ? Tuple
+  # value: Tuple
+  
+  ? Tuple[any]
+  # value: Tuple[any]
+  
+  ? testGuardMany([["one", 1], ["two", 2.2], ["three"], ["four", 4.0, 4], [5.0, 6.3]], Tuple[String, float64])
+  # value: [["one", 1.0], ["two", 2.2]]
+
+  ? [] :Tuple[any]
+  # problem: Need 1 element list: []
+
+  ? [1, 2] :Tuple[any]
+  # problem: Need 1 element list: [1, 2]
+
+  ? 44 :Tuple[any]
+  # problem: the int 44 doesn't coerce to a ConstList
+
+  ? "44" :Tuple[any]
+  # problem: Need 1 element list: "44"
+
+__Portrayal
+
+  ? __Portrayal
+  # value: Tuple[any, String, List[any]]
+  
+List
+
+  ? List
+  # value: List
+
+  ? {def t :List[float64] := [1, 2.0, 3.4]; t}
+  # value: [1.0, 2.0, 3.4]
+  
+  XXX This is Java-E behavior - is it appropriate? If it were coerced to true list instead, we would have the invariant that anything which passes the List guard is == iff its elements are. As it is, "a" != ['a']
+  
+  ? "abc" :List
+  # value: "abc"
+  
+  ? "a" != ['a']
+  # value: true
+
+Map
+
+  ? Map
+  # value: Map
+  
+  ? testGuardMany([[], [].asMap(), [].asMap().diverge(), [1=>2]], Map)
+  # value: [[].asMap(), [1 => 2]]
+
+  ? Map[float64, int]
+  # value: Map[float64, int]
+  
+  ? testGuardMany([[], [].asMap(), [].asMap().diverge(), [1=>2], [3 => "four"]], Map[float64, int])
+  # value: [[].asMap(), [1.0 => 2]]
+  
+  
+ XXX conformTo for specimens
+ XXX conformTo primitive guard
+
+ValueGuard
+
+  ? ValueGuard
+  # value: ValueGuard
+  
+  ? any :ValueGuard
+  # value: any
+
+Union guards
+
+  ? int | float64
+  # value: any[int, float64]
+  
+  ? int | float64 | char
+  # value: any[int, float64, char]
+  
+  ? testGuardMany(["a", 'b', 3, 4.0], float64 | char)
+  # value: ['b', 3.0, 4.0]
+  
+  ? any[float64, char]
+  # value: any[float64, char]
+  
+  test that union guard has BaseGuard methods
+  ? (float64 | char)[]
+  # value: List[any[float64, char]]
+
+Intersection guards
+
+  ? def Point := Tuple[any, any] & List[float64]
+  # value: all[Tuple[any, any], List[float64]]
+
+  ? testGuardMany(["ab", [1, 2], [3.0, 4.0], 5, "six", [7.7, 8]], Point)
+  # value: [[1.0, 2.0], [3.0, 4.0], [7.7, 8.0]]
+  
+  test that intersection guard has Guard methods
+  ? Point[]
+  # value: List[all[Tuple[any, any], List[float64]]]
+
+Negated guards
+
+  Assuming everything uses __makeGuard, testGuard above has tested the actual functionality of baseGuard#not (this file needs a better organization) and this is for print checking
+  ? !int
+  # value: !(int)
+  
+
+ButNot guards
+
+  NOTE: this test depends on the questionable behavior of the ListGuard passing strings without coercing them to list-of-char.
+  ? List &! String
+  # value: all[List, !(String)]
+  
+Xor guards
+  
+  XXX should we expect a specialized guard?
+  XXX N-ary xor?
+  ? testGuard ^ (int < 2)
+  # value: any[all[<testGuard>, (int >= 2)], all[!(<testGuard>), (int < 2)]]
+  
+  ? testGuardMany(-1..3, testGuard ^ (int < 2))
+  # value: [-1, 0, 2, 2]
+
+XXX trivial values for all Java unboxable types

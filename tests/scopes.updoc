@@ -1,0 +1,144 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Outer scope methods part 1.
+
+ getFQNPrefix/0
+
+  ? safeScope.getFQNPrefix()
+  # value: "__safe$"
+  
+ withPrefix/1
+  
+  ? safeScope.withPrefix("the.quick.brown.fox$").getFQNPrefix()
+  # value: "the.quick.brown.fox$"
+
+making scopes
+
+  ? var x := 22
+  # value: 22
+
+  ? def makeScope := <elang:scope.makeScope>
+  # value: <makeScope>
+
+  ? makeScope.asType()
+  # value: Scope
+  
+  ? makeScope.asType() == <type:org.erights.e.elang.scope.Scope>
+  # value: true
+
+  ? def aScope := makeScope.fromState(["false" => false, "&y" => &x], "testScope$")
+  # value: <scope testScope$>
+  
+  Not supported: run/2 outer/2
+  XXX asSlottedState, asMixedState
+  
+Outer scope methods part 2, and checking that aScope has the expected contents.
+
+ checking fromState
+
+  ? aScope.getFQNPrefix()
+  # value: "testScope$"
+  
+ get/1, checking fromState
+  
+  ? aScope["false"] == false
+  # value: true
+  
+ getSlot/1, checking slot state
+  
+  ? [aScope["y"] == x, aScope.getSlot("y") == &x]
+  # value: [true, true]
+  
+  ? [x *= x, aScope["y"]]
+  # value: [484, 484]
+  
+ iterate/1
+ 
+  ? for k => v in aScope { println(`$v <= $k`) }
+  # stdout: <& false> <= &false
+  #         <var 484> <= &y
+  #         
+
+ maps/1
+  
+  ? [aScope.maps("y"), aScope.maps("z")]
+  # value: [true, false]
+  
+ fetch/2
+ 
+  ? aScope.fetch("y", thunk {print("fail"); 11})
+  # value: 484
+  
+  ? aScope.fetch("z", thunk {print("fail"); 11})
+  # stdout: fail
+  
+  # value: 11
+  
+ getState/0
+ 
+  ? aScope.getState()
+  # value: ["&false" => <& false>, "&y" => <var 484>]
+  
+ put/2
+  
+  ? [aScope["y"] //= 2, x]
+  # value: [242, 242]
+  
+  XXX nestOuter/0 bindings/0 bindings/1
+  Not supported: newContext/1 getScopeLayout/0 update/1
+
+ or/1
+ 
+  XXX write regular tests - this is just because I found that a ref-shorten/coerce was missing
+  ? def p; bind p := safeScope; safeScope | p
+  # value: <scope __safe$>
+  
+ selflessness
+ 
+  ? aScope :PassByCopy
+  # value: <scope testScope$>
+  
+  ? aScope.__optUncall()
+  # value: [<makeScope>, "fromState", [["false" => false, "&y" => <var 242>], "testScope$"]]
+  
+  XXX test proper uncall of a binding whose noun is ::"&foo"
+  XXX test that a scope with bindings overridden via with/or/eval only produces one map entry
+
+--- Making safe-scopes
+
+This is for creating a scope with the usual safeScope structure but with different underlying objects; for example <elang> in the new scope would always be based on <import> in that scope.
+
+  xxx does this truly belong in prim?
+  ? def makeSafeScope := <import:org.cubik.cle.prim.makeSafeScope>
+  # value: <native function E.KNOT:MAKE-SAFE-SCOPE>
+  
+  ? def altImport := [
+  >   "org.erights.e.elib.eio.EIO" => def altEIO {}
+  > ]
+  # value: ["org.erights.e.elib.eio.EIO" => <altEIO>]
+  
+  ? def ss := makeSafeScope("altSafe$", makeScope.fromState([
+  >   "import__uriGetter" => altImport
+  > ], ""))
+  # value: <scope altSafe$>
+  
+  EIO is dependent on <import>
+  ? ss["EIO"]
+  # value: <altEIO>
+
+--- Making IO-scopes
+
+  ScopeSetup is an excessively ambient interface. I hope to deprecate it.
+  ? def scopeSetup := <unsafe:org.erights.e.elang.interp.ScopeSetup>
+  # value: <makeScopeSetup>
+  
+  ? def anIOScope := scopeSetup.privileged("testiing$", stdout, stderr, [].asMap(), def anInterp {}, null)
+  # value: <scope testiing$>
+  
+  ? anIOScope["interp"] == anInterp
+  # value: true
+
+XXX write tests for the cl-e makeIOScope which is what ScopeSetup is based on
+
+XXX nestOuter constraint

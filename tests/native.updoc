@@ -1,0 +1,87 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? lisp
+# value: <lisp>
+
+? def timerSym := lisp["E.EXTERN", "+THE-TIMER+"]
+# value: <E.EXTERN:+THE-TIMER+>
+
+x ? timerSym == lisp["e.extern:+the-timer+"]
+x # value: true
+x 
+x ? lisp["and"]
+x # value: <COMMON-LISP:AND>
+
+? lisp["foo", "and"]
+# problem: the package "foo" does not exist
+
+? lisp["CL", "and"]
+# problem: the symbol "and" does not exist in "CL"
+
+? lisp["CL", "AND"]
+# value: <AND>
+
+x ? lisp["cl-user:and"]
+x # value: <COMMON-LISP:AND>
+
+XXX interning/non-interning
+XXX non-external symbols
+
+symbol-value
+
+  ? [def v := timerSym.getValue(), v == timer]
+  # value: [<a Timer>, true]
+  
+symbol-function
+
+  ? def makeSymbolSym := lisp["CL", "MAKE-SYMBOL"]
+  # value: <MAKE-SYMBOL>
+  
+  ? def makeSymbol := makeSymbolSym.getFunction(); null
+
+  lenient print check  
+  ? [if (E.toQuote(makeSymbol) !~ `<native function @_MAKE-SYMBOL@_>`) {makeSymbol}]
+  # value: [null]
+  
+  ? def freshSymbol := makeSymbol("HELLO-WORLD")
+  # value: #:HELLO-WORLD
+  
+  returned values are *not* altered - XXX function-is-object-or-function issue?
+  ? freshSymbol.__respondsTo("getValue", 0)
+  # value: false
+  
+  for multiple-value functions - XXX write a test that shows this
+  ? makeSymbol.tuple("FOO")
+  # value: [#:FOO]
+  
+  ? makeSymbol.__respondsTo("run", 1)
+  # value: true
+
+  ? makeSymbol.__respondsTo("tuple", 1)
+  # value: true
+  
+  ? makeSymbol.__respondsTo("run", 10)
+  # value: false
+
+  ? makeSymbol.__respondsTo("someRandomVerb", 1)
+  # value: false
+
+ __respondsTo on more complex lambda lists
+ 
+  ? for i in 0..3 {
+  >   println(lisp["CL", "INTERN"].getFunction().__respondsTo("run", i))
+  > }
+  # stdout: false
+  #         true
+  #         true
+  #         false
+  #         
+
+  ? lisp["CL", "LIST"].getFunction().__respondsTo("run", 0)
+  # value: true
+  
+  ? lisp["CL", "LIST"].getFunction().__respondsTo("run", 100)
+  # value: true
+
+XXX alleged type of CL functions

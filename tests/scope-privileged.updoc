@@ -1,0 +1,118 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+privilegedScope
+
+  ? privilegedScope["println"]
+  # value: <println>
+
+<unsafe>
+
+  ? <unsafe>
+  # value: <unsafe:*>
+  
+  ? <unsafe:org.example.nonexistent>
+  # problem: <unsafe:*> can't find "org.example.nonexistent"
+
+DeepFrozenStamp
+  
+  ? DeepFrozenStamp
+  # value: <DeepFrozenStamp>
+  
+SelflessStamp
+
+  ? SelflessStamp
+  # value: <SelflessStamp>
+
+  ? def makeCell(arg) :any { 
+  >   return def cell implements SelflessStamp {
+  >     to __optUncall() :any { return [makeCell, "run", [arg]] }
+  >     to run() :any { return arg }
+  >   }
+  > }
+  # value: <makeCell>
+  
+  ? def ss_a := makeCell("a")
+  # value: <cell>
+
+  ? def ss_aa := makeCell("a")
+  # value: <cell>
+  
+  ? ss_a == ss_aa
+  # value: true
+  
+  ? ss_a == makeCell("b")
+  # value: false
+
+ Check that Equalizer can handle recursive == due to uncall properly
+ 
+  ? def makeCell2(option) :any { 
+  >   def value := option.pick(1, 0)
+  >   return def cell implements SelflessStamp {
+  >     to __optUncall() :any { return [makeCell2, "run", [value == 1]] }
+  >     to run() :any { return value }
+  >   }
+  > }
+  # value: <makeCell2>
+
+  ? makeCell2(true) == makeCell2(true)
+  # value: true
+
+  ? makeCell2(true) == makeCell2(false)
+  # value: false
+
+interp
+
+  ? interp
+  # value: <defaultInterp>
+  
+  XXX more specific tests
+  ? interp.getProps() :Map; null
+
+rune
+
+  ? rune; null
+  x # value: <rune>
+  
+<file>
+
+ root
+
+  ? <file>
+  # value: <file:///>
+  
+  ? <file>.getPath()
+  # value: "/"
+  
+ a directory
+  
+  ? def home := <file: interp.getProps()["e.home"]>; null
+
+ a file in the directory
+  
+  ? def runeScriptFile := home["clrune"]; null
+
+  check print  
+  ? def `<file:///@homeFragment/clrune>` := E.toQuote(runeScriptFile); null
+  
+  ? runeScriptFile.getPath().replaceAll(homeFragment, "<home>")
+  # value: "/<home>/clrune"
+  
+  ? runeScriptFile.getTwine().split("\n")[0]
+  # value: "#!/bin/sh"
+
+ directory listing
+ 
+  ? for name => subfile in home["jlib"] { 
+  >   println(`$name ${E.toQuote(subfile).replaceAll(homeFragment, "<home>")}`) }
+  # stdout: parseEToSExpression.emaker <file:///<home>/jlib/parseEToSExpression.emaker>
+  #         
+  
+  XXX
+    basics: get subdirs, getText/getTwine of contents, iteration
+  
+    all file operations
+    all dir operations
+    path construction is independent of current filesystem state
+
+  XXX we need to test writing, but it'd be difficult to test in a harmless way - if it can't affect anything then it's not working with the 'real' filesystem interface code, unless we're on a cap-OS, which is unlikely '

@@ -1,0 +1,93 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? 1 <- add(2)
+# value: <Promise>
+
+? def r := 1 <- add(2)
+# value: <Promise>
+
+? [interp.waitAtTop(r)]
+# value: [null]
+
+? r
+# value: 3
+
+? def x := x
+# value: <ref broken by problem: <ViciousCycleException: Ref loop>>
+
+? def r := 1 <- add(2) <- add(3)
+# value: <Promise>
+
+? [interp.waitAtTop(r)]
+# value: [null]
+
+? r
+# value: 6
+
+? def r := 1 <- boom()
+# value: <Promise>
+
+? [interp.waitAtTop(r)]
+# value: [null]
+
+? Ref.isBroken(r)
+# value: true
+
+XXX tests for coercion of E#send arguments
+
+Ref#whenResolved/2
+
+  updoc stdout from 'background' turns is not reliable
+  ? var out := ""; def report() :void { print(out); out := "" }
+  # value: <report>
+
+  ? def v
+  # value: <Resolver>
+  
+  ? def testDone := Ref.whenResolved(v, def _(vv) :void { out += ` 1. $v -> $vv` })
+  # value: <Promise>
+  
+  ? bind v := 0; interp.waitAtTop(testDone)
+  
+  ? report()
+  # stdout:  1. 0 -> 0
+  
+  ? def doubleBouncer { 
+  >   to __whenMoreResolved(r) :void { 
+  >     r <- (doubleBouncer)
+  >     r <- (doubleBouncer)
+  >   }
+  > }
+  # value: <doubleBouncer>
+  
+  ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (doubleBouncer), def _(vv) :void { out += ` 2. $doubleBouncer -> $vv` }))
+  
+  ? report()
+  # stdout:  2. <doubleBouncer> -> <doubleBouncer>
+  
+  ? def redirector {
+  >   to __whenMoreResolved(r) :void {
+  >     r <- (43)
+  >   }
+  > }
+  # value: <redirector>
+  
+ ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (redirector), def _(vv) :void { out += ` 3. $redirector -> $vv` }))
+ 
+ ? report()
+ # stdout:  3. <redirector> -> <redirector>
+  
+  ? def doubleRedirector {
+  >   to __whenMoreResolved(r) :void {
+  >     r <- (redirector)
+  >   }
+  > }
+  # value: <doubleRedirector>
+  
+ ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (doubleRedirector), def _(vv) :void { out += ` 4. $doubleRedirector -> $vv` }))
+ 
+ ? report()
+ # stdout:  4. <doubleRedirector> -> <doubleRedirector>
+  
+  

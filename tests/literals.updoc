@@ -1,0 +1,150 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? "abcdeffedcbaabcdeffedcba".lastIndexOf1('c')
+# value: 21
+
+? "abcdeffedcbaabcdeffedcba".lastIndexOf1('g')
+# value: -1
+
+? "abcdeffedcbaabcdeffedcba".indexOf1('f')
+# value: 5
+
+? "the quick brown fox"(4, 9)
+# value: "quick"
+
+? "the quick brown fox"(10)
+# value: "brown fox"
+
+? "abcdeffedcbaabcdeffedcba".size()
+# value: 24
+
+? "abcdeffed".startsWith("abcdef")
+# value: true
+
+? "abcdeffed".startsWith("def")
+# value: false
+
+? "abcdeffed".startsWith("foo")
+# value: false
+
+? "foo".startsWith("abcdeffed")
+# value: false
+
+? "foo".startsWith("food")
+# value: false
+
+? "abcdeffed".endsWith("ffed")
+# value: true
+
+? "abcdeffed".endsWith("def")
+# value: false
+
+? "abcdeffed".endsWith("feed")
+# value: false
+
+? "fed".endsWith("abcdeffed")
+# value: false
+
+? "ood".endsWith("food")
+# value: false
+
+XXX this should be general EList test, and check coercion, element type, etc
+  ? "abcd112efg12h1ijklm122".lastStartOf("12")
+  # value: 19
+  
+  ? "abcd112efg12h1ijklm122".lastStartOf("111")
+  # value: -1
+  
+  ? "abcd112efg12h1ijklm122".startOf("12")
+  # value: 5
+  
+  ? "abcd112efg12h1ijklm122".startOf("111")
+  # value: -1
+  
+  ? "".size()
+  # value: 0
+  
+  ? " ".size()
+  # value: 1
+
+String#replaceAll/2
+
+  ? "a".replaceAll("a", "b")
+  # value: "b"
+
+  ? "a".replaceAll("a", "bb")
+  # value: "bb"
+
+  ? "abc".replaceAll("b", "c")
+  # value: "acc"
+
+  ? "babcb".replaceAll("b", "c")
+  # value: "caccc"
+
+  ? "abcba".replaceAll("b", "!_!")
+  # value: "a!_!c!_!a"
+
+  ? "a".replaceAll("", "b")
+  # problem: replaceAll: search string may not be empty
+
+  ? "".replaceAll("a", "b")
+  # value: ""
+
+  ? "foobarbarbarfoof".replaceAll("bar", "qx")
+  # value: "fooqxqxqxfoof"
+
+split
+
+  ? "".split("<>")
+  # value: [""]
+
+  ? "abc".split("<>")
+  # value: ["abc"]
+
+  ? "abc<>def".split("<>")
+  # value: ["abc", "def"]
+
+  ? "<>abc<>".split("<>")
+  # value: ["", "abc", ""]
+
+String#add/1
+
+  ? "ab" + "bc"
+  # value: "abbc"
+  
+  ? "ab" + 10
+  # value: "ab10"
+  
+  ? "ab" + ["cd"]
+  # value: "ab[\"cd\"]"
+
+? E.toString('a')
+# value: "a"
+
+? E.toQuote('a')
+# value: "'a'"
+
+? 44.previous()
+# value: 43
+
+? 44.next()
+# value: 45
+
+? 253.min(18)
+# value: 18
+
+? 33 :DeepFrozen
+# value: 33
+
+? 38823752358143578936745893267458923047892347891234789324 :DeepFrozen
+# value: 38823752358143578936745893267458923047892347891234789324
+
+? "abc" :DeepFrozen
+# value: "abc"
+
+? 'a' :DeepFrozen
+# value: 'a'
+
+? 1.0 :DeepFrozen
+# value: 1.0

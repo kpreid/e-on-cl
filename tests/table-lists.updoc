@@ -1,0 +1,41 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? ['a'] * 2
+  # value: ['a', 'a']
+  
+  ? [44, "45"].snapshot()
+  # value: [44, "45"]
+
+  ? def fl := [44, "45"].diverge()
+  # value: [44, "45"].diverge()
+  
+  ? fl.push(null)
+  
+  ? fl
+  # value: [44, "45", null].diverge()
+  
+  ? fl.size()
+  # value: 3
+  
+  ? fl[0]
+  # value: 44
+  
+  ? fl[def _{to __conformTo(_) :any { return 1 }}]
+  # value: "45"
+  
+  ? fl["45"]
+  # problem: the String "45" doesn't coerce to an int
+  
+  ? def cfl := fl.snapshot()
+  # value: [44, "45", null]
+
+  ? fl.push(2)
+  
+  ? cfl
+  # value: [44, "45", null]
+
+  ? def FlexList := <type:org.erights.e.elib.tables.FlexList>
+  # value: FlexList
+  
+  XXX more FlexList guard tests

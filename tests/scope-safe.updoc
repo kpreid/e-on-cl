@@ -1,0 +1,90 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+import
+  
+  ? <import>
+  # value: <import:*>
+  
+  ? def allOf := <import:org.erights.e.tools.collect.allOf>
+  # value: <allOf>
+  
+  ? allOf([1, 2, 3], def _(x) :any {return x < 4})
+  # value: true
+  
+  ? def eLoader := <import:org.erights.e.*>
+  # value: <import:org.erights.e.*>
+  
+  ? eLoader["tools.collect.allOf"]
+  # value: <allOf>
+  
+  ? <import> :DeepFrozen
+  # value: <import:*>
+  
+  ? <import>.fetch("org.erights.e.tools.collect.allOf", thunk {throw("bang")})
+  # value: <allOf>
+  
+  ? <import>.fetch("a.fqn.with.no.referent", thunk {throw("bang")})
+  # problem: bang
+  
+ DeepFrozen importing
+ 
+  we're assuming that allOf can be used as an example of non-deep-frozen import '
+  ? allOf == <import:org.erights.e.tools.collect.allOf>
+  # value: false
+  
+  ? <elib:slot.makeBaseGuard> == <elib:slot.makeBaseGuard>
+  # value: true
+
+ Uncall/unget
+ 
+  ? [<import>.optUncall(53)]
+  # value: [null]
+
+  ? [<import>.optUncall(<elang:evm.NounExpr>)]
+  # value: [[<import:*>, "get", ["org.erights.e.elang.evm.NounExpr"]]]
+  
+  ? [<import>.optUnget(<elang:evm.NounExpr>)]
+  # value: ["org.erights.e.elang.evm.NounExpr"]
+  
+  XXX uncall/unget on package loaders
+  XXX uncall of all varieties of subloaders
+
+<elib>, <elang>
+
+  ? <elib>
+  # value: <import:org.erights.e.elib.*>
+
+  ? <elang>
+  # value: <import:org.erights.e.elang.*>
+
+see ref.updoc for Ref
+
+<type>
+
+  ? <type>
+  # value: <type:*>
+  
+  ? <type:org.erights.e.elib.serial.Uncaller>
+  # value: Uncaller
+
+<opaque>
+
+  ? <opaque>
+  # value: <opaque__uriGetter0>
+            
+  ? <opaque:foo>
+  # value: <ref broken by problem: opaque:foo>
+            
+  ? <opaque>.optUncall(<import>)
+  # value: [<opaque__uriGetter0>, "get", ["import:*"]]
+
+safeScope
+  
+  ? safeScope["int"]
+  # value: int
+  
+  ? safeScope.with("pi", 3.14159)["pi"]
+  # value: 3.14159
+
+XXX scope#get/1 with funny/nonexistent keys

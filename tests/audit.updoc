@@ -1,0 +1,204 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+auditors actually invoked
+
+  ? var timesCalled := 0
+  # value: 0
+  
+  ? def approver {
+  >   to audit(objectExpr, witness) :any {
+  >     timesCalled += 1
+  >     return true
+  >   }
+  > }
+  # value: <approver>
+  
+  ? def auditSample implements approver {
+  > }
+  # value: <auditSample>
+  
+  ? timesCalled
+  # value: 1
+  
+objectExpr
+
+  ? def exprTest {
+  >   to audit(objectExpr, witness) :any {
+  >     print(objectExpr.getDocComment())
+  >     return false
+  >   }
+  > }
+  # value: <exprTest>
+
+  ? /** the quick brown fox */
+  > def x1 implements exprTest {  
+  >   to __printOn(out :TextWriter) :void {
+  >     out.print("jumped over the lazy dog")
+  >   }
+  > }
+  # stdout: the quick brown fox
+
+  # value: jumped over the lazy dog
+
+__auditedBy
+
+  ? __auditedBy
+  # value: __auditedBy
+  
+  ? __auditedBy(approver, 1)
+  # value: false
+  
+  ? __auditedBy(approver, auditSample)
+  # value: true
+
+  ? __auditedBy(x1, exprTest)
+  # value: false
+
+check that an intervening near ref doesn't interfere '
+
+  ? {def r; bind r := auditSample; __auditedBy(approver, r)}
+  # value: true
+
+auditor that returns false
+
+  ? def noop {
+  >   to audit(objectExpr, witness) :boolean {
+  >     return false
+  >   }
+  > }
+  # value: <noop>
+  
+  ? __auditedBy(noop, def x5 implements noop {})
+  # value: false
+
+auditor that returns funny value
+
+  ? def brokenAuditor {
+  >   to audit(objectExpr, witness) :boolean {
+  >     return 43
+  >   }
+  > }
+  # value: <brokenAuditor>
+  
+  ? def x7 implements brokenAuditor {}
+  # problem: the int 43 doesn't coerce to a boolean
+
+matcher can't see audit '
+
+  ? def x2 {
+  >   match msg {
+  >     println(msg)
+  >     43
+  >   }
+  > }
+  # value: <x2>
+  
+  ? __auditedBy(approver, x2)
+  # value: false
+
+plumbing can't see audit '
+
+  ? def x6 match msg { println(msg); E.callWithPair(auditSample, msg) }; null
+  
+  ? x6.__getAllegedType()
+  # stdout: ["__getAllegedType", []]
+  #         
+  
+  # value: AuditSample
+  
+  ? __auditedBy(approver, x6)
+  # value: false
+
+e[-named]-lambda can't see audit '
+
+  ? __auditedBy(approver, __loop)
+  # value: false
+
+witness.ask
+
+  ? def delegatingAuditor {
+  >   to audit(objectExpr, witness) :boolean {
+  >     witness.ask(approver)
+  >     return false
+  >   }
+  > }
+  # value: <delegatingAuditor>
+  
+  ? def x3 implements delegatingAuditor {}
+  # value: <x3>
+  
+  ? __auditedBy(delegatingAuditor, x3)
+  # value: false
+  
+  ? __auditedBy(approver, x3)
+  # value: true
+
+witness.getSlot
+
+  ? def slotCheckingAuditor {
+  >   to audit(objectExpr, witness) :boolean {
+  >     # NOTE: In a similar auditor attempting to actually prove security properties, we would check if x is a true FinalSlot or itself DeepFrozen.
+  >     if (witness.getSlot("x").getValue() == 2) {
+  >       return true
+  >     } else {
+  >       throw("Bad!")
+  >     }
+  >   }
+  > }
+  # value: <slotCheckingAuditor>
+  
+  ? {def x := 1; def x4 implements slotCheckingAuditor {}}
+  # problem: Bad!
+  
+  ? {def x := 2; def x5 implements slotCheckingAuditor {}}
+  # value: <x5>
+
+
+--- check that auditor can't be asked after the object is constructed '
+
+  ? def capturedWitness
+  # value: <Resolver>
+  
+  ? def captureAuditor {
+  >   to audit(_, bind capturedWitness) :any {
+  >     print(capturedWitness)
+  >     return true
+  >   }
+  > }
+  # value: <captureAuditor>
+
+  ? capturedWitness
+  # value: <Promise>
+
+  ? def exampleObject implements captureAuditor { }
+  # stdout: <Witness for a __main$exampleObject__C>
+  
+  # value: <exampleObject>
+  
+  ? capturedWitness
+  # value: <closed Witness for a __main$exampleObject__C>
+
+  ? __auditedBy(approver, exampleObject)
+  # value: false
+  
+  ? capturedWitness.ask(approver)
+  # problem: <closed Witness for a __main$exampleObject__C> is out of scope
+  
+  ? __auditedBy(approver, exampleObject)
+  # value: false
+  
+ not actually related, but using a handy witness object
+ 
+  ? help(capturedWitness)
+  # value: interface "org.erights.e.elang.evm.AuditWitness" {
+  #            /** Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor */
+  #            to ask(::"other-auditor")
+  #            /** Returns the named slot in the audited object's lexical scope.
+  #            
+  #            XXX This is an excessively large authority and will probably be replaced. */
+  #            to getSlot(::"slot-name")
+  #        }
+
+xxx specific test for objectExpr being actually the expression of the object under audit / what transformation stage (if any) it's at '
+xxx auditors must be deep frozen?

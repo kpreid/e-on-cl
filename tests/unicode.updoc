@@ -1,0 +1,31 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+
+Sam Ruby's test string '
+  ? def t := "Iñtërnâtiônàlizætiøn"
+  # value: "Iñtërnâtiônàlizætiøn"
+ 
+Check that a single big-char is retrieved properly
+  ? t[1]
+  # value: 'ñ'
+  
+  ? t[1] == 'ñ'
+  # value: true
+  
+Check that a substring is retrieved properly
+  ? t(18)
+  # value: "øn"
+
+Using Unicode letters in nouns
+
+  ? def π := 3.14159
+  # value: 3.14159
+  
+  ? def π2 := π * 2
+  # value: 6.28318
+  
+  ? e`def π2 := π * 2`
+  # value: e`def π2 := π.multiply(2)`
+
+XXX more unicode tests as I think of them

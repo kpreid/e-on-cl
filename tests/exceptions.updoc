@@ -1,0 +1,216 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Testing and documentation for E-on-CL's odd exception semantics designed to avoid information leakage between mutually suspicious callers and callees. '
+
+This updoc will eventually be expanded to cover other aspects of exceptions in E-on-CL.
+
+--- Basics
+
+An example object that throws an exception, not via an ejector. All such exceptions are assumed to be 'accidental' errors which are not intended to be usefully reported to callers.
+
+  ? def server() :void {
+  >   throw("internal error")
+  > }
+  # value: <server>
+
+The exception is caught and presented by the Updoc noninteractive-REPL.
+
+  ? server()
+  # problem: internal error
+
+'client' cannot get access to any information about the exception, since the runtime/language semantics can't know whether it is safe to provide that information. '
+
+  ? def client() :void {
+  >   try {
+  >     server()
+  >   } catch p {
+
+Internally, a throw()n exception is converted into a CL condition object. The implementation of E CatchExpr seals the condition it catches before matching it against the catch clause's pattern. '
+
+  >     print(`Caught [$p]!`)
+  >     throw(p)
+
+When a sealed condition is throw()n, it is unsealed.
+
+  >   }
+  > }
+  # value: <client>
+  
+  ? client()
+  # stdout: Caught [<sealed problem>]!
+
+However, the REPL can still unseal the rethrown exception to display it.
+ 
+  # problem: internal error
+
+There will be an explicit unsealer available in the privileged scope, but this has not been implemented yet.
+
+An exception may be explicitly thrown unsealed. This is used for mechanisms using custom sealers (such as the eventual pseudo-ejectors shown below).
+
+  ? try { throw.free("eek") } catch p { print(p); throw(p) }
+  # stdout: eek
+  
+  # problem: eek
+
+
+  ? def sealedProblem; try { throw("biff") } catch bind sealedProblem {}
+
+  XXX fqn
+  XXX leaf method shouldn't exist? '
+  ? help(sealedProblem)
+  # value: interface "org.cubik.cle.prim.LocalThrowSealedBox" {
+  #            /** Java-E compatibility; currently just returns self. */
+  #            to leaf()
+  #        }
+
+--- Broken references
+
+Broken references are essentially unaffected; they may be created as usual:
+
+  ? def aProblem := "splat" :<type:java.lang.Exception>
+  # value: problem: splat
+
+  ? def b := Ref.broken(aProblem)
+  # value: <ref broken by problem: splat>
+  
+The problem may be extracted without it being sealed:
+
+  ? {[def r := Ref.optProblem(b), r == aProblem]}
+  # value: [problem: splat, true]
+
+Nor does it unseal already sealed exceptions:
+
+  ? {[def r := Ref.broken(sealedProblem), Ref.optProblem(r) == sealedProblem]}
+  # value: [<ref broken by <sealed problem>>, true]
+  
+Calling a broken reference results in a sealed problem just as with throw(). 
+
+  (This is probably not necessary as an implementation test.)
+  ? try { b() } catch p { print(p) }
+  # stdout: <sealed problem>
+  
+Sending to a broken reference, since it is a normal value return which is incidentally broken (and therefore follows obvious capability rules), does not get sealed.
+
+  ? b <- ()
+  # value: <ref broken by problem: splat>
+  
+--- Ejectors for exceptions
+
+XXX write this section
+
+--- Exception sealing in eventual sends
+
+An eventual send behaves like a CatchExpr.
+
+  ? interp.waitAtTop(def r := 1 <- add("2"))
+
+XXX should the repl unseal problem-in-broken-ref before printing?
+
+  ? r
+  # value: <ref broken by <sealed problem>>
+  
+  ? r.foo()
+  # problem: the String "2" doesn't coerce to a number
+
+XXX "NUMBER" will/should be changed.
+
+--- Eventual pseudo-ejectors
+
+XXX write the rest of this section
+
+http://www.eros-os.org/pipermail/e-lang/2005-January/010416.html
+
+  XXX this should be in an emaker, not this updoc
+  ? def Throwable := <type:java.lang.Throwable>
+  > def makeFailureBrand {
+  >    to run(label) :any {
+  >      def [sealer, unsealer] := <elib:sealing.makeBrand>(label)
+  > 
+  >      def ejectoid { # implements PassByCopy
+  >        to run(problem :Throwable) :void {
+  >          throw.free(sealer <- seal(problem))
+  >        }
+  >        to run() :void {
+  >          ejectoid("unspecified problem")
+  >        }
+  >      }
+  > 
+  >      def guard extends __makeGuard(guard) {
+  >        to coerce(specimen, optEjector) :any {
+  >          return Throwable.coerce(unsealer.unseal(specimen, optEjector),
+  >                                  optEjector)
+  >        }
+  >      }
+  > 
+  >      return [ejectoid, guard]
+  >    }
+  > 
+  >    to short(guard__Resolver) :any {
+  >      def [ejectoid, bind guard] := makeFailureBrand("_")
+  >      return ejectoid
+  >    }
+  > }
+  # value: <makeFailureBrand>
+
+  ? def farFlexMap := [1 => 2] <- diverge()
+  # value: <Promise>
+
+  ? def [ejectoid, MyMissingKey] := makeFailureBrand("missing key")
+  >
+  > for key in [1, 2, Ref.promise()[0]] {
+
+(I tried using the sugared when-catch here, but the current expansion uses a throw-and-catch for broken references and so ends up with a sealed problem.)
+
+  > Ref.whenResolved(farFlexMap <- fetch(key, ejectoid), def _(value) :void {
+  >     switch (Ref.optProblem(value)) {
+  >       match ==null {
+  >         println(`$key got: $value`)
+  >       }
+  >       match problem :MyMissingKey {
+  >         println(`$key missing: $problem`)
+  >       } 
+  >       match problem {
+  >         println(`$key died: $problem`)
+  >       }
+  >     }
+  >   })
+  > }
+  # stdout: 2 missing: problem: unspecified problem
+  #         <Promise> died: <sealed problem>
+  #         1 got: 2
+  #         
+
+xxx The above test is fragile as implementation variations may affect the order of completion.
+
+--- Print catching
+
+Bug test: check that printing doesn't reveal unsealed exceptions '
+
+  ? def _ { to __printOn(tw :TextWriter) :void { throw("bork") } }
+  # value: <***an org.cubik.cle.prim.any threw <sealed problem> when printed***>
+
+XXX this pretty much makes exception catching in printing useless for debugging the problem. What tools/semantic changes should we provide to solve this?
+
+--- Original implementation-steps notes
+
+CatchExpr
+  If the condition is a exception-adapter, unwrap it.
+  Then wrap with an local-exception-sealed-box and invoke catch clause
+
+Ref.broken:
+  Accepts whatever we decide is an Arbitrary Un-sealed Exception Value and saves it unedited in the reference
+  
+Call broken reference:
+  Acts as E-level throw() of the problem
+
+Ref.optProblem:
+  Problem slot of broken refs without alteration
+
+E-level throw() (and eject-or-ethrow)
+  If the argument is a condition:
+    (cl:error arg)
+  If the argument is a local sealed exception:
+    (cl:error (unseal arg))
+  Otherwise:
+    (cl:error (make-exception-adapter arg))

@@ -1,0 +1,425 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+ParamDesc
+
+  ? def makeParamDesc := <import:org.erights.e.elib.base.makeParamDesc>
+  # value: <makeParamDesc>
+
+  ? makeParamDesc :DeepFrozen
+  # value: <makeParamDesc>
+
+  ? def pd := makeParamDesc("new", int)
+  # value: new :int
+  
+  ? pd.getOptName()
+  # value: "new"
+
+  ? pd.getName()
+  # value: "new"
+  
+  ? [pd.getOptGuard(), pd.getOptGuard() == int]
+  # value: [int, true]
+  
+  ? pd.__optUncall()
+  # value: [<makeParamDesc>, "run", ["new", int]]
+  
+  ? pd == makeParamDesc("new", int)
+  # value: true
+  
+  ? def pd := makeParamDesc(null, int)
+  # value: _ :int
+
+  ? [pd.getOptName()]
+  # value: [null]
+  
+  ? pd.getName()
+  # value: "_"
+  
+  ? def pd := makeParamDesc("new", null)
+  # value: new
+
+  ? [pd.getOptGuard(), pd.getOptGuard() == int]
+  # value: [null, false]
+  
+  ? makeParamDesc(" ", null)
+  # value: ::" "
+  
+  ? makeParamDesc(null, null)
+  # value: _
+
+  ? def pd := makeParamDesc("_", null)
+  # value: ::"_"
+
+  ? [pd.getOptName()]
+  # value: ["_"]
+  
+  ? pd.getName()
+  # value: "_"
+
+  ? makeParamDesc(12, 34)
+  # problem: the int 12 doesn't coerce to an any[Null, String]
+  
+  ? makeParamDesc == __makeParamDesc
+  # value: true
+
+MessageDesc
+
+  ? def makeMessageDesc := <import:org.erights.e.elib.base.makeMessageDesc>
+  # value: <makeMessageDesc>
+
+  ? makeMessageDesc :DeepFrozen
+  # value: <makeMessageDesc>
+
+  ? def md := makeMessageDesc("doc comment", "verb", [makeParamDesc("arg", null)], float64)
+  # value: /** doc comment */
+  #        to verb(arg) :float64
+
+  ? md.getVerb()
+  # value: "verb"
+  
+  ? md.getDocComment()
+  # value: "doc comment"
+  
+  ? md.getParams()
+  # value: [arg]
+  
+  ? {[def r := md.getOptResultGuard(), r == float64]}
+  # value: [float64, true]
+
+  ? md.__optUncall()
+  # value: [<makeMessageDesc>, "run", ["doc comment", "verb", [arg], float64]]
+
+  ? md == makeMessageDesc("doc comment", "verb", [makeParamDesc("arg", null)], float64)
+  # value: true
+  
+  ? makeMessageDesc("", "//", [], null)
+  # value: to "//"()
+  
+  ? makeMessageDesc(null, "v", [], null)
+  # problem: the Null null doesn't coerce to a String
+
+  ? makeMessageDesc("", [], [], null)
+  # problem: the ConstList [] doesn't coerce to a String
+
+  ? makeMessageDesc("", "v", -1, null)
+  # problem: the int -1 doesn't coerce to a ConstList
+
+  ? makeMessageDesc("", "v", [-1], null)
+  # problem: the int -1 doesn't coerce to a ParamDesc
+  
+  ? makeMessageDesc == __makeMessageDesc
+  # value: true
+
+TypeDesc
+
+ constructor
+
+  ? def makeTypeDesc := <import:org.erights.e.elib.base.makeTypeDesc>
+  # value: <makeTypeDesc>
+
+  ? makeTypeDesc :DeepFrozen
+  # value: <makeTypeDesc>
+
+  ? def td := makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [md])
+  # value: N
+
+ selflessness
+
+  ? td.__optUncall()
+  # value: [<makeTypeDesc>, "run", ["doc", "f.q.n", [int], [DeepFrozen], [/** doc comment */
+  #        to verb(arg) :float64]]]
+  
+  ? td == makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [md])
+  # value: true
+  
+ instance methods
+  
+  ? td.getDocComment()
+  # value: "doc"
+  
+  ? td.getFQName()
+  # value: "f.q.n"
+  
+  ? td.getOptFQName()
+  # value: "f.q.n"
+  
+  ? td.getSupers()
+  # value: [int]
+  
+  ? td.getAuditors()
+  # value: [DeepFrozen]
+  
+  ? td.getMessageTypes()
+  # value: ["verb/1" => /** doc comment */
+  #        to verb(arg) :float64]
+
+ odd argument types
+
+  ? makeTypeDesc(null, "f.q.n", [int], [DeepFrozen], [md])
+  # problem: the Null null doesn't coerce to a String
+
+  ? def td := makeTypeDesc("doc", null, [int], [DeepFrozen], [md])
+  # value: _
+  
+  ? [td.getOptFQName()]
+  # value: [null]
+
+  ? td.getFQName()
+  # value: "_"
+
+  ? makeTypeDesc("doc", "f.q.n", null, [DeepFrozen], [md])
+  # problem: the Null null doesn't coerce to a ConstList
+
+  ? makeTypeDesc("doc", "f.q.n", [int], null, [md])
+  # problem: the Null null doesn't coerce to a ConstList
+
+  ? makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], null)
+  # problem: the Null null doesn't coerce to a ConstList
+
+  ? makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [45.9])
+  # problem: the float64 45.9 doesn't coerce to a MessageDesc
+
+ XXX printHelpOn/3, help/0, help/2, or should we skip them because it gets the trust backwards for help() purposes?
+  
+  
+xxx for all *Desc: allow promises for typed arguments?
+
+__getAllegedType details, def-vtable-based
+
+  ? def t := 43.__getAllegedType()
+  # value: int
+
+  ? t.coerce(2389523789523745902364890237489)
+  # value: 2389523789523745902364890237489
+  
+  ? t.coerce(true)
+  # problem: the boolean true doesn't coerce to an int
+  
+  ? t.getFQName()
+  # value: "org.cubik.cle.native.int"
+
+  xxx we're assuming int has no documentation '
+  xxx test something native *with* documentation (eg one of our own classes)
+  ? t.getDocComment()
+  # value: ""
+  
+  xxx Number?
+  ? t.getSupers()
+  # value: []
+  
+  t is a guard for integers, but /not/ an auditor (__auditedBy returns false) - should we change this, so that primitives are less distinguishable from E objects?
+  ? t.getAuditors()
+  # value: []
+  
+  Using Boolean rather than t (int) because ints have lots of methods
+  Note: this t
+  ? for key => _ in (false.__getAllegedType().getMessageTypes() :Map) {
+  >   println(key) 
+  > }
+  # stdout: __printOn/1
+  #         __getAllegedType/0
+  #         __respondsTo/2
+  #         __conformTo/1
+  #         __optSealedDispatch/1
+  #         __optUncall/0
+  #         __whenMoreResolved/1
+  #         __whenBroken/1
+  #         __order/2
+  #         __reactToLostClient/1
+  #         __getPropertySlot/1
+  #         and/1
+  #         not/0
+  #         or/1
+  #         pick/2
+  #         xor/1
+  #         
+
+Testing standard MessageDesc, and also sample message desc from a def-vtable-based object's type '
+
+  ? def t := false.__getAllegedType()
+  # value: boolean
+
+  ? def m := t.getMessageTypes()["pick/2"]
+  # value: /** Return the first argument if this is true, otherwise return the second argument. */
+  #        to pick(::"true-value", ::"false-value")
+  
+  ? m.getVerb()
+  # value: "pick"
+  
+  ? m.getDocComment()
+  # value: "Return the first argument if this is true, otherwise return the second argument."
+  
+  ? m.getParams()
+  # value: [::"true-value", ::"false-value"]
+  
+  ? [m.getOptResultGuard()]
+  # value: [null]
+  
+MessageDesc of a miranda method
+
+  ? def m := false.__getAllegedType().getMessageTypes()["__order/2"]
+  # value: /** Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this. */
+  #        to __order(::"nested-verb", ::"nested-args")
+
+  ? m.getVerb()
+  # value: "__order"
+  
+  ? m.getDocComment()
+  # value: "Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this."
+  
+  ? m.getParams()
+  # value: [::"nested-verb", ::"nested-args"]
+  
+  ? [m.getOptResultGuard()]
+  # value: [null]
+
+__getAllegedType, e-lambda
+  
+  ? def t := EIO.__getPropertySlot("ALL").__getAllegedType()
+  # value: DefaultPropertySlot
+
+  ? t.coerce(EIO.__getPropertySlot("NOW"), null)
+  # problem: No such method: TypeDesc#coerce/2
+  
+  ? t.getFQName()
+  # value: "org.cubik.cle.prim.DefaultPropertySlot"
+
+  ? t.getDocComment()
+  # value: "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object."
+  
+  ? t.getSupers()
+  # value: []
+  
+  ? t.getAuditors()
+  # value: []
+  
+  ? for key => _ in (t.getMessageTypes() :Map) {
+  >   println(key) 
+  > }
+  # stdout: __printOn/1
+  #         __getAllegedType/0
+  #         __respondsTo/2
+  #         __conformTo/1
+  #         __optSealedDispatch/1
+  #         __optUncall/0
+  #         __whenMoreResolved/1
+  #         __whenBroken/1
+  #         __order/2
+  #         __reactToLostClient/1
+  #         __getPropertySlot/1
+  #         getValue/0
+  #         setValue/1
+  #         isFinal/0
+  #         
+
+  ? def m := t.getMessageTypes()["setValue/1"]
+  # value: /** E.call(target, `set$Property`, new); null */
+  #        to setValue(new)
+  
+  ? m.getVerb()
+  # value: "setValue"
+  
+  ? m.getDocComment()
+  # value: "E.call(target, `set$Property`, new); null"
+  
+  ? m.getParams()
+  # value: [new]
+  
+  ? [m.getOptResultGuard()]
+  # value: [null]
+
+__getAllegedType, E object
+
+  ? interface Foo {}
+  # value: Foo
+
+  ? /** This is an object defined to test many aspects of __getAllegedType. */
+  > def typeSample extends true implements Foo {
+  >   /** This is the sole method. */
+  >   to foo(bar :int, baz ? true, qux) :float64 { 3.1414 }
+  > }
+  # value: <typeSample>
+
+  ? def t := typeSample.__getAllegedType()
+  # value: TypeSample
+
+  ? t.coerce(typeSample, null)
+  # problem: No such method: TypeDesc#coerce/2
+  
+  ? t.getFQName()
+  # value: "__main$typeSample__C"
+
+  ? t.getDocComment()
+  # value: "This is an object defined to test many aspects of __getAllegedType."
+  
+  xxx should we reveal boolean?
+  ? t.getSupers()
+  # value: []
+  
+  xxx we *can't* reveal Foo. I assume the purpose of this method is for when it is explicitly safe to do so. '
+  ? t.getAuditors()
+  # value: []
+  
+  ? for key => _ in (t.getMessageTypes() :Map) {
+  >   println(key) 
+  > }
+  # stdout: __printOn/1
+  #         __getAllegedType/0
+  #         __respondsTo/2
+  #         __conformTo/1
+  #         __optSealedDispatch/1
+  #         __optUncall/0
+  #         __whenMoreResolved/1
+  #         __whenBroken/1
+  #         __order/2
+  #         __reactToLostClient/1
+  #         __getPropertySlot/1
+  #         foo/3
+  #         
+
+  ? def m := t.getMessageTypes()["foo/3"]
+  # value: /** This is the sole method. */
+  #        to foo(bar :int, baz, qux) :float64
+    
+  ? m.getVerb()
+  # value: "foo"
+  
+  ? m.getDocComment()
+  # value: "This is the sole method."
+  
+  ? m.getParams()
+  # value: [bar :int, baz, qux]
+  
+  ? [m.getOptResultGuard()]
+  # value: [float64]
+
+help
+
+  ? help
+  # value: <help>
+  
+  ? help(&makeTypeDesc)
+  # value: /** A normal immutable slot. */
+  #        interface "org.erights.e.elib.slot.FinalSlot" {
+  #            /** Returns the constant value of this slot. */
+  #            to getValue()
+  #            /** Always fails. */
+  #            to setValue(new)
+  #            /** Returns true. */
+  #            to isFinal()
+  #        }
+  
+  ? help(Ref.promise()[0])
+  # value: This is an unresolved reference; no other information is available. You can use a 'when' expression or Ref.whenResolved to wait for it to become resolved.
+  
+  ? help(def _ { to __getAllegedType() :any { return null } })
+  # problem: No such method: Null#getDocComment/0
+  
+  XXX help(<Far>)
+  XXX broken __getAllegedTypes:
+    dies inside call
+    not a TypeDesc
+    looks like a TypeDesc but returns funny values
+  XXX returned type using extends, implements (i.e. supers, auditors)
+

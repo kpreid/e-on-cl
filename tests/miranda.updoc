@@ -1,0 +1,126 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Miranda methods on E-implemented objects
+
+  ? def thing {
+  >   to getX() :void { return 52 }
+  > }
+  # value: <thing>
+  
+  ? thing.__getAllegedType()
+  # value: Thing
+
+  ? thing.__order("__getAllegedType", [])
+  # value: [Thing, <thing>]
+
+Miranda methods on native (in CL-E, DEF-VTABLE-based) objects
+
+  ? def specimen := 44
+  # value: 44
+  
+  ? specimen.__getAllegedType()
+  # value: int
+  
+  ? specimen.__order("__getAllegedType", [])
+  # value: [int, 44]
+
+Miranda methods on CL-E E-LAMBDA-based objects
+
+  ? __loop.__getAllegedType()
+  # value: Loop
+  
+  ? __loop.__order("__getAllegedType", [])
+  # value: [Loop, <__loop>]
+
+Er. After writing the above, I combined all of the miranda-method implementations. So, having tested dispatching to miranda methods, the following tests will not necessarily exercise all cases of miranda dispatch.
+
+  ? [__loop.__optUncall()]
+  # value: [null]
+  
+  ? [thing.__optUncall()]
+  # value: [null]
+  
+  ? [specimen.__optUncall()]
+  # value: [null]
+  
+  
+  xxx should miranda __reactToLostClient coerce to exception?
+  ? [specimen.__reactToLostClient("bang")]
+  # value: [null]
+
+XXX __reactToLostClient on breakable refs (which we don't have yet) '
+
+whenMoreResolved
+
+  ? var gotWMR := "foo"
+  # value: "foo"
+  
+  ? [specimen.__whenMoreResolved(def wmrReactor(arg) :void {gotWMR := arg}), gotWMR]
+  # value: [null, "foo"]
+  
+  XXX we should waitAtTop on something resolved by the reactor here, to make the updoc script reliable
+  ? gotWMR
+  # value: 44
+  
+whenBroken
+  
+  ? [specimen.__whenBroken(thunk{print("oops")})]
+  # value: [null]
+
+__whenBroken on breakable refs is not a miranda method.
+
+getPropertySlot tests may be found in properties.updoc
+  
+optSealedDispatch
+  
+  Java-E would reject this because "bang" is not an elib.sealing.Brand. I decided this is unnecessarily restrictive, since one may wish to create new kinds of brands.
+  ? [specimen.__optSealedDispatch("bang")]
+  # value: [null]
+  
+conformTo
+  
+  ? specimen.__conformTo(any)
+  # value: 44
+  
+  ? specimen.__conformTo(void)
+  # value: 44
+
+__respondsTo, of course, is dependent on the dispatch implementation, so it shall be tested for many object types again.
+
+  ? thing.__respondsTo("frog", 1)
+  # value: false
+
+  ? thing.__respondsTo("getX", 0)
+  # value: true
+  
+  ? thing.__respondsTo("getX/1", 1)
+  # value: false
+  
+  ? specimen.__respondsTo("add", 1)
+  # value: true
+  
+  ? specimen.__respondsTo("toad", 2)
+  # value: false
+  
+  ? __loop.__respondsTo("newt", 3)
+  # value: false
+  
+  ? __loop.__respondsTo("run", 1)
+  # value: true
+  
+  ? thing.__respondsTo("__respondsTo", 2)
+  # value: true
+
+  ? specimen.__respondsTo("__respondsTo", 2)
+  # value: true
+
+  ? __loop.__respondsTo("__respondsTo", 2)
+  # value: true
+
+  XXX arity matters
+  XXX e-impls with matchers (or eg, stdout.print)
+  XXX non-string verb / non-int arity (conforming or not)
+
+Detailed testing of __getAllegedType/0 is in help.updoc.
+

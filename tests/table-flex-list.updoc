@@ -1,0 +1,340 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? def floatList := [].diverge(float64)
+# value: [].diverge()
+
+? floatList.valueType()
+# value: float64
+
+? def roList := floatList.readOnly()
+# value: [].diverge().readOnly()
+
+? [floatList.push(24)]
+# value: [null]
+
+? floatList
+# value: [24.0].diverge()
+
+? [1, 2.0].diverge(float64)
+# value: [1.0, 2.0].diverge()
+
+? floatList == (floatList :<type:org.erights.e.elib.tables.FlexList>)
+# value: true
+
+? floatList.snapshot() =~ x :<type:org.erights.e.elib.tables.FlexList>
+# value: false
+
+? floatList[1] := 48
+# value: 48
+
+? floatList
+# value: [24.0, 48.0].diverge()
+
+? floatList[0] := 47.0
+# value: 47.0
+
+? floatList
+# value: [47.0, 48.0].diverge()
+
+? floatList[3] := 96
+# problem: put index out of bounds: 3 > 2
+
+? floatList
+# value: [47.0, 48.0].diverge()
+
+? floatList.push(1.2)
+? floatList.push(44)
+? floatList.push(9)
+? floatList.push(47.5)
+? floatList.push(8)
+
+? floatList
+# value: [47.0, 48.0, 1.2, 44.0, 9.0, 47.5, 8.0].diverge()
+
+? floatList.sortInPlace(def _(a,b) :any { return a.op__cmp(b) })
+
+? floatList
+# value: [1.2, 8.0, 9.0, 44.0, 47.0, 47.5, 48.0].diverge()
+
+? floatList.sortInPlace(def _(_,_) :any { return NaN })
+# problem: partial order not yet implemented
+
+? floatList.append([-1, -2, -3])
+
+? floatList
+# value: [1.2, 8.0, 9.0, 44.0, 47.0, 47.5, 48.0, -1.0, -2.0, -3.0].diverge()
+
+? floatList.setSize(3)
+
+? floatList
+# value: [1.2, 8.0, 9.0].diverge()
+
+disabled till we get trivial-value stuff fixed up
+? floatList.setSize(6)
+
+? floatList
+# value: [1.2, 8.0, 9.0, 0.0, 0.0, 0.0].diverge()
+
+# extending past previous capacity test
+? floatList.setSize(11)
+
+? floatList
+# value: [1.2, 8.0, 9.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0].diverge()
+
+Making another type of list, for the immediate purpose of generalizing the null-element-filling of setSize().
+
+? def listList := [].diverge(List)
+# value: [].diverge()
+
+? listList.setSize(1)
+
+? listList
+# value: [[]].diverge()
+
+test failure case of setSize (no trivial value)
+  
+  ? def plainList := [].diverge(TextWriter)
+  # value: [].diverge()
+  
+  ? plainList.setSize(1)
+  # problem: No such method: org.erights.e.elib.print.TextWriterGuard#getTheTrivialValue/0
+  
+  ? plainList
+  # value: [].diverge()
+
+pop
+
+  ? listList[1] := [44]
+  # value: [44]
+  
+  ? listList.pop()
+  # value: [44]
+  
+  ? listList
+  # value: [[]].diverge()
+  
+  XXX zero length failure case
+
+ensureSize
+
+  ? listList.ensureSize(3)
+  
+  ? listList
+  # value: [[], [], []].diverge()
+  
+  ? listList.ensureSize(2)
+  
+  ? listList
+  # value: [[], [], []].diverge()
+  
+  
+  ? listList.ensureSize(3)
+  
+  ? listList
+  # value: [[], [], []].diverge()
+  
+  ? listList.ensureSize(def _ {to __conformTo(_) :any {return 4}})
+  
+  ? listList
+  # value: [[], [], [], []].diverge()
+
+ negative size is OK, because ensureSize never decreases the size.
+
+  ? listList.ensureSize(-3)
+  
+  ? listList
+  # value: [[], [], [], []].diverge()
+  
+replace/5
+
+note: I wrote append/1 first, then turned it into a broken replace/5 implementation, so these tests don't check the appendish functionality. This should be fixed. '
+
+  ? floatList
+  # value: [1.2, 8.0, 9.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0].diverge()
+  
+  ? floatList.replace(3, 6, [4.4, 5.5, 6.6], 0, 3)
+  ? floatList
+  # value: [1.2, 8.0, 9.0, 4.4, 5.5, 6.6, 0.0, 0.0, 0.0, 0.0, 0.0].diverge()
+  
+  ? floatList.replace(0, 1, [1, 3, 4], 1, 2)
+  ? floatList
+  # value: [3.0, 8.0, 9.0, 4.4, 5.5, 6.6, 0.0, 0.0, 0.0, 0.0, 0.0].diverge()
+  
+  ? floatList.replace(7, 11, [7], 0, 1); floatList
+  # value: [3.0, 8.0, 9.0, 4.4, 5.5, 6.6, 0.0, 7.0].diverge()
+  
+  ? floatList.replace(1, 3, [], 0, 0); floatList
+  # value: [3.0, 4.4, 5.5, 6.6, 0.0, 7.0].diverge()
+  
+  ? def c(n) :any { return def coercable {to __conformTo(_) :any {return n}} }
+  # value: <c>
+  
+  ? floatList.replace(c(1), c(5), [1,2,3,4,5,6], c(3), c(6)); floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+
+ range check tests - floatList value check is separate so that we check if it's unchanged even when the exception is thrown '
+  
+  start < 0
+  ? floatList.replace(-1, 1, [11,22], 0, 2)
+  # problem: replace target start < 0: -1
+  ? floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+  
+  bound > size
+  ? floatList.replace(20, 20, [11,22], 0, 2)
+  # problem: replace target bound > 5: 20
+  ? floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+  
+  start > bound
+  ? floatList.replace(1, 0, [11,22], 0, 2)
+  # problem: replace target range has negative length: 1..!0
+  ? floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+  
+  source start < 0
+  ? floatList.replace(1, 4, [11,22], -1, 2)
+  # problem: replace source start < 0: -1
+  ? floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+  
+  source bound > size
+  ? floatList.replace(1, 4, [11,22], 0, 3)
+  # problem: replace source bound > 2: 3
+  ? floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+  
+  source start > bound
+  ? floatList.replace(1, 4, [11,22], 2, 1)
+  # problem: replace source range has negative length: 2..!1
+  ? floatList
+  # value: [3.0, 4.0, 5.0, 6.0, 7.0].diverge()
+  
+  
+  XXX does it attempt to coerce list elements not being copied
+  XXX what happens if Nth replace-list element fails to coerce
+ 
+
+setRun/3
+
+  trivial check - assume it's built on a reliable replace/5 '
+  ? [floatList.setRun(1, 3, [40,50])]
+  # value: [null]
+  ? floatList
+  # value: [3.0, 40.0, 50.0, 6.0, 7.0].diverge()
+
+setRun/2
+
+  ? [floatList.setRun(4, [77, 88])]
+  # value: [null]
+  ? floatList
+  # value: [3.0, 40.0, 50.0, 6.0, 77.0, 88.0].diverge()
+
+insert/2
+
+  ? [floatList.insert(0, 2)]
+  # value: [null]
+  ? floatList
+  # value: [2.0, 3.0, 40.0, 50.0, 6.0, 77.0, 88.0].diverge()
+
+removeRun/2
+
+  ? [floatList.removeRun(4, 6)]
+  # value: [[6.0, 77.0]]
+  ? floatList
+  # value: [2.0, 3.0, 40.0, 50.0, 88.0].diverge()
+
+removeRun/1
+
+  ? [floatList.removeRun(4)]
+  # value: [[88.0]]
+  ? floatList
+  # value: [2.0, 3.0, 40.0, 50.0].diverge()
+
+__optUncall
+
+  ? floatList.__optUncall()
+  # value: [[2.0, 3.0, 40.0, 50.0], "diverge", [float64]]
+ 
+---
+
+check readOnly again
+
+  ? roList
+  # value: [2.0, 3.0, 40.0, 50.0].diverge().readOnly()
+
+run/2
+
+  ? floatList(1, 3)
+  # value: [3.0, 40.0]
+
+diverge/1
+
+  ? def l2 := floatList.diverge(any)
+  # value: [2.0, 3.0, 40.0, 50.0].diverge()
+  
+  ? l2.pop()
+  # value: 50.0
+  
+  ? l2.push("fifty")
+  
+  ? floatList.removeRun(0, 1)
+  # value: [2.0]
+  
+  ? floatList
+  # value: [3.0, 40.0, 50.0].diverge()
+  
+  ? l2
+  # value: [2.0, 3.0, 40.0, "fifty"].diverge()
+
+diverge/0
+
+  ? def l3 := l2.diverge()
+  # value: [2.0, 3.0, 40.0, "fifty"].diverge()
+
+  ? l3.pop()
+  # value: "fifty"
+
+  ? l3
+  # value: [2.0, 3.0, 40.0].diverge()
+
+iterate
+
+  ? for k => v in floatList { println(`$k $v`) }
+  # stdout: 0 3.0
+  #         1 40.0
+  #         2 50.0
+  #         
+ 
+XXX all elist ops
+  sort/0-1
+  getArray/0-3 - ???
+  get/1
+  fetch/2 - XXX allow nonint indexes?
+  last/0
+  contains/1
+  size/0
+  iterate/1
+  valueType/0
+  add/1
+  with/1-2
+  multiply/1
+  asMap/0
+  asKeys/0
+  asSet/0
+  includes/1
+  run/1
+  indexOf1/1-2
+  lastIndexOf1/1-2
+  startOf/1-2
+  lastStartOf/1-2
+  printOn/4
+  
+XXX all flexlist ops
+  static make/1-2
+  static fromType/1-2
+XXX documentation
+XXX fqname
+XXX passes EList guard
+XXX coercion failures during mutation operations

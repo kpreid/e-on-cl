@@ -1,0 +1,346 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.enable("accumulator")
+  > def testGuardMany(things, Thing) :any {
+  >   return accum [] for thing :Thing in things { _.with(thing) }
+  > }
+  # value: <testGuardMany>
+
+null
+
+  ? [null]
+  # value: [null]
+
+booleans
+
+  ? true
+  # value: true
+  
+  ? false
+  # value: false
+  
+  ? true.pick(1, 2)
+  # value: 1
+  
+  ? false.pick(3, 4)
+  # value: 4
+  
+  ? !true
+  # value: false
+  
+  ? !false
+  # value: true
+  
+  ? true & true
+  # value: true
+
+  ? true & false
+  # value: false
+  
+  ? true & def _{to __conformTo(==boolean) :any {return true}}
+  # value: true
+
+  ? false & true
+  # value: false
+
+  ? false & false
+  # value: false
+
+  ? false & -1
+  # problem: the int -1 doesn't coerce to a boolean
+
+  ? false & def _{to __conformTo(==boolean) :any {return false}}
+  # value: false
+
+  
+  ? false | false
+  # value: false
+
+  ? false | true
+  # value: true
+  
+  ? false | def _{to __conformTo(==boolean) :any {return false}}
+  # value: false
+
+  ? true | false
+  # value: true
+
+  ? true | true
+  # value: true
+
+  ? true | -1
+  # problem: the int -1 doesn't coerce to a boolean
+
+  ? true | def _{to __conformTo(==boolean) :any {return true}}
+  # value: true
+
+
+  ? false ^ false
+  # value: false
+
+  ? false ^ true
+  # value: true
+  
+  ? true ^ def _{to __conformTo(==boolean) :any {return true}}
+  # value: false
+
+  ? true ^ false
+  # value: true
+
+  ? true ^ true
+  # value: false
+
+  ? false ^ -1
+  # problem: the int -1 doesn't coerce to a boolean
+
+  ? false ^ def _{to __conformTo(==boolean) :any {return true}}
+  # value: true
+
+E
+
+  ? E
+  # value: <E>
+  
+  ? E :DeepFrozen
+  # value: <E>
+
+  ? E.call(1, "add", [3])
+  # value: 4
+  
+  ? E.call(1, 2, [3])
+  # problem: the int 2 doesn't coerce to a String
+
+  ? E.call(1, def _{to __conformTo(==String) :any {return "add"}}, [2])
+  # value: 3
+  
+  XXX primitive list guard isn't the same as List so we can't test that exactly yet - this is a significant problem
+  ? E.call(1, "add", def _{to __conformTo(_) :any {[4]}})
+  # value: 5
+  
+  ? E.callWithPair(1, ["add", [-1]])
+  # value: 0
+
+  XXX Java-E allows extra elements
+  XXX this exception message is awful
+  ? E.callWithPair(1, ["add", [-2], "extra-argument"])
+  # problem: the ConstList ["add", [-2], "extra-argument"] doesn't coerce to a ConstList[any, 2]
+
+  ? E.callWithPair(1, ["add"])
+  # problem: the ConstList ["add"] doesn't coerce to a ConstList[any, 2]
+  
+  ? E.callWithPair(1, def _{to __conformTo(_) :any {["add", [10]]}})
+  # value: 11
+  
+  E.send and sendOnly is tested in send.updoc
+  
+  ? E.toQuote(1)
+  # value: "1"
+  
+  ? E.toQuote("ab\"cd")
+  # value: "\"ab\\\"cd\""
+  
+  ? E.toString(1)
+  # value: "1"
+  
+  ? E.toString("ab\"cd")
+  # value: "ab\"cd"
+
+simple__quasiParser
+
+  ? `foo`
+  # value: "foo"
+
+  ? "abc" =~ `abc`
+  # value: true
+
+  ? `1 + 1 = ${1 + 1}`
+  # value: "1 + 1 = 2"
+
+  XXX more tests
+
+require
+  
+  ? [require(true, thunk{"biff"})]
+  # value: [null]
+  
+  ? [require(false, thunk{"bang"})]
+  # problem: bang
+
+__loop
+
+  ? __loop :DeepFrozen
+  # value: <__loop>
+
+  XXX more tests
+
+throw
+
+  XXX test argument types allowed for converting to exceptions
+
+  ? throw
+  # value: throw
+  
+  ? throw :DeepFrozen
+  # value: throw
+  
+  ? throw("bang")
+  # problem: bang
+
+  ? throw.eject(null, "bing")
+  # problem: bing
+  
+  ? escape x { throw.eject(x, "biff") }
+  # value: problem: biff
+  
+  ? throw.eject(throw, "boing")
+  # problem: boing
+  
+  ? throw.eject(def _{}, "boing")
+  # problem: No such method: __main$_#run/1
+  
+  ? throw.eject(def oops(_) :any {}, "boing")
+  # problem: optEjector <oops> returned: null
+  
+see table-lists.updoc for __makeList
+
+__makeMap
+
+  ? __makeMap
+  # value: __makeMap
+  
+  XXX see table-const-map.updoc
+  
+__identityFunc
+
+  ? __identityFunc
+  # value: <identityFunc>
+  
+  XXX more tests
+
+__makeInt
+
+  ? __makeInt
+  # value: <makeInt>
+
+  ? __makeInt("3416")
+  # value: 3416
+    
+  ? __makeInt("0xF")
+  # problem: not recognized as an integer: "0xF"
+  
+  ? __makeInt("010")
+  # value: 10
+  
+  XXX should whitespace be allowed?
+  ? __makeInt(" 12 ")
+  # value: 12
+  
+  ? __makeInt("12abcd")
+  # problem: not recognized as an integer: "12abcd"
+  
+  ? __makeInt(def _{to __conformTo(==String) :any {return "40"}})
+  # value: 40
+  
+  XXX more tests
+
+__makeFinalSlot
+
+  ? __makeFinalSlot
+  # value: <makeFinalSlot>
+  
+  ? __makeFinalSlot(safeScope) == &safeScope
+  # value: true
+
+NaN
+
+  ? NaN
+  # value: NaN
+  
+  XXX more tests
+
+Infinity
+
+  ? Infinity
+  # value: Infinity
+  
+  XXX more tests
+
+__makeOrderedSpace / ..
+
+  ? def OneOrTwo := 1..2
+  # value: 1..!3
+  
+  ? 0 :OneOrTwo
+  # problem: not in region
+  
+  ? 1 :OneOrTwo
+  # value: 1
+  
+  ? 2 :OneOrTwo
+  # value: 2
+  
+  ? 3 :OneOrTwo
+  # problem: not in region
+  
+  ? 'a' :OneOrTwo
+  # problem: the char 'a' doesn't coerce to an int
+  
+  ? def values := [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
+  # value: [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
+  
+  ? testGuardMany(values, OneOrTwo)
+  # value: [1, 2]
+  
+  ? testGuardMany(values, OneOrTwo + 10)
+  # value: [11, 12]
+  
+  ? pragma.enable("accumulator")
+  > accum [] for thing in OneOrTwo { _.with(thing) }
+  # value: [1, 2]
+  
+  ? def BakersDozen := int > 12
+  # value: (int >= 13)
+  
+  ? testGuardMany(values, BakersDozen)
+  # value: [13, 14]
+  
+  ? testGuardMany(values, OneOrTwo | BakersDozen)
+  # value: [1, 2, 13, 14]
+  
+Interface makers
+
+  ? interface Foo {}
+  # value: Foo
+  
+  ? interface Runnable {
+  >   to run() :void
+  > }
+  # value: Runnable
+  
+  XXX actually using interfaces (methods thereof, auditing/guarding)
+  XXX MessageDesc ParamDesc
+
+see syntax.updoc for e__quasiParser  
+DeepFrozenness
+
+  ? [null :DeepFrozen]
+  # value: [null]
+  
+  ? true :DeepFrozen
+  # value: true
+  
+  ? false :DeepFrozen
+  # value: false
+  
+traceln
+
+  ? traceln
+  # value: <traceln>
+  
+  ? traceln.__respondsTo("run", 1)
+  # value: true
+
+XXX test other scope objects
+
+see guards.updoc for testing of __makeGuard and stanrdard guards

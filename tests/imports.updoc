@@ -1,0 +1,130 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? <import:org.quasiliteral.syntax.URIKit>
+# value: <import:org.quasiliteral.syntax.URIKit>
+
+? <import:java.lang.Byte>.getTYPE()
+# value: -128..!128
+
+disabled because it takes too long for the test suite
+x ? def makeSurgeon := <elib:serial.makeSurgeon>
+x # value: <makeSurgeon>
+x 
+x ? def surgeon := makeSurgeon.withSrcKit(null)
+x # value: <surgeon>
+x 
+x ? surgeon.serialize(1)
+x # value: "1"
+
+? <elib:tables.makeConstMap>
+# value: __makeMap
+
+? <elib:tables.ConstMap>
+# value: __makeMap
+
+Throwable
+
+  ? def Throwable := <type:java.lang.Throwable>
+  # value: Throwable
+  
+  ? def p := "foo" :Throwable
+  # value: problem: foo
+  
+  ? p :Throwable
+  # value: problem: foo
+  
+  ? {[null =~ nullT :Throwable, nullT]}
+  # value: [false, <ref broken by problem: the Null null doesn't coerce to a Throwable>]
+
+Runnable
+
+  ? def Runnable := <type:java.lang.Runnable>
+  # value: <Runnable>
+  
+  ? def f() :void {} :Runnable
+  # value: <f>
+  
+  XXX test rejection once we've settled whether it ever does so '
+
+UnQuote
+
+  ? def makeUnQuote := <elib:oldeio.makeUnQuote>
+  # value: <makeUnQuote>
+  
+  ? makeUnQuote :DeepFrozen
+  # value: <makeUnQuote>
+  
+  ? def fooUQ := makeUnQuote("foo")
+  # value: foo
+  
+  ? fooUQ :DeepFrozen
+  # value: foo
+  
+  ? fooUQ.__optUncall()
+  # value: [<makeUnQuote>, "run", ["foo"]]
+  
+  ? <elib:oldeio.UnQuote>
+  # value: <makeUnQuote>
+
+Brand/Sealer/Unsealer
+
+  ? def makeBrand := <import:org.erights.e.elib.sealing.makeBrand>
+  # value: <makeBrand>
+  
+  ? def [sealer, unsealer] := def kit := makeBrand("ACME Widget")
+  # value: <ACME Widget brand kit>
+
+  ? def brand := kit.getBrand()
+  # value: ACME Widget
+
+ confirm that __conformTo of the kit is not-broken
+  ? kit.__conformTo(boolean) == kit
+  # value: true
+
+  ? [sealer, unsealer]
+  # value: [<ACME Widget sealer>, <ACME Widget unsealer>]
+
+  ? sealer.getBrand() == brand
+  # value: true
+
+  ? unsealer.getBrand() == brand
+  # value: true
+
+  ? def box := sealer.seal(def widget {})
+  # value: <sealed by ACME Widget>
+  
+  ? help(box)
+  # value: interface "org.erights.e.elib.sealing.makeBrand$makeBrand__C$sealer__C$sealedBox__C" {
+  #            /** Return the Brand of the Unsealer which can unseal this box. */
+  #            to getBrand() :any
+  #            /** An implementation detail. */
+  #            to _offerContent() :void
+  #        }
+
+  ? box.getBrand() == brand
+  # value: true
+
+  ? {[def r := unsealer.unseal(box), r == widget]}
+  # value: [<widget>, true]
+
+  ? escape not { print("-> ", unsealer.unseal(box, not)) } catch p { print(p) }
+  # stdout: -> <widget>
+
+  ? escape not { print("-> ", unsealer.unseal(44, not)) } catch p { print(p) }
+  # stdout: problem: 44 is not a ACME Widget sealed box
+
+  XXX wrong-brand boxes
+  XXX wrong-brand/non-boxes to unseal/1
+  XXX test that one can't mess with _offerContent '
+  XXX spoof/proxied boxes/unsealers
+  XXX all unseal methods
+  XXX optUncall
+
+simplifyFQName
+
+  ? def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+  # value: <simplifyFQName>
+
+  ? simplifyFQName :DeepFrozen
+  # value: <simplifyFQName>

@@ -1,0 +1,39 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+pragma.enable("dot-props")
+pragma.enable("accumulator")
+
+def makeConvertENode2Term := <elang:visitors.makeConvertENode2Term>
+
+def convert := makeConvertENode2Term()
+
+def termToSExpression(term) {
+  if (term =~ term`.String.@_`) {
+    # Quote in accordance with Common Lisp reader syntax - no \letter escapes.
+    return "\"" + term.getOptData().replaceAll("\\", "\\\\").replaceAll("\"", "\\\"") + "\""
+  } else if (term =~ term`.int.@_`) {
+    return term.asText()
+  } else if (term =~ term`.char.@_`) {
+    return "#\\" + E.toString(term.getOptData())
+  } else if (term =~ term`.float64.@_`) {
+    # Print as double-float
+    def floatString := term.asText()
+    if (floatString.indexOf("e") != -1) {
+      return floatString.replaceAll("e", "d")
+    } else {
+      return floatString + "d0"
+    }
+  } else {
+    return "(|" + term::tag::tagName + "|" + accum "" for x in term::args { _ + " " + termToSExpression(x) } + ")"
+  }
+}
+
+def parseEToSExpression(source) {
+  
+  return termToSExpression(convert(e__quasiParser(source)))
+
+}

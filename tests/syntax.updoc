@@ -1,0 +1,382 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+--- ePrinter ---
+
+  ? def ePrinter := <import:org.erights.e.elang.syntax.ePrinter>
+  # value: <E-syntax printer>
+
+Doc comments
+  
+  ? ePrinter.printDocComment(stdout, "")
+  
+  ? ePrinter.printDocComment(stdout, "foo")
+  # stdout: /** foo */
+  #         
+  
+  ? ePrinter.printDocComment(stdout, "*/*")
+  # problem: doc comment containing "*/" cannot be printed: "*/*"
+  
+  ? ePrinter.printDocComment(stdout, 40)
+  # problem: the int 40 doesn't coerce to a String
+  
+  ? ePrinter.printDocComment(stdout, def _{to __conformTo(_) :any {return "foo"}})
+  # stdout: /** foo */
+  #         
+  
+  ? { var i := -1; ePrinter.printDocComment(stdout, def _{to __conformTo(_) :any {return ["innocent", "*/"][i += 1]}}) }
+  # stdout: /** innocent */
+  #         
+  
+  XXX should left-column asterisks be in the print?
+  ? ePrinter.printDocComment(stdout, "\nfoo\nbar\n")
+  # stdout: /** 
+  #         foo
+  #         bar
+  #          */
+  #         
+  
+  ? ePrinter.printDocComment(stdout, " ")
+  # stdout: /**   */
+  #         
+
+printVerb
+
+  ? ePrinter.printVerb(stdout, "xor")
+  # stdout: xor
+  
+  ? ePrinter.printVerb(stdout, "")
+  # stdout: ""
+  
+  ? ePrinter.printVerb(stdout, "^")
+  # stdout: "^"
+  
+  ? ePrinter.printVerb(stdout, "\"")
+  # stdout: "\""
+  
+  ? ePrinter.printVerb(stdout, def _{to __conformTo(_) :any {return "foo"}})
+  # stdout: foo
+
+printNoun
+
+  ? ePrinter.printNoun(stdout, "xor")
+  # stdout: xor
+  
+  ? ePrinter.printNoun(stdout, "")
+  # stdout: ::""
+  
+  ? ePrinter.printNoun(stdout, "^")
+  # stdout: ::"^"
+  
+  ? ePrinter.printNoun(stdout, "\"")
+  # stdout: ::"\""
+  
+  ? ePrinter.printNoun(stdout, def _{to __conformTo(_) :any {return "foo"}})
+  # stdout: foo
+
+printPropertySlot
+
+  ? ePrinter.printPropertySlot(stdout, "xor")
+  # stdout: _::&xor
+  
+  ? ePrinter.printPropertySlot(stdout, "a1")
+  # stdout: _::&a1
+  
+  ? ePrinter.printPropertySlot(stdout, "1a")
+  # stdout: _::&"1a"
+  
+  ? ePrinter.printPropertySlot(stdout, "")
+  # stdout: _::&""
+  
+  ? ePrinter.printPropertySlot(stdout, "^")
+  # stdout: _::&"^"
+  
+  ? ePrinter.printPropertySlot(stdout, "\"")
+  # stdout: _::&"\""
+
+  ? ePrinter.printPropertySlot(stdout, def _{to __conformTo(_) :any {return "foo"}})
+  # stdout: _::&foo
+
+printString
+
+  ? ePrinter.printString(stdout, "")
+  # stdout: ""
+
+  ? ePrinter.printString(stdout, "foo")
+  # stdout: "foo"
+
+  ? ePrinter.printString(stdout, "string-with-\t-inside")
+  # stdout: "string-with-\t-inside"
+
+  ? ePrinter.printString(stdout, " \n\"\\\\\"\" ")
+  # stdout: " 
+  #         \"\\\\\"\" "
+
+  ? ePrinter.printString(stdout, "\n\r\t")
+  # stdout: "
+  #         \r\t"
+
+  ? ePrinter.printString(stdout, def _{to __conformTo(_) :any {return "foo"}})
+  # stdout: "foo"
+
+printCharacter
+
+  ? ePrinter.printCharacter(stdout, 'a')
+  # stdout: 'a'
+
+  ? ePrinter.printCharacter(stdout, '$')
+  # stdout: '$'
+
+  ? ePrinter.printCharacter(stdout, ' ')
+  # stdout: ' '
+
+  ? ePrinter.printCharacter(stdout, '\\')
+  # stdout: '\\'
+
+  ? ePrinter.printCharacter(stdout, '\'')
+  # stdout: '\''
+
+  ? ePrinter.printCharacter(stdout, '\t')
+  # stdout: '\t'
+
+  x ? ePrinter.printCharacter(stdout, '•')
+  x # stdout: '•'
+
+  ? ePrinter.printCharacter(stdout, def _{to __conformTo(_) :any {return 'f'}})
+  # stdout: 'f'
+
+printList
+
+  ? ePrinter.printList(stdout, [], false)
+  # stdout: []
+  
+  ? ePrinter.printList(stdout, [1], false)
+  # stdout: [1]
+  
+  ? ePrinter.printList(stdout, [1, "2", 3], true)
+  # stdout: [1, "2", 3]
+
+  ? ePrinter.printList(stdout, [1, "2", 3], false)
+  # stdout: [1, 2, 3]
+
+  ? ePrinter.printList(stdout, "123", true)
+  # stdout: ['1', '2', '3']
+
+  ? ePrinter.printList(stdout, def _{to __conformTo(_) :any {return [4]}}, true)
+  # stdout: [4]
+
+printMethodHeader
+
+  ? ePrinter.printMethodHeader(stdout, false, "doc", "verb!", ["param"], "org")
+  # stdout: /** doc */
+  #         to "verb!"(param) :org
+  
+  ? ePrinter.printMethodHeader(stdout, true, "", "verb", [], null)
+  # stdout: method verb()
+  
+  ? ePrinter.printMethodHeader(stdout, 
+  >   def a{to __conformTo(_) :any {return false}},
+  >   def b{to __conformTo(_) :any {return "dc"}},
+  >   def c{to __conformTo(_) :any {return ""}},
+  >   def d{to __conformTo(_) :any {return [def da{to __conformTo(_) :any {return "p"}}]}},
+  >   def e{to __conformTo(_) :any {return null}})
+  # stdout: /** dc */
+  #         to ""(<da>) :<e>
+  
+printGuardedNounPattern
+
+  ? ePrinter.printGuardedNounPattern(stdout, "foo", "bar")
+  # stdout: foo :bar
+  
+  ? ePrinter.printGuardedNounPattern(stdout, null, null)
+  # stdout: _
+  
+  ? ePrinter.printGuardedNounPattern(stdout, 
+  >   def a{to __conformTo(_) :any {return "a"}},
+  >   def b{to __conformTo(_) :any {return "b"}})
+  # stdout: a :<b>
+  
+node visitor
+
+  ? def visitor := ePrinter.makePrintENodeVisitor(stdout)
+  # value: <E-syntax node visitor printing to <textWriter>>
+  
+  ? e`1 + 1`.welcome(visitor)
+  # stdout: 1.add(1)
+
+  XXX further print visitor tests
+
+--- Node printing ---
+
+XXX move print tests to here from mixed up in enode.updoc
+XXX print tests for all nodes
+
+Catch
+
+  ? e`try { a } catch b { c }`
+  # value: e`try {
+  #            a
+  #        } catch b {
+  #            c
+  #        }`
+
+Finally
+
+  ? e`try { a } finally { b }`
+  # value: e`try {
+  #            a
+  #        } finally {
+  #            b
+  #        }`
+
+Hide
+
+  ? e`{ a }`
+  # value: e`{
+  #            a
+  #        }`
+
+If
+
+  ? e`if (a) { b } else { c }`
+  # value: e`if (a) {
+  #            b
+  #        } else {
+  #            c
+  #        }`
+
+MetaContext
+
+  ? e`meta.context()`
+  # value: e`meta.context()`
+
+MetaState
+
+  ? e`meta.getState()`
+  # value: e`meta.getState()`
+
+MatchBInd
+
+  ? e`a =~ b`
+  # value: e`a =~ b`
+
+SlotExpr
+
+  ? e`&a`
+  # value: e`&a`
+
+CdrPattern, ListPattern
+
+  ? epatt`[car, cadr] + cddr`
+  # value: epatt`[car, cadr] + cddr`
+
+Precedence parenthesization tests
+
+  ? e`((a) =~ b ? ((c) =~ d))`
+  # value: e`a =~ b ? (c =~ d)`
+
+  ? epatt`a :(b; c)` 
+  # value: epatt`a :(b
+  #        c)`
+  
+  ? e`a := (b; c)`
+  # value: e`a := (b
+  #        c)`
+  
+  ? e`(a := b) =~ c`
+  # value: e`(a := b) =~ c`
+  
+  ? e`a := (b =~ c)`
+  # value: e`a := b =~ c`
+
+  ? e`a := (b := c)`
+  # value: e`a := b := c`
+
+  ? e`(a =~ b) =~ c`
+  # value: e`(a =~ b) =~ c`
+
+Universal precedence-proper print-parenthesization tester:
+
+  ? def vm__uriGetter := <elang:evm.*>
+  >
+  > def SeqExpr := <vm:SeqExpr>.asType()
+  >
+  > def innerNodes := [
+  >   e`a := b`,
+  >   e`a.b(c)`,
+  >   e`try {a} catch b {c}`,
+  >   e`def a := b`,
+  >   e`escape a {b}`,
+  >   e`try {a} finally {b}`,
+  >   e`{a}`,
+  >   e`if (a) {b} else {c}`,
+  >   e`1`,
+  >   e`meta.context()`,
+  >   e`meta.getState()`,
+  >   e`a =~ b`,
+  >   e`a`,
+  >   e`def "o" {}`,
+  >   e`a; b`,
+  >   e`&a`,
+  > ]; null
+  
+  ? for inner in innerNodes {
+  >   for whole in [
+  >     e`aa := $inner`,
+  >     e`aa($inner)`,
+  >     e`$inner(aa)`,
+  >     e`def aa := $inner`,
+  >     e`$inner =~ aa`,
+  >     e`$inner; aa`,
+  >     e`aa; $inner`,
+  >     e`def aa { method bb() :$inner {} }`,
+  >     e`bb =~ aa ? $inner`,
+  >     e`bb =~ aa :$inner`,
+  >   ] {
+  >     # Special case: SeqExpr may merge harmlessly with nested SeqExprs
+  >     if (List[SeqExpr].accepts([whole, inner])) { continue }
+  >
+  >     def [tw, sb] := <elib:oldeio.TextWriter>.makeBufferingPair()
+  >     whole.welcome(ePrinter.makePrintENodeVisitor(tw))
+  >     tw.close()
+  >     escape fail {
+  >       def result := e__quasiParser.xTryParse(sb.snapshot(), fail)
+  >       if (result != whole) {
+  >         # XXX should print kernel node structure instead of E-syntax
+  >         println(`difference: $whole ===> $result`)
+  >       }
+  >     } catch p {
+  >       println(`parse error: $whole ===> ${sb.snapshot()} ($p)`)
+  >     }
+  >   }
+  > }
+
+--- Parsing ---
+
+e__quasiParser
+
+  ? e__quasiParser
+  # value: <import:org.erights.e.elang.syntax.makeEParser>
+  
+  ? e`1 + 1`
+  # value: e`1.add(1)`
+  
+  ? e__quasiParser("hi")
+  # value: e`hi`
+  
+  XXX other methods
+
+makeEParser
+
+  ? def makeEParser := <import:org.erights.e.elang.syntax.makeEParser>
+  # value: <import:org.erights.e.elang.syntax.makeEParser>
+
+  ? escape fail { makeEParser.xTryParse("hi", fail) } catch p { print(p) }
+  # value: e`hi`
+
+  ? escape fail { makeEParser.xTryParse("try", fail) } catch p { print(p) }
+  # stdout: syntax error: Unexpected EOF
+
+XXX specific tests for e`` and epatt``
+XXX printing all nodes, parens, precedence
+XXX test proper quoting as source is delivered to the Java parser - e.g. right now sending source containing a tab kills the connection because it's misquoted a the REPL-input level.

@@ -1,0 +1,199 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+XXX very incomplete tests - the first group originally written just to test the print value of a closed resolver
+  
+  ? def [p, r] := Ref.promise()
+  # value: [<Promise>, <Resolver>]
+  
+  ? r.isDone()
+  # value: false
+  
+  ? [r.resolve(1)]
+  # value: [null]
+  
+  ? r
+  # value: <Closed Resolver>
+  
+  ? r.isDone()
+  # value: true
+  
+  ? p
+  # value: 1
+
+resolver#resolveRace
+
+  ? def [p, r] := Ref.promise()
+  # value: [<Promise>, <Resolver>]
+  
+  ? r.isDone()
+  # value: false
+  
+  ? [r.resolveRace(1), p, r]
+  # value: [true, 1, <Closed Resolver>]
+
+  ? r.isDone()
+  # value: true
+  
+  ? [r.resolveRace(2), p, r]
+  # value: [false, 1, <Closed Resolver>]
+  
+  ? r.isDone()
+  # value: true
+  
+Ref
+
+  ? Ref
+  # value: <Ref>
+
+  ? Ref :DeepFrozen
+  # value: <Ref>
+  
+ broken
+  
+  ? Ref.broken("bang")
+  # value: <ref broken by problem: bang>
+  
+  ? Ref.broken(def _ {to __conformTo(g) :any {return g.coerce("biff", null)}})
+  # value: <ref broken by problem: biff>
+  
+  ? Ref.broken(null)
+  # problem: the Null null doesn't coerce to a Throwable
+
+ isNear
+
+  ? Ref.isNear(1)
+  # value: true
+  
+  ? Ref.isNear(Ref.promise()[0])
+  # value: false
+
+  ? Ref.isNear(Ref.promise())
+  # value: true
+
+  ? Ref.isNear(Ref.broken("biff"))
+  # value: false
+
+  XXX isNear with far refs
+
+ isSettled
+ 
+  ? Ref.isSettled(1)
+  # value: true
+ 
+  ? Ref.isSettled([1])
+  # value: true
+
+  ? Ref.isSettled(Ref.promise()[0])
+  # value: false
+
+  ? Ref.isSettled(def settled_test_pair := Ref.promise())
+  # value: false
+  
+  ? settled_test_pair[1].resolve(2)
+
+  ? Ref.isSettled(settled_test_pair)
+  # value: true
+  
+  ? Ref.isSettled(Ref.broken("biff"))
+  # value: true
+  
+ isFar
+ 
+  XXX test with actual Far ref
+  
+  ? Ref.isFar(1)
+  # value: false
+    
+  ? Ref.isFar(245398378954763192874789237489237483234532523463467)
+  # value: false
+  
+  ? Ref.isFar({def x; x})
+  # value: false
+  
+  ? Ref.isFar(def y {})
+  # value: false
+  
+  ? Ref.isFar(Ref.broken("you'll never know"))
+  # value: false
+
+ isResolved
+
+  ? Ref.isResolved("idea")
+  # value: true
+
+  ? Ref.isResolved(Ref.broken("nope"))
+  # value: true
+
+  ? Ref.isResolved(Ref.promise()[0])
+  # value: false
+  
+ fulfillment
+
+  ? Ref.fulfillment("null")
+  # value: "null"
+
+  ? Ref.fulfillment(Ref.broken("bang"))
+  # problem: bang
+  
+  ? Ref.fulfillment(Ref.promise()[0])
+  # problem: not resolved (Ref#fulfillment)
+
+ optProblem
+
+  ? [Ref.optProblem('r')]
+  # value: [null]
+
+  ? Ref.optProblem(Ref.broken("expected"))
+  # value: problem: expected
+
+  ? [Ref.optProblem(Ref.promise()[0])]
+  # value: [null]
+  
+ isEventual
+
+  ? Ref.isEventual("idea")
+  # value: false
+
+  ? Ref.isEventual(Ref.broken("nope"))
+  # value: false
+
+  ? Ref.isEventual(Ref.promise()[0])
+  # value: true
+
+Bugfix test: promise ref not propagating opt-problem correctly
+
+  ? def [p, r] := Ref.promise()
+  # value: [<Promise>, <Resolver>]
+  
+  ? r.smash("boink")
+  
+  ? Ref.optProblem(p)
+  # value: problem: boink
+
+Broken reference details
+
+  XXX this updoc script is ordering-fragile
+
+  ? Ref.broken("biff").__whenMoreResolved(print) 
+  # problem: biff
+  
+  # stdout: <ref broken by problem: biff>
+
+  ? Ref.broken("biff").__whenBroken(print) 
+  # problem: biff
+  
+  # stdout: <ref broken by problem: biff>
+
+  XXX these reveal that <BROKEN> <- anything *immediately* produces a broken reference, rather than a promise. This matches Java-E, but is it *right*?
+
+  ? Ref.broken("biff") <- __whenMoreResolved(print) 
+  # value: <ref broken by problem: biff>
+  
+  # stdout: <ref broken by problem: biff>
+
+  ? Ref.broken("biff") <- __whenBroken(print) 
+  # value: <ref broken by problem: biff>
+  
+  # stdout: <ref broken by problem: biff>
+

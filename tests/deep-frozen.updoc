@@ -1,0 +1,177 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Frozen
+XXX some of these tests should be eventually moved out to files relevant to the objects being checked for DeepFrozenness
+
+  ? DeepFrozen
+  # value: DeepFrozen
+  
+  ? 1 :DeepFrozen
+  # value: 1
+  
+  ? any :DeepFrozen
+  # value: any
+
+  ? {def [x, y] := [1, 1]; &x == &y}
+  # value: true
+
+  ? (&any) :DeepFrozen
+  # value: <& any>
+  
+  ? {def x := [].diverge(); (&x) :DeepFrozen}
+  # problem: <& [].diverge()> is not DeepFrozen because [].diverge() is not
+  
+  ? def f0 {} :DeepFrozen
+  # problem: <f0> is not DeepFrozen
+   
+  ? def f1 implements DeepFrozen {}
+  # value: <f1>
+  
+  ? f1 :DeepFrozen
+  # value: <f1>
+  
+  ? var f2x := 0
+  # value: 0
+  
+  ? def f2 implements DeepFrozen { to run() :void { f2x += 1 } }
+  # problem: "f2x" in the lexical scope of $f2__C is not DeepFrozen because <var 0> is not
+  
+  ? DeepFrozen :DeepFrozen
+  # value: DeepFrozen
+
+  ? def f22 implements DeepFrozen.optionally() { to run() :void { f2x += 1 } }
+  # value: <f22>
+  
+  ? f22 :DeepFrozen
+  # problem: <f22> is not DeepFrozen
+
+--- 'Lazy' checking
+
+  ? def EventuallyDeepFrozen := DeepFrozen."eventually"()
+  # value: <EventuallyDeepFrozen>
+  
+  ? def secret
+  # value: <Resolver>
+  
+  ? def lazyFailer1 implements EventuallyDeepFrozen {}
+  # problem: EventuallyDeepFrozen: $lazyFailer1__C: no __optSealedDispatch/1 method found
+  
+  ? def lazyFailer2 implements EventuallyDeepFrozen match msg {}
+  # problem: EventuallyDeepFrozen: $lazyFailer2__C: auditing plumbing not yet supported
+  
+  ? def lazyFailer3 implements EventuallyDeepFrozen {
+  >   to __optSealedDispatch() :void {}
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer3__C: no __optSealedDispatch/1 method found
+  
+  ? def lazyFailer4 implements EventuallyDeepFrozen {
+  >   to __optSealedDispatch(brand) :void {}
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer4__C: __optSealedDispatch result guard is not any
+  
+  ? def lazyFailer5 implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(brand :void) :any {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     }
+  >   }
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer5__C: __optSealedDispatch argument pattern is not simple
+  
+  ? def lazyFailer6 implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(brand) :void {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     }
+  >   }
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer6__C: __optSealedDispatch result guard is not any
+  
+  XXX can't do this test because Java-E rejects redefining "any" - see if we can replace the node builder or some such to fix this - if not, build an expression using ENode constructors and eval that '
+  x ? def lazyFailer7 implements (def any := int; EventuallyDeepFrozen) {
+  x >   method __optSealedDispatch(brand) :any {
+  x >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  x >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  x >     }
+  x >   }
+  x > }
+  x # problem: EventuallyDeepFrozen: $lazyFailer7__C: __optSealedDispatch/1 does not have appropriate structure
+  
+  ? def lazyFailer8 implements EventuallyDeepFrozen {
+  >   to __optSealedDispatch(brand) :any {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     }
+  >   }
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer8__C: __optSealedDispatch body is not an if
+  
+  ? def lazyFailer9 implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(brand ? (def EventuallyDeepFrozen := 43; true)) :any {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     }
+  >   }
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer9__C: __optSealedDispatch argument pattern is not simple
+  
+  ? def lazyFailer10 implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(brand) :any {
+  >     if (brand != EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     }
+  >   }
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer10__C: __optSealedDispatch if test does not compare the given brand to the peek brand
+  
+  ? def lazyFailer11 implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(brand) :any {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       [].asMap()
+  >     }
+  >   }
+  > }
+  # problem: EventuallyDeepFrozen: $lazyFailer11__C: __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  
+  ? def opaqueButDeepFrozen implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(brand) :any {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     } else {
+  >       "the auditor doesn't care about this"
+  >     }
+  >   }
+  >   to doSomething() :void { 
+  >     # mention the secret
+  >     secret.run() 
+  >     # gratuitous self-reference
+  >     opaqueButDeepFrozen.__optSealedDispatch(null)
+  >   }
+  > }
+  # value: <opaqueButDeepFrozen>
+  
+  ? opaqueButDeepFrozen :DeepFrozen
+  # problem: <opaqueButDeepFrozen> is not DeepFrozen because <opaqueButDeepFrozen> contains references that are unsettled or not DeepFrozen
+  
+  ? bind secret implements DeepFrozen { to run() :void {} }
+  # value: <secret__1>
+  
+  ? opaqueButDeepFrozen :DeepFrozen
+  # value: <opaqueButDeepFrozen>
+
+XXX test that redefinitions of __equalizer are rejected
+
+-- DeepFrozenness checks of various imports
+
+  ? __auditedBy :DeepFrozen; null
+
+  ? <elib:tables.makeConstMap> :DeepFrozen; null
+
+  XXX the below aren't exported yet - enable tests when they are'
+
+  x ? <elib:tables.makeTwine> :DeepFrozen; null
+  
+  x ? <elib:tables.makeFlexMap> :DeepFrozen; null
+  
+Should we have some sort of 'test *everything*' tool for the SafeScope/import loader?

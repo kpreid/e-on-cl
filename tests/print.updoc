@@ -1,0 +1,273 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? [1]
+# value: [1]
+
+
+? def simpleCustomPrint {
+>   to __printOn(tw :TextWriter) :void {
+>     tw.print("coi munje")
+>   }
+> }
+# value: coi munje
+
+For purposes of this test, prevent infinite loops if the TextWriter doesn't do so properly. '
+
+? var cycle := 0
+# value: 0
+
+? def trickyCycleBreaker {
+>   to __printOn(tw :TextWriter) :void {
+>     cycle += 1
+>     try {
+>       if (cycle < 5) {
+>         tw.print("<([{ ", trickyCycleBreaker, " }])>")
+>       }
+>     } finally {
+>       cycle -= 1
+>     }
+>   }
+>   to getSelf() :any { return trickyCycleBreaker } # debugging
+> }
+# value: <([{ <***CYCLE***> }])>
+
+? trickyCycleBreaker == trickyCycleBreaker.getSelf()
+# value: true
+
+? trickyCycleBreaker == trickyCycleBreaker
+# value: true
+
+? def notSelfReferential {
+>   to __printOn(tw :TextWriter) :void {
+>     cycle += 1
+>     try {
+>       if (cycle < 5) {
+>         tw.print("$#$ ", trickyCycleBreaker, " $#$")
+>       }
+>     } finally {
+>       cycle -= 1
+>     }
+>   }
+>   to getSelf() :any { return trickyCycleBreaker } # debugging
+> }
+# value: $#$ <([{ <***CYCLE***> }])> $#$
+
+? def l := [l]
+# value: [<***CYCLE***>]
+
+? def l := [l].diverge()
+# value: [<***CYCLE***>].diverge()
+
+? def l := [1, 2, l, 3, 4, [l]]
+# value: [1, 2, <***CYCLE***>, 3, 4, [<***CYCLE***>]]
+
+? def usingPrintAll {
+>   to __printOn(tw :TextWriter) :void {
+>     tw.printAll(["a", "bb", "cee"])
+>   }
+> }
+# value: abbcee
+
+? stdout.print("biff")
+# stdout: biff
+
+? stdout.print("biff\nboff")
+# stdout: biff
+#         boff
+
+? stdout.indent("+").print("biff\nboff")
+# stdout: biff
+#         +boff
+
+? stdout.indent("+").print("\nbiff\nboff\n")
+# stdout: 
+#         +biff
+#         +boff
+#         +
+
+TextWriter maker
+
+  ? def makeTextWriter := <elib:oldeio.TextWriter>
+  # value: <makeTextWriter>
+  
+  ? makeTextWriter :DeepFrozen
+  # value: <makeTextWriter>
+
+StringBuffer writing
+  
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair()
+  # value: [<textWriter>, <stringBuffer "">]
+  
+  ? tw.print("hi!")
+  
+  ? sb
+  # value: <stringBuffer "hi!">
+  
+  ? def sbSnap := sb.snapshot()
+  # value: "hi!"
+  
+  ? tw.lnPrint("bye!")
+  
+  ? sb
+  # value: <stringBuffer "hi!
+  #        bye!">
+  
+  ? sbSnap
+  # value: "hi!"
+  
+  ? tw.indent(" .. ").lnPrint("why?")
+  
+  ? sb
+  # value: <stringBuffer "hi!
+  #        bye!
+  #         .. why?">
+  
+  ? tw.close()
+  
+  ? tw.print("gone")
+  # problem: closed TextWriter
+
+  ? sb
+  # value: <stringBuffer "hi!
+  #        bye!
+  #         .. why?">
+  
+Nested TextWriters are closed if their parents are closed
+
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair()
+  # value: [<textWriter>, <stringBuffer "">]
+  
+  ? def sub := tw.indent()
+  # value: <textWriter>
+  
+  ? tw.close()
+  
+  ? sub.print("gone again")
+  # problem: closed TextWriter
+
+Custom syntax (experimental)
+
+  ? makeTextWriter.makeBufferingPair(["syntax" => def badSyntax {}])
+  # problem: <badSyntax> is not DeepFrozen
+
+  Syntaxes are required to be DeepFrozen on a 'better safe than sorry' principle, as I don't know quite what programmer expectations will be for TextWriters.
+  
+  This is *not* intended as a good example of HTML.
+  
+  ? def xhtmlPrintSyntax implements DeepFrozen {
+
+  XXX need better names for all these concepts
+
+  >   to run(baseWriter) :any {
+  >     def variant(isQuoting, indentString) :any {
+  >       def syntaxInstance {
+  >         to enterReference() :any { 
+  >           baseWriter.write("<span>")
+  >           return syntaxInstance
+  >         }
+  >         to exitReference() :void { 
+  >           baseWriter.write("</span>")
+  >         }
+  >         to cycle() :void {
+  >           baseWriter.write("<img src=\"/cycle\" alt=\"@\"/>")
+  >         }
+  >         to "eventual"(isResolved :boolean) :void {
+  >           baseWriter.write("<span class=\"eventual\">Promise</span>")
+  >         }
+  >         to broken(tw, problem :any) :void {
+     
+  XXX it's rather a wart that broken and problem get a tw arg and nothing else does - we need to figure out what the general pattern should be
+     
+  >           baseWriter.write("<span class=\"broken\">")
+  >           tw.quote(problem) 
+  >           baseWriter.write("</span>")
+  >         }
+  >         to problem(tw, fqn, problem :any) :void {
+  >           baseWriter.write("<em class=\"error\">(")
+  >           tw.print(fqn)
+  >           baseWriter.write(") ")
+  >           tw.quote(problem)
+  >           baseWriter.write("</em>")
+  >         }
+  >         to write(s :String) :void {
+  >           def hquote(t) :any { return t.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;") }
+  >           baseWriter.write(hquote(s).replaceAll("\n", "<br/>" + hquote(indentString)))
+  >         }
+  >         to indent(new) :any {
+  >           return variant(isQuoting, indentString + new)
+  >         }
+  >         to isQuoting() :any { return isQuoting }
+  >         to asQuoting() :any { return variant(true, indentString) }
+  >         to asNotQuoting() :any { return variant(false, indentString) }
+  >       }
+  >       return syntaxInstance
+  >     }
+  >     return variant(false, "")
+  >   }
+  > }
+  # value: <xhtmlPrintSyntax>
+
+ reference marking
+
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.quote(def _ { to __printOn(out :TextWriter) :void {
+  >   out.write("[")
+  >   out.print(def _ { to __printOn(out :TextWriter) :void { 
+  >     out.write("1")
+  >   }})
+  >   out.write("]")
+  > }})
+  ? print(sb.snapshot())
+  # stdout: <span>[<span>1</span>]</span>
+
+ cycle hook
+
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.print({def cyc {to __printOn(out :TextWriter) :void {
+  >   out.write("begin ")
+  >   out.print(cyc)
+  >   out.write(" end")
+  > }}})
+  ? print(sb.snapshot())
+  # stdout: <span>begin <span><img src="/cycle" alt="@"/></span> end</span>
+  
+ content escaping
+  
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.write("&a;*@!$\\[><\"{}>{?'?")
+  ? print(sb.snapshot())
+  # stdout: &amp;a;*@!$\[&gt;&lt;&quot;{}&gt;{?'?
+  
+ eventual ref hook
+  
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.print(Ref.promise()[0])
+  ? print(sb.snapshot())
+  # stdout: <span><span class="eventual">Promise</span></span>
+  
+  XXX try with Far ref
+
+ broken ref hook
+ 
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.print(Ref.broken("aardvarks"))
+  ? print(sb.snapshot())
+  # stdout: <span><span class="broken"><span><span>problem: </span><span>aardvarks</span></span></span></span>
+
+ indent hook
+
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.indent("abc").write("hi\nbye")
+  ? print(sb.snapshot())
+  # stdout: hi<br/>abcbye
+
+ failure hook
+
+  XXX should the fqn be __getAllegedType-based instead?
+
+  ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
+  ? tw.print(def "$boing" match _ {throw("boing")})
+  ? print(sb.snapshot())
+  # stdout: <span><em class="error">(<span>org.cubik.cle.prim.any</span>) <span><span>&lt;sealed problem&gt;</span></span></em></span>
+

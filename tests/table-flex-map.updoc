@@ -1,0 +1,334 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def cl := []
+  # value: []
+  
+  ? def cm := [].asMap()
+  # value: [].asMap()
+  
+  ? def fm := cm.diverge()
+  # value: [].asMap().diverge()
+  
+  ? def rofm := fm.readOnly()
+  # value: [].asMap().diverge().readOnly()
+  
+  ? fm.maps("a")
+  # value: false
+  
+  ? [fm.put("a", "b")]
+  # value: [null]
+  
+  ? fm.maps("a")
+  # value: true
+  
+  ? fm["a"]
+  # value: "b"
+  
+  ? fm
+  # value: ["a" => "b"].diverge()
+  
+  ? fm.__optUncall()
+  # value: [["a" => "b"], "diverge", [any, any]]
+  
+  ? [fm.put("a", "b2")]
+  # value: [null]
+  
+  ? fm
+  # value: ["a" => "b2"].diverge()
+  
+  ? [fm.put("a", "b3", false)]
+  # value: [null]
+  
+  ? fm
+  # value: ["a" => "b3"].diverge()
+  
+  ? [fm.put("a", "b4", true)]
+  # problem: "a" already in map
+  
+  ? fm
+  # value: ["a" => "b3"].diverge()
+  
+  ? fm.fetch("a", thunk{0})
+  # value: "b3"
+  
+  ? fm.fetch("b", thunk{1})
+  # value: 1
+  
+  ? [escape out { fm.fetch("b", out); "oops" }]
+  # value: [null]
+  
+  ? def keys := fm.getKeys()
+  # value: ["a"]
+  
+  ? [fm.put("b", "q")]
+  # value: [null]
+
+put/4
+
+  ? escape ej { fm.put("a", "b4", true, ej); "q" }
+  # value: problem: "a" already in map
+
+readOnly
+
+  ? rofm
+  # value: ["a" => "b3", "b" => "q"].diverge().readOnly()
+
+snapshot
+
+  ? def snap := fm.snapshot()
+  # value: ["a" => "b3", "b" => "q"]
+  
+  ? def rosnap := rofm.snapshot()
+  # value: ["a" => "b3", "b" => "q"]
+  
+checking for accidental mutability in getKeys
+  ? keys
+  # value: ["a"]
+  
+  ? fm
+  # value: ["a" => "b3", "b" => "q"].diverge()
+  
+  ? fm.put("c", 'd')
+  
+  ? fm
+  # value: ["a" => "b3", "b" => "q", "c" => 'd'].diverge()
+  
+removeKey 1
+
+  ? fm.removeKey("a")
+  
+  ? fm
+  # value: ["c" => 'd', "b" => "q"].diverge()
+
+removeKey 2
+  
+  ? fm.put("e", "f")
+  
+  ? fm
+  # value: ["c" => 'd', "b" => "q", "e" => "f"].diverge()
+  
+  ? fm.removeKey("b")
+  
+  ? fm
+  # value: ["c" => 'd', "e" => "f"].diverge()
+  
+removeKey 3 (not starting with 3 elements + stale data check)
+
+  ? fm.put(4, 5)
+  ? fm.removeKey(4)
+
+  ? fm.removeKey("c")
+  
+  ? fm
+  # value: ["e" => "f"].diverge()
+  
+removeKey absent
+
+  ? fm.removeKey(44)
+  
+  ? fm
+  # value: ["e" => "f"].diverge()
+
+removeKey formerly present
+
+  ? fm.removeKey("a")
+  
+  ? fm
+  # value: ["e" => "f"].diverge()
+  
+removeKey strict
+
+  ? fm.removeKey("b", true)
+  # problem: "b" not in map
+  
+  ? fm
+  # value: ["e" => "f"].diverge()
+
+  ? fm.removeKey("e", true)
+  
+  ? fm
+  # value: [].asMap().diverge()
+
+putAll
+
+  ? fm.putAll([1 => 2], false)
+  
+  ? fm
+  # value: [1 => 2].diverge()
+  
+  XXX this matches Java E behavior (leave all elements before the strictly conflicting one), but is it right?
+  ? fm.putAll([3 => 3, 2 => 2, 1 => 1, 0 => 0], true)
+  # problem: 1 already in map
+  
+  ? fm
+  # value: [1 => 2, 3 => 3, 2 => 2].diverge()
+  
+  ? fm.putAll([1 => 33, 2 => 44])
+
+  ? fm
+  # value: [1 => 33, 3 => 3, 2 => 44].diverge()
+
+putAll/4
+
+  ? escape ej { fm.putAll([1 => 199], true, ej); "q" }
+  # value: problem: 1 already in map
+
+rechecking readOnly's contents, testing its methods '
+
+  ? rofm
+  # value: [1 => 33, 3 => 3, 2 => 44].diverge().readOnly()
+  
+  ? rofm.removeKey(1)
+  # problem: No such method: ROMap#removeKey/1
+  
+  ? rofm[1]
+  # value: 33
+
+checking for accidental mutability in snapshot
+
+  ? snap
+  # value: ["a" => "b3", "b" => "q"]
+  
+  ? rosnap
+  # value: ["a" => "b3", "b" => "q"]
+  
+  ? snap == rosnap
+  # value: true
+  
+Test searching for bug in algorithm for EMap#or/1 (later found not to be a bug)
+
+  ? def oleft := ["x" => 1]
+  # value: ["x" => 1]
+  
+  ? def oright := ["y" => 1]
+  # value: ["y" => 1]
+  
+  ? def oflex := oright.diverge(any, any)
+  # value: ["y" => 1].diverge()
+  
+  ? [oflex.putAll(oleft, true)]
+  # value: [null]
+  
+  ? oflex
+  # value: ["y" => 1, "x" => 1].diverge()
+  
+  ? oflex.snapshot()
+  # value: ["y" => 1, "x" => 1]
+
+removeKeys
+
+  ? def removeKeysTest := [1 => 2, 3 => 4, 5 => 6, 7 => 8].diverge()
+  # value: [1 => 2, 3 => 4, 5 => 6, 7 => 8].diverge()
+  
+  ? [removeKeysTest.removeKeys([1 => 2, 3 => 33, 9 => 6, 101 => 102])]
+  # value: [null]
+  
+  ? removeKeysTest
+  # value: [7 => 8, 5 => 6].diverge()
+
+typed map
+
+ initialization
+
+  ? def guardedFM := [1 => 2].diverge(float64, nullOk[float64])
+  # value: [1.0 => 2.0].diverge()
+
+ publishing of guard
+
+  ? guardedFM.keyType()
+  # value: float64
+
+  ? guardedFM.valueType()
+  # value: nullOk[float64]
+  
+  ? guardedFM.__optUncall()
+  # value: [[1.0 => 2.0], "diverge", [float64, nullOk[float64]]]
+  
+ put coerces
+  
+  ? [guardedFM.put(4, 3)]
+  # value: [null]
+  
+  ? guardedFM
+  # value: [1.0 => 2.0, 4.0 => 3.0].diverge()
+  
+  strict put fails *before* coercion of the value
+  ? [guardedFM.put(4, "does-not-fit", true)]
+  # problem: the String "does-not-fit" doesn't coerce to a float64
+  
+  ? guardedFM
+  # value: [1.0 => 2.0, 4.0 => 3.0].diverge()
+  
+  
+ removeKey coerces
+ 
+  ? [guardedFM.removeKey(1)]
+  # value: [null]
+  
+  ? guardedFM  # after removeKey(1)
+  # value: [4.0 => 3.0].diverge()
+  
+  coercion failure even if it wouldn't matter '
+  ? [guardedFM.removeKey("foo")]
+  # problem: the String "foo" doesn't coerce to a float64
+  
+  ? guardedFM  # after removeKey("foo")
+  # value: [4.0 => 3.0].diverge()
+ 
+ fetch coerces
+ 
+  ? guardedFM.fetch(4, thunk{ "failed" })
+  # value: 3.0
+  
+  ? guardedFM.fetch("b", thunk{ "failed" })
+  # problem: the String "b" doesn't coerce to a float64
+
+ what if coerce-on-diverge creates a duplicate key?
+ 
+  ? [1.0 => any, 1 => int].diverge(float64, any)
+  # problem: duplicate keys in [1.0 => any, 1 => int] under float64 coercion
+
+diverge
+
+  ? def divergeA := [111 => 222, 1 => 2, 11 => 22].diverge(int, int)
+  # value: [111 => 222, 1 => 2, 11 => 22].diverge()
+
+  ? def divergeB := divergeA.diverge(any, float64)  
+  # value: [111 => 222.0, 1 => 2.0, 11 => 22.0].diverge()
+  
+  ? def divergeC := divergeA.diverge()
+  # value: [111 => 222, 1 => 2, 11 => 22].diverge()
+  
+  ? def divergeD := divergeA.diverge(int, int)
+  # value: [111 => 222, 1 => 2, 11 => 22].diverge()
+  
+  ? [divergeA.removeKey(1)]
+  # value: [null]
+  
+  ? divergeA
+  # value: [111 => 222, 11 => 22].diverge()
+  ? divergeB
+  # value: [111 => 222.0, 1 => 2.0, 11 => 22.0].diverge()
+  ? divergeC
+  # value: [111 => 222, 1 => 2, 11 => 22].diverge()
+  ? divergeD
+  # value: [111 => 222, 1 => 2, 11 => 22].diverge()
+
+  ? divergeD[111] := 212
+  # value: 212
+  
+  ? divergeA
+  # value: [111 => 222, 11 => 22].diverge()
+  ? divergeB
+  # value: [111 => 222.0, 1 => 2.0, 11 => 22.0].diverge()
+  ? divergeC
+  # value: [111 => 222, 1 => 2, 11 => 22].diverge()
+  ? divergeD
+  # value: [111 => 212, 1 => 2, 11 => 22].diverge()
+  
+
+XXX
+  all operations on readOnly map
+  other mutation ops
+  ordering of each mutation op

@@ -1,0 +1,705 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+LiteralExpr
+  
+  ? 43
+  # value: 43
+  
+  ? "foo"
+  # value: "foo"
+  
+  ? "fo\"o"
+  # value: "fo\"o"
+  
+  ? '%'
+  # value: '%'
+  
+  ? 2.5
+  # value: 2.5
+
+CallExpr
+  
+  ? 1 / 2
+  # value: 0.5
+
+  order-of-evaluation test  
+  ? (print("1"); print).run((print("2"); " left"), (print("3"); " right"))
+  # stdout: 123 left right
+  
+DefineExpr, NounExpr, FinalPattern
+  
+  ? def pi := 3.14159
+  # value: 3.14159
+  
+  ? pi * 2
+  # value: 6.28318
+
+VarPattern, AssignExpr
+
+  ? def var x := 1
+  # value: 1
+  
+  ? x
+  # value: 1
+  
+  ? x := 2
+  # value: 2
+  
+  ? x
+  # value: 2
+  
+var slot with guard
+  
+  ? def var guarded_var :float64 := 1.0
+  # value: 1.0
+  
+  ? guarded_var
+  # value: 1.0
+  
+  ? guarded_var := 2.0
+  # value: 2.0
+
+  ? guarded_var
+  # value: 2.0
+
+  ? guarded_var := 3
+  # value: 3
+  
+  ? guarded_var
+  # value: 3.0
+
+  ? guarded_var := "four"
+  # problem: the String "four" doesn't coerce to a float64
+  
+  ? def var failing_guarded_var :float64 := "five"
+  # problem: the String "five" doesn't coerce to a float64
+  
+Non-contagion:
+
+  ? def y := x
+  # value: 2
+  
+  ? x := 0
+  # value: 0
+  
+  ? y
+  # value: 2
+
+More AssignExpr:
+
+  ? y := 3
+  # problem: not an assignable slot: <& 2>
+
+  confirm static rejection  
+  ? if (false) { y := 3 }
+  # problem: not an assignable slot: <& 2>
+  
+  ? x := (x + 3)
+  # value: 3
+  ? x
+  # value: 3
+  
+  ? x := (x + 5)
+  # value: 8
+  ? x
+  # value: 8
+  
+  ? x := (x - 6)
+  # value: 2
+  ? x
+  # value: 2
+  
+  ? x := (x := 3) - 1
+  # value: 2
+  ? x
+  # value: 2
+
+  ? x := x
+  # value: 2
+  ? x
+  # value: 2
+  
+
+SeqExpr:
+
+  ? null; x := 11; null; x + 1
+  # value: 12
+  
+  ? x
+  # value: 11
+
+HideExpr and scoping:
+
+  ? { def z := 100; z }
+  # value: 100
+  
+  ? z
+  # problem: Failed: Undefined variable: z
+
+EscapeExpr
+  
+  ? escape x { 40 }
+  # value: 40
+  
+  ? escape x { def escapeRes := 41; x(escapeRes) }
+  # value: 41
+
+ scope check
+  ? x
+  # value: 11
+  
+  ? escapeRes
+  # problem: Failed: Undefined variable: escapeRes
+
+ disabling of ejector, and a non-simple pattern
+  ? { def ej; escape bind ej {}; ej("oops"); print("end") }
+  # problem: ejector "ej__1" no longer in scope
+  
+  ? escape _ ? false { print("failing ejector pattern test") }
+  # problem: such-that expression was false
+  
+ ejector printing
+  ? { def ej; escape bind ej {}; ej }
+  # value: <ej__1 ejector>
+  
+  ? escape ej {print(ej)}
+  # stdout: <ej ejector>
+
+EscapeExpr with catch
+
+  ? escape x { 50 } catch v { v + 51 }
+  # value: 50
+
+  ? escape x { x(60) } catch v { v + 61 }
+  # value: 121
+  
+  XXX catch pattern failure
+  XXX multiple catch, and failure thereof
+
+List expressions for further testing
+
+  ? [1, 2, 3]
+  # value: [1, 2, 3]
+  
+  ? def tlist := [x, y, null]
+  # value: [11, 2, null]
+
+  ? tlist[0]
+  # value: 11
+
+  ? tlist[1]
+  # value: 2
+
+  ? [tlist[2]]
+  # value: [null]
+
+MatchBindExpr, FinalPattern guards
+  
+  ? {[92 =~ x, x]}
+  # value: [true, 92]
+  
+  ? {[93 =~ x :int, x]}
+  # value: [true, 93]
+  
+  ? {[94 =~ x :float64, x]}
+  # value: [true, 94.0]
+  
+  ? {[95.0 =~ x :int, x]}
+  # value: [false, <ref broken by problem: the float64 95.0 doesn't coerce to an int>]
+
+MetaContextExpr
+
+  ? meta.context()
+  # value: <static context>
+  
+  ? meta.context().getFQNPrefix()
+  # value: "__main$"
+
+MetaStateExpr
+
+  ? (thunk { def x := int; meta.getState() })()
+  # value: ["&x" => <& int>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
+  
+  XXX toplevel meta.getState()
+
+ObjectExpr
+  
+  ? def "trivialObject" {}
+  # value: <trivialObject>
+  
+  ? def thing {
+  >   method foo() :any { x += 1 }
+  >   method bar() :any { y }
+  > }
+  # value: <thing>
+  
+  ? thing
+  # value: <thing>
+  
+  ? thing.bar()
+  # value: 2
+  
+  ? thing.foo()
+  # value: 12
+  
+  ? thing.foo()
+  # value: 13
+  
+Matcher
+
+  ? def matches {
+  >   match msg { msg }
+  > }
+  # value: <matches>
+  
+  ? matches.hi("there")
+  # value: ["hi", ["there"]]
+
+  ? def nonmatches {
+  >   match _ ? false { "oops" }
+  > }
+  # value: <nonmatches>
+
+  ? nonmatches.hi("there")
+  # problem: No such method: __main$nonmatches__C#hi/1
+  
+  ? try { nonmatches.hi("there") } catch p {"ok"}
+  # value: "ok"
+
+  ? def maybes {
+  >   to regular() :any { return "yep" }
+  >   match [x ? x <=> "yes", args] { args[1] }
+  > }
+  # value: <maybes>
+  
+  ? maybes.yes(1, 2)
+  # value: 2
+  
+  ? maybes.no(3, 4)
+  # problem: No such method: __main$maybes__C#no/2
+  
+  ? maybes.regular()
+  # value: "yep"
+
+Bug?: matcher catching non-overridden miranda methods.
+
+  ? def matcherMirandaCheck {
+  >   match msg { throw(E.toQuote(msg)) }
+  > }
+  # value: <matcherMirandaCheck>
+
+  In the bug, this is instead caught by the matcher.
+  ? [matcherMirandaCheck.__optSealedDispatch(42)]
+  # value: [null]
+
+Bug: incorrect scoping of the pattern of a matcher.
+  
+  ? def makeMatcherClosure {
+  >   match msg {
+  >     thunk { msg }
+  >   }
+  > }
+  # value: <makeMatcherClosure>
+  
+  ? def match_c1 := makeMatcherClosure.first()
+  # value: <_>
+  
+  ? def match_c2 := makeMatcherClosure.second()
+  # value: <_>
+  
+  ? match_c1()
+  # value: ["first", []]
+  
+  ? match_c2()
+  # value: ["second", []]
+
+Plumbing
+
+  ? def one match msg { E.callWithPair(1, msg) }
+  # value: 1
+  
+  ? one + 1
+  # value: 2
+  
+  ? 2 + one
+  # value: 3
+  
+  ? one == 1
+  # value: false
+  
+  ? one.__conformTo(any) == 1
+  # value: true
+
+Alleged type
+
+  ? /** object doc */
+  > def objectOfInterestingType {
+  >   to getNested() :notNull {
+  >     return def nestedObject {}
+  >   }
+  > }
+  # value: <objectOfInterestingType>
+  
+  ? def ooitType := objectOfInterestingType.__getAllegedType()
+  # value: ObjectOfInterestingType
+  
+  ? ooitType.getFQName()
+  # value: "__main$objectOfInterestingType__C"
+  
+  ? objectOfInterestingType.getNested().__getAllegedType().getFQName()
+  # value: "__main$objectOfInterestingType__C$nestedObject__C"
+
+ObjectExpr auditing moved to audit.updoc
+
+IfExpr
+
+  ? if (true) { "t" } else { "f" }
+  # value: "t"
+
+  ? if (false) { "t" } else { "f" }
+  # value: "f"
+
+  ? if ([false, true][0]) { "t" } else { "f" }
+  # value: "f"
+
+  ? if ([false, true][1]) { "t" } else { "f" }
+  # value: "t"
+
+  ? if (true) { "t" }
+  # value: "t"
+
+  ? [if (false) { "t" }]
+  # value: [null]
+  
+  ? { def a := 1; if (def a := 2; true) { a } else { a } }
+  # value: 2
+
+  ? { def a := 1; if (def a := 2; false) { a } else { a } }
+  # value: 1
+
+  ? { if (def a := 2; true) { a } else { a } }
+  # problem: Failed: Undefined variable: a
+
+  ? { if (def a := 2; false) { a } else { a } }
+  # problem: Failed: Undefined variable: a
+
+  ? { if (def a := 2; true) { a }; a }
+  # problem: Failed: Undefined variable: a
+
+  ? if (1) {"oops"}
+  # problem: the int 1 doesn't coerce to a boolean
+  
+  ? if (def _ { to __conformTo(_) :any {return true} }) {"y"} else {"n"}
+  # value: "y"
+
+  these two further tests were written to debug the internal E-IS-TRUE used by IfExpr, not IfExpr itself
+  ? if (def _ { to __conformTo(_) :any {return false} }) {"y"} else {"n"}
+  # value: "n"
+
+  ? if (def conformist { to __conformTo(_) :any {return conformist} }) {"y"} else {"n"}
+  # problem: the "__main$conformist__C" <conformist> doesn't coerce to a boolean
+
+FinallyExpr
+
+  ? [try {} finally {}]
+  # value: [null]
+  
+  ? try { 1 } finally { 2 }
+  # value: 1
+  
+  ? {var s := "a"; s += "b"; try { s += "c"; } finally { s += "d"; }; s += "e"; s }
+  # value: "abcde"
+
+FinallyExpr/EscapeExpr interaction
+
+  ? escape e {
+  >   try {
+  >     e("Will this be seen?")
+  >   } finally {
+  >     throw("No.")
+  >   }
+  >   throw("can't happen")
+  > }
+  # problem: No.
+  
+  ? escape e {
+  >   try {
+  >     e("Original")
+  >   } finally {
+  >     e("Replacement")
+  >   }
+  >   throw("can't happen")
+  > }
+  # value: "Replacement"
+
+CatchExpr
+
+  XXX write sufficient tests
+
+  former bug: catch pattern and body executed before internal finallys
+  ? try {
+  >   try { print("body "); throw("biff") } finally { print("finally ") }
+  > } catch p { print("catch ") }
+  # stdout: body finally catch 
+
+SlotExpr, SlotPattern, AssignExpr
+
+ final slot
+ 
+  ? &pi
+  # value: <& 3.14159>
+  
+  ? (&pi).getValue()
+  # value: 3.14159
+  
+  ? (&pi).isFinal()
+  # value: true
+  
+  ? (&pi).__optUncall()
+  # value: [<makeFinalSlot>, "run", [3.14159]]
+  
+  ? [(&pi).setValue(3)]
+  # problem: not an assignable slot: <& 3.14159>
+  
+ outer normal slot
+ 
+  ? &any
+  # value: <& any>
+  
+  ? (&any) :(DeepFrozen & PassByCopy)
+  # value: <& any>
+  
+  ? (&any).getValue()
+  # value: any
+  
+  ? (&any).isFinal()
+  # value: true
+  
+  ? (&any).__optUncall()
+  # value: [<makeFinalSlot>, "run", [any]]
+  
+  ? [(&any).setValue(3)]
+  # problem: not an assignable slot: <& any>
+  
+ outer lazy slot
+ 
+  ? &require
+  # value: <lazyApplySlot>
+  
+  ? (&require) :DeepFrozen
+  # value: <lazyApplySlot>
+  
+  ? (&require).getValue()
+  # value: <require0>
+  
+  ? (&require).isFinal()
+  # value: true
+  
+  ? [(&require).__optUncall()]
+  # value: [null]
+  
+  ? [(&require).setValue(3)]
+  # problem: No such method: lazyApplySlot#setValue/1
+  
+ var slots, slot patterns, assignment
+
+  ? var slottest_a := 3.14
+  # value: 3.14
+  
+  ? &slottest_a
+  # value: <var 3.14>
+  
+  ? (&slottest_a).getValue()
+  # value: 3.14
+  
+  ? (&slottest_a).isFinal()
+  # value: false
+  
+  x ? (&slottest_a).__optUncall()
+  x # value: [<makeVarSlot>, "run", [3.14]]
+  
+  ? [(&slottest_a).setValue(3)]
+  # value: [null]
+  
+  ? def slottest_slot := &slottest_a
+  # value: <var 3>
+  
+  ? def &slottest_b := slottest_slot
+  # value: <var 3>
+  
+  ? slottest_a
+  # value: 3
+  
+  ? slottest_b
+  # value: 3
+  
+  ? slottest_b := 3.14159
+  # value: 3.14159
+  
+  ? slottest_a
+  # value: 3.14159
+ 
+ guarded SlotPattern, failure thereof
+ 
+  ? def &spg :DeepFrozen := &any
+  # value: <& any>
+  
+  ? spg
+  # value: any
+ 
+  ? def &spg :DeepFrozen := &slottest_a
+  # problem: <var 3.14159> is not DeepFrozen
+  
+  XXX SlotPattern with a transforming guard
+ 
+ custom slot
+ 
+  ? def &perverse := { 
+  >   var v := 0
+  >   def perverseSlot {
+  >     to getValue() :any { return v += 1 }
+  >     to setValue(new :int) :void { v += new * 100 }
+  >   }
+  > }
+  # value: <perverseSlot>
+  
+  ? perverse
+  # value: 1
+  
+  ? perverse
+  # value: 2
+  
+  ? perverse := 1
+  # value: 1
+  
+  ? perverse
+  # value: 103
+  
+  ? perverse := "a"
+  # problem: the String "a" doesn't coerce to an int
+  
+  ? perverse
+  # value: 104
+
+ListPattern
+
+  ? [1, 2, 3] =~ [lp_a, lp_b, lp_c :float64]
+  # value: true
+  
+  ? [lp_c, lp_b, lp_a]
+  # value: [3.0, 2, 1]
+  
+  ? ["a", "b"] =~ [lp_a]
+  # value: false
+  
+  ? lp_a
+  # value: <ref broken by problem: a 2 size list doesn't match a 1 size list pattern>
+  
+  ? def [_, _] := ["a"]
+  # problem: a 1 size list doesn't match a 2 size list pattern
+  
+  ? "abc" =~ [lp_a, _, _]
+  # value: true
+  
+  ? lp_a
+  # value: 'a'
+  
+  ? 4 =~ [_]
+  # value: false
+  
+  ? var listoid_i := 1
+  > def listoid { 
+  >   to __conformTo(_) :any { return [listoid_i] * (listoid_i += 1) } 
+  > }
+  # value: <listoid>
+  
+  ? [listoid =~ [lp_a, _], lp_a]
+  # value: [true, 1]
+  
+  ? listoid =~ [_, _, _]
+  # value: true
+
+CdrPattern
+
+  ? [1, 2, 3] =~ [cp_a] + cp_b
+  # value: true
+  
+  ? cp_a
+  # value: 1
+  
+  ? cp_b
+  # value: [2, 3]
+  
+  ? def [_] + _ := []
+  # problem: a 0 size list doesn't match a >= 1 size list pattern
+
+  ? listoid =~ [cp_a, cp_b] + cp_c
+  # value: true
+  
+  ? [cp_a, cp_b, cp_c]
+  # value: [3, 3, [3, 3]]
+
+IgnorePattern
+
+  ? 1 =~ _
+  # value: true
+  
+  ? Ref.promise()[0] =~ _
+  # value: true
+  
+  ? Ref.broken("biff") =~ _
+  # value: true
+  
+  ? throw("bang") =~ _
+  # problem: bang
+
+SuchThatPattern
+
+  ? {[ [1] =~ [stpv] ? (def stpev := stpv == 1), stpv, stpev ]}
+  # value: [true, 1, true]
+
+  ? {[ [2] =~ [stpv] ? (def stpev := stpv == 1), stpv, stpev ]}
+  # value: [false, <ref broken by problem: such-that expression was false>, <ref broken by problem: such-that expression was false>]
+
+  ? {[ def [stpv] ? (def stpev := stpv == 1) := [1], stpv, stpev ]}
+  # value: [[1], 1, true]
+
+  ? {[ def [stpv] ? (def stpev := stpv == 1) := [2], stpv, stpev ]}
+  # problem: such-that expression was false
+
+
+Miscellaneous scoping
+
+  ? def outerDefined := 44
+  # value: 44
+
+  ? { def x := 1; [{ def x := 2; x }, x] }
+  # value: [2, 1]
+  
+  ? { def x := 1; [def x := 2; x, x] }
+  # problem: "x" already in scope
+  
+  ? { notOuterDefined + 1; def notOuterDefined := 2 }
+  # problem: Failed: Undefined variable: notOuterDefined
+  
+  ? {[notOuterDefined + 1, def notOuterDefined := 2]}
+  # problem: Failed: Undefined variable: notOuterDefined
+  
+  xxx This is what current Java-E does, but should it? Should we instead reject usage preceding shadowing define?
+  ? { outerDefined + 1; def outerDefined := 2 }
+  # value: 2
+  
+  ? {[outerDefined + 1, def outerDefined := 2]}
+  # value: [45, 2]
+  
+  XXX this is being rejected by the parser, but it really needs to be rejected at eval time as a constraint, so we should test it with explicit node construction (which usually goes in enode.updoc, but ???)
+  ? { def x :x := 1 }
+  # problem: Failed: kernel definer cycle not allowed: x
+
+
+XXX test perverse scoping cases:
+  recursive defines pre-transform (raw-node-input case)
+  def x := y && x static rejection (also ||)
+  for x in x {} static rejection
+  check that all cases of scope boxes allow redefinition, and that all kinds of defining patterns check for disallowed redefinitions
