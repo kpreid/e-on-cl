@@ -218,8 +218,8 @@ MetaContextExpr
 
 MetaStateExpr
 
-  ? (thunk { def x := int; meta.getState() })()
-  # value: ["&x" => <& int>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
+  ? (def _() :any { def x := int; meta.getState() })()
+  # value: ["&x" => <& int>, "&__return" => <& <__return ejector>>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
   
   XXX toplevel meta.getState()
 
