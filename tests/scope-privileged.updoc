@@ -99,11 +99,11 @@ rune
   # value: "/<home>/clrune"
   
   ? runeScriptFile.getTwine().split("\n")[0]
-  # value: "#!/bin/sh"
+  # value: "#!/bin/bash"
 
  directory listing
  
-  ? for name => subfile in home["jlib"] { 
+  ? for name ? (name !~ `.@_`) => subfile in home["jlib"] { 
   >   println(`$name ${E.toQuote(subfile).replaceAll(homeFragment, "<home>")}`) }
   # stdout: parseEToSExpression.emaker <file:///<home>/jlib/parseEToSExpression.emaker>
   #         
