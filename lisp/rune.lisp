@@ -66,6 +66,11 @@
   (force-output)
   (global-exit 0))
 
+(defun irc-repl-toplevel (args)
+  (asdf:operate 'asdf:load-op :cl-e.irc-repl)
+  (apply (intern "START-IRC-REPL" :e.irc-repl) args)
+  (vat-loop))
+
 (defun translate-toplevel (args)
   (assert (= 1 (length args)))
   (print (e.elang:get-translation (e.syntax:e-source-to-tree (first args))))
@@ -109,6 +114,8 @@
         (setf toplevel #'translate-toplevel))
       (("--lrepl")
         (setf toplevel #'repl-toplevel))
+      (("--irc")
+        (setf toplevel #'irc-repl-toplevel))
       (otherwise 
         (loop-finish)))))
   
@@ -135,6 +142,9 @@ Lisp-level options:
   --lrepl
       Action-selecting option:
       Enter the Lisp-implemented E REPL.
+  --irc
+      Action-selecting option:
+      Start an IRC bot. The arguments are: <nick> <server> <channel>*
   
   If no action-selecting option is given, the E rune() function is
   called with the remaining arguments.
@@ -149,5 +159,5 @@ Lisp-level options:
     (e.syntax:load-parse-cache-file parse-cache-name)
     (setf *parse-cache-name* parse-cache-name))
 
-  (with-vat
-    (funcall toplevel args)))
+  (establish-vat)
+  (funcall toplevel args))

@@ -4,6 +4,7 @@
 (defsystem cl-e
   :name "cl-e"
   :depends-on (:cl-ppcre :genhash :cl-fad)
+  ; cl-ppcre dependency could be made lazy
   :components ((:module "lisp" :components
     ((:file "packages")
      (:file "compile-options")
@@ -43,11 +44,11 @@
   :components ((:module "lisp" :components
     ((:file "updoc")))))
 
-;(defsystem cl-e.ircrepl
-;  :name "cl-e.ircrepl"
-;  :depends-on (:cl-e)
-;  :components ((:module "lisp" :components
-;    ((:file "ircrepl")))))
+(defsystem cl-e.irc-repl
+  :name "cl-e.irc-repl"
+  :depends-on (:cl-irc :cl-e)
+  :components ((:module "lisp" :components
+    ((:file "irc-repl")))))
 
 
 ; cl-ppcre, as of 1.0.0 to 1.2.1, causes SBCL to produce style-warnings while loading it. This muffles them.
