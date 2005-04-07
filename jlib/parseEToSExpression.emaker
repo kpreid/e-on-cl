@@ -11,10 +11,14 @@ def makeConvertENode2Term := <elang:visitors.makeConvertENode2Term>
 
 def convert := makeConvertENode2Term()
 
+def clQuote(s :String) {
+  return "\"" + s.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"") + "\""
+}
+
 def termToSExpression(term) {
   if (term =~ term`.String.@_`) {
     # Quote in accordance with Common Lisp reader syntax - no \letter escapes.
-    return "\"" + term.getOptData().replaceAll("\\", "\\\\").replaceAll("\"", "\\\"") + "\""
+    return clQuote(term.getOptData())
   } else if (term =~ term`.int.@_`) {
     return term.asText()
   } else if (term =~ term`.char.@_`) {
@@ -32,8 +36,23 @@ def termToSExpression(term) {
   }
 }
 
-def parseEToSExpression(source) {
-  
-  return termToSExpression(convert(e__quasiParser(source)))
-
+def parseEToSExpression(verb, args) {
+  return try { 
+    switch (verb) {
+      match =="run" {
+        def [source] := args
+        termToSExpression(convert(e__quasiParser(source)))
+      }
+      match =="isIdentifier" {
+        def [word] := args
+        if (<elang:syntax.ELexer>.isIdentifier(word)) {
+          "cl:t "
+        } else {
+          "cl:nil "
+        }
+      }
+    }
+  } catch p { 
+    `(ERROR ${clQuote(E.toQuote(p))})`
+  }
 }
