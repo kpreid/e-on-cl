@@ -16,7 +16,7 @@ This should be successful:
 
 This should fail:
 
-  ? updoc.push(e`1 + 1`, [["value", "You should see a failure report, expecting the value 2."]])
+  x ? updoc.push(e`1 + 1`, [["value", "You should see a failure report, expecting the value 2."]])
 
 
   ? "something after pushed tests"
