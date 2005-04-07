@@ -14,9 +14,17 @@ XXX better print for the maker
 ? [1, 2, 2].asMap()
 # value: [0 => 1, 1 => 2, 2 => 2]
 
-? [1, 2, 2].asKeys()
-# value: [1 => null, 2 => null]
+asKeys/1
+  
+  ? [1, 2, 2].asKeys()
+  # value: [1 => null, 2 => null]
+  
+  ? [].asKeys()
+  # value: [].asMap()
 
+  ? [null, 4, 1, 2, 3, 4, 5, 6, 7].asKeys()
+  # value: [null => null, 4 => null, 1 => null, 2 => null, 3 => null, 5 => null, 6 => null, 7 => null]
+  
 ? [1, 2, 2].asSet()
 # value: [1, 2].asSet()
 
