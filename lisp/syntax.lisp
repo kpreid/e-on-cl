@@ -1,3 +1,6 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
 (in-package :e.elang.syntax)
 
 ; --- ---
@@ -562,7 +565,7 @@ XXX make precedence values available as constants"
   
   ; Ensure that the source string is printable under *print-readably*, and therefore won't hose the parse cache. (simple-base-strings are not, in SBCL.)
   ; XXX check if this works on implementations other than SBCL 
-  (setf source (coerce arg '(vector character)))
+  (setf arg (coerce arg '(vector character)))
   
   (let* ((args (list arg))
          (key (list verb args)))
