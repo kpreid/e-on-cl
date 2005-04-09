@@ -25,6 +25,10 @@ Big features:
 
 Code cleanups not marked in the code:
   - delete explicit /arity from e-lambdas wherever possible
+  - reorganize: rename elang-transform.lisp to compiler-transform?
+  - reorganize: rename elib.lisp once it's been pared down to just the external macros and stuff
+  - reorganize: move stuff that isn't really about the root scopes out of knot.lisp
+  - reorganize: rename tables2.lisp once elib-tables.lisp is gone
 
 ---
 
