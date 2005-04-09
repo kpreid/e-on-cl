@@ -33,10 +33,14 @@
             :depends-on ("elang"))
      (:file "syntax"
             :depends-on ("packages" "elang-nodes"))
+     (:file "compiler-base"
+            :depends-on ("elang-nodes"))
      (:file "elang-transform"
-            :depends-on ("elang" "elang-nodes"))
+            :depends-on ("compiler-base"))
+     (:file "compiler-entry"
+            :depends-on ("compiler-base"))
      (:file "rune"
-            :depends-on ("elang" "knot"))))))
+            :depends-on ("elib" "compiler-entry" "knot"))))))
 
 (defsystem cl-e.updoc
   :name "cl-e.updoc"
