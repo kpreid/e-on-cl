@@ -786,7 +786,8 @@
                       (let* ((sub-syntax (e. syntax |enterReference|))
                              (sub-tw (nest :should-close nil
                                            :syntax sub-syntax)))
-                        (if (e-is-true (e. seen |maps| key))
+                        (if (block nil (e. seen |fetch| key (e-lambda (:|run| () (return nil))))
+                                                  t)
                           (e. sub-syntax |cycle|)
                           (progn
                             (e. seen |put| key nil +e-false+ nil)

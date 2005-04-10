@@ -8,25 +8,12 @@ def makeMapShell := <elib:tables.makeMapShell>
 
 /** Makes a full FlexMap given an object implementing the data storage. */
 def makeFlexMapShell implements DeepFrozen {
-  # XXX probably should have self arg
-  to run(impl) {
+  to run(self, impl) {
     # XXX should not delegate to the impl
-    def flexMap := def "org.erights.e.elib.tables.FlexMap" extends makeMapShell(flexMap, impl) { # implements FlexMap
+    def flexMap := def "org.erights.e.elib.tables.FlexMap" extends makeMapShell(self, impl) { # implements FlexMap
       
       to __printOn(out :TextWriter) {
-        # XXX should call the shared e syntax printer
-        if (flexMap.size() == 0) {
-          out.write("[].asMap()")
-        } else {
-          flexMap.printOn("[", " => ", ", ", "]", out)
-        }
-        out.write(".diverge()")
-      }
-      
-      to __optUncall() {
-        # XXX for general use this should be parameterizable, since nonstandard FlexMaps aren't just diverge(). OR should we have no uncall at all and expect the client to write a delegating wrapper?
-        # XXX guards should be local variables
-        return [flexMap.snapshot(), "diverge", [flexMap.keyType(), flexMap.valueType()]]
+        out.printSame(impl)
       }
       
       to put(key, value) {

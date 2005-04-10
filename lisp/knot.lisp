@@ -416,6 +416,8 @@
     (:|makeTypeDesc|     +the-make-type-desc+)
     (:|makeMessageDesc|  +the-make-message-desc+)
     (:|makeParamDesc|    +the-make-param-desc+)
+
+    (:|makeFlexMap|      elib:+the-make-flex-map+)
     
     (:|FlexList|         elib:+the-flex-list-guard+)
     (:|Throwable|        elib:+the-exception-guard+)
