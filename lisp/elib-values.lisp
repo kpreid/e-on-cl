@@ -418,8 +418,6 @@
 ;  Copyright 2002 Combex, Inc. under the terms of the MIT X license
 ;  found at http://www.opensource.org/licenses/mit-license.html
 
-(defvar +the-make-identity-map+)
-
 (defclass traversal-key (vat-checking) 
   ((wrapped :initarg :wrapped
             :accessor tk-wrapped)
@@ -427,11 +425,12 @@
               :accessor tk-snap-hash
               :type fixnum)
    (fringe :initarg :fringe
-           :accessor tk-fringe)))
+           :accessor tk-fringe
+           :type hash-table)))
    
 (defun make-traversal-key (target)
   (let ((wrapped (ref-shorten target))
-        (fringe (e. +the-make-identity-map+ |run|)))
+        (fringe (make-hash-table :test #'eql)))
     (make-instance 'traversal-key
       :wrapped wrapped
       :fringe fringe
@@ -442,19 +441,15 @@
 
 (defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
   ;(format t "eeq-same-dispatch traversal-keys ~A ~A" (tk-wrapped a) (tk-wrapped b))
-  ;(print (loop for x being each hash-key of (slot-value (tk-fringe a) 'hash-table) collect x))
-  ;(print (loop for x being each hash-key of (slot-value (tk-fringe b) 'hash-table) collect x))
   (and
     (eql (tk-snap-hash a)
          (tk-snap-hash b))
     (eeq-is-same-yet (tk-wrapped a)
                      (tk-wrapped b))
-    (eql (e. (tk-fringe a) |size|)
-         (e. (tk-fringe b) |size|))
-    (every
-      #'(lambda (aelem) 
-          (e-is-true (e. (tk-fringe b) |maps| aelem)))
-      (e. (tk-fringe a) |getKeys|))))
+    (eql (hash-table-count (tk-fringe a))
+         (hash-table-count (tk-fringe b)))
+    (loop for aelem being each hash-key of (tk-fringe a)
+          always (nth-value 1 (gethash aelem (tk-fringe b))))))
 
 (defmethod eeq-hash-dispatch ((a traversal-key))
   (tk-snap-hash a))

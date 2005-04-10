@@ -198,7 +198,7 @@
   "If fringe is nil (the default value), requires a settled target."
   (let ((result (eeq-internal-sameness-hash target +eeq-hash-depth+ fringe)))
     (when fringe
-      (loop for prom across (map-get-keys fringe) do
+      (loop for prom being each hash-key of fringe do
         (setf result (logxor result (eeq-identity-hash prom)))))
     result))
 
@@ -233,7 +233,7 @@
       (progn
         ;(format t "fallthru: ~S" obj)
         (when opt-fringe
-          (e. opt-fringe |put| obj nil +e-false+ nil))
+          (setf (gethash obj opt-fringe) nil))
         nil))))
 
 
@@ -284,7 +284,7 @@
           (error "Must be settled"))
         (t
           ; target is an unresolved promise. Our caller will take its hash into account via opt-fringe.
-          (e. opt-fringe |put| target +e-false+ +e-false+ nil)
+          (setf (gethash target opt-fringe) +e-false+)
           -1)))))
 
 (defmethod eeq-hash-dispatch ((a null))
