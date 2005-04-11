@@ -42,8 +42,7 @@ bind makeMapShell implements EventuallyDeepFrozen {
   }
 
   to run(self, impl) {
-    # XXX should not delegate to the impl
-    def map := def "org.erights.e.elib.tables.Map" extends impl { # implements Map
+    def map { # implements Map
       
       # XXX implement returning Map interface documentation in our alleged type?
       
@@ -52,9 +51,16 @@ bind makeMapShell implements EventuallyDeepFrozen {
         out.printSame(impl)
       }
 
+      method keyType() { impl.keyType() }
+      method valueType() { impl.valueType() }
+
+      method size() { impl.size() }
+      method fetch(key, absentThunk) { impl.fetch(key, absentThunk) }
+
       method get(key) { impl.fetch(key, thunk{ throw(E.toQuote(key) + " not found") }) }
       to maps(key) :boolean { impl.fetch(key, thunk{ return false }); return true }
       
+      method getKeys() { impl.getKeys() }
       to iterate(assocFunc) {
         # XXX should probably have primitive iterate
         for key in impl.getKeys() {

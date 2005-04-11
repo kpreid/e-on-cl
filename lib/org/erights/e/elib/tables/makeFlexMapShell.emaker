@@ -9,7 +9,6 @@ def makeMapShell := <elib:tables.makeMapShell>
 /** Makes a full FlexMap given an object implementing the data storage. */
 def makeFlexMapShell implements DeepFrozen {
   to run(self, impl) {
-    # XXX should not delegate to the impl
     def flexMap := def "org.erights.e.elib.tables.FlexMap" extends makeMapShell(self, impl) { # implements FlexMap
       
       to __printOn(out :TextWriter) {
