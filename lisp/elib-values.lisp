@@ -165,13 +165,9 @@
   (:|asMap/0| (vector)
     "Return a ConstMap mapping the indices of this vector to the elements of this vector. For example, ['a', 'b'].asMap() == [0 => 'a', 1 => 'b']."
     ; xxx offer empty map constant when vector is empty?
-    ; xxx use ConstMap maker instead of make-instance?
-    (make-instance 'e.elib.tables::genhash-const-map-impl
-      :keys (loop with a = (make-array (length vector) :element-type 'integer) 
-                  for i below (length vector)
-                  do (setf (aref a i) i)
-                  finally (return a))
-      :values vector))
+    (e. +the-make-const-map+ |fromColumns|
+      (let ((k -1)) (map '#.`(vector (integer 0 (,array-dimension-limit))) (lambda (v) (declare (ignore v)) (incf k)) vector))
+      vector))
   (:|asKeys/0| (vector)
     "Return a ConstMap mapping the elements of this vector to null."
     ; XXX preserve internal-element-type if possible
