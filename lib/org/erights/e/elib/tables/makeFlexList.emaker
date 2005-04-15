@@ -1,0 +1,109 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def makeArray := <import:org.cubik.cle.prim.makeArray>
+def makeFlexListShell := <import:org.erights.e.elib.tables.makeFlexListShell>
+
+interface FlexList guards FlexListStamp {} # XXX methods?
+
+def resizeFactor := 2
+
+def makeFlexList implements EventuallyDeepFrozen {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+  
+  to asType() {
+    return FlexList
+  }
+
+  to _fromArray(var array, valueGuard) {
+    def impl {
+      method get(i) { 
+        # elt is specified to provide range checking against the fill pointer
+        array.elt(i)
+      }
+      method put(i, new :valueGuard) :void {
+        def size := array.getFillPointer()
+        if (i < size) {
+          array.setElt(i, valueGuard.coerce(new))
+        } else if (i == size) {
+          array.vectorPushExtend(new)
+        } else {
+          throw("put index out of bounds: " + E.toString(i) + " > " + E.toString(size))
+        }
+      }
+      method size() { array.getFillPointer() }
+      method setSize(newSize) :void {
+        # XXX should shrink array?
+        def oldSize := array.getFillPointer()
+        def dim := array.getDimension(0)
+        if (dim < newSize) {
+          array := array.adjust([newSize * resizeFactor], valueGuard.getTheTrivialValue())
+        }
+        if (newSize < oldSize) {
+          array.fill(valueGuard.getTheTrivialValue(), newSize, oldSize)
+        }
+        array.setFillPointer(newSize)
+      }
+      
+      method replace(thisStart, thisEnd, other, otherStart, otherEnd) {
+        # The FlexListShell handles the range checking for this - XXX oddity
+
+        def oldSize := array.getFillPointer()
+        def deltaSize := (otherEnd - otherStart) - (thisEnd - thisStart)
+        def newSize := oldSize + deltaSize
+        def newEnd := thisEnd + deltaSize
+        def copyOffset := thisStart - otherStart
+        
+        # Ensure the physical size is sufficient
+        if (newSize > array.getDimension(0)) {
+          impl.setSize(newSize)
+        }
+        
+        # Move existing elements after the replaced section
+        array.setFillPointer(oldSize.max(newSize))
+        array.replace(array, newEnd, newSize, thisEnd, oldSize)
+        
+        # Copy new elements in
+        # XXX optimize case where the other is known to have already-coerced elements
+        for i in otherStart..!otherEnd {
+          array.setElt(i + copyOffset, other[i] :valueGuard)
+        }
+        
+        # Set final fill pointer
+        array.setFillPointer(newSize)
+        
+      }
+      
+      method snapshot() {
+        # XXX do the-array-is-the-snapshot optimization
+        array.snapshotVector()
+      }
+    }
+    def flexList extends makeFlexListShell(flexList, impl, valueGuard) implements FlexListStamp {
+      to __printOn(out :TextWriter) {
+        # XXX call to printer's syntax
+        flexList.printOn("[", ", ", "].diverge()", out)
+      }
+      
+      method __optUncall() {
+        [flexList.snapshot(), "diverge", [valueGuard]]
+      }
+    }
+    return flexList
+  }
+
+  to diverge(source, valueGuard) {
+    # XXX coerce on insertion instead of building a temporary list
+    # XXX accept any kind of list, even if mutable, as input
+    def contents :List[valueGuard] := source
+    return makeFlexList._fromArray(makeArray.fromSequence(contents), valueGuard)
+  }
+}

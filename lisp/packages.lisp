@@ -203,7 +203,9 @@
   (:use :cl :elib :net.hexapodia.hashtables)
   (:documentation "Collection implementations.")
   (:export
-    ))
+    :+the-make-array+))
+
+(defvar e.elib.tables:+the-make-array+)
 
 (cl:defpackage :e.knot
   (:use :cl :elib)

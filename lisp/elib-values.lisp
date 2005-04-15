@@ -230,10 +230,18 @@
   (:|snapshot/0| #'identity)
   (:|diverge/0| (this)
     (make-instance 'flex-list-impl :initial-contents this))
+  ;(:|diverge/1| (this value-guard)
+  ;  "Returns a FlexList with the same initial contents as this, with the specified element guard."
+  ;  (make-instance 'flex-list-impl :initial-contents this
+  ;                                 :value-guard value-guard))
   (:|diverge/1| (this value-guard)
     "Returns a FlexList with the same initial contents as this, with the specified element guard."
-    (make-instance 'flex-list-impl :initial-contents this
-                                   :value-guard value-guard))
+    (e. (e. (e. (vat-safe-scope *vat*) 
+                |get| "import__uriGetter")
+            |get| "org.erights.e.elib.tables.makeFlexList")
+      |diverge|
+      this
+      value-guard))
   (:|printOn/4| (this left sep right tw)
     "Prints 'left', the values separated by 'sep', and 'right'.
 
@@ -251,6 +259,17 @@
 ; XXX make this an e-named-lambda
 (defclass make-e-list () ())
 (defvar +the-make-list+ (make-instance 'make-e-list))
+
+(def-vtable make-e-list
+  ; XXX write tests for this
+  (:|fromIteratableValues/1| (this iteratable) 
+    (declare (ignore this))
+    (let ((values))
+      (e. iteratable |iterate| (e-lambda (:|run| (k v)
+        (declare (ignore k))
+        ; out-of-dynamic-extent calls are harmless
+        (push v values))))
+      (coerce (nreverse values) 'vector))))
 
 (defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen make-e-list))
   t)
@@ -279,9 +298,19 @@
   (:|min/1| #'min)
   (:|max/1| #'max)
   (:|approxDivide/1| (a b) 
-    (if *java-e-compatible*
-      (coerce (/ a b) 'float64)
-      (/ a b)))
+    (e-coercef b 'number)
+    (handler-case
+      (if *java-e-compatible*
+        (coerce (/ a b) 'float64)
+        (/ a b))
+      (division-by-zero ()
+        (cond
+          ((= a 0)
+            |NaN|)
+          ((> a 0)
+            |Infinity|)
+          ((< a 0)
+            |-Infinity|)))))
   (:|floorDivide/1| (a b) 
     (floor (/ a b)))
   (:|truncDivide/1| (a b) 
@@ -322,7 +351,10 @@
       (coerce this 'float64)
       this))
   (:|previous/0| #'1-)
-  (:|next/0| #'1+))
+  (:|next/0| #'1+)
+  (:|isNaN/0| (this)
+    (declare (ignore this))
+    +e-false+))
 
 (def-fqn integer "org.cubik.cle.native.int")
 
@@ -333,13 +365,19 @@
       (with-standard-io-syntax
         (let ((*read-default-float-format* 'double-float)
               (*print-readably* nil)) ; for clisp
-          (prin1-to-string this))))))
+          (prin1-to-string this)))))
+  (:|isNaN/0| (this)
+    (declare (ignore this))
+    +e-false+))
 
 (def-vtable (eql #.|NaN|)
   (:|__printOn/1| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "NaN")))
+    (e. tw |print| "NaN"))
+  (:|isNaN/0| (this)
+    (declare (ignore this))
+    +e-true+))
 
 (def-vtable (eql #.|Infinity|)
   (:|__printOn/1| (this tw)
@@ -713,10 +751,13 @@
                 ; propagate.
                 (e. thing |__printOn| wrapped-tw)
                 (handler-case
-                  (e. thing |__printOn| wrapped-tw)
+                  (handler-bind 
+                      ; XXX this tracing is too noisy for running the tests - we need a 'store-but-don't-print' trace, or a tracelog like Java-E.
+                      ((e-catchable-condition (lambda (condition)
+                        #-(or) (declare (ignore condition))
+                        #+(or) (e. (e. (vat-safe-scope *vat*) |get| "traceln") |run| (format nil "problem while printing ~S: ~A (~S)~%~:W" thing (e-quote condition) condition (sb-debug:backtrace-as-list))))))
+                    (e. thing |__printOn| wrapped-tw))
                   (e-catchable-condition (condition)
-                    ; XXX this tracing is too noisy for running the tests - we need a 'store-but-don't-print' trace, or a tracelog like Java-E.
-                    ;(e. (e. (vat-safe-scope *vat*) |get| "traceln") |run| (format nil "problem while printing ~S: ~A (~S)~%~:W" thing (e-quote condition) condition (sb-debug:backtrace-as-list)))
                     (e. syntax |problem| (funcall nest :in-error-printing t)
                                          (cl-type-fq-name (observable-type-of thing))
                                          ; XXX passing the problem to the syntax unrestrictedly will be an arguable authority leak once we generalize TextWriter to non-string output. Probably should restrict to DeepPassByCopy, if we can do that at this layer.

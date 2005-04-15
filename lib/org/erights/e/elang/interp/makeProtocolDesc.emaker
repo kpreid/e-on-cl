@@ -75,9 +75,30 @@ def makeProtocolDesc implements DeepFrozen {
   # XXX write independent tests for makePair
   to makePair(docComment :String, optFQName :nullOk[String], supers :List, auditors :List, mTypes :List) {
     # XXX methods
+    def stamp
     def guard {
+      to __printOn(out :TextWriter) {
+        if (optFQName != null) {
+          out.print(simplifyFQName(optFQName))
+        } else {
+          out.print("<Anonymous ProtocolDesc>")
+        }
+      }
+      
+      to coerce(specimen, optEjector) {
+        if (__auditedBy(stamp, specimen)) {
+          return specimen
+        } else {
+          def conformed := specimen.__conformTo(guard)
+          if (__auditedBy(stamp, conformed)) {
+            return conformed
+          } else {
+            throw.eject(optEjector, "Not stamped by " + optFQName)
+          }
+        }
+      }
     }
-    def stamp {
+    bind stamp {
       /** Rubber-stamping auditor - accepts anything. */
       to audit(_, _) { return true }
     }
@@ -85,11 +106,7 @@ def makeProtocolDesc implements DeepFrozen {
   }
 }
 
-#        # from TypeDesc.java. this algorithm should be extracted somewhere
-#        def problem := escape notSimple {
-#          return tryCoerceR(specimen, notSimple)
-#        }
-#        escape notCoerced {
-#          return tryCoerceR(specien.__conformTo(this), notCoerced)
-#        }
-#        throw(problem)
+# print test
+
+  ? interface G guards S {}
+  # value: G

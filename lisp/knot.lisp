@@ -417,6 +417,7 @@
     (:|makeMessageDesc|  +the-make-message-desc+)
     (:|makeParamDesc|    +the-make-param-desc+)
 
+    (:|makeArray|        e.elib.tables:+the-make-array+)
     (:|makeFlexMap|      elib:+the-make-flex-map+)
     
     (:|FlexList|         elib:+the-flex-list-guard+)

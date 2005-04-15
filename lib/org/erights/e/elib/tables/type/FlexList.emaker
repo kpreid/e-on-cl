@@ -1,1 +1,1 @@
-<import:org.cubik.cle.prim.FlexList>
+<import:org.erights.e.elib.tables.makeFlexList>.asType()
