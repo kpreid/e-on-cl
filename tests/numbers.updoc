@@ -71,14 +71,14 @@ Coercion tests
   ? -3 // like(2)
   # value: -2
   
-  ? -3.truncDivide(like(2))
+  ? (-3).truncDivide(like(2))
   # value: -1
   
   ? 53 % like(10)
-  # value: 50
+  # value: 3
 
   ? 53 %% like(10)
-  # value: 50
+  # value: 3
   
   ? 0 <=> like(0.0)
   # value: true

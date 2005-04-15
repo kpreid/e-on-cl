@@ -196,7 +196,9 @@
 (defvar elib:+the-make-proxy-resolver+)
 
 (declaim (ftype function
-  e.elib:make-equalizer))
+  e.elib:make-equalizer
+  e.elib:cl-type-simple-expr
+  e.elib:eeq-same-yet-hash))
 
 (cl:defpackage :e.elib.tables
   (:nicknames :e.tables)

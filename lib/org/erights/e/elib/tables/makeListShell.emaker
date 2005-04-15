@@ -41,6 +41,7 @@ bind makeListShell implements EventuallyDeepFrozen {
   to run(self, impl) {
     def list {
     
+      method get(i) { impl.get(i) }
       method size() { impl.size() }
     
       to iterate(assocFunc) {
