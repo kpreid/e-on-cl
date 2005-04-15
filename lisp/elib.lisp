@@ -893,21 +893,6 @@ This could instead be defined as an eeq-is-transparent-selfless method, but I ex
     nil
     (call-next-method)))
 
-; --- Table protocol ---
-
-; Must be implemented by concrete EMaps
-(defgeneric map-snapshot (map))
-(defgeneric map-diverge (map key-guard value-guard))
-(defgeneric map-read-only (map))
-(defgeneric map-fetch (map key instead-thunk))
-(defgeneric map-size (map))
-(defgeneric map-domain (map))
-(defgeneric map-get-keys (map))
-(defgeneric map-get-values (map))
-(defgeneric map-get-pair (map))
-(defgeneric map-key-type (map))
-(defgeneric map-value-type (map))
-
 ; --- utilities referenced below ---
 
 (declaim (inline e-coerce))

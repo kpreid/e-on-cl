@@ -101,6 +101,7 @@
     :e-coerce-native
     
     :observable-type-of 
+    :def-class-opaque
     :cl-type-guard
     :+the-void-guard+
     :+the-any-guard+

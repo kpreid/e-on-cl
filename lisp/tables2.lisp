@@ -9,9 +9,6 @@
 
 ; --- ... ---
 
-(defmethod e.elib::map-read-only ((this e.elib::const-map)) 
-  this)
-
 ; --- Twine ---
 
 ; minimal to make Twine guard work and be distinct
@@ -115,9 +112,37 @@
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
     (make-flex-array (make-array (length seq) :initial-contents seq :fill-pointer t)))))
 
+; --- ConstMap ---
+
+(defclass const-map (e.elib::e-map) ())
+
+
+(def-vtable const-map
+  (:|__optUncall/0| (this)
+    `#(,+the-make-const-map+ "fromColumns" ,(e. this |getPair|)))
+  (:|__printOn/1| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (if (= 0 (e. this |size|))
+      (e. tw |print| "[].asMap()")
+      (e. this |printOn| "[" " => " ", " "]" tw)))
+  (:|keyType/0| (this) (declare (ignore this)) +the-any-guard+)
+  (:|valueType/0| (this) (declare (ignore this)) +the-any-guard+)
+  (:|snapshot/0| #'identity)
+  (:|readOnly/0| #'identity))
+
+
+(def-fqn const-map "org.erights.e.elib.tables.ConstMap")
+(defmethod eeq-is-transparent-selfless ((a const-map))
+  (declare (ignore a)) 
+  t)
+(def-class-opaque const-map)
+
+
+(defvar e.elib:+the-map-guard+ (make-instance 'cl-type-guard :type-specifier 'const-map))
+
 ; --- genhash ConstMap ---
 
-(defclass genhash-const-map-impl (e.elib::const-map)
+(defclass genhash-const-map-impl (const-map)
   ((table       :initarg :table)
    (keys        :initarg :keys
                 :type vector)
@@ -134,29 +159,23 @@
             for i from 0
             do (setf (hashref key table) i)))))
 
-(defmethod e.elib::map-fetch ((this genhash-const-map-impl) key absent-thunk)
-  (with-slots (table keys values) this
-    (let ((index (hashref key table)))
-      (if index
-        (aref values index)
-        (e. absent-thunk |run|)))))
-
-(defmethod e.elib::map-snapshot ((this genhash-const-map-impl))
-  this)
-                                   
-(defmethod e.elib::map-size ((this genhash-const-map-impl))
-  (with-slots (keys) this (length keys)))
-
-(defmethod e.elib::map-get-keys ((this genhash-const-map-impl))
-  (with-slots (keys) this keys))
-
-(defmethod e.elib::map-get-values ((this genhash-const-map-impl))
-  (with-slots (values) this values))
-
-(defmethod e.elib::map-get-pair ((this genhash-const-map-impl))
-  (with-slots (keys values) this (vector keys values)))
-
-
+(def-vtable genhash-const-map-impl
+  (:|getPair/0| (this)
+    (with-slots (keys values) this
+      (vector keys values)))
+  (:|snapshot/0| #'identity)
+  (:|fetch/2| (this key absent-thunk)
+    (with-slots (table keys values) this
+      (let ((index (hashref key table)))
+        (if index
+          (aref values index)
+          (e. absent-thunk |run|)))))
+  (:|size/0| (this)
+    (with-slots (keys) this (length keys)))
+  (:|getKeys/0| (this)
+    (with-slots (keys) this keys))
+  (:|getValues/0| (this)
+    (with-slots (values) this values)))
 
 ; --- genhash FlexMap ---
 
