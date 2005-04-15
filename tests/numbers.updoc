@@ -1,0 +1,86 @@
+? 44.previous()
+# value: 43
+
+? 44.next()
+# value: 45
+
+? 253.min(18)
+# value: 18
+
+? 33 :DeepFrozen
+# value: 33
+
+? 38823752358143578936745893267458923047892347891234789324 :DeepFrozen
+# value: 38823752358143578936745893267458923047892347891234789324
+
+? 1.0 :DeepFrozen
+# value: 1.0
+
+? 1.0.isNaN()
+# value: false
+
+? 0.isNaN()
+# value: false
+
+? NaN.isNaN()
+# value: true
+
+? Infinity.isNaN()
+# value: false
+
+? 1.isNaN() 
+# value: false
+
+? (1/0).isNaN()
+# value: false
+
+? (0/0).isNaN()
+# value: true
+
+
+Coercion tests
+
+  XXX stricter version that checks the guard passed to conformTo
+  ? def like(v) :any { return def conformer { to __conformTo(_) :any { return v }}}
+  # value: <like>
+  
+  ? 1 / like(2)
+  # value: 0.5
+  
+  ? 1 / like(0)
+  # value: Infinity
+
+  ? 1 + like(2)
+  # value: 3
+  
+  ? 1 - like(2)
+  # value: -1
+  
+  ? 3 * like(5)
+  # value: 15
+  
+  ? 3.min(like(2))
+  # value: 2
+  
+  ? 1.min(like(2))
+  # value: 1
+  
+  ? 3.max(like(4))
+  # value: 4
+  
+  ? -3 // like(2)
+  # value: -2
+  
+  ? -3.truncDivide(like(2))
+  # value: -1
+  
+  ? 53 % like(10)
+  # value: 50
+
+  ? 53 %% like(10)
+  # value: 50
+  
+  ? 0 <=> like(0.0)
+  # value: true
+  
+  

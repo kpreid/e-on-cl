@@ -125,26 +125,8 @@ String#add/1
 ? E.toQuote('a')
 # value: "'a'"
 
-? 44.previous()
-# value: 43
-
-? 44.next()
-# value: 45
-
-? 253.min(18)
-# value: 18
-
-? 33 :DeepFrozen
-# value: 33
-
-? 38823752358143578936745893267458923047892347891234789324 :DeepFrozen
-# value: 38823752358143578936745893267458923047892347891234789324
-
 ? "abc" :DeepFrozen
 # value: "abc"
 
 ? 'a' :DeepFrozen
 # value: 'a'
-
-? 1.0 :DeepFrozen
-# value: 1.0
