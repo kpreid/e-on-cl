@@ -1,0 +1,112 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeListShell := <import:org.erights.e.elib.tables.makeListShell>
+
+/** Check that start..!endd is a subrange of 0..!size. */
+def listRangeChecks implements DeepFrozen {
+  to run(start, endd, size, name) {
+    require(0 <= start,    thunk{`$name start < 0: $start`})
+    require(start <= endd, thunk{`$name range has negative length: $start..!$endd`})
+    require(endd <= size,  thunk{`$name bound > $size: $endd`})
+  }}
+        
+def makeFlexListShell implements DeepFrozen {
+  to run(self, impl, valueGuard) {
+    def flexList extends makeListShell(self, impl) {
+      # XXX programmatically provide FlexList interface doc
+      
+      # The implementation must do range checking.
+      to put(index :int, value) { impl.put(index, value) }
+      
+      to setSize(new :int) { impl.setSize(new) }
+      
+      to valueType() { return valueGuard }
+      
+      to ensureSize(minimum :int) {
+        if (impl.size() < minimum) {
+          impl.setSize(minimum)
+        }
+      }
+      
+      method push(new) :void {
+        def i := impl.size()
+        impl.setSize(i + 1)
+        impl.put(i, new)
+      }
+      method pop() {
+        def lastIndex := impl.size() - 1
+        def result := impl[lastIndex]
+        impl.setSize(lastIndex)
+        result
+      }
+      
+      to append(newItems) :void {
+        # XXX should coerce to EList?
+        # XXX better variable names
+        def itemsSize :int := newItems.size()
+        def last := impl.size()
+        impl.setSize(last + itemsSize)
+        for j in 0..!itemsSize {
+          impl.put(last + j, newItems[j])
+        }
+      }
+      
+      # Replace aliases
+      to setRun(start, source) {
+        self.replace(start, impl.size(), source, 0, source.size())
+      }
+      to setRun(start, endd, source) {
+        self.replace(start, endd, source, 0, source.size())
+      }
+      to removeRun(start, endd) {
+        def result := self.run(start, endd)
+        self.replace(start, endd, [], 0, 0)
+        return result
+      }
+      method removeRun(start) { self.removeRun(start, impl.size()) }
+      to insert(afterIndex, value) {
+        self.replace(afterIndex, afterIndex, [value], 0, 1)
+      }
+
+      
+      to replace(thisStart :int, thisEnd :int, other, otherStart :int, otherEnd :int) :void {
+        # Do range checking since this is so messy
+        
+        listRangeChecks(thisStart, thisEnd, impl.size(), "replace target")
+        listRangeChecks(otherStart, otherEnd, other.size(), "replace source")
+        impl.replace(thisStart, thisEnd, other, otherStart, otherEnd)
+      }
+      
+      # XXX this is private in Java-E and I forget why I exposed it
+      # it perhaps should not exist: http://www.eros-os.org/pipermail/e-lang/2000-August/003737.html
+      to sortInPlace(comparer) :void {
+        # Insertion sort
+        
+        def greater(a, b) {
+          def result := comparer(a, b)
+          if (result.isNaN()) {
+            throw("partial order not yet implemented")
+          }
+          return result.aboveZero()
+        }
+        
+        for mark in 1..!impl.size() {
+          def moving := impl[mark]
+          var insertIndex := mark
+          while (insertIndex > 0 && \
+                 greater(impl[def beforeInsert := insertIndex - 1],
+                          moving)) {
+            impl[insertIndex] := impl[beforeInsert]
+            insertIndex := beforeInsert
+          }
+          impl[insertIndex] := moving
+        }
+      }
+    }
+    return flexList
+  }
+}
