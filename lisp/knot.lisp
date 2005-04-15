@@ -540,11 +540,6 @@
     ("org.cubik.cle.prim.ePrinter"             e.syntax:+e-printer+)
     ("org.cubik.cle.prim.makeFirstCharSplitter" +make-first-char-splitter+)
     ("org.cubik.cle.prim.makePathLoader"       +the-make-path-loader+)
-    ("org.erights.e.elib.tables.makeReadOnlyMap" 
-      ; XXX temporary - I expect to rewrite this in E
-      (e-named-lambda "org.erights.e.elib.tables.makeReadOnlyMap"
-        (:|run| (map)
-          (make-instance 'e.elib::read-only-map :precious map))))
     ("org.cubik.cle.prim.simplifyFQName" 
       (e-named-lambda "org.cubik.cle.prim.simplifyFQName" 
         :stamped +deep-frozen-stamp+
