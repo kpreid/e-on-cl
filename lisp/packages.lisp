@@ -206,6 +206,7 @@
   (:use :cl :elib :net.hexapodia.hashtables)
   (:documentation "Collection implementations.")
   (:export
+    :const-map ; type
     :+the-make-array+))
 
 (defvar e.elib.tables:+the-make-array+)

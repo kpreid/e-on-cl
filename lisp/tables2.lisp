@@ -114,10 +114,11 @@
 
 ; --- ConstMap ---
 
-(defclass const-map (e.elib::e-map) ())
+(defclass const-map () ())
 
 
 (def-vtable const-map
+  ; XXX import documentation strings lazily from EMap interface
   (:|__optUncall/0| (this)
     `#(,+the-make-const-map+ "fromColumns" ,(e. this |getPair|)))
   (:|__printOn/1| (this tw)
@@ -128,7 +129,147 @@
   (:|keyType/0| (this) (declare (ignore this)) +the-any-guard+)
   (:|valueType/0| (this) (declare (ignore this)) +the-any-guard+)
   (:|snapshot/0| #'identity)
-  (:|readOnly/0| #'identity))
+  (:|readOnly/0| #'identity)
+  
+  ; The folowing are methods equally applicable to non-const maps, but all of them are currently implemented in E.
+  
+  (:|get/1| (this key)
+    (e. this |fetch|
+      key
+      (e-lambda (:|run| ()
+        ; XXX can this error be made more informative?
+        (error "~A not found" (e-quote key))))))
+  (:|maps/1| (this key)
+    (block nil
+      (e. this |fetch| key (e-lambda (:|run| () (return +e-false+))))
+      +e-true+))
+  
+  ; xxx with is generally used repeatedly: have a special efficiently-accumulating map
+  (:|with/2| (map new-key new-value)
+    (e. +the-make-const-map+ |fromIteratable|
+      (e-lambda (:|iterate| (f)
+        (e. map |iterate| f)
+        (e. f |run| new-key new-value)
+        nil))
+      +e-false+))
+
+  ; xxx using more complicated and slow version to imitate Java-E's ordering behavior
+  (:|without/1| (map key-to-remove)
+    "Return a ConstMap including all entries in this map except for the given key, which is replaced in the ordering with the last element of the map."
+    (if (e-is-true (e. map |maps| key-to-remove))
+      (let (last-pair 
+            removing-nonlast)
+        (e. map |iterate| (e-lambda (:|run/2| (&rest p) (setf last-pair p))))
+        (setf removing-nonlast (not (eeq-is-same-ever (first last-pair) key-to-remove)))
+        (e. +the-make-const-map+ |fromIteratable|
+          (e-lambda (:|iterate| (f)
+            (e. map |iterate| (e-lambda (:|run| (key value)
+              (cond
+                ((and last-pair removing-nonlast (eeq-is-same-ever key key-to-remove))
+                  (e. f |run| (first last-pair) (second last-pair)))
+                ((eeq-is-same-ever key (first last-pair))
+                  #|do nothing|#)
+                (t
+                  (e. f |run| key value)))
+              nil)))
+            nil))
+          +e-true+))
+      map))
+
+  (:|optExtract/1| (this key)
+    (block nil
+      (vector
+        (e. this |fetch| key
+          (e-lambda (:|run| ()
+            (return nil))))
+        (e. this |without| key))))
+
+  (:|and/1| (map mask)
+    (e-coercef mask +the-any-map-guard+)
+    (e. +the-make-const-map+ |fromIteratable|
+      (e-lambda (:|iterate| (f)
+        (e. map |iterate| (e-lambda (:|run| (key value)
+          (when (e-is-true (e. mask |maps| key))
+            (e. f |run| key value))
+          nil)))
+        nil))
+      +e-true+))
+
+  ; simpler but not-like-Java-E butNot. XXX discuss whether it would be acceptable to use this
+  ;(:|butNot/1| (map mask)
+  ;  (e-coercef mask +the-any-map-guard+)
+  ;  (e. +the-make-const-map+ |fromIteratable|
+  ;    (e-lambda (:|iterate| (f)
+  ;      (e. map |iterate| (e-lambda (:|run| (key value)
+  ;        (unless (e-is-true (e. mask |maps| key))
+  ;          (e. f |run| key value))
+  ;        nil)))
+  ;      nil))
+  ;    +e-true+))
+
+  (:|butNot/1| (map mask)
+    (e-coercef mask +the-any-map-guard+)
+    (let* ((map-keys (e-coerce (e. map |getKeys|) 'vector))
+           (ordering (make-array (length map-keys) 
+                                 :initial-contents map-keys
+                                 :fill-pointer t)))
+      (loop with i = 0
+            while (< i (length ordering))
+            do (if (e-is-true (e. mask |maps| (aref ordering i)))
+                 (if (= i (1- (length ordering)))
+                   (vector-pop ordering)
+                   (setf (aref ordering i) (vector-pop ordering)))
+                 (incf i)))
+      (e. +the-make-const-map+ |fromIteratable|
+        (e-lambda (:|iterate| (f)
+          (loop for key across ordering do
+            (e. f |run| key (e. map |get| key)))
+          nil))
+        +e-true+)))
+  
+  (:|or/1| (front behind)        (e. front |or| behind +e-false+ 'nil))
+  (:|or/2| (front behind strict) (e. front |or| behind strict    'nil))
+  (:|or/3| (front behind strict opt-ejector)
+    (cond
+      ((eql 0 (e. front  |size|)) (e. behind |snapshot|))
+      ((eql 0 (e. behind |size|)) (e. front |snapshot|))
+      (t 
+        (e. +the-make-const-map+ |fromIteratable|
+          (e-lambda (:|iterate| (f)
+            (e. behind |iterate| f)
+            (e. front |iterate| f)
+            nil))
+          strict opt-ejector))))
+  
+  (:|iterate/1| (map func)
+    (let* ((pair (ref-shorten (e. map |getPair|))))
+      (loop for key   across (aref pair 0)
+            for value across (aref pair 1)
+            do (e. func |run| key value))
+      nil))
+  
+  (:|printOn/5| (map left-s map-s sep-s right-s tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |write| left-s)
+    (let ((this-sep ""))
+      (e. map |iterate| (e-lambda (:|run| (key value)
+        (e. tw |write| this-sep)
+        (e. tw |quote| key)
+        (e. tw |write| map-s)
+        (e. tw |quote| value)
+        (setf this-sep sep-s)))))
+    (e. tw |write| right-s))
+  
+  (:|diverge/0| (this) (e. this |diverge| +the-any-guard+ +the-any-guard+))
+  (:|diverge/2| (this key-guard value-guard)
+    (let ((flex-map (e. +the-make-flex-map+ |fromTypes| key-guard value-guard)))
+      (e. flex-map |putAll| this +e-true+ (e-lambda (:|run| (problem)
+        ; xxx explain exactly what keys, after the problem argument becomes more informative
+        (declare (ignore problem))
+        (error "duplicate keys in ~A under ~A coercion"
+          (e-quote this)
+          (e-quote key-guard)))))
+      flex-map)))
 
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
@@ -139,6 +280,8 @@
 
 
 (defvar e.elib:+the-map-guard+ (make-instance 'cl-type-guard :type-specifier 'const-map))
+
+(defvar e.elib:+the-any-map-guard+ e.elib:+the-map-guard+) ; XXX what this *should* be is a stamp-checking guard to allow standard FlexMaps and ROMaps (which are currently implemented in E)
 
 ; --- genhash ConstMap ---
 
@@ -185,7 +328,6 @@
   (map-generic-hash #'(lambda (k v) (setf (hashref k new) v)) old)
   new)
 
-; XXX remove e-map parent when possible
 (defclass genhash-flex-map-impl (vat-checking)
   ((self        :initarg :self)
    (key-guard   :initarg :key-guard   :initform +the-any-guard+)

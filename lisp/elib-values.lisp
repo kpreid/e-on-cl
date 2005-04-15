@@ -935,7 +935,7 @@
   (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
   (:|makeBufferingPair| (options)
     "Return a tuple of a TextWriter and a StringBuffer from which the output of the TextWriter is readable."
-    (e-coercef options 'e-map)
+    (e-coercef options 'e.elib.tables:const-map)
     ; xxx arbitrary initial size figure. CLISP didn't like an initial size of 0 (adjust-array signaled the error "index too large")
     (let ((buffer (make-array 80
                               :element-type 'character

@@ -18,17 +18,14 @@
             :depends-on ("elib"))
      (:file "elib-values"
             :depends-on ("elib"))
-     (:file "elib-tables"
-            :depends-on ("elib" "elib-values"))
      (:file "tables2"
-            :depends-on ("elib-tables" ; for generics, superclasses, etc
-                         "elib-guts")) ; genhash's register-hash-function needs #'eeq-same-yet-hash #'eeq-is-same-ever
+            :depends-on ("elib-guts")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
      (:file "extern"
             :depends-on ("elib"))
      (:file "knot"
             :depends-on ("elib"))
      (:file "elang"
-            :depends-on ("elib-tables" "tables2" "elib-values" "elib" "util" "packages"))
+            :depends-on ("tables2" "elib-values" "elib" "util" "packages"))
      (:file "elang-nodes"
             :depends-on ("elang"))
      (:file "syntax"
