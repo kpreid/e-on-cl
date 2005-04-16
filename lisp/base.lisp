@@ -31,8 +31,10 @@
 (eval-when (:compile-toplevel :load-toplevel :execute) 
 
   (defconstant |NaN| 
-    #+sbcl (- sb-ext:double-float-positive-infinity sb-ext:double-float-positive-infinity)
-    #-sbcl '|NaN|)
+    (or #+(and sbcl ppc)
+	  (with-appropriate-floating-point-rules
+	    (- sb-ext:double-float-positive-infinity sb-ext:double-float-positive-infinity))
+        '|NaN|))
   (defconstant |Infinity|
     #+sbcl sb-ext:double-float-positive-infinity
     #-sbcl '|Infinity|)

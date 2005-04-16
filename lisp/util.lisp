@@ -174,11 +174,29 @@
 ;    (unwind-protect
 ;      (progn ,@forms)
 ;      (apply #'ccl:set-fpu-mode ,save))))
-;#-ccl (defmacro with-appropriate-floating-point-rules (&body forms)
-;  `(progn ,@forms))
+
+#+(and sbcl x86)
+(defun %with-appropriate-floating-point-rules (f)
+  (let ((save (sb-int:get-floating-point-modes)))
+    (unwind-protect
+      (progn
+	(sb-int:set-floating-point-modes
+          :traps '())
+	(funcall f))
+      (apply #'sb-int:set-floating-point-modes save))))
+
+#-(or (and sbcl x86))
+(defun %with-appropriate-floating-point-rules (f)
+  (funcall f))
+
+(declaim (inline %with-appropriate-floating-point-rules))
+
+(defmacro with-appropriate-floating-point-rules (&body forms)
+  `(%with-appropriate-floating-point-rules (lambda () ,@forms)))
 
 #+sbcl (eval-when (:compile-toplevel :load-toplevel :execute)
          (require :sb-introspect))
+
 (defun function-lambda-list (function)
   "Return the lambda list of the given function, or '(&rest <unknown-lambda-list>) if it cannot be determined."
   (first

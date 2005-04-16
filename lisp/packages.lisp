@@ -29,7 +29,7 @@
     :without-prefix
     :serve-event
     :class-precedence-list
-    #-(and) :with-appropriate-floating-point-rules
+    :with-appropriate-floating-point-rules
     
     :function-lambda-list :<unknown-lambda-list>
     
