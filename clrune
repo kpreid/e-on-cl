@@ -113,6 +113,9 @@ QUOTED_HERE=`dirname $0 | perl -pe 's&(["\\\\])&\\$1&g'`
 # XXX make this into a function so we don't invoke perl unless necessary
 QUOTED_ARGS=`perl -e 'print map {(my $x=$_) =~ s&(["\\\\])&\\$1&g; qq& "$x" &} @ARGV' -- "$@"`
 
+JHOME=`rune -show | grep -- '^-De.home=' | cut -c 10-`
+QUOTED_JLIB=`echo "$JHOME/src/esrc/" | perl -pe 's&(["\\\\])&\\$1&g'`
+
 # COMMON_INIT1/2 are separated since INIT2 needs to be read after INIT1 is evaluated, as the ELANG package will not exist until then.
 
 COMMON_INIT1='(progn
@@ -128,10 +131,7 @@ COMMON_INIT1='(progn
 COMMON_INIT2='(progn
   (setf e.knot:*emaker-search-list* 
     (append e.knot:*emaker-search-list*
-            (quote ("/Volumes/Beta/Stuff/e/src/esrc/"
-                    "/Stuff/e/src/esrc/"
-                    "/Users/kpreid/Documents/Xenon/jlib/"
-                    "/Volumes/Beta/Stuff/jlib/"))))
+            (quote ("'$QUOTED_JLIB'"))))
   (values))'
 
 
