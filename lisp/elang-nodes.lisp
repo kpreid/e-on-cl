@@ -476,7 +476,7 @@
 ; --- static scopes ---
 
 (defun make-static-scope (&key
-    has-meta-state-expr
+    (has-meta-state-expr +e-false+)
     (def-names  (e. #() |asMap|))
     (var-names  (e. #() |asMap|))
     (read-names (e. #() |asMap|))
@@ -489,7 +489,7 @@
                            (e. read-names |getKeys|) " =~ "
                            (e. def-names  |getKeys|) " + var "
                            (e. var-names  |getKeys|) 
-                           (if has-meta-state-expr 
+                           (if (e-is-true has-meta-state-expr)
                              ", meta.getState()" 
                              "") 
                        ">"))
@@ -508,16 +508,16 @@
           (make-static-scope
             :def-names  (e. left-def  |or| right-def)
             :var-names  (e. left-var  |or| right-var)
-            :read-names (e. left-read |or| (e. right-read |butNot| left-out))
+            :read-names (e. left-read |or| (e. right-read |butNot| left-out))
             :set-names  (e. left-set  |or| (e. right-set  |butNot| left-out))
-            :has-meta-state-expr (or left-meta right-meta))))
+            :has-meta-state-expr (e. left-meta |or| right-meta))))
       (:|namesRead|        () read-names)
       (:|namesSet|         () set-names)
       (:|namesUsed|        () (e. read-names |or| set-names))
       (:|defNames|         () def-names)
       (:|varNames|         () var-names)
       (:|outNames|         () (e. def-names |or| var-names))
-      (:|hasMetaStateExpr| () (as-e-boolean has-meta-state-expr))
+      (:|hasMetaStateExpr| () has-meta-state-expr)
       (:|hide|             () (make-static-scope 
                                 :read-names read-names
                                 :set-names set-names
@@ -533,7 +533,7 @@
       (make node :set-names (e. node |name|)))
     (:|scopeDef| (node)
       (e-coercef node 'evm-node::|FinalPattern|)
-      (make node :def-names (e. (e. node |getNoun|) |name|))))
+      (make node :def-names (e. (e. node |getNoun|) |name|)))
     (:|scopeRead| (node)
       (e-coercef node '(or evm-node::|NounExpr| evm-node::|SlotExpr|))
       (make node :read-names (e. node |name|)))
@@ -544,7 +544,7 @@
       (e-coercef node 'evm-node::|SlotPattern|)
       (make node :var-names (e. (e. node |getNoun|) |name|)))
     (:|scopeMeta| ()
-      (make-static-scope :has-meta-state-expr t))
+      (make-static-scope :has-meta-state-expr +e-true+))
     (:|getEmptyScope| ()
       (make-static-scope)))))
 

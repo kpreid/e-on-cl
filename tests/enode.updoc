@@ -487,9 +487,9 @@ SuchThatPattern printing
   ? empty + empty
   # value: <[] := [] =~ [] + var []>
 
-  lack of a guard in the current implementation would be a security hole
   ? sdef1 + def _ { to __conformTo(_) :any { return empty }}
-  # value: <[] := [] =~ ["x"] + var []>
+  # problem: No such method: __main$_#defNames/0
+  x # value: <[] := [] =~ ["x"] + var []>
   
   ? sdef1 + sdef2
   # value: <[] := [] =~ ["y", "x"] + var []>
