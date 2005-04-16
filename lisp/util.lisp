@@ -18,7 +18,7 @@
   (apply 
     #+sbcl #'sb-sys:serve-event
     #+cmu #'system:serve-event
-    #-(or sbcl) (error "No serve-event")
+    #-(or sbcl cmu) (error "No serve-event")
     args))
 
 ; --- RUN-PROGRAM and friends ---
@@ -40,7 +40,7 @@
   (apply
     #+ccl    #'ccl:run-program
     #+sbcl   #'sb-ext:run-program
-    #+cmu    #'ext:run-program
+    #+cmu    #'extensions:run-program
     #-(or sbcl ccl cmu)
       (error "Don't know where to find RUN-PROGRAM")
     
@@ -103,7 +103,8 @@
     (apply 
       #+ccl  #'ccl:external-process-input-stream
       #+sbcl #'sb-ext:process-input
-      #-(or sbcl ccl)
+      #+cmu  #'extensions:process-input
+      #-(or sbcl ccl cmu)
         (error "Don't know where to find external-process-input-stream")
       args))
   
@@ -111,7 +112,8 @@
     (apply 
       #+ccl  #'ccl:external-process-output-stream
       #+sbcl #'sb-ext:process-output
-      #-(or sbcl ccl)
+      #+cmu  #'extensions:process-output
+      #-(or sbcl ccl cmu)
         (error "Don't know where to find external-process-output-stream")
       args)))
 

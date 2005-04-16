@@ -20,6 +20,8 @@
     (ccl:quit status)
   #+clisp
     (ext:quit status)
+  #+cmu  ; XXX have exit status warning
+    (extensions:quit)
   #+abcl
     (progn
       (when (/= 0 status)
