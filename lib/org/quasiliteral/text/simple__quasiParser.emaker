@@ -1,0 +1,217 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+pragma.enable("accumulator")
+
+# --- ---
+
+def getOrMake(cache, compile, templateTwine :Twine) {
+  def templateString :String := templateTwine
+  return cache.fetch(templateString, thunk {
+    cache[templateString] := compile(templateTwine)
+  })
+}
+
+# --- ---
+
+def makeFirstCharSplitter := <import:org.quasiliteral.text.FirstCharSplitter>
+
+def templateSpecialSplitter := makeFirstCharSplitter("$@")
+def closeBraceSplitter := makeFirstCharSplitter(# {
+                                                "}")
+
+def parse(var template, builder) {
+  while (true) {
+    def specialIndex := templateSpecialSplitter.findInFrom(template, 0)
+
+    {
+      def afterPlainIndex := if (specialIndex == -1) {template.size()} else {specialIndex}
+      if (afterPlainIndex > 0) {
+        builder.text(template.run(0, afterPlainIndex))
+        template := template.run(afterPlainIndex)
+      }
+      if (template == "") {
+        break
+      }
+    }
+
+    def tag := template[0]
+    
+    require(template.size() >= 2, thunk{"template ends at special character: " + template})
+    switch (template[1]) {
+    
+      match ==tag {
+        builder.text(E.toString(tag))
+        template := template.run(2)
+      }
+
+      match =='{' { # }
+        def afterBraceIndex := 2
+        def holeIndex
+        
+        if ((def endIndex := closeBraceSplitter.findInFrom(template, afterBraceIndex)) != -1) {
+          bind holeIndex := __makeInt(template(afterBraceIndex, endIndex))
+          template := template.run(endIndex + 1)
+        } else {
+          throw( # {
+                "missing '}': " + template)
+        }
+        
+        switch (tag) {
+          match =='$' { builder.valueHole(holeIndex) }
+          match =='@' { builder.matchHole(holeIndex) }
+          match _ {
+            throw(meta.context().getFQNPrefix() + " self-inconsistent: unknown special character " + E.toQuote(tag))
+          }
+        }
+      }
+
+      match _ {
+        throw(E.toQuote(tag) + " not followed by '{': " + template # }
+             )
+      }
+    }
+  }  
+}
+
+# --- ---
+
+def makeSeqExpr := <elang:evm.SeqExpr>
+def makeLiteralExpr := <elang:evm.LiteralExpr>
+
+def compileValue(template) {
+  
+  var printExprs := []
+  var maxIndex := -1
+  
+  parse(template, def _ {
+    to text(s :String) {
+      printExprs with= e`tw.write(${makeLiteralExpr(null, s, null)})`
+    }
+    to valueHole(index :int) {
+      printExprs with= e`tw.print(holeValues[${makeLiteralExpr(null, index, null)}])`
+      maxIndex max= index
+    }
+    to matchHole(_) {
+      throw("at-holes not allowed in quasi-literal expression")
+    }
+  })
+
+  return e`
+    pragma.enable("easy-return")
+    pragma.disable("explicit-result-guard")
+
+    def makeTextWriter := <elib:oldeio.TextWriter>
+    def simpleValueMaker {
+      to substitute(holeValues) {
+        def [tw, sb] := makeTextWriter.makeBufferingPair()
+        ${makeSeqExpr(null, printExprs, null)}
+        return sb.snapshot()
+      }
+      
+      /** Return the number of $$-holes in the pattern. Present only to support PerlMatchMakerMaker. */
+      to numArgs() {
+        return ${makeLiteralExpr(null, maxIndex + 1, null)}
+      }
+    }
+  `.eval(safeScope)
+}
+
+def compileMatch(template) {
+  # xxx compile-to-E the matcher also, like we do the valueMaker above?
+  var vmatchers := []
+  
+  parse(template, def _ {
+    to text(myString :String) {
+      vmatchers with= def stringMatcher {
+        to run(_, specimen, optEjector, _) {
+          if (specimen.startsWith(myString)) {
+            return [[], specimen.run(myString.size())]
+          } else {
+            throw.eject(optEjector, "expected " + E.toQuote(myString) + "..., found " + E.toQuote(specimen))
+          }
+        }
+        
+        to getOptArgIndex() {}
+              
+        to getString(_) { return myString }
+      }
+    }
+    
+    to valueHole(holeIndex :int) {
+      vmatchers with= def valueMatcher {
+        to run(holeValues, specimen, optEjector, _) {
+          def myString := E.toString(holeValues[holeIndex])
+          # XXX this is duplicated with stringMatcher
+          if (specimen.startsWith(myString)) {
+            return [[], specimen.run(myString.size())]
+          } else {
+            throw.eject(optEjector, "expected " + E.toQuote(myString) + "... ($-hole " + E.toString(holeIndex) + "), found " + E.toQuote(specimen))
+          }
+        }
+        
+        to getOptArgIndex() { return holeIndex }
+        
+        to getString(holeValues) {
+          return E.toString(holeValues[holeIndex])
+        }
+      }
+    }
+    
+    to matchHole(holeIndex :int) {
+      vmatchers with= def holeMatcher {
+        to run(holeValues, specimen, optEjector, nextPart) {
+          if (nextPart != null) {
+            def nextString := nextPart.getString(holeValues)
+            def pos := specimen.indexOf(nextString)
+            if (pos == -1) {
+              throw.eject(optEjector, "expected " + E.toQuote(nextString) + "..., found " + E.toString(specimen))
+            }
+            return [[specimen(0, pos)], specimen(pos)]
+          } else {
+            return [[specimen], ""]
+          }
+        }
+        
+        to getOptArgIndex() {}
+      }
+    }
+  })
+
+  def matchers := vmatchers
+
+  def matchMaker {
+    to matchBind(holeValues :List[any], var specimen, optEjector) :List[Twine] {
+      specimen := String.coerce(specimen, optEjector)
+      var bindings := []
+      for i => matcher in matchers {
+        def [moreBindings, newSpecimen] :=
+          matcher(holeValues, specimen, optEjector, if ((i+1) < matchers.size()) {matchers[i+1]})
+        bindings += moreBindings
+        specimen := newSpecimen
+      }
+      if (specimen != "") {
+        throw.eject(optEjector, "extra text at end of specimen: " + specimen)
+      }
+      return bindings
+    }
+  }
+  return matchMaker
+}
+
+# --- ---
+
+def valueMakerCache := [].asMap().diverge(String, any)
+def matchMakerCache := [].asMap().diverge(String, any)
+
+def simple__quasiParser0 {
+  to valueMaker(s) {
+    return getOrMake(valueMakerCache, compileValue, s)
+  }
+  to matchMaker(s) {
+    return getOrMake(matchMakerCache, compileMatch, s)
+  }
+}
