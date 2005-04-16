@@ -304,7 +304,7 @@ ObjectExpr, EScript
   XXX standalone IgnorePattern tests
   
   ? makeEScript(null, null, null, null)
-  # problem: at least one of optMethods or optMatcher must not be null
+  # problem: EScript must have methods or matcher
   
   ? def bothScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null), null)
   # value: e??` {
@@ -647,7 +647,7 @@ evalToPair
   # value: ["leftward", <scope __safe$>]
   
   ? e`x`.evalToPair(safeScope)
-  # problem: Failed: Undefined variable: x
+  # problem: undefined variable: x
   
   ? e`x`.eval(newScope)
   # value: "leftward"

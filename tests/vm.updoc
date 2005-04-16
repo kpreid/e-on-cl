@@ -135,7 +135,7 @@ HideExpr and scoping:
   # value: 100
   
   ? z
-  # problem: Failed: Undefined variable: z
+  # problem: undefined variable: z
 
 EscapeExpr
   
@@ -150,7 +150,7 @@ EscapeExpr
   # value: 11
   
   ? escapeRes
-  # problem: Failed: Undefined variable: escapeRes
+  # problem: undefined variable: escapeRes
 
  disabling of ejector, and a non-simple pattern
   ? { def ej; escape bind ej {}; ej("oops"); print("end") }
@@ -379,13 +379,13 @@ IfExpr
   # value: 1
 
   ? { if (def a := 2; true) { a } else { a } }
-  # problem: Failed: Undefined variable: a
+  # problem: undefined variable: a
 
   ? { if (def a := 2; false) { a } else { a } }
-  # problem: Failed: Undefined variable: a
+  # problem: undefined variable: a
 
   ? { if (def a := 2; true) { a }; a }
-  # problem: Failed: Undefined variable: a
+  # problem: undefined variable: a
 
   ? if (1) {"oops"}
   # problem: the int 1 doesn't coerce to a boolean
@@ -681,10 +681,10 @@ Miscellaneous scoping
   # problem: "x" already in scope
   
   ? { notOuterDefined + 1; def notOuterDefined := 2 }
-  # problem: Failed: Undefined variable: notOuterDefined
+  # problem: undefined variable: notOuterDefined
   
   ? {[notOuterDefined + 1, def notOuterDefined := 2]}
-  # problem: Failed: Undefined variable: notOuterDefined
+  # problem: undefined variable: notOuterDefined
   
   xxx This is what current Java-E does, but should it? Should we instead reject usage preceding shadowing define?
   ? { outerDefined + 1; def outerDefined := 2 }
