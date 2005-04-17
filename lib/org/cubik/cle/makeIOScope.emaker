@@ -76,8 +76,8 @@ def makeIOScope(fqnPrefix :String,
   # XXX make this accept lack of std* etc.
   addLazy("rune", thunk{
     def [=> stdout, => stderr] | _ := exits
-    def runeAuthor := <elang:cmd.runeAuthor>
-    #def runeAuthor := <import:org.cubik.cle.simpleRuneAuthor>
+    #def runeAuthor := <elang:cmd.runeAuthor>
+    def runeAuthor := <import:org.cubik.cle.simpleRuneAuthor>
     runeAuthor(["metaout" => stdout,
                 "metaerr" => stderr,
                 "defaultProps" => ioScope["interp"].getProps()
