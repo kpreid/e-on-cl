@@ -66,7 +66,7 @@
             (e. tw |print| "/"))))
       (:|get/1| (subpath)
         (e-coercef subpath 'string)
-        (let* ((splat (e. subpath |split| '#.(coerce #(#\/ ) 'string))))
+        (let* ((splat (e. subpath |split| "/")))
           (make-file-getter
             (concatenate 'vector
               path-components
