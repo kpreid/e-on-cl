@@ -50,15 +50,15 @@
 
 ; --- transformation ---
 
-(def-expr-transformation evm-node::|AssignExpr| (name-map noun rValue &aux (vars ()))
-  (assert (typep noun 'evm-node::|NounExpr|))
+(def-expr-transformation |AssignExpr| (name-map noun rValue &aux (vars ()))
+  (assert (typep noun '|NounExpr|))
   (let ((code `(let ((r-value ,(updating-transform rValue name-map vars)))
                 ,(binding-set-code (inner-scope-noun-binding name-map (car (node-elements noun)))
                                    'r-value)
                 r-value)))
     (values vars name-map code)))
 
-(def-expr-transformation evm-node::|CallExpr| (name-map recip verb &rest args &aux (vars ()))
+(def-expr-transformation |CallExpr| (name-map recip verb &rest args &aux (vars ()))
   (let ((code `(e. ,(updating-transform recip name-map vars)
                    ,verb
                    ,@(loop for x in args collect (updating-transform x name-map vars)))))
@@ -68,7 +68,7 @@
   "This function exists to make it clear in a backtrace that the condition did not originate at this location."
   (error condition))
 
-(def-expr-transformation evm-node::|CatchExpr| (outer-name-map attempt pattern catcher)
+(def-expr-transformation |CatchExpr| (outer-name-map attempt pattern catcher)
   (let* ((catch-tag-sym (gensym "E-CATCH-EJECTOR-TAG-VAR-"))
          (condition-sym (gensym "E-CATCH-CONDITION-"))
          (attempt-vars ())
@@ -94,7 +94,7 @@
                 (catch-expr-resignal ,condition-sym)))))))))
  
 ; broken version: executes the catch block before unwind-protect/finally         
-;(def-expr-transformation evm-node::|CatchExpr| (outer-name-map attempt pattern catcher)
+;(def-expr-transformation |CatchExpr| (outer-name-map attempt pattern catcher)
 ;  (let* ((catch-tag-sym (gensym "E-CATCH-EJECTOR-TAG-VAR-"))
 ;         (condition-sym (gensym "E-CATCH-CONDITION-"))
 ;         (attempt-vars ())
@@ -121,18 +121,18 @@
 ;                  (return-from ,attempt-block-sym ,catcher-code)))))))
 ;          ,(make-lets attempt-vars attempt-code))))))
 
-(def-expr-transformation evm-node::|DefineExpr| (name-map patt rValue &aux (vars ()))
+(def-expr-transformation |DefineExpr| (name-map patt rValue &aux (vars ()))
   (let ((rvalue-code (updating-transform rValue name-map vars))
         (patt-code (updating-transform-pattern patt 'define-specimen 'nil name-map vars)))
     (values vars name-map `(let ((define-specimen ,rvalue-code)) ,patt-code define-specimen))))
 
-(defmethod tail-transform-expr ((expr evm-node::|DefineExpr|) tail-exprs name-map &aux vars)
+(defmethod tail-transform-expr ((expr |DefineExpr|) tail-exprs name-map &aux vars)
   (destructuring-bind (patt rValue) (node-elements expr)
     (let* ((rvalue-code (updating-transform rValue name-map vars))
            (patt-code (tail-transform-patterns (list patt) tail-exprs rvalue-code 'nil name-map)))
       (make-lets vars patt-code))))
 
-(def-expr-transformation evm-node::|EscapeExpr| (outer-name-map hatch body opt-arg-pattern opt-catcher)
+(def-expr-transformation |EscapeExpr| (outer-name-map hatch body opt-arg-pattern opt-catcher)
   (assert (eql (null opt-arg-pattern) (null opt-catcher)))
   (let* ((escape-name-map outer-name-map)
          (catch-name-map outer-name-map)
@@ -170,7 +170,7 @@
           (catch ,etag-var
             ,body-code))))))
 
-(def-expr-transformation evm-node::|FinallyExpr| (name-map attempt unwinder)
+(def-expr-transformation |FinallyExpr| (name-map attempt unwinder)
   (let* ((attempt-code (nth-value 2 (scope-box-transform name-map attempt)))
          (unwinder-code (nth-value 2 (scope-box-transform name-map unwinder))))
     (values () name-map 
@@ -178,10 +178,10 @@
         ,attempt-code
         ,unwinder-code))))
 
-(def-expr-transformation evm-node::|HideExpr| (name-map sub) 
+(def-expr-transformation |HideExpr| (name-map sub) 
   (scope-box-transform name-map sub))
 
-(def-expr-transformation evm-node::|IfExpr| (outer-name-map test then else)
+(def-expr-transformation |IfExpr| (outer-name-map test then else)
   (let* ((block-sym (gensym))
          (then-name-map (inner-scope-nest outer-name-map))
          (else-name-map (inner-scope-nest outer-name-map))
@@ -204,10 +204,10 @@
           ,(make-lets else-vars else-code)))
       )))
 
-(def-expr-transformation evm-node::|LiteralExpr| (onm data)
+(def-expr-transformation |LiteralExpr| (onm data)
   (values () onm `',data))
 
-(def-expr-transformation evm-node::|MatchBindExpr| (name-map specimen pattern &aux
+(def-expr-transformation |MatchBindExpr| (name-map specimen pattern &aux
     specimen-vars pattern-vars)
   (let* ((tag-sym (gensym "E-MATCH-BIND-TAG-VAR-"))
          (problem-var (make-symbol "PROBLEM"))
@@ -231,7 +231,7 @@
             elib:+e-false+))))))
 
 
-(def-expr-transformation evm-node::|MetaContextExpr| (onm
+(def-expr-transformation |MetaContextExpr| (onm
     &aux (prefix (inner-scope-fqn-prefix onm)))
   (values () onm `',(e-named-lambda "org.erights.e.elang.scope.StaticContext"
     (:|__printOn/1| (tw)
@@ -240,12 +240,12 @@
     (:|getFQNPrefix/0| ()
       prefix))))
 
-(def-expr-transformation evm-node::|MetaStateExpr| (onm)
+(def-expr-transformation |MetaStateExpr| (onm)
   (values () onm
     `(e. ',+the-make-const-map+ |fromPairs|
       (vector ,@(inner-scope-meta-state-bindings onm)))))
 
-(def-expr-transformation evm-node::|NounExpr| (onm varName)
+(def-expr-transformation |NounExpr| (onm varName)
   (values () onm (binding-get-code (inner-scope-noun-binding onm varName))))
 
 (defun method-body (name-map method args-var &aux vars)
@@ -361,9 +361,9 @@
         ,qn-var
         #-(and) (error "Unrecognized qualified name: ~A (being qualified with prefix ~A)" (e-quote ,qn-var) (e-quote (inner-scope-fqn-prefix ,scope-var)))))))
 
-(def-expr-transformation evm-node::|ObjectExpr| (name-map doc-comment qualified-name auditor-exprs eScript
+(def-expr-transformation |ObjectExpr| (name-map doc-comment qualified-name auditor-exprs eScript
     &aux vars
-         (this-expr (make-instance 'evm-node::|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs eScript)))) ; XXX need a this argument
+         (this-expr (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs eScript)))) ; XXX need a this argument
   (destructuring-bind (methods matcher) (node-elements eScript)
     (let* ((approvers-sym (make-symbol "APPROVERS"))
            (witness-sym (make-symbol "WITNESS"))
@@ -414,7 +414,7 @@ XXX This is an excessively large authority and will probably be replaced."
                   ,witness-check-form
                   ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
 
-                  (e. ,(nth-value 2 (transform (make-instance 'evm-node::|MetaStateExpr| :elements '()) name-map))
+                  (e. ,(nth-value 2 (transform (make-instance '|MetaStateExpr| :elements '()) name-map))
                       |get| (e. "&" |add| slot-name))
                   #-(and) (cond
                     ,@(loop for (name . binding) in (inner-scope-bindings name-map) collect
@@ -430,20 +430,20 @@ XXX This is an excessively large authority and will probably be replaced."
             ,@(when has-auditors `((setf ,witness-ok-sym nil)))
             #',self-fsym))))))
 
-(def-expr-transformation evm-node::|SeqExpr| (name-map &rest subs &aux (vars ()))
+(def-expr-transformation |SeqExpr| (name-map &rest subs &aux (vars ()))
   (let ((form `(progn ,@(mapcar (lambda (x) (updating-transform x name-map vars)) subs))))
     (values vars name-map form)))
 
-(defmethod tail-transform-expr ((expr evm-node::|SeqExpr|) tail-exprs name-map)
+(defmethod tail-transform-expr ((expr |SeqExpr|) tail-exprs name-map)
   (tail-transform-exprs (append (node-elements expr) tail-exprs) name-map))
 
 
-(def-expr-transformation evm-node::|SlotExpr| (onm noun-expr)
-  (assert (typep noun-expr 'evm-node::|NounExpr|))
+(def-expr-transformation |SlotExpr| (onm noun-expr)
+  (assert (typep noun-expr '|NounExpr|))
   (values () onm (binding-get-slot-code (inner-scope-noun-binding onm (car (node-elements noun-expr))))))
 
 
-(def-patt-transformation evm-node::|CdrPattern| (specimen-form ejector-spec name-map list-pattern rest-pattern &aux (vars ()))
+(def-patt-transformation |CdrPattern| (specimen-form ejector-spec name-map list-pattern rest-pattern &aux (vars ()))
   (let* ((coerced-sym (gensym "VECTOR"))
          (list-patt-length (length (node-elements list-pattern)))
          (list-patt-code (updating-transform-pattern list-pattern `(subseq ,coerced-sym 0 ,list-patt-length) ejector-spec name-map vars))
@@ -492,7 +492,7 @@ XXX This is an excessively large authority and will probably be replaced."
 ; old code for FinalPattern: (binding-pattern-impl #'final-binding-impl t specimen-form ejector-spec name-map nounExpr optGuardExpr)
 ; XXX throw out final-binding-impl; review other binding kinds for simplar optimizations
 
-(def-patt-transformation evm-node::|FinalPattern| (specimen-form ejector-spec name-map nounExpr optGuardExpr &aux vars)
+(def-patt-transformation |FinalPattern| (specimen-form ejector-spec name-map nounExpr optGuardExpr &aux vars)
   (let ((guard-code (if (not (null optGuardExpr))
                       (updating-transform optGuardExpr name-map vars)))
         (binding nil))
@@ -505,7 +505,7 @@ XXX This is an excessively large authority and will probably be replaced."
                                      ,(opt-ejector-make-code ejector-spec))
                     specimen-form)))))
 
-(defmethod tail-transform-pattern ((patt evm-node::|FinalPattern|) tail-patts tail-exprs specimen-form ejector-spec name-map &aux vars)
+(defmethod tail-transform-pattern ((patt |FinalPattern|) tail-patts tail-exprs specimen-form ejector-spec name-map &aux vars)
   (destructuring-bind (nounExpr optGuardExpr) (node-elements patt)
   (let ((guard-code (if (not (null optGuardExpr))
                       (updating-transform optGuardExpr name-map vars)))
@@ -520,10 +520,10 @@ XXX This is an excessively large authority and will probably be replaced."
                   specimen-form)))
         ,(tail-transform-patterns tail-patts tail-exprs specimen-form ejector-spec name-map))))))
 
-(def-patt-transformation evm-node::|IgnorePattern| (specimen-form ejector-spec name-map)
+(def-patt-transformation |IgnorePattern| (specimen-form ejector-spec name-map)
   (values () name-map specimen-form))
 
-(def-patt-transformation evm-node::|ListPattern| (specimen-form ejector-spec name-map &rest subs &aux (vars ()))
+(def-patt-transformation |ListPattern| (specimen-form ejector-spec name-map &rest subs &aux (vars ()))
   (let* ((pattern-arity (length subs))
          (sub-forms (loop for i below pattern-arity
                           and sub in subs
@@ -536,10 +536,10 @@ XXX This is an excessively large authority and will probably be replaced."
                                                      :format-arguments (list (length slist) ,pattern-arity))))
         ,@sub-forms))))
 
-(def-patt-transformation evm-node::|SlotPattern| (specimen-form ejector-spec name-map &rest args)
+(def-patt-transformation |SlotPattern| (specimen-form ejector-spec name-map &rest args)
   (apply #'binding-pattern-impl #'slot-binding-impl t specimen-form ejector-spec name-map args))
 
-(def-patt-transformation evm-node::|SuchThatPattern| (specimen-form ejector-spec name-map sub-patt test &aux (vars ()))
+(def-patt-transformation |SuchThatPattern| (specimen-form ejector-spec name-map sub-patt test &aux (vars ()))
   (let* ((patt-code (updating-transform-pattern sub-patt specimen-form ejector-spec name-map vars))
          (test-code (updating-transform test name-map vars)))
     (values vars name-map
@@ -548,6 +548,6 @@ XXX This is an excessively large authority and will probably be replaced."
         (if (not (e-is-true ,test-code)) 
           ,(eject-code ejector-spec '(make-condition 'simple-error :format-control "such-that expression was false")))))))
 
-(def-patt-transformation evm-node::|VarPattern| (specimen-form ejector-spec name-map &rest args)
+(def-patt-transformation |VarPattern| (specimen-form ejector-spec name-map &rest args)
   (apply #'binding-pattern-impl #'var-binding-impl nil specimen-form ejector-spec name-map args))
 

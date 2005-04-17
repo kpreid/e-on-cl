@@ -222,9 +222,62 @@
   
 (cl:defvar e.knot:*emaker-search-list*)
 
+(cl:defpackage :e.elang.vm-node 
+  (:nicknames)
+  (:documentation "All symbols in this package are the names of subclasses of ENode, eccept for null, error and .tuple..")
+  ; XXX arrange so that null, error and .tuple. are not produced by parseEToSExpression?
+  (:use)
+  (:import-from :cl
+    :error)
+  (:export
+    :|null|
+
+    :|.tuple.|
+    :|.AtHole.|
+    :|.DollarHole.|
+    
+    :|AssignExpr|
+    :|CallExpr|
+    :|CatchExpr|
+    :|CdrPattern|
+    :|DefineExpr|
+    :|EExpr|
+    :|EMatcher|
+    :|EMethod|
+    :|ENode|
+    :|EScript|
+    :|EscapeExpr|
+    :|FinalPattern|
+    :|FinallyExpr|
+    :|HideExpr|
+    :|IfExpr|
+    :|IgnorePattern|
+    :|ListPattern|
+    :|LiteralExpr|
+    :|MatchBindExpr|
+    :|MetaContextExpr|
+    :|MetaStateExpr|
+    :|NounExpr|
+    :|NounPattern|
+    :|ObjectExpr|
+    :|Pattern|
+    :|QuasiLiteralExpr|
+    :|QuasiLiteralNode|
+    :|QuasiLiteralPatt|
+    :|QuasiNode|
+    :|QuasiPatternExpr|
+    :|QuasiPatternNode|
+    :|QuasiPatternPatt|
+    :|SeqExpr|
+    :|SlotExpr|
+    :|SlotPattern|
+    :|SuchThatPattern|
+    :|VarPattern|)
+  #+sbcl (:lock t))
+
 (cl:defpackage :e.elang
   (:nicknames :elang)
-  (:use :cl :elib)
+  (:use :cl :elib :e.elang.vm-node)
   (:export
     :eval-e
     :get-translation
@@ -239,7 +292,7 @@
 
 (cl:defpackage :e.elang.syntax
   (:nicknames :e.syntax)
-  (:use :cl :e.elib :e.elang)
+  (:use :cl :e.elib :e.elang :e.elang.vm-node)
   (:export
     +e-printer+
     
@@ -287,57 +340,6 @@
 (declaim (ftype function
   e.extern:make-file-getter
   e.extern:read-entire-file))
-
-(cl:defpackage :e.elang.vm-node 
-  (:nicknames :evm-node)
-  (:documentation "All symbols in this package are the names of subclasses of ENode, eccept for null, error and .tuple..")
-  ; XXX arrange so that null, error and .tuple. are not produced by parseEToSExpression?
-  (:use)
-  (:export
-    :|null|
-    :error
-    :|.tuple.|
-    :|.AtHole.|
-    :|.DollarHole.|
-    
-    :|AssignExpr|
-    :|CallExpr|
-    :|CatchExpr|
-    :|CdrPattern|
-    :|DefineExpr|
-    :|EExpr|
-    :|EMatcher|
-    :|EMethod|
-    :|ENode|
-    :|EScript|
-    :|EscapeExpr|
-    :|FinalPattern|
-    :|FinallyExpr|
-    :|HideExpr|
-    :|IfExpr|
-    :|IgnorePattern|
-    :|ListPattern|
-    :|LiteralExpr|
-    :|MatchBindExpr|
-    :|MetaContextExpr|
-    :|MetaStateExpr|
-    :|NounExpr|
-    :|NounPattern|
-    :|ObjectExpr|
-    :|Pattern|
-    :|QuasiLiteralExpr|
-    :|QuasiLiteralNode|
-    :|QuasiLiteralPatt|
-    :|QuasiNode|
-    :|QuasiPatternExpr|
-    :|QuasiPatternNode|
-    :|QuasiPatternPatt|
-    :|SeqExpr|
-    :|SlotExpr|
-    :|SlotPattern|
-    :|SuchThatPattern|
-    :|VarPattern|)
-  #+sbcl (:lock t))
 
 (cl:defpackage :e.rune
   (:use :cl :elib :e.knot)

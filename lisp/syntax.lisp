@@ -489,16 +489,16 @@ XXX make precedence values available as constants"
 (defun build-nodes (tree)
   (if (consp tree)
     (case (car tree)
-      (evm-node::|null| nil)
-      (evm-node::|.tuple.|
+      (|null| nil)
+      (|.tuple.|
         (map 'vector #'build-nodes (cdr tree)))
-      (evm-node::|.DollarHole.|
-        (make-instance 'evm-node::|QuasiLiteralNode| :elements
+      (|.DollarHole.|
+        (make-instance '|QuasiLiteralNode| :elements
           (mapcar #'build-nodes (cdr tree))))
-      (evm-node::|.AtHole.|
-        (make-instance 'evm-node::|QuasiPatternNode| :elements
+      (|.AtHole.|
+        (make-instance '|QuasiPatternNode| :elements
           (mapcar #'build-nodes (cdr tree))))
-      ((evm-node::|ObjectExpr| evm-node::|EMethod|)
+      ((|ObjectExpr| |EMethod|)
         (make-instance (car tree) :elements
           (cons (string-trim " " (cadr tree))
                 (mapcar #'build-nodes (cddr tree)))))
@@ -543,7 +543,7 @@ XXX make precedence values available as constants"
       (let ((return-serial
               (read (e-util:external-process-output-stream *parser-process*)))
             (tree-expr 
-              (let ((*package* (find-package :evm-node)))
+              (let ((*package* (find-package :e.elang.vm-node)))
                 (read (e-util:external-process-output-stream *parser-process*)))))
         (unless (eql *parse-counter* return-serial) 
           (error 'link-out-of-sync-error))
@@ -585,7 +585,7 @@ XXX make precedence values available as constants"
 
 (defun e-source-to-tree (source &key syntax-ejector
     &aux (tree-expr (parse-to-expr source)))
-  (if (eql (first tree-expr) 'evm-node::error)
+  (if (eql (first tree-expr) 'error)
     (error-from-e-error-string syntax-ejector (second tree-expr))
     (build-nodes tree-expr)))
 
@@ -605,7 +605,7 @@ XXX make precedence values available as constants"
   (force-output *trace-output*)
   (loop
     for (source tree) in
-      (let ((*package* (find-package :evm-node))) (read stream))
+      (let ((*package* (find-package :e.elang.vm-node))) (read stream))
     do (setf (gethash source *parse-cache-hash*) tree))
   (format *trace-output* "done~%")
   (values))
@@ -613,7 +613,7 @@ XXX make precedence values available as constants"
 (defun save-parse-cache (stream)
   (format *trace-output* "~&; Writing parse cache to ~A..." (enough-namestring (pathname stream)))
   (force-output *trace-output*)
-  (let ((*package* (find-package :evm-node)))
+  (let ((*package* (find-package :e.elang.vm-node)))
     (write
       (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
         collect (list source tree))

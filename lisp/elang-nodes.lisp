@@ -10,69 +10,60 @@
 
 #+sbcl (sb-ext:unlock-package :e.elang.vm-node)
 
-(defclass evm-node::|ENode| () ((elements :initarg :elements :accessor node-elements)))
+(defclass |ENode| () ((elements :initarg :elements :accessor node-elements)))
 
-(defclass evm-node::|EExpr|   (evm-node::|ENode|) ())
-(defclass evm-node::|Pattern| (evm-node::|ENode|) ())
+(defclass |EExpr|   (|ENode|) ())
+(defclass |Pattern| (|ENode|) ())
 
-; XXX ABCL workaround for bug where IN-PACKAGE gets inappropriately written unqualified to .abcl when :cl isn't USEd by the current package
-#+abcl (shadow '(:null :error) :evm-node)
-#+abcl (use-package :cl :evm-node)
+(defclass |AssignExpr|      (|EExpr|) ())
+(defclass |CallExpr|        (|EExpr|) ())
+(defclass |CatchExpr|       (|EExpr|) ())
+(defclass |DefineExpr|      (|EExpr|) ())
+(defclass |EscapeExpr|      (|EExpr|) ())
+(defclass |FinallyExpr|     (|EExpr|) ())
+(defclass |HideExpr|        (|EExpr|) ())
+(defclass |IfExpr|          (|EExpr|) ())
+(defclass |LiteralExpr|     (|EExpr|) ())
+(defclass |MetaContextExpr| (|EExpr|) ())
+(defclass |MetaStateExpr|   (|EExpr|) ())
+(defclass |MatchBindExpr|   (|EExpr|) ())
+(defclass |NounExpr|        (|EExpr|) ())
+(defclass |ObjectExpr|      (|EExpr|) ())
+(defclass |SeqExpr|         (|EExpr|) ())
+(defclass |SlotExpr|        (|EExpr|) ())
 
-(in-package :evm-node)          
-  (cl:defclass |AssignExpr|      (|EExpr|) ())
-  (cl:defclass |CallExpr|        (|EExpr|) ())
-  (cl:defclass |CatchExpr|       (|EExpr|) ())
-  (cl:defclass |DefineExpr|      (|EExpr|) ())
-  (cl:defclass |EscapeExpr|      (|EExpr|) ())
-  (cl:defclass |FinallyExpr|     (|EExpr|) ())
-  (cl:defclass |HideExpr|        (|EExpr|) ())
-  (cl:defclass |IfExpr|          (|EExpr|) ())
-  (cl:defclass |LiteralExpr|     (|EExpr|) ())
-  (cl:defclass |MetaContextExpr| (|EExpr|) ())
-  (cl:defclass |MetaStateExpr|   (|EExpr|) ())
-  (cl:defclass |MatchBindExpr|   (|EExpr|) ())
-  (cl:defclass |NounExpr|        (|EExpr|) ())
-  (cl:defclass |ObjectExpr|      (|EExpr|) ())
-  (cl:defclass |SeqExpr|         (|EExpr|) ())
-  (cl:defclass |SlotExpr|        (|EExpr|) ())
-  
-  (cl:defclass |EMethod|         (|ENode|) ())
-  (cl:defclass |EMatcher|        (|ENode|) ())
-  (cl:defclass |EScript|         (|ENode|) ())
-                                 
-  (cl:defclass |CdrPattern|      (|Pattern|) ())
-  (cl:defclass |IgnorePattern|   (|Pattern|) ())
-  (cl:defclass |ListPattern|     (|Pattern|) ())
-  (cl:defclass |SuchThatPattern| (|Pattern|) ())
-  (cl:defclass |NounPattern|     (|Pattern|) ())
+(defclass |EMethod|         (|ENode|) ())
+(defclass |EMatcher|        (|ENode|) ())
+(defclass |EScript|         (|ENode|) ())
+                               
+(defclass |CdrPattern|      (|Pattern|) ())
+(defclass |IgnorePattern|   (|Pattern|) ())
+(defclass |ListPattern|     (|Pattern|) ())
+(defclass |SuchThatPattern| (|Pattern|) ())
+(defclass |NounPattern|     (|Pattern|) ())
 
-  (cl:defclass |FinalPattern|    (|NounPattern|) ())
-  (cl:defclass |SlotPattern|     (|NounPattern|) ())
-  (cl:defclass |VarPattern|      (|NounPattern|) ())
-  
-  (cl:defclass |QuasiNode| (|ENode|) ())
-  
-  (cl:defclass |QuasiLiteralNode| (|QuasiNode|) ())
-  (cl:defclass |QuasiPatternNode| (|QuasiNode|) ())
-  
-  (cl:defclass |QuasiLiteralExpr| (|QuasiLiteralNode| |EExpr|) ())
-  (cl:defclass |QuasiPatternExpr| (|QuasiPatternNode| |EExpr|) ())
-  (cl:defclass |QuasiLiteralPatt| (|QuasiLiteralNode| |Pattern|) ())
-  (cl:defclass |QuasiPatternPatt| (|QuasiPatternNode| |Pattern|) ())
-(cl:in-package :elang)
+(defclass |FinalPattern|    (|NounPattern|) ())
+(defclass |SlotPattern|     (|NounPattern|) ())
+(defclass |VarPattern|      (|NounPattern|) ())
 
-; XXX ABCL workaround
-#+abcl (unuse-package :cl :evm-node)
+(defclass |QuasiNode| (|ENode|) ())
+
+(defclass |QuasiLiteralNode| (|QuasiNode|) ())
+(defclass |QuasiPatternNode| (|QuasiNode|) ())
+
+(defclass |QuasiLiteralExpr| (|QuasiLiteralNode| |EExpr|) ())
+(defclass |QuasiPatternExpr| (|QuasiPatternNode| |EExpr|) ())
+(defclass |QuasiLiteralPatt| (|QuasiLiteralNode| |Pattern|) ())
+(defclass |QuasiPatternPatt| (|QuasiPatternNode| |Pattern|) ())
 
 #+sbcl (sb-ext:lock-package :e.elang.vm-node)
 
-(do-symbols (node-type (find-package :evm-node))
+(do-symbols (node-type (find-package :e.elang.vm-node))
   (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
       fqn)))
 
-(defmethod print-object ((node evm-node::|ENode|) stream)
+(defmethod print-object ((node |ENode|) stream)
   (print-unreadable-object (node stream :type nil :identity nil)
     (format stream "~A ~W" (type-of node) (node-elements node))))
 
@@ -99,151 +90,151 @@
                 collect `(e-coercef ,arg ',type))
         (make-instance ',class-sym :elements ,(or elements-form `(list ,@bare-args)))))))
 
-(def-node-maker evm-node::|AssignExpr|
+(def-node-maker |AssignExpr|
   (t t)
   ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun evm-node::|EExpr|) (rvalue evm-node::|EExpr|)))
+  ((noun |EExpr|) (rvalue |EExpr|)))
 
-(def-node-maker evm-node::|CallExpr|
+(def-node-maker |CallExpr|
   (t nil t)
   ; XXX parameterized list guard is not available at this layer: consider fixing.
   ;     -- and if it was, we'd need a way to incorporate the reference to it in the type specifier def-node-maker provides
   ;     perhaps we should use (vector EExpr)? cl-type-guard would need to be smart enough to coerce elements, and we'd want it to resemble E-level List[EExpr]
-  ((recipient evm-node::|EExpr|) (verb string) (args vector))
-  (list* recipient verb (loop for arg across args collect (e-coerce arg 'evm-node::|EExpr|))))
+  ((recipient |EExpr|) (verb string) (args vector))
+  (list* recipient verb (loop for arg across args collect (e-coerce arg '|EExpr|))))
 
-(def-node-maker evm-node:|CatchExpr|
+(def-node-maker |CatchExpr|
   (t t t)
-  ((attempt evm-node::|EExpr|) (catch-pattern evm-node::|Pattern|) (catcher evm-node::|EExpr|)))
+  ((attempt |EExpr|) (catch-pattern |Pattern|) (catcher |EExpr|)))
 
-(def-node-maker evm-node::|DefineExpr|
+(def-node-maker |DefineExpr|
   (t t)
-  ((pattern evm-node::|Pattern|) (rvalue evm-node::|EExpr|)))
+  ((pattern |Pattern|) (rvalue |EExpr|)))
 
-(def-node-maker evm-node::|FinalPattern|
+(def-node-maker |FinalPattern|
   (t t)
   ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun evm-node::|EExpr|) (opt-guard (or null evm-node::|EExpr|))))
+  ((noun |EExpr|) (opt-guard (or null |EExpr|))))
 
-(def-node-maker evm-node:|FinallyExpr|
+(def-node-maker |FinallyExpr|
   (t t)
-  ((attempt evm-node::|EExpr|) (unwinder evm-node::|EExpr|)))
+  ((attempt |EExpr|) (unwinder |EExpr|)))
   
-(def-node-maker evm-node::|HideExpr|
+(def-node-maker |HideExpr|
   (t)
-  ((body evm-node::|EExpr|)))
+  ((body |EExpr|)))
   
-(def-node-maker evm-node:|IfExpr|
+(def-node-maker |IfExpr|
   (t t t)
-  ((condition evm-node::|EExpr|) (true-block evm-node::|EExpr|) (false-block evm-node::|EExpr|)))
+  ((condition |EExpr|) (true-block |EExpr|) (false-block |EExpr|)))
 
-(def-node-maker evm-node::|ListPattern|
+(def-node-maker |ListPattern|
   (t)
   ((patterns t))
-  (loop for pattern in patterns collect (e-coerce pattern 'evm-node::|Pattern|)))
+  (loop for pattern in patterns collect (e-coerce pattern '|Pattern|)))
 
-(def-node-maker evm-node::|LiteralExpr|
+(def-node-maker |LiteralExpr|
   (nil)
   ; XXX require value be DeepPassByCopy? be string/int/char/float64?
   ((value t)))
 
-(def-node-maker evm-node::|MatchBindExpr|
+(def-node-maker |MatchBindExpr|
   (t t)
-  ((specimen evm-node::|EExpr|) (pattern evm-node::|Pattern|)))
+  ((specimen |EExpr|) (pattern |Pattern|)))
 
-(def-node-maker evm-node:|MetaContextExpr|
+(def-node-maker |MetaContextExpr|
   ()
   ())
 
-(def-node-maker evm-node:|MetaStateExpr|
+(def-node-maker |MetaStateExpr|
   ()
   ())
 
-(def-node-maker evm-node::|NounExpr|
+(def-node-maker |NounExpr|
   (nil)
   ((name string)))
 
-(def-node-maker evm-node::|SeqExpr|
+(def-node-maker |SeqExpr|
   (t)
   ((subs t))
   (progn
     (unless (> (length subs) 0)
       (error "SeqExpr must have at least one subexpression"))
-    (loop for sub across subs collect (e-coerce sub 'evm-node::|EExpr|))))
+    (loop for sub across subs collect (e-coerce sub '|EExpr|))))
 
-(def-node-maker evm-node::|SlotExpr|
+(def-node-maker |SlotExpr|
   (nil)
-  ((noun evm-node::|NounExpr|)))
+  ((noun |NounExpr|)))
 
-(def-node-maker evm-node::|EScript|
+(def-node-maker |EScript|
   (t t)
-  ((methods (or null vector)) (matcher (or null evm-node::|EMatcher|)))
+  ((methods (or null vector)) (matcher (or null |EMatcher|)))
   (progn
     (unless (or methods matcher)
       (error "EScript must have methods or matcher"))
-    (list (and methods (map 'vector (lambda (sub) (e-coerce sub 'evm-node::|EMethod|)) methods))
+    (list (and methods (map 'vector (lambda (sub) (e-coerce sub '|EMethod|)) methods))
           matcher)))
         
-(def-node-maker evm-node::|ObjectExpr|
+(def-node-maker |ObjectExpr|
   (nil nil t t)
-  ((doc-comment string) (qualified-name string) (auditor-exprs vector) (script evm-node::|EScript|))
-  (list doc-comment qualified-name (map 'vector (lambda (sub) (e-coerce sub 'evm-node::|EExpr|)) auditor-exprs) script))
+  ((doc-comment string) (qualified-name string) (auditor-exprs vector) (script |EScript|))
+  (list doc-comment qualified-name (map 'vector (lambda (sub) (e-coerce sub '|EExpr|)) auditor-exprs) script))
 
-(def-node-maker evm-node::|EMethod|
+(def-node-maker |EMethod|
   (nil nil t t t)
   ; XXX constrain patterns to vector of Pattern (write tests)
-  ((doc-comment string) (verb string) (patterns vector) (opt-result-guard (or null evm-node::|EExpr|)) (body evm-node::|EExpr|))
+  ((doc-comment string) (verb string) (patterns vector) (opt-result-guard (or null |EExpr|)) (body |EExpr|))
   (list doc-comment verb patterns opt-result-guard body))
 
-(def-node-maker evm-node::|EMatcher|
+(def-node-maker |EMatcher|
   (t t)
-  ((pattern evm-node::|Pattern|) (body evm-node::|EExpr|))
+  ((pattern |Pattern|) (body |EExpr|))
   (list pattern body))
 
-(def-node-maker evm-node::|EscapeExpr|
+(def-node-maker |EscapeExpr|
   (t t t t)
-  ((ejector-pattern evm-node::|Pattern|) (body evm-node::|EExpr|) (opt-catch-pattern (or null evm-node::|Pattern|)) (opt-catcher (or null evm-node::|EExpr|))))
+  ((ejector-pattern |Pattern|) (body |EExpr|) (opt-catch-pattern (or null |Pattern|)) (opt-catcher (or null |EExpr|))))
 
-(def-node-maker evm-node::|CdrPattern|
+(def-node-maker |CdrPattern|
   (t t)
-  ((list-patt evm-node::|ListPattern|) (rest-patt evm-node::|Pattern|)))
+  ((list-patt |ListPattern|) (rest-patt |Pattern|)))
 
-(def-node-maker evm-node::|ListPattern|
+(def-node-maker |ListPattern|
   (t)
   ((subs t))
   (progn
-    (loop for sub across subs collect (e-coerce sub 'evm-node::|Pattern|))))
+    (loop for sub across subs collect (e-coerce sub '|Pattern|))))
 
-(def-node-maker evm-node::|VarPattern|
+(def-node-maker |VarPattern|
   (t t)
   ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun evm-node::|EExpr|) (opt-guard (or null evm-node::|EExpr|))))
+  ((noun |EExpr|) (opt-guard (or null |EExpr|))))
 
-(def-node-maker evm-node::|SlotPattern|
+(def-node-maker |SlotPattern|
   (t t)
   ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun evm-node::|EExpr|) (opt-guard (or null evm-node::|EExpr|))))
+  ((noun |EExpr|) (opt-guard (or null |EExpr|))))
 
-(def-node-maker evm-node::|SuchThatPattern|
+(def-node-maker |SuchThatPattern|
   (t t)
-  ((subpattern evm-node::|Pattern|) (condition evm-node::|EExpr|)))
+  ((subpattern |Pattern|) (condition |EExpr|)))
   
-(def-node-maker evm-node::|IgnorePattern| () ())
+(def-node-maker |IgnorePattern| () ())
 
-(def-node-maker evm-node::|QuasiLiteralNode| (nil) ((index integer)))
-(def-node-maker evm-node::|QuasiPatternNode| (nil) ((index integer)))
-(def-node-maker evm-node::|QuasiLiteralExpr| (nil) ((index integer)))
-(def-node-maker evm-node::|QuasiPatternExpr| (nil) ((index integer)))
-(def-node-maker evm-node::|QuasiLiteralPatt| (nil) ((index integer)))
-(def-node-maker evm-node::|QuasiPatternPatt| (nil) ((index integer)))
+(def-node-maker |QuasiLiteralNode| (nil) ((index integer)))
+(def-node-maker |QuasiPatternNode| (nil) ((index integer)))
+(def-node-maker |QuasiLiteralExpr| (nil) ((index integer)))
+(def-node-maker |QuasiPatternExpr| (nil) ((index integer)))
+(def-node-maker |QuasiLiteralPatt| (nil) ((index integer)))
+(def-node-maker |QuasiPatternPatt| (nil) ((index integer)))
 
 ; --- E-level methods, and printing ---
 
-(defmethod eeq-is-transparent-selfless ((a evm-node::|ENode|))
+(defmethod eeq-is-transparent-selfless ((a |ENode|))
   (declare (ignore a))
   t)
 
-(def-vtable evm-node::|ENode|
+(def-vtable |ENode|
   (:|__printOn/1| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let ((quote (e-is-true (e. tw |isQuoting|))))
@@ -328,7 +319,7 @@
       (declare (ignore field-keyword))
       nil))))
 
-(defmethod e-call-match ((rec evm-node::|ENode|) mverb &rest args
+(defmethod e-call-match ((rec |ENode|) mverb &rest args
     &aux (mverb-string (symbol-name mverb)) opt-getter)
   (declare (ignore args))
   (if (and (keywordp mverb)
@@ -345,30 +336,30 @@
     (call-next-method)))
 
 ; XXX put these somewhere else
-(def-indexed-node-properties evm-node::|AssignExpr| ("noun" "rValue"))
-(def-indexed-node-properties evm-node::|CallExpr| ("recipient" "verb" &rest "args"))
-(def-indexed-node-properties evm-node::|CatchExpr| ("attempt" "pattern" "catcher"))
-(def-indexed-node-properties evm-node::|DefineExpr| ("pattern" "rValue"))
-(def-indexed-node-properties evm-node::|EscapeExpr| ("exitPattern" "body" "optArgPattern" "optCatcher"))
-(def-indexed-node-properties evm-node::|FinallyExpr| ("attempt" "unwinder"))
-(def-indexed-node-properties evm-node::|HideExpr| ("block"))
-(def-indexed-node-properties evm-node::|IfExpr| ("test" "then" "else"))
-(def-indexed-node-properties evm-node::|MatchBindExpr| ("specimen" "pattern"))
-(def-indexed-node-properties evm-node::|NounExpr| ("name"))
-(def-indexed-node-properties evm-node::|ObjectExpr| ("docComment" "qualifiedName" "auditorExprs" "script"))
-(def-indexed-node-properties evm-node::|SeqExpr| (&rest "subs"))
-(def-indexed-node-properties evm-node::|SlotExpr| ("noun"))
+(def-indexed-node-properties |AssignExpr| ("noun" "rValue"))
+(def-indexed-node-properties |CallExpr| ("recipient" "verb" &rest "args"))
+(def-indexed-node-properties |CatchExpr| ("attempt" "pattern" "catcher"))
+(def-indexed-node-properties |DefineExpr| ("pattern" "rValue"))
+(def-indexed-node-properties |EscapeExpr| ("exitPattern" "body" "optArgPattern" "optCatcher"))
+(def-indexed-node-properties |FinallyExpr| ("attempt" "unwinder"))
+(def-indexed-node-properties |HideExpr| ("block"))
+(def-indexed-node-properties |IfExpr| ("test" "then" "else"))
+(def-indexed-node-properties |MatchBindExpr| ("specimen" "pattern"))
+(def-indexed-node-properties |NounExpr| ("name"))
+(def-indexed-node-properties |ObjectExpr| ("docComment" "qualifiedName" "auditorExprs" "script"))
+(def-indexed-node-properties |SeqExpr| (&rest "subs"))
+(def-indexed-node-properties |SlotExpr| ("noun"))
 
-(def-indexed-node-properties evm-node::|EScript| ("optMethods" "optMatcher"))
-(def-indexed-node-properties evm-node::|EMatcher| ("pattern" "body"))
-(def-indexed-node-properties evm-node::|EMethod| ("docComment" "verb" "patterns" "optResultGuard" "body"))
+(def-indexed-node-properties |EScript| ("optMethods" "optMatcher"))
+(def-indexed-node-properties |EMatcher| ("pattern" "body"))
+(def-indexed-node-properties |EMethod| ("docComment" "verb" "patterns" "optResultGuard" "body"))
 
-(def-indexed-node-properties evm-node::|NounPattern| ("noun" "optGuardExpr"))
-(def-indexed-node-properties evm-node::|CdrPattern| ("listPatt" "restPatt"))
-(def-indexed-node-properties evm-node::|ListPattern| (&rest "subs"))
-(def-indexed-node-properties evm-node::|SuchThatPattern| ("pattern" "test"))
+(def-indexed-node-properties |NounPattern| ("noun" "optGuardExpr"))
+(def-indexed-node-properties |CdrPattern| ("listPatt" "restPatt"))
+(def-indexed-node-properties |ListPattern| (&rest "subs"))
+(def-indexed-node-properties |SuchThatPattern| ("pattern" "test"))
 
-(def-vtable evm-node::|EExpr|
+(def-vtable |EExpr|
   (:|quasiTypeTag/0| (this)
     (declare (ignore this))
     "e")
@@ -377,49 +368,49 @@
     "Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings."
     (multiple-value-call #'vector (eval-e this scope))))
 
-(def-vtable evm-node::|AssignExpr|)
+(def-vtable |AssignExpr|)
 
-(def-vtable evm-node::|CallExpr|)
+(def-vtable |CallExpr|)
 
-(def-vtable evm-node::|DefineExpr|)
+(def-vtable |DefineExpr|)
 
-(def-vtable evm-node::|EscapeExpr|)
+(def-vtable |EscapeExpr|)
 
-(def-vtable evm-node::|LiteralExpr|)
+(def-vtable |LiteralExpr|)
 
-(def-vtable evm-node::|NounExpr|
+(def-vtable |NounExpr|
   (:|name/0| (this)
     (nth 0 (node-elements this))))
 
-(def-vtable evm-node::|ObjectExpr|)
+(def-vtable |ObjectExpr|)
 
-(def-vtable evm-node::|SeqExpr|)
+(def-vtable |SeqExpr|)
 
-(def-vtable evm-node::|SlotExpr|)
+(def-vtable |SlotExpr|)
 
-(def-vtable evm-node::|EMethod|)
+(def-vtable |EMethod|)
 
-(def-vtable evm-node::|EMatcher|)
+(def-vtable |EMatcher|)
     
-(def-vtable evm-node::|EScript|
+(def-vtable |EScript|
   (:|getDocComment/0| (this)
     (nth 0 (node-elements this))))
     
 
-(def-vtable evm-node::|Pattern|
+(def-vtable |Pattern|
   (:|quasiTypeTag/0| (this)
     (declare (ignore this))
     "epatt"))
 
-(def-vtable evm-node::|FinalPattern|)
+(def-vtable |FinalPattern|)
 
-(def-vtable evm-node::|VarPattern|)
+(def-vtable |VarPattern|)
 
-(def-vtable evm-node::|IgnorePattern|)
+(def-vtable |IgnorePattern|)
 
-(def-vtable evm-node::|SlotPattern|)
+(def-vtable |SlotPattern|)
 
-(def-vtable evm-node::|SuchThatPattern|)
+(def-vtable |SuchThatPattern|)
       
 ; --- analysis ---
 
@@ -427,10 +418,10 @@
 ; XXX this isn't actually used
 (defgeneric needs-reified-slot (node name))
 
-(defmethod needs-reified-slot ((node evm-node::|ENode|) name)
+(defmethod needs-reified-slot ((node |ENode|) name)
   (some #'(lambda (node) (needs-reified-slot node name)) (node-elements node)))
 
-(defmethod needs-reified-slot ((node evm-node::|SlotExpr|) name)
+(defmethod needs-reified-slot ((node |SlotExpr|) name)
   (string= name (first (node-elements node))))
 
 ; XXX pattern-opt-noun and pattern-to-param-desc are looking similar - perhaps pattern-opt-noun should be defined as a wrapper
@@ -438,29 +429,29 @@
 ; XXX expose and test this
 (defgeneric pattern-opt-noun (patt))
 
-(defmethod pattern-opt-noun ((patt evm-node::|Pattern|))
+(defmethod pattern-opt-noun ((patt |Pattern|))
   nil)
 
-(defmethod pattern-opt-noun ((patt evm-node::|SuchThatPattern|))
+(defmethod pattern-opt-noun ((patt |SuchThatPattern|))
   (pattern-opt-noun (first (node-elements patt))))
 
-(defmethod pattern-opt-noun ((patt evm-node::|NounPattern|))
+(defmethod pattern-opt-noun ((patt |NounPattern|))
   ; XXX use method of noun expr once we have it
   (first (node-elements (e. patt |getNoun|))))
 
 
 (defgeneric pattern-to-param-desc (pattern))
 
-(defmethod pattern-to-param-desc ((pattern evm-node::|ENode|))
+(defmethod pattern-to-param-desc ((pattern |ENode|))
   (make-instance 'param-desc))
 
-(defmethod pattern-to-param-desc ((pattern evm-node::|NounPattern|))
+(defmethod pattern-to-param-desc ((pattern |NounPattern|))
   (make-instance 'param-desc
     :opt-name (e-print (e. pattern |getNoun|))
     ; XXX make this a formal NotAGuard
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
 
-(defmethod pattern-to-param-desc ((patt evm-node::|SuchThatPattern|))
+(defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
   (pattern-to-param-desc (first (node-elements patt))))
 
 (defun opt-guard-expr-to-safe-opt-guard (opt-guard-expr
@@ -529,19 +520,19 @@
             `#(#(,label ,node))))))
   (defvar +the-make-static-scope+ (e-named-lambda "org.erights.e.evm.makeStaticScope"
     (:|scopeAssign| (node)
-      (e-coercef node 'evm-node::|NounExpr|)
+      (e-coercef node '|NounExpr|)
       (make node :set-names (e. node |name|)))
     (:|scopeDef| (node)
-      (e-coercef node 'evm-node::|FinalPattern|)
+      (e-coercef node '|FinalPattern|)
       (make node :def-names (e. (e. node |getNoun|) |name|)))
     (:|scopeRead| (node)
-      (e-coercef node '(or evm-node::|NounExpr| evm-node::|SlotExpr|))
+      (e-coercef node '(or |NounExpr| |SlotExpr|))
       (make node :read-names (e. node |name|)))
     (:|scopeVar| (node)
-      (e-coercef node 'evm-node::|VarPattern|)
+      (e-coercef node '|VarPattern|)
       (make node :var-names (e. (e. node |getNoun|) |name|)))
     (:|scopeSlot| (node)
-      (e-coercef node 'evm-node::|SlotPattern|)
+      (e-coercef node '|SlotPattern|)
       (make node :var-names (e. (e. node |getNoun|) |name|)))
     (:|scopeMeta| ()
       (make-static-scope :has-meta-state-expr +e-true+))
@@ -592,22 +583,22 @@
                      nodes)
           :initial-value (e. +the-make-static-scope+ |getEmptyScope|)))
 
-(def-scope-rule evm-node::|AssignExpr|
+(def-scope-rule |AssignExpr|
   (seq (! (e. +the-make-static-scope+ |scopeAssign| (:get :|noun|)))
        :|rValue|))
 
-(def-scope-rule evm-node::|CallExpr|
+(def-scope-rule |CallExpr|
   (seq :|recipient| (flatten :|args|)))
 
-(def-scope-rule evm-node::|CatchExpr|
+(def-scope-rule |CatchExpr|
   (hide (seq (hide :|attempt|)
              :|pattern|
              :|catcher|)))
 
-(def-scope-rule evm-node::|DefineExpr|
+(def-scope-rule |DefineExpr|
   (seq :|pattern| :|rValue|))
 
-(def-scope-rule evm-node::|EscapeExpr|
+(def-scope-rule |EscapeExpr|
   (hide (seq (hide (seq :|exitPattern| :|body|))
              (! (if (:get :|optArgPattern|)
                   (e. (e. (:get :|optArgPattern|) |staticScope|) 
@@ -615,76 +606,76 @@
                       (e. (:get :|optCatcher|) |staticScope|))
                   (e. +the-make-static-scope+ |getEmptyScope|))))))
 
-(def-scope-rule evm-node::|FinallyExpr|
+(def-scope-rule |FinallyExpr|
   (hide (seq (hide :|attempt|)
              :|unwinder|)))
       
-(def-scope-rule evm-node::|HideExpr|
+(def-scope-rule |HideExpr|
   (hide :|block|))
 
-(def-scope-rule evm-node::|IfExpr|
+(def-scope-rule |IfExpr|
   (seq (hide (seq :|test| :|then|)) (hide :|else|)))
 
-(def-scope-rule evm-node::|LiteralExpr|
+(def-scope-rule |LiteralExpr|
   nil)
 
-(def-scope-rule evm-node::|MatchBindExpr|
+(def-scope-rule |MatchBindExpr|
   (seq :|specimen| :|pattern|))
 
-(def-scope-rule evm-node::|MetaContextExpr|
+(def-scope-rule |MetaContextExpr|
   nil)
 
-(def-scope-rule evm-node::|MetaStateExpr|
+(def-scope-rule |MetaStateExpr|
   (! (e. +the-make-static-scope+ |scopeMeta|)))
 
 ; XXX 'node' not explicitly bound
-(def-scope-rule evm-node::|NounExpr|
+(def-scope-rule |NounExpr|
   (! (e. +the-make-static-scope+ |scopeRead| node)))
 
-(def-scope-rule evm-node::|ObjectExpr|
+(def-scope-rule |ObjectExpr|
   (seq (flatten :|auditorExprs|) :|script|))
 
-(def-scope-rule evm-node::|SeqExpr|
+(def-scope-rule |SeqExpr|
   (flatten :|subs|))
 
-(def-scope-rule evm-node::|SlotExpr|
+(def-scope-rule |SlotExpr|
   (! (e. +the-make-static-scope+ |scopeRead| (:get :|noun|))))
 
 
-(def-scope-rule evm-node::|CdrPattern|
+(def-scope-rule |CdrPattern|
   (seq :|listPatt| :|restPatt|))
 
 ; XXX hidden binding
-(def-scope-rule evm-node::|FinalPattern|
+(def-scope-rule |FinalPattern|
   (! (e. +the-make-static-scope+ |scopeDef| node)))
 
-(def-scope-rule evm-node::|IgnorePattern|
+(def-scope-rule |IgnorePattern|
   nil)
 
-(def-scope-rule evm-node::|ListPattern|
+(def-scope-rule |ListPattern|
   (flatten :|subs|))
 
-(def-scope-rule evm-node::|SlotPattern|
+(def-scope-rule |SlotPattern|
   (! (e. +the-make-static-scope+ |scopeSlot| node)))
 
-(def-scope-rule evm-node::|SuchThatPattern|
+(def-scope-rule |SuchThatPattern|
   (seq :|pattern| :|test|))
 
-(def-scope-rule evm-node::|VarPattern|
+(def-scope-rule |VarPattern|
   (! (e. +the-make-static-scope+ |scopeVar| node)))
 
-(def-scope-rule evm-node::|EMatcher|
+(def-scope-rule |EMatcher|
   (hide (seq :|pattern|
              :|body|)))
 
-(def-scope-rule evm-node::|EMethod|
+(def-scope-rule |EMethod|
   (hide (seq (flatten :|patterns|)
              (! (if (:get :|optResultGuard|)
                   (e. (:get :|optResultGuard|) |staticScope|)
                   (e. +the-make-static-scope+ |getEmptyScope|)))
              :|body|)))
 
-(def-scope-rule evm-node::|EScript|
+(def-scope-rule |EScript|
   (seq (! (if (:get :|optMethods|)
             (sum-node-scopes (:get :|optMethods|))
             (e. +the-make-static-scope+ |getEmptyScope|)))
@@ -696,15 +687,15 @@
 
 (defgeneric node-visitor-arguments (node))
 
-(defmethod node-visitor-arguments ((node evm-node::|ENode|))
+(defmethod node-visitor-arguments ((node |ENode|))
   (node-elements node))
 
-(defmethod node-visitor-arguments ((node evm-node::|CallExpr|))
+(defmethod node-visitor-arguments ((node |CallExpr|))
   (destructuring-bind (rec verb &rest args) (node-elements node)
     `(,rec ,verb ,(coerce args 'vector))))
 
-(defmethod node-visitor-arguments ((node evm-node::|SeqExpr|))
+(defmethod node-visitor-arguments ((node |SeqExpr|))
   `(,(coerce (node-elements node) 'vector)))
 
-(defmethod node-visitor-arguments ((node evm-node::|ListPattern|))
+(defmethod node-visitor-arguments ((node |ListPattern|))
   `(,(coerce (node-elements node) 'vector)))

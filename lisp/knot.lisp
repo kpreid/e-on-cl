@@ -450,7 +450,7 @@
       (:|fetch/2| (fqn absent-thunk
           &aux (local-name (e.util:without-prefix fqn prefix)))
         (if local-name
-          (let* ((sym (find-symbol local-name "EVM-NODE")))
+          (let* ((sym (find-symbol local-name :e.elang.vm-node)))
             (or (and sym
                      (get sym 'static-maker))
                 (e. absent-thunk |run|)))
@@ -458,7 +458,7 @@
       (:|optUnget/1| (specimen)
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
-          (do-symbols (node-type (find-package :evm-node))
+          (do-symbols (node-type (find-package :e.elang.vm-node))
             (when (eeq-is-same-yet specimen (get node-type 'static-maker))
               (return-from opt-unget (concatenate 'string prefix (string node-type)))))
           nil)))))
@@ -470,7 +470,7 @@
   (:|fetch/2| (fqn absent-thunk
       &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
     (if local-name
-      (let* ((sym (find-symbol local-name "EVM-NODE")))
+      (let* ((sym (find-symbol local-name :e.elang.vm-node)))
         (if sym
           (make-instance 'cl-type-guard :type-specifier sym)
           (e. absent-thunk |run|)))
