@@ -86,7 +86,7 @@
             (read-entire-stream file))))
       (:|iterate/1| (f)
         (loop for subpath in (cl-fad:list-directory (get-cl-pathname))
-          do (e. f |run| (file-namestring subpath) (pathname-to-file subpath)))))))
+          do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath)))))))
 
 ; --- GC ---
 
