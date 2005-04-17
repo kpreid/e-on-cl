@@ -199,7 +199,8 @@
 (declaim (ftype function
   e.elib:make-equalizer
   e.elib:cl-type-simple-expr
-  e.elib:eeq-same-yet-hash))
+  e.elib:eeq-same-yet-hash
+  e.elib:make-text-writer-to-cl-stream))
 
 (cl:defpackage :e.elib.tables
   (:nicknames :e.tables)
