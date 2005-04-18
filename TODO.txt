@@ -9,6 +9,7 @@ Minor bugs:
   - The profiling options in updoc.lisp don't work for me.
     - for sb-profile, this appears to be a known bug - see sbcl BUGS #373
     - for sb-sprof, still unknown.
+  - clrune <relative-path-to-script> doesn't work because file__uriGetter doesn't accept relative paths.
 
 Little features:
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
@@ -17,6 +18,7 @@ Little features:
   - have updoc stop running a given script when a mismatch has occurred and a later step depends on a binding made/shadowed by that step
 
 Big features:
+  - term trees
   - true vats
   - boot-comm system
   - threaded vats
