@@ -419,7 +419,12 @@
     (e. tw |print| "problem: ")
     (when interesting-type
       (e. tw |print| "<" (simplify-fq-name (cl-type-fq-name (class-name (class-of this)))) ": "))
-    (e. tw |print| (princ-to-string this))
+    (e. tw |print|
+      ; CMUCL workaround
+      (if (typep this 'simple-condition)
+	(apply #'format nil (simple-condition-format-control this)
+	                    (simple-condition-format-arguments this))
+	(princ-to-string this)))
     (when interesting-type
       (e. tw |print| ">")))
   (:|leaf/0| (this)

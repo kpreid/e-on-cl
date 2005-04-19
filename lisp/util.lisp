@@ -211,6 +211,8 @@
         (list (ext:arglist function))
       #+ccl ; XXX appropriate feature test? should this be restricted to #+openmcl?
         (list (ccl:arglist function))
+      #+cmu
+        (list (kernel:%function-arglist function)) ; XXX is this a supported interface? probably not
       (cdr (function-lambda-expression function))
       '((&rest <unknown-lambda-list>)))))
 

@@ -549,8 +549,9 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       collect 
         (make-instance 'param-desc :opt-name
           (with-standard-io-syntax
-            (let ((*print-case* :downcase))
-              (princ-to-string sym))))) 'vector))
+            (let ((*print-case* :downcase)
+		  (*package* (or (symbol-package sym) (find-package :cl))))
+              (write-to-string sym))))) 'vector))
                             
   (defun vtable-entry-message-desc-pair (entry &key (prefix-arity 0)
       &aux (mverb (vtable-entry-mverb entry))
@@ -632,7 +633,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
           (otherwise 
             (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
               ,(let ((fallthrough
-                      `(error "No such method: ~W#~A" 
+                      `(error "No such method: ~A#~A" 
                               ',type-name ,mverb-sym)))
                 (if opt-otherwise-body
                   (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name type-name)
