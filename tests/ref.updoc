@@ -21,6 +21,29 @@ XXX very incomplete tests - the first group originally written just to test the 
   ? p
   # value: 1
 
+resolver#resolve
+
+  ? def [p, r] := Ref.promise()
+  # value: [<Promise>, <Resolver>]
+  
+  ? r.isDone()
+  # value: false
+  
+  ? [r.resolve(1), p, r]
+  # value: [null, 1, <Closed Resolver>]
+
+  ? r.isDone()
+  # value: true
+  
+  ? r.resolve(2)
+  # problem: already resolved
+  
+  ? [p, r]
+  # value: [1, <Closed Resolver>]
+  
+  ? r.isDone()
+  # value: true
+
 resolver#resolveRace
 
   ? def [p, r] := Ref.promise()

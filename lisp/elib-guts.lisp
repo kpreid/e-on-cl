@@ -130,8 +130,8 @@
   ; XXX resolve/2
   (:|resolveRace/1| #'resolve-race)
   (:|resolve/1| (this target)
-    (unless (resolve-race this target)
-            (error "Already resolved")))
+    (unless (e-is-true (resolve-race this target))
+      (error "already resolved")))
   (:|smash/1| (this problem)
     "Equivalent to this.resolve(Ref.broken(problem))."
     ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
