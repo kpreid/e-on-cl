@@ -5,6 +5,8 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 def EIO0 := def "org.erights.e.elib.eio.EIO" implements DeepFrozen {
+  to getRange() { return nullOk[int >= 0] }
+
   /** The value denoting all remaining elements in an EIO stream. */
   to getALL() { return null }
 }

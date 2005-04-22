@@ -7,4 +7,7 @@
 ? [EIO.getALL()]
 # value: [null]
 
+? EIO.getRange()
+# value: nullOk[(int >= 0)]
+
 XXX there should be more EIO tests eventually
