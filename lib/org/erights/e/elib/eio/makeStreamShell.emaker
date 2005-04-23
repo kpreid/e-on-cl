@@ -1,0 +1,87 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("dot-props")
+
+def Range := EIO::Range
+def ALL := EIO::ALL
+
+def makeStreamShell implements DeepFrozen {
+  to run(Element) {
+  
+    var available :Range := 0
+    def [terminator, terminatorResolver] := Ref.promise()
+    
+    def noAvailableHandler {
+      to requireNone() {}
+      to run() {}
+    }
+    
+    var availableHandler := noAvailableHandler
+  
+    /** internal function */
+    def terminate(value ? (Ref.isBroken(value) || value == true)) {
+      # close() after termination returns silently - XXX is this the Right Thing?
+      if (!(Ref.isResolved(terminator) && value == true)) {
+      
+        terminatorResolver.resolve(value)
+        available := 0
+      }
+      
+      return terminator
+    }
+  
+    def streamShell { # implements Stream
+      
+      # XXX return interface's documentation
+      
+      # - availability -
+      
+      to available() { return available }
+      
+      to maxAvailable() {
+        # XXX should be configurable by the impl
+        return if (Ref.isResolved(terminator)) {0} else {ALL}
+      }
+      
+      to whenAvailable(minimum, thunke) {
+        availableHandler.requireNone()
+        def result
+        availableHandler := def "$activeAvailableHandler" {
+          to requireNone() {
+            throw(`whenAvailable reactor ${E.toQuote(thunke)} already registered`)
+          }
+          to run() {
+            if (available >= minimum) {
+              availableHandler := noAvailableHandler
+              bind result := try { thunke() } catch p { Ref.broken(p) }
+            }
+          }
+        }
+        
+        availableHandler() # handle immediate call if appropriate
+        
+        return result
+      }
+      
+      # - properties -
+      
+      to getElementType() { return Element }
+      
+      # - termination -
+      
+      to terminates() { return terminator }
+      to isTerminated() { return Ref.isResolved(terminator) }
+      
+      to close() { return terminate(true) }
+      to fail(problem) { return terminate(Ref.broken(problem)) }
+      
+    }
+    return [streamShell, &available, thunk { availableHandler() }]
+  }
+}
+
+
+

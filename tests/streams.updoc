@@ -1,0 +1,172 @@
+  ? def ALL := EIO.getALL()
+
+
+  ? def makeOutStreamShell := <elib:eio.makeOutStreamShell>
+  # value: <makeOutStreamShell>
+  
+  ? def stream := makeOutStreamShell(float64, def streamBackend, def impl {
+  >   to write(elements) :void { print(elements) }
+  >   to flush() :void { print("flush") }
+  > })
+  # value: -><impl>
+
+  ? stream.available()  
+  # value: 0
+  
+  ? streamBackend.setAvailable(10)
+  
+  ? stream.available()
+  # value: 10
+  
+  ? stream.write([1.0, 2.0, 3.0])
+  # stdout: [1.0, 2.0, 3.0]
+  
+  ? stream.available()
+  # value: 7
+  
+insufficient availability
+
+  ? stream.write("abcdefgh")
+  # problem: <UnavailableException: 8 elements cannot be written at this time (only 7)>
+  
+test ALL while writing
+  
+  ? streamBackend.setAvailable(ALL)
+  
+  ? stream.available() == ALL
+  # value: true
+  
+  ? stream.write([1000.0])
+  # stdout: [1000.0]
+  
+  ? stream.available() == ALL
+  # value: true
+  
+misc methods
+
+  ? stream.flush()
+  # stdout: flush
+
+  XXX impl should get to give an opinion
+  ? stream.maxAvailable() == ALL
+  # value: true
+  
+  XXX test that this is enforced
+  ? stream.getElementType()
+  # value: float64
+  
+  ? def terminator := stream.terminates()
+  # value: <Promise>
+  
+  ? stream.isTerminated()
+  # value: false
+  
+termination and consequences
+
+  XXX Java FQN
+
+  ? stream.fail("biff" :<type:java.lang.Exception>)
+  # value: <ref broken by problem: biff>
+  
+  ? stream.fail("blaff" :<type:java.lang.Exception>)
+  # problem: already resolved
+  
+  ? stream.close()
+  # value: <ref broken by problem: biff>
+  
+  ? stream.write([])
+  # problem: biff
+  
+  ? stream.flush()
+  -- no effect
+  
+  XXX check that setAvailable may not now be used
+  ? stream.available()
+  # value: 0
+  
+  ? stream.getElementType()
+  # value: float64
+  
+  ? [terminator, stream.terminates() == terminator]
+  # value: [<ref broken by problem: biff>, true]
+  
+  ? stream.maxAvailable()
+  # value: 0
+
+closure (testing with fresh stream)
+
+  ? def stream := makeOutStreamShell(float64, def streamBackend, def impl {
+  >   to write(elements) :void { print(elements) }
+  >   to flush() :void { print("flush") }
+  > })
+  # value: -><impl>
+  
+  ? def terminator := stream.terminates()
+  # value: <Promise>
+  
+  ? stream.close()
+  # value: true
+  
+  ? stream.close()
+  # value: true
+  
+  ? stream.flush()
+  -- no effect
+  
+  ? stream.write([])
+  # problem: <UnavailableException: stream closed>
+
+  ? stream.available()
+  # value: 0
+  
+  ? stream.getElementType()
+  # value: float64
+  
+  ? [terminator, stream.terminates() == terminator]
+  # value: [true, true]
+  
+  ? stream.maxAvailable()
+  # value: 0
+
+whenAvailable
+
+  ? def stream := makeOutStreamShell(float64, def streamBackend, def impl {
+  >   to write(elements) :void { print(elements) }
+  >   to flush() :void { print("flush") }
+  > })
+  # value: -><impl>
+  
+  ? stream.whenAvailable(0, thunk { print("wa1"); '1' })
+  # stdout: wa1
+  
+  # value: '1'
+  
+  ? def wap2 := stream.whenAvailable(4, thunk { print("wa2"); '2' })
+  # value: <Promise>
+
+  ? stream.whenAvailable(4, thunk { print("wa3"); '3' })
+  # problem: whenAvailable reactor <_> already registered
+  
+  ? streamBackend.setAvailable(2)
+
+  ? streamBackend.setAvailable(6); "set"
+  # stdout: wa2
+  
+  # value: "set"
+  
+  ? wap2
+  # value: '2'
+
+  ? def wap4 := stream.whenAvailable(7, thunk { throw("blargh") })
+  # value: <Promise>
+  
+  ? streamBackend.setAvailable(7)
+  
+  ? E.toQuote(wap4)
+  # value: "<ref broken by <sealed problem>>"
+  
+  ? wap4()
+  # problem: blargh
+
+
+XXX ejectors for kinds of failure from write()
