@@ -380,3 +380,4 @@ makeEParser
 XXX specific tests for e`` and epatt``
 XXX printing all nodes, parens, precedence
 XXX test proper quoting as source is delivered to the Java parser - e.g. right now sending source containing a tab kills the connection because it's misquoted a the REPL-input level.
+XXX test parsing of (a ** b) %% c vs. a ** b %% c
