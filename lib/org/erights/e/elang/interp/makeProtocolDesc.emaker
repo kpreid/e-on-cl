@@ -76,7 +76,13 @@ def makeProtocolDesc implements DeepFrozen {
   to makePair(docComment :String, optFQName :nullOk[String], supers :List, auditors :List, mTypes :List) {
     # XXX methods
     def stamp
-    def guard {
+    def guard implements EventuallyDeepFrozen {
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+    
       to __printOn(out :TextWriter) {
         if (optFQName != null) {
           out.print(simplifyFQName(optFQName))
@@ -98,10 +104,24 @@ def makeProtocolDesc implements DeepFrozen {
         }
       }
     }
-    bind stamp {
+    
+    bind stamp implements EventuallyDeepFrozen {
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+    
+      to __printOn(out :TextWriter) {
+        out.write("<")
+        out.print(guard)
+        out.write(" stamp>")
+      }
+      
       /** Rubber-stamping auditor - accepts anything. */
       to audit(_, _) { return true }
     }
+
     return [guard, stamp]
   }
 }
