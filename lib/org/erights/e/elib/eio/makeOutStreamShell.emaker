@@ -53,6 +53,7 @@ def makeOutStreamShell implements DeepFrozen {
     }
     
     bind backend {
+      /** May synchronously call the client's whenAvailable reactor. */
       to setAvailable(new) {
         available := new
         triggerAvailable()
