@@ -107,7 +107,8 @@
           new-dimensions
           :initial-element initial-element)))))
 
-(defvar +the-make-array+ (e-named-lambda "org.cubik.cle.prim.makeArray"
+(defvar +the-make-array+ (e-named-lambda "org.cubik.cle.prim.makeArray" 
+  :stamped +deep-frozen-stamp+
   (:|fromSequence| (seq)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
     (make-flex-array (make-array (length seq) :initial-contents seq :fill-pointer t)))))

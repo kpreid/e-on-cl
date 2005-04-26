@@ -107,3 +107,5 @@ def makeFlexList implements EventuallyDeepFrozen {
     return makeFlexList._fromArray(makeArray.fromSequence(contents), valueGuard)
   }
 }
+
+makeFlexList :DeepFrozen

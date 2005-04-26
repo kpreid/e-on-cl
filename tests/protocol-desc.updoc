@@ -1,0 +1,10 @@
+XXX not complete
+
+  ? interface Foo guards FooStamp {}
+  # value: Foo
+  
+  ? Foo :DeepFrozen
+  # value: Foo
+  
+  ? FooStamp :DeepFrozen
+  # value: <Foo stamp>
