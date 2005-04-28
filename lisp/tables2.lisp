@@ -64,6 +64,7 @@
     
     (:|vectorPushExtend| (new)
       (setf new (ref-shorten new))
+      ; XXX leaves undefined elements in any extra-extension area
       (vector-push-extend new array)) ; XXX will this fail safely if the array is >1-dimensional?
     
     (:|fill| (value)           
