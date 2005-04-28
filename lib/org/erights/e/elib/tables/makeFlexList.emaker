@@ -51,6 +51,9 @@ def makeFlexList implements EventuallyDeepFrozen {
           array.fill(valueGuard.getTheTrivialValue(), newSize, oldSize)
         }
         array.setFillPointer(newSize)
+        if (newSize > oldSize) {
+          array.fill(valueGuard.getTheTrivialValue(), oldSize, newSize)
+        }
       }
       
       method replace(thisStart, thisEnd, other, otherStart, otherEnd) {
@@ -64,7 +67,10 @@ def makeFlexList implements EventuallyDeepFrozen {
         
         # Ensure the physical size is sufficient
         if (newSize > array.getDimension(0)) {
-          impl.setSize(newSize)
+          #impl.setSize(newSize)
+          # filling with arbitrary allowable value
+          # XXX should not leave user values sitting around keeping things live (that is, the resizeFactor)
+          array.adjust([newSize * resizeFactor], other[0])
         }
         
         # Move existing elements after the replaced section
@@ -73,8 +79,11 @@ def makeFlexList implements EventuallyDeepFrozen {
         
         # Copy new elements in
         # XXX optimize case where the other is known to have already-coerced elements
-        for i in otherStart..!otherEnd {
+        # for i in otherStart..!otherEnd { # can't use this because the region implementation uses FlexList#push
+        var i := otherStart
+        while (i < otherEnd) {
           array.setElt(i + copyOffset, other[i] :valueGuard)
+          i += 1
         }
         
         # Set final fill pointer

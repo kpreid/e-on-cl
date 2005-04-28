@@ -34,8 +34,9 @@ def makeFlexListShell implements DeepFrozen {
       
       method push(new) :void {
         def i := impl.size()
-        impl.setSize(i + 1)
-        impl.put(i, new)
+        #impl.setSize(i + 1)
+        #impl.put(i, new)
+        impl.replace(i, i, [new], 0, 1)
       }
       method pop() {
         def lastIndex := impl.size() - 1

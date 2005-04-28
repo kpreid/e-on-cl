@@ -305,7 +305,22 @@ iterate
   #         1 40.0
   #         2 50.0
   #         
- 
+
+
+
+Regression test: push works on trivial-value-less typed lists:
+
+  ? def flexList := [].diverge(__Portrayal)
+  # value: [].diverge()
+  
+  ? [flexList.push([1, "add", [1]])]
+  # value: [null]
+  
+  ? flexList
+  # value: [[1, "add", [1]]].diverge()
+
+
+
 XXX all elist ops
   sort/0-1
   getArray/0-3 - ???
