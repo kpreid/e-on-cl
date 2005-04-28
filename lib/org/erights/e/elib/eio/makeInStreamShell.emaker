@@ -1,0 +1,150 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("dot-props")
+
+def Range := EIO::Range
+def ALL := EIO::ALL
+
+# XXX get these from the InStream interface?
+def NOW := "NOW" 
+def LATER := "LATER" 
+def ADVANCE := "ADVANCE"
+def QUERY := "QUERY"
+def ELEMENTS := "ELEMENTS"
+def STATUS := "STATUS"
+
+def Same {
+  match [=="get", values] {
+    def valuesSet := values.asSet()
+    def message := "must be one of " + E.toQuote(values) + ": "
+    def Same1 {
+      to coerce(specimen, optEjector) {
+        if (valuesSet.contains(specimen)) {
+          return specimen
+        } else {
+          throw.eject(optEjector, message + E.toQuote(specimen))
+        }
+      }
+    }
+  }
+}
+
+def Schedule := Same["NOW", "LATER", "WAIT"]
+def Proceed  := Same["ADVANCE", "QUERY"]
+def Report   := Same["ELEMENTS", "STATUS"]
+
+def makeStreamShell := <elib:eio.makeStreamShell>
+
+def makeInStreamShell implements DeepFrozen {
+  to run(Element, backend__Resolver, impl) {
+
+    def handleTerminate
+    def [streamShell, &unclaimedAvailable, triggerAvailable] := makeStreamShell(Element)
+
+    def terminator := streamShell.terminates()
+    
+    def waitersFlex := [].diverge()
+    
+    var implAvailable :Range := 0
+    
+    /** update the visible 'available' - XXX should this be implicit? */
+    def updateAvailable() {
+      unclaimedAvailable :=  \
+        if (waitersFlex.size() > 0 || Ref.isResolved(terminator)) \
+          { 0 } else { implAvailable }
+    }
+    
+    /** obtain without the scheduling. assumes arguments have been checked. */
+    def obtainNow([atLeast, atMost, proceed, report], optEjector) {
+      if (Ref.isBroken(terminator)) {
+        throw.eject(optEjector, Ref.optProblem(terminator))
+      }
+      if (atLeast != ALL && atLeast > implAvailable) { # XXX method on ALL?
+        throw.eject(optEjector, `<UnavailableException: $atLeast elements cannot be read at this time (only $implAvailable)>`) # XXX exception type, ejector
+      }
+      def maybeElements := impl.semiObtain(atLeast, atMost, proceed, report)
+      
+      return switch (report) {
+        match ==ELEMENTS { maybeElements :List }
+        match ==STATUS   { terminator }
+        match _          { throw("shouldn't have reached here with bad 'report' $report") }
+      }
+    }
+  
+    /** resolve as many LATER data requests as we can */
+    def triggerWaiters() {
+      while (waitersFlex.size() > 0) {
+        def [resolver, args] := waitersFlex[0]
+        if (implAvailable >= args[0] || Ref.isResolved(terminator)) { # atLeast
+          # XXX use an ejector from obtainNow
+          resolver.resolve(
+            escape fail {
+              try {
+                obtainNow(args, fail) 
+              } catch p { Ref.broken(p) }
+            } catch p { Ref.broken(p) })
+          waitersFlex(0, 1) := []
+        } else {
+          break
+        }
+      }
+    }
+    
+    # Async is OK for termination notification
+    Ref.whenResolved(terminator, def inStreamTerminationHandler(_) {
+      triggerWaiters()
+      triggerAvailable()
+    })
+    
+    def inStream extends streamShell { # implements InStream
+      to __printOn(out :TextWriter) :void {
+        out.write("<-")
+        out.printSame(impl)
+      }
+      
+      # XXX the nullOk should be Same[ANY]
+      to obtain(atLeast :Range, atMost :any[nullOk, (int >= atLeast)], schedule :Schedule, proceed :Proceed, report :Report) {
+        # XXX guards on schedule/proceed/report
+        # XXX ejector for UnavailableException
+        def args := [atLeast, atMost, proceed, report]
+        return switch (schedule) {
+          match ==NOW {
+          
+            if (waitersFlex.size() > 0) {
+              if (atLeast != 0) {
+                throw(`<UnavailableException: $atLeast elements cannot be read at this time ($implAvailable elements are claimed by ${waitersFlex.size()} LATER requests)>`)
+              } else {
+                return []
+              }
+            }
+            
+            obtainNow(args, null) # XXX ejector parameter
+          }
+          match ==LATER { 
+            waitersFlex.push([def result, args])
+            updateAvailable()
+            result
+          }
+          match _ { throw(`shouldn't happen: unrecognized schedule $schedule`) }
+        }
+      }
+    }
+    
+    bind backend {
+      to setAvailable(new) { 
+        implAvailable := new
+        triggerWaiters()
+        updateAvailable()
+        triggerAvailable()
+      }
+    }
+    
+    return inStream
+  }
+}
+
+
+

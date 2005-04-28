@@ -54,7 +54,7 @@ def makeStreamShell implements DeepFrozen {
             throw(`whenAvailable reactor ${E.toQuote(thunke)} already registered`)
           }
           to run() {
-            if (available >= minimum) {
+            if (available >= minimum || Ref.isResolved(terminator)) {
               availableHandler := noAvailableHandler
               bind result := try { thunke() } catch p { Ref.broken(p) }
             }
