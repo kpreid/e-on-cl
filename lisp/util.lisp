@@ -212,7 +212,10 @@
       #+ccl ; XXX appropriate feature test? should this be restricted to #+openmcl?
         (list (ccl:arglist function))
       #+cmu
-        (list (kernel:%function-arglist function)) ; XXX is this a supported interface? probably not
+        (list
+	  (let ((*package* (find-package :cl-user)))
+	    (read-from-string
+	      (kernel:%function-arglist function)))) ; XXX is this a supported interface? probably not
       (cdr (function-lambda-expression function))
       '((&rest <unknown-lambda-list>)))))
 
