@@ -341,6 +341,30 @@ traceln
   ? traceln.__respondsTo("run", 1)
   # value: true
 
+__makeVerbFacet
+
+  XXX poor print syntax
+  ? pragma.enable("verb-curry"); def rr := Ref.isResolved
+  # value: <calling "isResolved" facet>
+
+  ? rr(def x)
+  # value: true
+  
+  ? rr(x)
+  # value: false
+  
+  ? rr(1, 2, 3)
+  # problem: no such method: org.erights.e.elib.ref.RefAuthor$RefAuthor__C$Ref#isResolved/3
+
+  ? pragma.enable("verb-curry"); var x := 1; def u := ((&x) <- setValue)
+  # value: <sending "setValue" facet>
+  
+  ? [x, u(2), x]
+  # value: [1, <Promise>, 1]
+  
+  ? x
+  # value: 2
+
 XXX test other scope objects
 
-see guards.updoc for testing of __makeGuard and stanrdard guards
+see guards.updoc for testing of __makeGuard and standard guards

@@ -1,0 +1,92 @@
+# Copyright 2004 Hewlett Packard, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# kpreid 2005-04-28: copied from Java E version
+#   TextWriter guard on __printOn for CL-E compatibilty
+#   removed unused 'sendSpreader'
+#
+# I would like to see these changes merged back to Java E.
+#
+# XXX possible further changes: 'fix' documentation markup; don't include not-relevant-to-client runtime documentation on facet; better print representation; remove inefficient `literalstring` matching
+
+def makeVerbFacet(kind :String, recipient, verb, caller) :near {
+
+    /**
+     * A facet-function on some underlying object for sending only messages
+     * with a given verb (message selector) to that underlying object.
+     * <p>
+     * For example, '<tt>foo.bar</tt>' results in a function such that
+     * '<tt>(foo.bar)(args...)</tt>' invokes '<tt>foo.bar(args...)</tt>'.
+     */
+    def verbFacet {
+        to __printOn(out :TextWriter) :void {
+            out.print(`<$kind ${E.toQuote(verb)} facet>`)
+        }
+
+        match [`run`, args] {
+            caller(recipient, verb, args)
+        }
+
+        # XXX The rest of this is a kludge, until we repair the __respondsTo
+        # and __getAllegedType behaviors regarding match clauses.
+
+        match [`__respondsTo`, [`run`, arity]] {
+            recipient.__respondsTo(verb, arity)
+        }
+        match [`__respondsTo`, _] {
+            false
+        }
+        match [`__getAllegedType`, []] {
+            def oldMsgs := recipient.__getAllegedType().getMessageTypes()
+            var newMsgs := []
+            for oldMsg ? (oldMsg.getVerb() =~ `$verb`) in oldMsgs {
+                newMsgs with= __makeMessageDesc(oldMsg.getDocComment(),
+                                                "run",
+                                                oldMsg.getParams(),
+                                                oldMsg.getOptResultGuard())
+            }
+            __makeProtocolDesc("",
+                               `${meta.context().getFQNPrefix()}Sub__T`,
+                               [],
+                               [],
+                               newMsgs)
+        }
+    }
+    return verbFacet
+}
+
+def callCaller(recipient, verb, args) :any {
+    return E.call(recipient, verb, args)
+}
+
+def sendCaller(recipient, verb, args) :any {
+    return E.send(recipient, verb, args)
+}
+
+/**
+ * Used in the expansion of "foo.bar" so that "(foo.bar)(...)" means the same
+ * thing as "foo.bar(...)".
+ * <p>
+ * Likewise used in the expansion of "foo &lt;- bar" so that
+ * "(foo &lt;- bar)(...) means the same thing as "foo &lt;- bar(...)".
+ * <p/>
+ * The result should be a function which responds to "run" with any number
+ * of arguments by calling the corresponding "bar" method on the "foo"
+ * object. Inspired by the <a href="http://www.waterken.com"
+ * >web-calculus</a>, this is a cheap notation for forming a bar-only
+ * unforseen-facet (a filtering forwarder, sort-of) on the "foo" object.
+ */
+def __makeVerbFacet0 {
+    to curryCall(recipient, verb :String) :near {
+        return makeVerbFacet("calling",
+                             recipient,
+                             verb,
+                             callCaller)
+    }
+    to currySend(recipient, verb :String) :near {
+        return makeVerbFacet("sending",
+                             recipient,
+                             verb,
+                             sendCaller)
+    }
+}
