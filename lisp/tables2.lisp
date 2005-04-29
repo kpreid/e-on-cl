@@ -186,6 +186,14 @@
             (return nil))))
         (e. this |without| key))))
 
+  (:|extract/2| (this key default)
+    (block nil
+      (vector
+        (e. this |fetch| key
+          (e-lambda (:|run| ()
+            (return (vector default this)))))
+        (e. this |without| key))))
+  
   (:|and/1| (map mask)
     (e-coercef mask +the-any-map-guard+)
     (e. +the-make-const-map+ |fromIteratable|
