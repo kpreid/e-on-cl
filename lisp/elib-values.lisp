@@ -73,7 +73,28 @@
                        t)))))
         (loop while (pick))
         result)))
+
+  (:|rjoin/1| (this items)
+    "Return the strings in 'items' concatenated and separated by this string.
+    
+someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty string."
+    (let* ((items (loop for item across (e-coerce items 'vector) collect (e-coerce item 'string)))
+           (string (make-array 
+                     (reduce #'+ items
+                       :initial-value 0
+                       :key #'length)
+                     :element-type 'character ; too clever: `(or ,@(mapcar #'array-element-type items))
+                     :fill-pointer 0
+                     :adjustable t)))
+      (with-output-to-string (out string)
+        (loop for item in items
+              for sep = "" then this
+              do (princ sep out)
+                 (princ item out))
+        string)))
+
   (:|replaceAll/2| (this old new)
+    "Return this string with all occurrences of the string 'old' (searching from the beginning) replaced with the string 'new'."
     (declare (optimize (debug 3)))
     (e-coercef old 'string)
     (e-coercef new 'string)

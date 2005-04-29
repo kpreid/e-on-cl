@@ -119,6 +119,21 @@ String#add/1
   ? "ab" + ["cd"]
   # value: "ab[\"cd\"]"
 
+rjoin/1
+
+  ? ".".rjoin([1, 2, 3, 4])
+  # problem: the int 1 doesn't coerce to a String
+  
+  ? ".".rjoin(["1", "2", "3", "4", ""])
+  # value: "1.2.3.4."
+  
+  ? ".".rjoin([])
+  # value: ""
+
+  ? ".".rjoin([""])
+  # value: ""
+
+
 ? E.toString('a')
 # value: "a"
 
