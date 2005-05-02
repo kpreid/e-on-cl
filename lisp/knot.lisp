@@ -729,7 +729,12 @@
           ; --- user/REPL ---
           ("&help"              ,(lazy-import "org.erights.e.elang.interp.help")))))))
 
-(defun make-io-scope (&key ((:stdout out-cl-stream)) ((:stderr error-cl-stream)))
+(defvar +eprops+
+  (e. +the-make-const-map+ |fromPairs| 
+    `#(#("e.home" ,(namestring (asdf:component-pathname 
+                                 (asdf:find-system :cl-e)))))))
+
+(defun make-io-scope (&key (interp nil interp-supplied) ((:stdout out-cl-stream)) ((:stderr error-cl-stream)))
   (let ((vat-priv-scope
           (e. (make-scope "__localPrivileged$"
                 ; NOTE: these stamps are process-wide, but their effect is local unless amplified with some authority allowing sharing objects between vats (e.g. a hypothetical thread-safe stamp)
@@ -760,6 +765,7 @@
                               :should-close-underlying nil))
              #("lisp"       ,+lisp+)
                             ; XXX should use e-extern's pathname-to-E-style-path facilities
-             #("props"      ,(e. +the-make-const-map+ |fromPairs|
-                              `#(#("e.home" ,(namestring (asdf:component-pathname (asdf:find-system :cl-e))))))))))))
+             #("props"      ,+eprops+)
+             ,@(when interp-supplied
+               `(#("interp" ,interp))))))))
 

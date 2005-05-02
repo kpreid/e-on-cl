@@ -162,7 +162,7 @@ http://www.eros-os.org/pipermail/e-lang/2005-January/010416.html
 
 (I tried using the sugared when-catch here, but the current expansion uses a throw-and-catch for broken references and so ends up with a sealed problem.)
 
-  > Ref.whenResolved(farFlexMap <- fetch(key, ejectoid), def _(value) :void {
+  >   interp.waitAtTop(Ref.whenResolved(farFlexMap <- fetch(key, ejectoid), def _(value) :void {
   >     switch (Ref.optProblem(value)) {
   >       match ==null {
   >         println(`$key got: $value`)
@@ -174,7 +174,7 @@ http://www.eros-os.org/pipermail/e-lang/2005-January/010416.html
   >         println(`$key died: $problem`)
   >       }
   >     }
-  >   })
+  >   }))
   > }
   # stdout: 2 missing: problem: unspecified problem
   #         <Promise> died: <sealed problem>

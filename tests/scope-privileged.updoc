@@ -63,8 +63,10 @@ SelflessStamp
 
 interp
 
+  XXX testing interp here isn't very useful since it's (currently) an updoc-specific interp implementation
+
   ? interp
-  # value: <defaultInterp>
+  # value: <updocInterp>
   
   XXX more specific tests
   ? interp.getProps() :Map; null

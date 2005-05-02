@@ -21,3 +21,30 @@ This should fail:
 
   ? "something after pushed tests"
   # value: "something after pushed tests"
+  
+---
+
+waitAtTop / timing tests:
+
+  ? print <- ("hello")
+  # value: <Promise>
+  
+  # stdout: hello
+  
+  ? thunk { print <- ("world") } <- ()
+  # value: <Promise>
+    
+  ? 1
+  # value: 1
+  
+  # stdout: world
+  
+  ? interp.waitAtTop(thunk { print <- ("now") } <- ()); 2
+  # value: 2
+  
+  # stdout: now
+  
+  ? 3
+  # value: 3
+
+  

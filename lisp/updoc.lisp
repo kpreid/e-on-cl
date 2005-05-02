@@ -84,12 +84,13 @@
 (defun (setf slot-place) (new slot)
   (e. slot |setValue| new))
 
-(defun make-stepper (file scope-slot eval-out-stream eval-err-stream)
-  (symbol-macrolet ((scope (slot-place scope-slot)))
+(defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream)
+  (symbol-macrolet ((scope (slot-place scope-slot))
+                    (wait-hook (slot-place wait-hook-slot)))
     (lambda (step
         &aux new-answers new-result backtrace)
       (destructuring-bind (expr answers) step
-        ;(princ ".") ; XXX disabled for SBCL 0.8.21 eval fresh-line bug
+        (princ ".") ; XXX disabled for SBCL 0.8.21 eval fresh-line bug
         (force-output)
         (setf new-answers nil)
         ; --- The ordering of these steps significantly affects the output ordering of updoc scripts, especially as we don't yet implement interp.waitAtTop() properly. ---
@@ -98,21 +99,25 @@
               (unless (string= s "") (push (list "stdout" s) new-answers)))
             (let ((s (get-output-stream-string eval-err-stream)))
               (unless (string= s "") (push (list "stderr" s) new-answers)))))
-          (block attempt
-            (handler-bind ((error #'(lambda (condition) 
-                                      (setf new-result nil)
-                                      (collect-streams)
-                                      (push (make-problem-answer condition) new-answers)
-                                      #+sbcl (setf backtrace (sb-debug:backtrace-as-list)) ; XXX platform
-                                      (return-from attempt)))
-                           (warning #'muffle-warning)
-                           #+sbcl (sb-ext:compiler-note #'muffle-warning))
-              (setf (values new-result scope)
-                      (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
-          (collect-streams)
-          (if new-result
-            (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))
-          (run-vats)
+          (block step-user-region
+            (block attempt
+              (handler-bind ((error #'(lambda (condition) 
+                                        (setf new-result nil)
+                                        (collect-streams)
+                                        (push (make-problem-answer condition) new-answers)
+                                        #+sbcl (setf backtrace (sb-debug:backtrace-as-list)) ; XXX platform
+                                        (return-from attempt)))
+                             (warning #'muffle-warning)
+                             #+sbcl (sb-ext:compiler-note #'muffle-warning))
+                (setf (values new-result scope)
+                        (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
+            (collect-streams)
+            (if new-result
+              (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))
+            (e. (e. scope |get| "Ref") |whenResolved| wait-hook (e-lambda (:|run| (x)
+              (declare (ignore x))
+              (return-from step-user-region))))
+            (vat-loop))
           (collect-streams))
         ; --- end ---
         (setf new-answers (nreverse new-answers))
@@ -136,7 +141,8 @@
            (eval-out-stream (make-string-output-stream))
            (eval-err-stream (make-string-output-stream))
            (scope-slot (make-instance 'elib:e-var-slot :value nil))
-           (stepper (make-stepper file scope-slot eval-out-stream eval-err-stream))
+           (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain"))
+           (stepper (make-stepper file scope-slot wait-hook-slot eval-out-stream eval-err-stream))
            (runner (e-named-lambda "org.cubik.cle.updoc.Runner"
               (:|__printOn/1| (tw)
                 (e-coercef tw +the-text-writer-guard+)
@@ -149,7 +155,22 @@
                             (map 'list #'(lambda (x) (coerce x 'list))
                                  answers-vector)) script)
                 nil)))
-           (scope (e. (e. (make-io-scope :stdout eval-out-stream :stderr eval-err-stream) 
+           (interp (e-named-lambda "org.cubik.cle.updocInterp"
+             ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
+             (:|gc/0| () (e. e.extern:+gc+ |run|))
+             (:|getProps/0| ()
+               ; XXX internal symbol
+               e.knot::+eprops+)
+             (:|waitAtTop/1| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
+               (e. wait-hook-slot |setValue|
+                 (e. (e. (vat-safe-scope *vat*) |get| "Ref") |whenResolved| ref
+                   (e-lambda (:|run| (ref)
+                     (declare (ignore ref))
+                     old-wait))))
+               nil)))
+           (scope (e. (e. (make-io-scope :stdout eval-out-stream 
+                                         :stderr eval-err-stream
+                                         :interp interp) 
                           |withPrefix| "__main$")
                       |with| "updoc" runner))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope

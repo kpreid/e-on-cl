@@ -299,7 +299,8 @@ Termination
   ? def poAS := stream.obtain(50, 50, LATER, ADVANCE, STATUS)
   # value: <Promise>
 
-  ? stream.fail("boo")
+  ? interp.waitAtTop(pwA)
+  > stream.fail("boo")
   # value: <ref broken by problem: boo>
 
   # stdout: termination test whenAvailable -- <ref broken by problem: boo>
