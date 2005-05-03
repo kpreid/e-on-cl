@@ -488,6 +488,7 @@
 
 ; this could be less primitive, but then it would have more dependencies
 (defvar +traceln+ (elib:e-named-lambda "org.cubik.cle.prim.traceln"
+  :stamped +deep-frozen-stamp+
   (:|run/1| (message)
     ; xxx use stream writer on *trace-output*?
     ; xxx Should we tag traceln according to the FQN-prefix of the safe scope, or in nested scopes such as emakers' FQN-prefix-scopes?
@@ -496,6 +497,19 @@
         (e. tw |print|      "; trace: ")
         (e. (e. tw |indent| ";        ") |print| message)
         (e. tw |println|))))))
+
+; XXX merge with traceln? (I imagine this becoming something with many little useful methods)
+(defvar +trace+ (e-named-lambda "org.cubik.cle.prim.trace"
+  :stamped +deep-frozen-stamp+
+  (:|runAsTurn| (thunk context-thunk)
+    "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
+
+If a log message is produced, context-thunk is run to produce a string describing the origin of the failure."
+    (handler-case
+      (e. thunk |run|)
+      (error (condition)
+        (format *trace-output* "~&; caught problem in ~A: ~A" (e-quote (e. context-thunk |run|)) (e-print condition))
+        (make-unconnected-ref (transform-condition-for-e-catch condition)))))))
 
 ; XXX merge these two: make lazy-apply robust in the presence of failure, and make lazy-eval use lazy-apply with a particular thunk
 
@@ -644,6 +658,7 @@
           ("&__loop"    ,(lazy-import "org.cubik.cle.prim.loop")) ; XXX should be elang.interp.loop
           
           ; --- primitive: tracing ---
+          ("trace"      ,+trace+)
           ("traceln"    ,+traceln+)
 
           ; --- nonprimitive flow control ---
