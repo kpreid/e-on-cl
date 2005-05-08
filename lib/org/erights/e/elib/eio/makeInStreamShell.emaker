@@ -107,8 +107,7 @@ def makeInStreamShell implements DeepFrozen {
       
       # XXX the nullOk should be Same[ANY]
       to obtain(atLeast :Range, atMost :any[nullOk, (int >= atLeast)], schedule :Schedule, proceed :Proceed, report :Report) {
-        # XXX guards on schedule/proceed/report
-        # XXX ejector for UnavailableException
+        # XXX ejectors for UnavailableException and failure
         def args := [atLeast, atMost, proceed, report]
         return switch (schedule) {
           match ==NOW {
