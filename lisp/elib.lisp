@@ -368,8 +368,29 @@ If there is no current vat at initialization time, captures the current vat at t
 
 ; - vat -
 
+(defmacro with-vat (&body forms)
+  `(progn
+    (assert (null *vat*))
+    (let ((*vat* (make-instance 'vat)))
+      ,@forms)))
+
+(defmacro with-turn ((vat-form) &body body
+    &aux (vat-sym (gensym "TURN-VAT")))
+  "Execute the body, as a turn in the given vat."
+  `(let ((,vat-sym ,vat-form))
+    (assert (not (vat-in-turn ,vat-sym)) (,vat-sym))
+    (unwind-protect
+      (progn 
+        (setf (vat-in-turn ,vat-sym) t)
+        ,@body)
+      (setf (vat-in-turn ,vat-sym) nil))))
+
 (defclass vat ()
-  ((sends :initform (make-instance 'queue))
+  ((in-turn :initform nil
+            :accessor vat-in-turn
+            :type boolean
+            :documentation "Whether some type of top-level turn is currently being executed in this vat. Used for consistency checking.")
+   (sends :initform (make-instance 'queue))
    (safe-scope :initform (e.knot:make-safe-scope)
                :accessor vat-safe-scope)))
 
@@ -399,14 +420,9 @@ If there is no current vat at initialization time, captures the current vat at t
       (if (queue-null sends)
         (e-util:serve-event)
         (progn
-          (funcall (dequeue sends))
+          (with-turn (*vat*)
+            (funcall (dequeue sends)))
           (e-util:serve-event 0))))))
-
-(defmacro with-vat (&body forms)
-  `(progn
-    (assert (null *vat*))
-    (let ((*vat* (make-instance 'vat)))
-      ,@forms)))
 
 (defun establish-vat ()
   (assert (null *vat*))

@@ -100,17 +100,18 @@
             (let ((s (get-output-stream-string eval-err-stream)))
               (unless (string= s "") (push (list "stderr" s) new-answers)))))
           (block step-user-region
-            (block attempt
-              (handler-bind ((error #'(lambda (condition) 
-                                        (setf new-result nil)
-                                        (collect-streams)
-                                        (push (make-problem-answer condition) new-answers)
-                                        #+sbcl (setf backtrace (sb-debug:backtrace-as-list)) ; XXX platform
-                                        (return-from attempt)))
-                             (warning #'muffle-warning)
-                             #+sbcl (sb-ext:compiler-note #'muffle-warning))
-                (setf (values new-result scope)
-                        (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
+            (with-turn (*vat*)
+              (block attempt
+                (handler-bind ((error #'(lambda (condition) 
+                                          (setf new-result nil)
+                                          (collect-streams)
+                                          (push (make-problem-answer condition) new-answers)
+                                          #+sbcl (setf backtrace (sb-debug:backtrace-as-list)) ; XXX platform
+                                          (return-from attempt)))
+                               (warning #'muffle-warning)
+                               #+sbcl (sb-ext:compiler-note #'muffle-warning))
+                  (setf (values new-result scope)
+                          (elang:eval-e (e.syntax:e-source-to-tree expr) scope)))))
             (collect-streams)
             (if new-result
               (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))

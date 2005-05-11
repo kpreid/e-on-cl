@@ -53,7 +53,7 @@
     :vat
     :*vat*
     :vat-loop
-    :with-vat
+    :with-vat :with-turn
     :establish-vat
     :run-vats  ; deprecated
     :vat-safe-scope
