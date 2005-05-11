@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def makeUnionGuard {
+def makeUnionGuard implements DeepFrozen {
   to run(subGuards) {
     def unionGuard extends __makeGuard(unionGuard) implements DeepFrozen.optionally() {
       to __printOn(out :TextWriter) {
@@ -13,7 +13,7 @@ def makeUnionGuard {
       }
       
       to or(other) {
-        return makeUnionGuard(subGuards.with(other))
+        return <elib:slot.makeUnionGuard>(subGuards.with(other))
       }
       
       to coerce(specimen, optEjector) {

@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def makeIntersectionGuard {
+def makeIntersectionGuard implements DeepFrozen {
   to run(subGuards) {
     def intersectionGuard extends __makeGuard(intersectionGuard) {
       to __printOn(out :TextWriter) {
@@ -14,7 +14,7 @@ def makeIntersectionGuard {
       
       # XXX should/will the super documentation be inherited?
       to and(other) {
-        return makeIntersectionGuard(subGuards.with(other))
+        return <elib:slot.makeIntersectionGuard>(subGuards.with(other))
       }
       
       to coerce(var specimen, optEjector) {

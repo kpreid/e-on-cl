@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def makeBrand {
+def makeBrand implements DeepFrozen {
   to run(label :String) :any {
   
     var unsealHolder :nullOk[Tuple[any]] := null
