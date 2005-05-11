@@ -184,7 +184,7 @@ The 'name slot gives a label for the value which was not settled, such as the na
 (defmethod e-call-match ((rec t) mverb &rest args)
   "Final case of E call dispatch - always fails."
   (declare (ignore args))
-  (error "No such method: ~A#~A" (simplify-fq-name (cl-type-fq-name (observable-type-of rec))) mverb))
+  (error "no such method: ~A#~A" (simplify-fq-name (cl-type-fq-name (observable-type-of rec))) mverb))
 
 ; --- defining some vat pieces early so that vat-checking does not come after local-resolver which subclasses it, which ABCL doesn't like ---
 
@@ -633,7 +633,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
           (otherwise 
             (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
               ,(let ((fallthrough
-                      `(error "No such method: ~A#~A" 
+                      `(error "no such method: ~A#~A" 
                               ',type-name ,mverb-sym)))
                 (if opt-otherwise-body
                   (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name type-name)

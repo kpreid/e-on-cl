@@ -262,7 +262,7 @@ Matcher
   # value: <nonmatches>
 
   ? nonmatches.hi("there")
-  # problem: No such method: __main$nonmatches__C#hi/1
+  # problem: no such method: __main$nonmatches__C#hi/1
   
   ? try { nonmatches.hi("there") } catch p {"ok"}
   # value: "ok"
@@ -277,7 +277,7 @@ Matcher
   # value: 2
   
   ? maybes.no(3, 4)
-  # problem: No such method: __main$maybes__C#no/2
+  # problem: no such method: __main$maybes__C#no/2
   
   ? maybes.regular()
   # value: "yep"
@@ -500,7 +500,7 @@ SlotExpr, SlotPattern, AssignExpr
   # value: [null]
   
   ? [(&require).setValue(3)]
-  # problem: No such method: lazyApplySlot#setValue/1
+  # problem: no such method: lazyApplySlot#setValue/1
   
  var slots, slot patterns, assignment
 

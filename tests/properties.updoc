@@ -36,7 +36,7 @@
 # value: 0.0
 
 ? yy := 3.14
-# problem: No such method: __main$autoPropObj__C#setY/1
+# problem: no such method: __main$autoPropObj__C#setY/1
 
 ? yStore := 3.14
 # value: 3.14

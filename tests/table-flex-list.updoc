@@ -97,7 +97,7 @@ test failure case of setSize (no trivial value)
   # value: [].diverge()
   
   ? plainList.setSize(1)
-  # problem: No such method: org.erights.e.elib.print.TextWriterGuard#getTheTrivialValue/0
+  # problem: no such method: org.erights.e.elib.print.TextWriterGuard#getTheTrivialValue/0
   
   ? plainList
   # value: [].diverge()

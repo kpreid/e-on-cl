@@ -488,7 +488,7 @@ SuchThatPattern printing
   # value: <[] := [] =~ [] + var []>
 
   ? sdef1 + def _ { to __conformTo(_) :any { return empty }}
-  # problem: No such method: __main$_#defNames/0
+  # problem: no such method: __main$_#defNames/0
   x # value: <[] := [] =~ ["x"] + var []>
   
   ? sdef1 + sdef2

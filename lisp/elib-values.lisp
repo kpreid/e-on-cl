@@ -903,7 +903,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                         (let ((tw (nest :syntax (e. syntax |asQuoting|))))
                           (dolist (arg args) (e. tw |printSame| arg))))
                       (t
-                        (error "No such method: TextWriter#~A" mverb)))))))))
+                        (error "no such method: TextWriter#~A" mverb)))))))))
     (spawn :syntax (let ((base (e. syntax |run| delegate)))
                      (if is-quoting
                        (e. base |asQuoting|)

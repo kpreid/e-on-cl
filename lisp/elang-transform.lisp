@@ -333,7 +333,7 @@
     (otherwise 
       (elib:miranda #',self-fsym mverb args (lambda ()
         ,(opt-matcher-body name-map matcher
-          `(error "No such method: ~A#~A" ',qualified-name mverb)))))))
+          `(error "no such method: ~A#~A" ',qualified-name mverb)))))))
 
 (defun plumbing-object-body (self-fsym name-map methods matcher qualified-name approvers-sym doc-comment)
   (declare (ignore self-fsym methods doc-comment))

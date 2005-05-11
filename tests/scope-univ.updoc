@@ -197,7 +197,7 @@ throw
   # problem: boing
   
   ? throw.eject(def _{}, "boing")
-  # problem: No such method: __main$_#run/1
+  # problem: no such method: __main$_#run/1
   
   ? throw.eject(def oops(_) :any {}, "boing")
   # problem: optEjector <oops> returned: null

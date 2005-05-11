@@ -277,7 +277,7 @@
               (not (not (find auditor stamps :test #'eeq-is-same-ever)))))
             (otherwise
               (elib:miranda #'wrapper mverb args (lambda ()
-                (error "No such method on wrapped function: ~A" mverb)))))))))
+                (error "no such method on wrapped function: ~A" mverb)))))))))
     #'wrapper))
 
 (defun make-symbol-accessor (symbol)

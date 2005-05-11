@@ -280,7 +280,7 @@ __getAllegedType, e-lambda
   # value: DefaultPropertySlot
 
   ? t.coerce(EIO.__getPropertySlot("NOW"), null)
-  # problem: No such method: TypeDesc#coerce/2
+  # problem: no such method: TypeDesc#coerce/2
   
   ? t.getFQName()
   # value: "org.cubik.cle.prim.DefaultPropertySlot"
@@ -345,7 +345,7 @@ __getAllegedType, E object
   # value: TypeSample
 
   ? t.coerce(typeSample, null)
-  # problem: No such method: TypeDesc#coerce/2
+  # problem: no such method: TypeDesc#coerce/2
   
   ? t.getFQName()
   # value: "__main$typeSample__C"
@@ -414,7 +414,7 @@ help
   # value: This is an unresolved reference; no other information is available. You can use a 'when' expression or Ref.whenResolved to wait for it to become resolved.
   
   ? help(def _ { to __getAllegedType() :any { return null } })
-  # problem: No such method: Null#getDocComment/0
+  # problem: no such method: Null#getDocComment/0
   
   XXX help(<Far>)
   XXX broken __getAllegedTypes:
