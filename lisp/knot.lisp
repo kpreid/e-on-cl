@@ -316,6 +316,7 @@
 ; XXX #+eventually-frozen-path-loader is not expected to be in *features* - because this code isn't working yet - it's just a descriptive commenting-out 
 
 (defvar +the-make-path-loader+ (e-named-lambda "org.cubik.cle.prim.makePathLoader"
+  :stamped +deep-frozen-stamp+
   (:|run/2| (name fetchpath
       &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |eventually|)))
     (e-coercef name 'string)
