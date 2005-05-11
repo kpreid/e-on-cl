@@ -409,7 +409,7 @@ If there is no current vat at initialization time, captures the current vat at t
     promise))
 
 (defun run-vats ()
-  "XXX Should not exist, but used by updoc.lisp anyway."
+  "Should not exist. Currently used by the repl in rune.lisp. XXX make the repl use proper async IO."
   (with-slots (sends) *vat*
     (loop until (queue-null sends)
           do    (funcall (dequeue sends)))))
