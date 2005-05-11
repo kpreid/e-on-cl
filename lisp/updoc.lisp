@@ -90,10 +90,10 @@
     (lambda (step
         &aux new-answers new-result backtrace)
       (destructuring-bind (expr answers) step
-        (princ ".") ; XXX disabled for SBCL 0.8.21 eval fresh-line bug
+        (princ ".")
         (force-output)
         (setf new-answers nil)
-        ; --- The ordering of these steps significantly affects the output ordering of updoc scripts, especially as we don't yet implement interp.waitAtTop() properly. ---
+        ; --- The ordering of these steps significantly affects the output ordering of updoc scripts. ---
         (labels ((collect-streams ()
             (let ((s (get-output-stream-string eval-out-stream)))
               (unless (string= s "") (push (list "stdout" s) new-answers)))
