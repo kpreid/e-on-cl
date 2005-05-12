@@ -1,0 +1,186 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("dot-props")
+pragma.enable("verb-curry")
+pragma.enable("accumulator")
+
+def map implements DeepFrozen { # XXX eutil
+  to v(f, coll) {
+    return accum [] for v in coll {_.with(f(v))}}
+  to kv(f, coll) {
+    return accum [] for k => v in coll {_.with(f(k, v))}}
+}    
+
+def makeOutStreamShell := <elib:eio.makeOutStreamShell>
+def makeInStreamShell := <elib:eio.makeInStreamShell>
+
+def Range := EIO::Range
+def ALL := EIO::ALL
+
+def IPAuthor implements DeepFrozen {
+  # This is somewhat an experiment in writing close-to-the-implementation code in E
+  # XXX can we give a smaller authority than all-of-lisp practically? 
+  to run(lisp) {
+  
+    # XXX this is horribly verbose. the lisp interface needs some shortcuts
+    def intern := lisp["CL", "INTERN"]::"function"
+    def read := lisp["CL", "READ-FROM-STRING"]::"function"
+    def l__quasiParser {
+      to valueMaker(t) {
+        return def vm {
+          to substitute(values) { return read(simple__quasiParser.valueMaker(t).substitute(values)) }
+        } 
+      }
+    }
+    
+    { def asdfOperate := lisp["ASDF", "OPERATE"]::"function"
+      def load_op := intern("LOAD-OP", "ASDF")
+      
+      # XXX :verbose nil for asdf loads
+      asdfOperate(load_op, intern("CL-E.SOCKETS", "KEYWORD"))
+    }
+    
+    def clCoerce := lisp["CL", "COERCE"]::"function"
+    def makeInstance := lisp["CL", "MAKE-INSTANCE"]::"function"
+
+    # XXX SBCL internal function
+    def _write := lisp["SB-UNIX", "UNIX-WRITE"]::"function"
+  
+    def IP0 {
+      to __printOn(out :TextWriter) {
+        out.write("<IP network access>")
+      }
+    
+      /** XXX copy documentation from keio implementation */
+      to getRemoteTCPEndpoint(hostSpec :Tuple[0..255, 0..255, 0..255, 0..255], portSpec :0..65535) {
+        # XXX hostSpec should allow host names
+        # XXX portSpec should allow service names
+        # XXX IPv6 support, or generalized interface
+        # XXX should we separate out the TCP part?
+        
+        def remoteTCPEndpoint {
+          to __printOn(out :TextWriter) {
+            out.write("<remote TCP endpoint ")
+            out.print(".".rjoin(map.v(E.toString, hostSpec)))
+            out.write(":")
+            out.print(portSpec)
+            out.write(">")
+          }
+        
+          to connect(=> textStreams :nullOk[String] := null) {
+          
+            def [Element, clElementType, clExternalFormat] :=
+              if (textStreams =~ encoding :notNull) {
+                # XXX use a common charset-name-to-external-format routine (see extern.lisp)
+                #[char, read("cl:character"), intern(encoding, "KEYWORD")]
+                [char, read("cl:character"), read(":default")]
+              } else {
+                [int, read("(cl:unsigned-byte 8)"), read(":default")] # XXX should be int8
+              } 
+            
+            # working now, portable later
+            def socket := makeInstance(
+              l`sb-bsd-sockets:inet-socket`, 
+              l`:type`, l`:stream`,
+              l`:protocol`, l`:tcp`)
+            
+            def socketFD := (lisp["SB-BSD-SOCKETS", "SOCKET-FILE-DESCRIPTOR"]::"function")(socket)
+              
+            socket.setNonBlocking(true)
+            escape err {
+              socket.connect(clCoerce(hostSpec, read("(cl:vector (cl:unsigned-byte 8) 4)")), portSpec, err)
+            } catch p {} # XXX ignore only EINPROGRESS
+            
+            # this value is semantically arbitrary, but matching the socket's default send buffer is, I hope, good for efficiency
+            def maxOutAvailable := socket::sockoptSendBuffer
+            
+            # The buffer for the output side; there is no portable way to ask a socket how much local buffer is available, so we must maintain our own.
+            def outBuffer := [].diverge(Element)
+
+            def inBuffer := [].diverge(Element)
+            
+            var eof := false
+            
+            def outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
+              to __printOn(out :TextWriter) {
+                out.print(".".rjoin(map.v(E.toString, hostSpec)))
+                out.write(":")
+                out.print(portSpec)
+              }
+              
+              to write(elements :List) {
+                require(elements.size() <= maxOutAvailable - outBuffer.size())
+                outBuffer.append(elements)
+              }
+              
+              to flush() {
+                def v := clCoerce(outBuffer.snapshot(), read("(cl:vector (cl:unsigned-byte 8))"))
+                
+                def [elementsWritten, ==0] := _write.tuple(socketFD, v, 0, v.size())
+                outBuffer.setRun(0, elementsWritten, [])
+                outBackend.setAvailable(maxOutAvailable - outBuffer.size())
+              }
+              
+            })
+            
+            def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
+              to __printOn(out :TextWriter) {
+                out.print(".".rjoin(map.v(E.toString, hostSpec)))
+                out.write(":")
+                out.print(portSpec)
+              }
+              
+              to semiObtain(atLeast :int, atMost :Range, proceed, report) {
+                # XXX use constants from InStream-somehow
+                def n := if (atMost == ALL) { inBuffer.size() } else { inBuffer.size().min(atMost) }
+                return if (proceed == "ADVANCE") {
+                  inBuffer.removeRun(0, n)
+                } else if (report == "ELEMENTS") {
+                  inBuffer.run(0, n)
+                }
+              }
+              
+            })
+            
+            outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
+            
+            def inFDHandler
+            def removeHandler() {
+              (lisp["SB-SYS", "REMOVE-FD-HANDLER"]::"function")((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
+            }
+            
+            bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(socketFD, l`:input`, (lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function")(def fdHandlerFunc(_) {
+              # XXX in current SBCL this needs some protection against reentrance
+              escape error {
+                escape eof {
+                  def elements := socket.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eof)
+                  #traceln(`$inStream: read $elements from socket`)
+                  inBuffer.append(elements)
+                } catch _ {
+                  traceln(`$inStream: eof`)
+                  removeHandler()
+                  eof := true
+                }
+              } catch p {
+                traceln(`$inStream: error $p`)
+                removeHandler()
+                inStream.fail(p)
+              }
+              
+              inBackend.setAvailable(inBuffer.size())
+            }))
+            
+            return [inStream, outStream]
+          }
+        }
+        
+        return remoteTCPEndpoint
+      }
+    }
+  
+    return IP0
+  }
+}

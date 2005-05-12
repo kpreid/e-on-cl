@@ -51,6 +51,12 @@
   :components ((:module "lisp" :components
     ((:file "irc-repl")))))
 
+;; This is a separate system because I decided to lazily load the Lisp-side socket code, and so the relevant taming declarations cannot be loaded until the socket system is. -- kpreid 2005-04-30
+(defsystem cl-e.sockets
+  :name "cl-e.sockets"
+  :depends-on (#+sbcl :sb-bsd-sockets)
+  :components ((:module "lisp" :components
+    ((:file "sockets")))))
 
 ; cl-ppcre, as of 1.0.0 to 1.2.1, causes SBCL to produce style-warnings while loading it. This muffles them.
 ; XXX consider whether this should still exist in production

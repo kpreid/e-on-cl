@@ -311,6 +311,11 @@
         (make-symbol-accessor symbol)
         (error "the symbol ~S does not exist in ~S" symbol-name package-name))))))
 
+(defun e-to-lisp-function (e-function)
+  "Wrap an E function (object with run/* methods) as an equivalent Lisp function."
+  ; XXX it would be nice to set up a function-name based on the e-function's print. Can this be done without EVAL?
+  (lambda (&rest args) (e-call e-function "run" args)))
+
 ; --- scope construction utilities ---
 
 ; XXX #+eventually-frozen-path-loader is not expected to be in *features* - because this code isn't working yet - it's just a descriptive commenting-out 
@@ -516,7 +521,7 @@ If a log message is produced, context-thunk is run to produce a string describin
 
 (defun make-lazy-eval-slot (scope source &aux value this)
   (setf this (e-named-lambda "LazyEvalSlot"
-    :stamped +deep-frozen-stamp+
+    :stamped +deep-frozen-stamp+ ; XXX this stamp is only appropriate when the resulting value is also DeepFrozen
     (:|getValue/0| ()
       (when source
         (let ((source-here source))
@@ -783,5 +788,11 @@ If a log message is produced, context-thunk is run to produce a string describin
                             ; XXX should use e-extern's pathname-to-E-style-path facilities
              #("props"      ,+eprops+)
              ,@(when interp-supplied
-               `(#("interp" ,interp))))))))
+               `(#("interp" ,interp)))
+             #("IP"         ,(e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") 
+                                     |get|
+                                     "org.cubik.cle.IPAuthor")
+                                 |run|
+                                 +lisp+))
+             #||#)))))
 
