@@ -610,7 +610,7 @@
         (e. tw |print| "<Proxy Resolver>"))
       (:|getProxy/0| ()
         "Return the Ref for this resolver, creating a new one if necessary."
-        (unless (and ref-slot (e-slot-get ref-slot))
+        (unless (and ref-slot (e. ref-slot |getValue|))
           (setf ref-slot (make-instance 'e-simple-slot :value
             (if opt-handler
               (if opt-identity
@@ -620,11 +620,11 @@
                 (make-instance 'remote-promise
                     :handler opt-handler))
               (error "this ProxyResolver is resolved and therefore its proxy is not available")))))
-        (e-slot-get ref-slot))
+        (e. ref-slot |getValue|))
       (:|smash/1| (problem)
         (unless opt-handler
           (error "already resolved"))
-        (let ((ref (and ref-slot (e-slot-get ref-slot))))
+        (let ((ref (and ref-slot (e. ref-slot |getValue|))))
           (when ref
             (with-ref-transition-invariants (ref)
               (change-class ref

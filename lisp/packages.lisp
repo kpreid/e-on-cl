@@ -81,8 +81,6 @@
     :message-pairs-to-map-including-miranda-messages
     :static-maker
     
-    :e-slot-get
-    :e-slot-set
     :e-simple-slot
     :e-var-slot
     :e-guarded-slot

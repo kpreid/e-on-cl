@@ -104,7 +104,7 @@
                 (lambda (noun &aux (slot (gethash noun slot-table)))
                   (if (and (typep slot 'e-simple-slot) 
                            (not (e-is-true (e. noun |startsWith| "&"))))
-                    (vector noun (e-slot-get slot))
+                    (vector noun (e. slot |getValue|))
                     (vector (concatenate 'string "&" noun) slot)))
                 (scope-slot-ordering this)))
            ,fqn-prefix))))
@@ -126,7 +126,7 @@
     (with-slots (slot-table) this
       (as-e-boolean (nth-value 1 (gethash noun slot-table)))))
   (:|get/1| (scope noun)
-    (e-slot-get (e. scope |getSlot| noun)))
+    (e. (e. scope |getSlot| noun) |getValue|))
   (:|getSlot/1| (this noun)
     (e-coercef noun 'string)
     (with-slots (slot-table) this
@@ -139,10 +139,10 @@
     (with-slots (slot-table) this
       (multiple-value-bind (slot present) (gethash noun slot-table)
         (if present
-          (e-slot-get slot)
+          (e. slot |getValue|)
           (e. absent-thunk |run|)))))
   (:|put/2| (this noun value)
-    (e-slot-set (e. this |getSlot| noun) value))
+    (e. (e. this |getSlot| noun) |setValue| value))
   (:|getState/0| (this)
     "Return a ConstMap containing the bindings in this scope, as \"&\" + noun => slot."
     (e. +the-make-const-map+ |fromIteratable| this +e-true+))
@@ -432,7 +432,7 @@
     
     (:|equalizer|        (make-equalizer))
     (:|E|                elib:+the-e+)
-    (:|Ref|              (e-slot-get +e-ref-kit-slot+)) ; XXX reduce indirection
+    (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
       (e. (load-emaker-without-cache "org.erights.e.elib.serial.DeepFrozenAuthor" (e-named-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" (:|run/0| () (error "DeepFrozenAuthor missing")))) 
@@ -639,7 +639,7 @@ If a log message is produced, context-thunk is run to produce a string describin
     (labels ((typical-lazy (source)
                (make-lazy-eval-slot safe-scope-vow source))
              (lazy-import (fqn)
-               (make-lazy-apply-slot (lambda () (e. (e-slot-get &<import>) |get| fqn)))))
+               (make-lazy-apply-slot (lambda () (e. (e. &<import> |getValue|) |get| fqn)))))
       (make-scope fqn-prefix
       
         `(; --- self-referential / root ---

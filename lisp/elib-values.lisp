@@ -818,7 +818,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                :in-error-printing in-error-printing
                                :open-flags open-flags))
                        (assert-open ()
-                         (assert (every #'e-slot-get open-flags) () "closed TextWriter")))
+                         (assert (every #'(lambda (s) (e. s |getValue|)) open-flags) () "closed TextWriter")))
                 (e-named-lambda "org.erights.e.elib.print.TextWriter"
                   :stamped +text-writer-stamp+
                   (:|__printOn/1| (ptw)

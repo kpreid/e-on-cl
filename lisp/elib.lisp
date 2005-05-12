@@ -950,38 +950,14 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 ; --- slots ---
 
-; XXX is having a specialized dispatch for slot access really any faster than e-call-dispatch?
-
-(defgeneric e-slot-get (slot))
-(defgeneric e-slot-set (slot new-value))
-
-(defmethod e-slot-get ((slot t))
-  (e. slot |getValue|))
-
-(defmethod e-slot-set ((slot t) new-value)
-  (e. slot |setValue| new-value))
-
-(defclass native-e-slot () ())
-(def-vtable native-e-slot
-  (:|getValue/0| #'e-slot-get)
-  (:|setValue/1| #'e-slot-set)
-  (:|isFinal/0| ()
-    (error "isFinal/0 not overriden")))
-
-
 (defvar +the-make-simple-slot+ (e-named-lambda "org.erights.e.elib.slot.makeFinalSlot"
   :stamped +deep-frozen-stamp+
   (:|run/1| (value)
     (make-instance 'e-simple-slot :value value))))
 
-(defclass e-simple-slot (native-e-slot) 
-  ((value :initarg :value
-          :reader e-slot-get))
+(defclass e-simple-slot () 
+  ((value :initarg :value))
   (:documentation "A normal immutable slot."))
-
-(defmethod e-slot-set ((slot e-simple-slot) new-value)
-  (declare (ignore new-value))
-  (error "not an assignable slot: ~A" (e-quote slot)))
 
 (defmethod print-object ((slot e-simple-slot) stream)
   ; xxx make readable under read-eval?
@@ -998,13 +974,12 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
     (e. tw |print| ">")
     nil)
   (:|getValue/0| (this)
-    ; XXX these getValue and setValue definitions are just for the comments which exist because of arbitrary tests.
-    ; it would be better to be able to extract the documentation from the e-slot-get method, but that would require what seems an excessive amount of MOPping currently (if it's possible at all).
     "Returns the constant value of this slot."
-    (e-slot-get this))
-  (:|setValue/1| (this new)
+    (slot-value this 'value))
+  (:|setValue/1| (this new-value)
     "Always fails."
-    (e-slot-set this new))
+    (declare (ignore new-value))
+    (error "not an assignable slot: ~A" (e-quote this)))
   (:|isFinal/0| (this)
     "Returns true."
     (declare (ignore this))
@@ -1014,64 +989,68 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (declare (ignore a)) t)
   
 
-(defclass e-unset-slot (native-e-slot) ())
+(defclass e-unset-slot () ())
 
-(defmethod e-slot-get ((slot e-unset-slot))
-  (error "internal error: slot variable never assigned"))
+(def-vtable e-unset-slot
+  (:|getValue/0| (this)
+    (declare (ignore this))
+    (error "internal error: slot variable never assigned"))
+  (:|setValue/1| (this new-value)
+    (declare (ignore this new-value))
+    (error "internal error: slot variable never assigned")))
 
-(defmethod e-slot-set ((slot e-unset-slot) new-value)
-  (declare (ignore new-value))
-  (error "internal error: slot variable never assigned"))
-  
 (defvar the-unset-slot (make-instance 'e-unset-slot))
 
 
-(defclass e-var-slot (native-e-slot vat-checking) 
-  ((value :initarg :value
-          :reader e-slot-get)))
+(defclass e-var-slot (vat-checking) 
+  ((value :initarg :value)))
 
 (def-vtable e-var-slot
   (:|__printOn/1| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<var ")
-    (e. tw |quote| (e-slot-get this))
+    (e. tw |quote| (slot-value this 'value))
     (e. tw |print| ">"))
+  (:|getValue/0| (this)
+    (slot-value this 'value))
+  (:|setValue/1| (this new-value)
+    (setf (slot-value this 'value) new-value)
+    nil)
   (:|isFinal/0| (this)
     (declare (ignore this))
     +e-false+))
-
-(defmethod e-slot-set ((slot e-var-slot) new-value)
-  (setf (slot-value slot 'value) new-value) 
-  nil)
 
 (defmethod print-object ((slot e-var-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
     (format stream "var & ~W" (slot-value slot 'value))))
 
-(defclass e-guarded-slot (native-e-slot vat-checking) 
-  ((value :initarg :value
-          :reader e-slot-get)
+(defclass e-guarded-slot (vat-checking) 
+  ((value :initarg :value)
    (guard :initarg :guard)))
 
 (defmethod shared-initialize :after ((slot e-guarded-slot) slot-names &key opt-ejector &allow-other-keys)
   (declare (ignore slot-names))
-  (setf (slot-value slot 'value) (e. (slot-value slot 'guard) |coerce| (e-slot-get slot) opt-ejector)))
+  (with-slots (guard value) slot
+    (setf value (e. guard |coerce| value opt-ejector))))
 
 (def-vtable e-guarded-slot
   (:|__printOn/1| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "<var ")
-    (e. tw |quote| (e-slot-get this))
-    (e. tw |print| " :")
-    (e. tw |quote| (slot-value this 'guard))
-    (e. tw |print| ">"))
+    (with-slots (guard value) this
+      (e. tw |print| "<var ")
+      (e. tw |quote| value)
+      (e. tw |print| " :")
+      (e. tw |quote| guard)
+      (e. tw |print| ">")))
+  (:|getValue/0| (this)
+    (slot-value this 'value))
+  (:|setValue/1| (this new-value)
+    (with-slots (guard value) this
+      (setf value (e. guard |coerce| new-value nil)))
+    nil)
   (:|isFinal/0| (this)
     (declare (ignore this))
     +e-false+))
-
-(defmethod e-slot-set ((slot e-guarded-slot) new-value)
-  (setf (slot-value slot 'value) (e. (slot-value slot 'guard) |coerce| new-value nil)) 
-  nil)
 
 (defmethod print-object ((slot e-guarded-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
