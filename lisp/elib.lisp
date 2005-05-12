@@ -244,8 +244,8 @@ If there is no current vat at initialization time, captures the current vat at t
           (error 'print-not-readable 'object ref)
           (format stream "#<ref>:~W" (ref-shorten ref)))))))
 
+; XXX declare this inline
 (defun make-unconnected-ref (problem)
-  ; XXX should this function exist?
   (make-instance 'unconnected-ref
     :problem problem))
 
@@ -738,7 +738,6 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
         "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object."
         (:|__printOn/1| (tw)
           (e-coercef tw +the-text-writer-guard+)
-          ; XXX should quote if we can't prove otherwise
           (e. e.syntax:+e-printer+ |printPropertySlot| tw prop-name))
         (:|getValue/0| ()
           "E.call(target, `get$Property`)"
@@ -768,7 +767,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
 #+e.vtable-collect.use-example
 (progn
   (defgeneric vtable-collect-message-types (instance narrowest-type)
-    (:documentation "Returns a list of #(mverb message-desc) tuples for the given instance, except those for <XXX explain narrowest-type>"))
+    (:documentation "Returns a list of #(mverb message-desc) tuples for the given instance, except those for <xxx explain narrowest-type>"))
 
   (defmethod vtable-collect-message-types ((instance t) narrowest-type)
     (declare (ignore instance narrowest-type))
@@ -788,7 +787,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       (error "oops: no example of ~S seen yet for alleged type purposes" type)
       #+e.vtable-collect.use-typelist 
       (setf (gethash type *vtable-message-types-cache*)
-        ; XXX this is wrong: it doesn't necessarily return entries in precedence-list order
+        ; xxx this is wrong: it doesn't necessarily return entries in precedence-list order
         (loop for vtype in *types-with-vtables*
               when (subtypep type vtype)
               append (vtable-local-message-types type)))))
@@ -1162,7 +1161,6 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 ; XXX thread-safety: make these all vat-local or remove super arg
 (defvar +the-any-guard+    (make-instance 'cl-type-guard :type-specifier 't))
 (defvar +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
-;XXX delete if the stamp/guard works out: (defvar +the-text-writer-guard+ (make-instance 'cl-type-guard :type-specifier 'text-writer))
 (defvar +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
 ; --- Boolean ---
