@@ -79,6 +79,7 @@
     :e-named-lambda
     :miranda
     :message-pairs-to-map-including-miranda-messages
+    :or-miranda-message-descs
     :static-maker
     
     :e-simple-slot

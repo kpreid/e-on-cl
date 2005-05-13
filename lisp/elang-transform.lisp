@@ -299,10 +299,7 @@
              qualified-name
              #()
              #()
-             (concatenate 'vector
-               (map 'vector (lambda (x) (aref x 1))
-                 ; XXX now that the TypeDesc constructor has changed, reconsider this: e.g. maybe TypeDesc's CL-level initarg should take the list instead of map, and so message-pairs-to-map-including-miranda-messages gets changed to be non-pairs; also perhaps this type desc should be made with make-instance
-                 elib::+miranda-message-entries+)
+             (or-miranda-message-descs
                (loop for method across methods
                  for (doc-comment verb patterns opt-result-guard nil) = (node-elements method)
                  collect

@@ -405,7 +405,7 @@ help
   #            /** Returns the constant value of this slot. */
   #            to getValue()
   #            /** Always fails. */
-  #            to setValue(new)
+  #            to setValue(::"new-value")
   #            /** Returns true. */
   #            to isFinal()
   #        }

@@ -444,13 +444,14 @@ If there is no current vat at initialization time, captures the current vat at t
              :reader type-desc-supers
              :type (vector t))
      (auditors :initarg :auditors
-                :reader type-desc-auditors
-                :type (vector t))
-     (message-types :initarg :message-types
-                    :reader type-desc-message-types
-                    ; type const-map
-                    )))
-       
+               :reader type-desc-auditors
+               :type (vector t))
+     (message-types-v :initarg :message-types-v
+                      :reader type-desc-message-types-v
+                      :type (vector message-desc))))
+  
+  (defgeneric type-desc-message-types (type-desc))
+  
   (defclass message-desc () 
     ((verb :initarg :verb 
            :reader message-desc-verb
@@ -489,13 +490,26 @@ If there is no current vat at initialization time, captures the current vat at t
   (defmethod make-load-form ((a param-desc) &optional environment)
     (make-load-form-saving-slots a :environment environment))
   
-  (defvar +miranda-message-entries+)
+  (defvar +miranda-message-descs+)
   
   (defun message-pairs-to-map-including-miranda-messages (pairs)
     (e. (e. +the-make-const-map+ |fromPairs| 
           (coerce pairs 'vector))
         |or|
-        (e. +the-make-const-map+ |fromPairs| (coerce +miranda-message-entries+ 'vector)))))
+        (message-types-to-map +miranda-message-descs+)))
+  
+  (defun or-miranda-message-descs (descs)
+    "Given a *list* of MessageDescs, add all Miranda messages not already in the list and return the result as a *vector*."
+    (let* ((out  (reverse +miranda-message-descs+))
+           (seen (make-hash-table)))
+      (loop for mdc on out do
+        (setf (gethash (message-desc-mverb (first mdc)) seen) mdc))
+      (loop for md in descs do
+        (if (gethash (message-desc-mverb md) seen)
+          (setf (first (gethash (message-desc-mverb md) seen)) md)
+          (push md out)))
+      ;(print (mapcar #'e-quote out))
+      (coerce (reverse out) 'vector))))
 
 ; --- E objects ---
 
@@ -569,20 +583,24 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
 		  (*package* (or (symbol-package sym) (find-package :cl))))
               (write-to-string sym))))) 'vector))
                             
-  (defun vtable-entry-message-desc-pair (entry &key (prefix-arity 0)
+  (defun vtable-entry-message-desc-pair (entry &rest keys
+      &aux (mverb (vtable-entry-mverb entry)))
+    (vector (symbol-name mverb) 
+            (apply #'vtable-entry-message-desc entry keys)))
+  
+  (defun vtable-entry-message-desc (entry &key (prefix-arity 0)
       &aux (mverb (vtable-entry-mverb entry))
            (impl-desc (rest entry)))
     (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
-      (vector (symbol-name mverb) 
-              ; XXX *TEMPORARY* workaround for ABCL's lack of MAKE-LOAD-FORM support
-              #+abcl "abcl-message-desc-load-gimmick"
-              #-abcl (make-instance 'message-desc
-                :verb verb
-                :doc-comment (or (find-if #'stringp impl-desc) "")
-                :params (if (rest impl-desc) ; therefore inline
-                          (lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
-                          (make-array arity :initial-element 
-                            (make-instance 'param-desc)))))))
+      ; XXX *TEMPORARY* workaround for ABCL's lack of MAKE-LOAD-FORM support
+      #+abcl "abcl-message-desc-load-gimmick"
+      #-abcl (make-instance 'message-desc
+        :verb verb
+        :doc-comment (or (find-if #'stringp impl-desc) "") ; XXX too lenient
+        :params (if (rest impl-desc) ; therefore inline
+                  (lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
+                  (make-array arity :initial-element 
+                    (make-instance 'param-desc))))))
                             
   (defun nl-miranda-case-maybe (verb entries &rest body)
     (unless (find verb entries :key #'car)
@@ -630,15 +648,14 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
             (e. tw |print| ',(format nil "<~A>" (simplify-fq-name type-name)))
             nil))
           ,@(nl-miranda-case-maybe :|__getAllegedType/0| method-entries `(destructuring-bind () ,args-sym
-            ; XXX we can't construct the TypeDesc immediately because message-types is a ConstMap. Perhaps make type-desc take a vector/list and construct the TypeDesc on demand.
             (make-instance 'type-desc
               :doc-comment ',documentation
               :fq-name ',type-name
               :supers #()
               :auditors #()
-              :message-types
-                (message-pairs-to-map-including-miranda-messages
-                  ',(map 'vector #'vtable-entry-message-desc-pair method-entries)))))
+              :message-types-v
+                (or-miranda-message-descs
+                  ',(mapcar #'vtable-entry-message-desc method-entries)))))
           
           ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
             (as-e-boolean (or
@@ -670,19 +687,19 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                            `(otherwise (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" type-name)) ,@(cdr desc)) mverb args))
                            (vtable-case-entry desc 'args '() :type-name type-name)))))))
 
-(defmacro def-miranda (func-name entries-name fqn-designator (mverb-litem args-litem) &body entries)
+(defmacro def-miranda (func-name descs-name fqn-designator (mverb-litem args-litem) &body entries)
   "The reason for this macro's existence is to allow compiling the miranda-methods into a single function and simultaneously capturing the method names and comments for alleged-type purposes. I realize this is ugly, and I'd be glad to hear of better solutions."
   `(progn
-    (setf ,entries-name 
+    (setf ,descs-name 
       ',(loop for entry in entries
               when (not (eql (first entry) 'otherwise))
-              collect (vtable-entry-message-desc-pair entry)))
+              collect (vtable-entry-message-desc entry)))
     (defun ,func-name (self ,mverb-litem ,args-litem else-func)
       (the-miranda-method-case ,fqn-designator miranda-mverbs (,mverb-litem ,args-litem)
         ,@entries))))
  
 ;(declaim (inline miranda))
-(def-miranda miranda +miranda-message-entries+ "MirandaMethods" (mverb args)
+(def-miranda miranda +miranda-message-descs+ "MirandaMethods" (mverb args)
   
     (:|__printOn/1| (tw)
       ; FUNCTION-based E-objects must always implement their own __printOn/1.

@@ -539,6 +539,37 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- TypeDesc, etc ---
 
 
+(defun message-types-to-map (mtypes)
+  (e. +the-make-const-map+ |fromColumns|
+    (map 'vector 
+      #'(lambda (md) 
+        (format nil "~A/~A" (message-desc-verb md) 
+                            (length (message-desc-params md)))) 
+      mtypes)
+    (coerce mtypes 'vector)))
+
+
+(defmethod type-desc-message-types ((this type-desc))
+  (message-types-to-map (type-desc-message-types-v this)))
+
+(defmethod shared-initialize :after ((this type-desc) slot-names &key &allow-other-keys)
+  (declare (ignore slot-names))
+  (with-slots (message-types-v) this
+    (loop 
+      with seen = (make-hash-table)
+      for md across message-types-v
+      for mverb = (message-desc-mverb md)
+      do (when (gethash mverb seen)
+           (error "duplicate message desc for ~A: ~A then ~A"
+             mverb 
+             (e-quote (gethash mverb seen))
+             (e-quote md)))
+         (setf (gethash mverb seen) md))))
+
+(defun message-desc-mverb (md)
+  (e-util:mangle-verb (message-desc-verb md) (length (message-desc-params md))))
+
+
 (defvar +the-make-type-desc+ (e-named-lambda
   "org.erights.e.elib.base.makeTypeDesc"
   :stamped +deep-frozen-stamp+
@@ -550,20 +581,15 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef mtypes      '(vector message-desc))
     (setf mtypes (copy-seq mtypes))
     ; (vector TYPE) enforces only upgraded-type of elements
-    (loop for i below (length mtypes) do
-      (e-coercef (aref mtypes i) 'message-desc))
+    (loop 
+      for i below (length mtypes)
+      do (e-coercef (aref mtypes i) 'message-desc))
     (make-instance 'type-desc
       :doc-comment doc-comment 
       :fq-name fq-name 
       :supers supers 
       :auditors auditors 
-      :message-types (e. +the-make-const-map+ |fromColumns|
-        (map 'vector 
-          #'(lambda (md) 
-            (format nil "~A/~A" (message-desc-verb md) 
-                                (length (message-desc-params md)))) 
-          mtypes)
-        mtypes)))))
+      :message-types-v mtypes))))
 
 (defvar +the-make-message-desc+ (e-named-lambda
   "org.erights.e.elib.base.makeMessageDesc"
@@ -604,8 +630,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
               (char-upcase (char simple-name initial))))
       (e. tw |print| simple-name)))
   (:|__optUncall/0| (this)
-    (with-slots (doc-comment opt-fq-name supers auditors message-types) this
-      `#(,+the-make-type-desc+ "run" #(,doc-comment ,opt-fq-name ,supers ,auditors ,(e. message-types |getValues|)))))
+    (with-slots (doc-comment opt-fq-name supers auditors message-types-v) this
+      `#(,+the-make-type-desc+ "run" #(,doc-comment ,opt-fq-name ,supers ,auditors ,message-types-v))))
   (:|getOptFQName/0| #'type-desc-opt-fq-name)
   (:|getFQName/0| (td)
     (or (type-desc-opt-fq-name td) "_"))
