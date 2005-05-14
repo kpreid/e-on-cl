@@ -227,8 +227,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (or (position elem vector :test #'eeq-is-same-ever)
         -1))
   (:|lastIndexOf1/1| (vector elem)
-    ; XXX give deprecation warnings
-    "Deprecated: use lastStartOf/1 instead."
     (or (position elem vector :test #'eeq-is-same-ever
                               :from-end t)
         -1))
