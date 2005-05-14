@@ -227,11 +227,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (or (position elem vector :test #'eeq-is-same-ever)
         -1))
   (:|lastIndexOf1/1| (vector elem)
+    ; XXX give deprecation warnings
+    "Deprecated: use lastStartOf/1 instead."
     (or (position elem vector :test #'eeq-is-same-ever
                               :from-end t)
         -1))
   (:|indexOf/1| (vector subseq)
-    ; note that this is identical to startOf/1. XXX what to do? is one deprecated?
+    ; XXX give deprecation warnings
+    "Deprecated: use startOf/1 instead."
     (e-coercef subseq 'vector)
     (or (search subseq vector :test #'eeq-is-same-ever)
         -1))
