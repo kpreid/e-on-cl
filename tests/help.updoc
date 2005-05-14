@@ -332,7 +332,7 @@ __getAllegedType, e-lambda
 __getAllegedType, E object
 
   ? interface Foo {}
-  # value: Foo
+  # value: <Foo advisory guard/stamp>
 
   ? /** This is an object defined to test many aspects of __getAllegedType. */
   > def typeSample extends true implements Foo {

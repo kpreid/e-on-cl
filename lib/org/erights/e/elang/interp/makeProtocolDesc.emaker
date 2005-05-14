@@ -47,9 +47,9 @@ def makeProtocolDesc implements DeepFrozen {
     
       to __printOn(out :TextWriter) {
         if (optFQName != null) {
-          out.print(simplifyFQName(optFQName))
+          out.print("<" + simplifyFQName(optFQName) + " advisory guard/stamp>")
         } else {
-          out.print("<Anonymous ProtocolDesc>")
+          out.print("<Anonymous advisory guard/stamp>")
         }
       }
       
@@ -58,13 +58,16 @@ def makeProtocolDesc implements DeepFrozen {
       }
       
       to coerce(specimen, optEjector) {
-        # using __conformTo would reveal our 'single key'
         if (__auditedBy(protocolDesc, specimen)) {
           return specimen
         } else {
-          # XXX simple__quasiParser not DeepFrozen
-          # throw.eject(optEjector, `Not stamped by $protocolDesc`)
-          throw.eject(optEjector, "Not stamped by " + E.toQuote(protocolDesc))
+          # Yes, this reveals our stamp. See http://www.eros-os.org/pipermail/e-lang/2005-May/010607.html
+          def conformed := specimen.__conformTo(protocolDesc)
+          if (__auditedBy(protocolDesc, conformed)) {
+            return conformed
+          } else {
+            throw.eject(optEjector, "Not stamped by " + E.toQuote(protocolDesc))
+          }
         }
       }
     }

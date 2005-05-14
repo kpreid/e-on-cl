@@ -311,12 +311,12 @@ __makeOrderedSpace / ..
 Interface makers
 
   ? interface Foo {}
-  # value: Foo
+  # value: <Foo advisory guard/stamp>
   
   ? interface Runnable {
   >   to run() :void
   > }
-  # value: Runnable
+  # value: <Runnable advisory guard/stamp>
   
   XXX actually using interfaces (methods thereof, auditing/guarding)
   XXX MessageDesc ParamDesc
