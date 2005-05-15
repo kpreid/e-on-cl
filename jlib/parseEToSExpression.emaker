@@ -26,7 +26,7 @@ def termToSExpression(term) {
   } else if (term =~ term`.float64.@_`) {
     # Print as double-float
     def floatString := term.asText()
-    if (floatString.indexOf("e") != -1) {
+    if (floatString.startOf("e") != -1) {
       return floatString.replaceAll("e", "d")
     } else {
       return floatString + "d0"

@@ -166,7 +166,7 @@ def compileMatch(template) {
         to run(holeValues, specimen, optEjector, nextPart) {
           if (nextPart != null) {
             def nextString := nextPart.getString(holeValues)
-            def pos := specimen.indexOf(nextString)
+            def pos := specimen.startOf(nextString)
             if (pos == -1) {
               throw.eject(optEjector, "expected " + E.toQuote(nextString) + "..., found " + E.toString(specimen))
             }

@@ -230,12 +230,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (or (position elem vector :test #'eeq-is-same-ever
                               :from-end t)
         -1))
-  (:|indexOf/1| (vector subseq)
-    ; XXX give deprecation warnings
-    "Deprecated: use startOf/1 instead."
-    (e-coercef subseq 'vector)
-    (or (search subseq vector :test #'eeq-is-same-ever)
-        -1))
   (:|startOf/1| (vector subseq)
     (e-coercef subseq 'vector)
     (or (search subseq vector :test #'eeq-is-same-ever)
