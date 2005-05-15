@@ -175,7 +175,29 @@
         :fqn-prefix new
         :slot-table slot-table)))
   (:|getFQNPrefix/0| (scope)
-    (slot-value scope 'fqn-prefix)))
+    (slot-value scope 'fqn-prefix))
+  
+  (:|optExtract/1| (this key)
+    "Same as ConstMap#optExtract/1. Added to support using Scopes in map-patterns."
+    (block nil
+      (vector
+        (e. this |fetch| key
+          (e-lambda (:|run| ()
+            (return nil))))
+        (e. this |without| key))))
+  (:|without/1| (scope removed-noun)
+    "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."
+    (e-coercef removed-noun 'string)
+    (with-slots (slot-table fqn-prefix) scope
+      (make-instance 'scope 
+        :fqn-prefix fqn-prefix
+        :slot-table
+          (let ((new-table (make-hash-table :test #'equal 
+                                            :size (1+ (hash-table-count slot-table)))))
+            (loop for noun being each hash-key of slot-table using (hash-value slot) 
+                  when (string/= noun removed-noun)
+                    do (setf (gethash noun new-table) slot))
+            new-table)))))
 
 (defmethod eeq-is-transparent-selfless ((a scope))
   (declare (ignore a))
@@ -770,29 +792,30 @@ If a log message is produced, context-thunk is run to produce a string describin
         |run| 
         "__privileged$"
         vat-priv-scope
-        (e. +the-make-const-map+ |fromPairs| 
-          `#(#("timer"           ,e.extern:+the-timer+)
-             #("file__uriGetter" ,(e.extern:make-file-getter '#()))
-             #("gc"              ,e.extern:+gc+)
-             #("makeWeakRef"     ,+the-make-weak-ref+)
-             #("stdin"      ,(e-named-lambda "fake-stdin"))
-             #("stdout"     ,(make-text-writer-to-cl-stream
-                              out-cl-stream
-                              :autoflush t
-                              :should-close-underlying nil))
-             #("stderr"     ,(make-text-writer-to-cl-stream
-                              error-cl-stream
-                              :autoflush t
-                              :should-close-underlying nil))
-             #("lisp"       ,+lisp+)
-                            ; XXX should use e-extern's pathname-to-E-style-path facilities
-             #("props"      ,+eprops+)
-             ,@(when interp-supplied
-               `(#("interp" ,interp)))
-             #("IP"         ,(e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") 
+        (make-scope "__ioPowers$"
+          `(("timer"           ,e.extern:+the-timer+)
+            ("file__uriGetter" ,(e.extern:make-file-getter '#()))
+            ("gc"              ,e.extern:+gc+)
+            ("makeWeakRef"     ,+the-make-weak-ref+)
+            ("stdin"      ,(e-named-lambda "fake-stdin"))
+            ("stdout"     ,(make-text-writer-to-cl-stream
+                            out-cl-stream
+                            :autoflush t
+                            :should-close-underlying nil))
+            ("stderr"     ,(make-text-writer-to-cl-stream
+                            error-cl-stream
+                            :autoflush t
+                            :should-close-underlying nil))
+            ("lisp"       ,+lisp+)
+                          ; XXX should use e-extern's pathname-to-E-style-path facilities
+            ("props"      ,+eprops+)
+            ,@(when interp-supplied
+              `(("interp" ,interp)))
+            ("&IP"        ,(make-lazy-apply-slot (lambda ()
+                             (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") 
                                      |get|
                                      "org.cubik.cle.IPAuthor")
                                  |run|
-                                 +lisp+))
-             #||#)))))
+                                 +lisp+))))
+            #||#)))))
 

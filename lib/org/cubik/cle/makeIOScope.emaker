@@ -16,7 +16,7 @@ def Scope := makeScope.asType()
 def makeIOScope implements DeepFrozen {
   to run(fqnPrefix :String, 
          vatPrivScope :Scope,
-         exits :Map[String, any]) :Scope {
+         exits) :Scope {
   
     # --- Setting up ---
     
@@ -35,13 +35,13 @@ def makeIOScope implements DeepFrozen {
     # (Note that names starting with & are special in ioAdd)
     for copyName ? exits.maps(copyName) in 
         ["timer", "file__uriGetter", "stdin", "stdout", "stderr", "interp", "lisp", "IP"] {
-      ioAdd with= (copyName, exits[copyName])
+      ioAdd with= ("&" + copyName, exits.getSlot(copyName))
     }
   
     def props := exits["props"]
   
     # XXX throw out defaultInterp once all uses of IOScopes supply their own
-    if (!ioAdd.maps("interp")) {
+    if (!(ioAdd.maps("interp") || ioAdd.maps("&interp"))) {
       def gc := exits.fetch("gc", thunk{thunk{}})
       ioAdd with= ("interp", def defaultInterp {
         /** not yet implemented */
@@ -106,10 +106,11 @@ def makeIOScope implements DeepFrozen {
             return <import:org.cubik.cle.makeIOScope>(
               fqnPrefix, 
               vatPrivScope,
-              ["stdout" => altout,
-               "stderr" => alterr,
-               "interp" => interpVow,
-               => props])
+              makeScope.fromState([
+                "stdout" => altout,
+                "stderr" => alterr,
+                "interp" => interpVow,
+                => props], "_"))
           }
         }
       },
