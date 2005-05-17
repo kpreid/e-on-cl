@@ -45,6 +45,8 @@ def IPAuthor implements DeepFrozen {
     
     def clCoerce := lisp["CL", "COERCE"]::"function"
     def makeInstance := lisp["CL", "MAKE-INSTANCE"]::"function"
+    def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
+    def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
 
     # XXX SBCL internal function
     def _write := lisp["SB-UNIX", "UNIX-WRITE"]::"function"
@@ -152,25 +154,32 @@ def IPAuthor implements DeepFrozen {
               (lisp["SB-SYS", "REMOVE-FD-HANDLER"]::"function")((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
             }
             
-            bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(socketFD, l`:input`, (lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function")(def fdHandlerFunc(_) {
-              # XXX in current SBCL this needs some protection against reentrance
-              escape error {
-                escape eof {
-                  def elements := socket.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eof)
-                  #traceln(`$inStream: read $elements from socket`)
-                  inBuffer.append(elements)
-                } catch _ {
-                  traceln(`$inStream: eof`)
-                  removeHandler()
-                  eof := true
-                }
-              } catch p {
-                traceln(`$inStream: error $p`)
-                removeHandler()
-                inStream.fail(p)
-              }
+            def vat := lisp["E.ELIB", "*VAT*"]::value
+            
+            bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(socketFD, l`:input`, lispFunction(def fdHandlerFunc(_) {
               
-              inBackend.setAvailable(inBuffer.size())
+              withTurn(lispFunction(thunk {
+              
+                escape error {
+                  escape eof {
+                    def elements := socket.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eof)
+                    #traceln(`$inStream: read $elements from socket`)
+                    inBuffer.append(elements)
+                  } catch _ {
+                    traceln(`$inStream: eof`)
+                    removeHandler()
+                    eof := true
+                  }
+                } catch p {
+                  traceln(`$inStream: error $p`)
+                  removeHandler()
+                  inStream.fail(p)
+                }
+                
+                inBackend.setAvailable(inBuffer.size())
+                
+              }), vat)
+              
             }))
             
             return [inStream, outStream]
