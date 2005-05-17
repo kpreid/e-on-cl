@@ -374,16 +374,21 @@ If there is no current vat at initialization time, captures the current vat at t
     (let ((*vat* (make-instance 'vat)))
       ,@forms)))
 
-(defmacro with-turn ((vat-form) &body body
-    &aux (vat-sym (gensym "TURN-VAT")))
+(defun %with-turn (body vat)
+  "Execute the 'body' thunk, as a turn in the given vat."
+  (assert (and (not (vat-in-turn vat))
+               (or (null *vat*)
+                   (eq *vat* vat)))
+          (vat))
+  (unwind-protect
+    (let ((*vat* vat))
+      (setf (vat-in-turn vat) t)
+      (funcall body))
+    (setf (vat-in-turn vat) nil)))
+
+(defmacro with-turn ((vat) &body body)
   "Execute the body, as a turn in the given vat."
-  `(let ((,vat-sym ,vat-form))
-    (assert (not (vat-in-turn ,vat-sym)) (,vat-sym))
-    (unwind-protect
-      (progn 
-        (setf (vat-in-turn ,vat-sym) t)
-        ,@body)
-      (setf (vat-in-turn ,vat-sym) nil))))
+  `(%with-turn (lambda () ,@body) ,vat))
 
 (defclass vat ()
   ((in-turn :initform nil
