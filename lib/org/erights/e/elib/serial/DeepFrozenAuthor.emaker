@@ -131,6 +131,7 @@ def DeepFrozenAuthor(DeepFrozenStamp,
           # XXX make the fallthrough else below eject a typed exception that we use in generating this message, so the client can know whether this is unsettled ('change your code to wait longer') or definitely not DeepFrozen ('sorry, hopeless')
           # xxx future extensions: make this exception contain (sealed) the full details of what chain of subobjects led to the non-DeepFrozen object.
           rtrace("--rDF exiting and discarding subexception for privacy: " + E.toQuote(p))
+          traceln("DeepFrozen not-yet-eventually: " + E.toQuote(p))
           throw.eject(optEjector, E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " contains references that are unsettled or not DeepFrozen")
         }
         rtrace("--rDF amplified")

@@ -159,6 +159,9 @@ int
 
   ? int
   # value: int
+  
+  ? int :DeepFrozen
+  # value: int
 
  (indirectly) check that int is a space
  

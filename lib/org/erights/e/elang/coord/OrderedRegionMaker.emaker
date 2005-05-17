@@ -1,0 +1,547 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# MODIFIED by kpreid to be DeepFrozen
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+/**
+ * A min where null represents positive infinity
+ */
+def min implements DeepFrozen { to run(a, b) :any {
+    if (a == null) {
+        b
+    } else if (b == null) {
+        a
+    } else {
+        a.min(b)
+    }
+}}
+
+/**
+ * A max where null represents negative infinity
+ */
+def max implements DeepFrozen { to run(a, b) :any {
+    if (a == null) {
+        b
+    } else if (b == null) {
+        a
+    } else {
+        a.max(b)
+    }
+}}
+
+/**
+ * A get that returns null if index is out of bounds
+ */
+def get implements DeepFrozen { to run(list, index) :any {
+    if (index < 0 || index >= list.size()) {
+        null
+    } else {
+        list[index]
+    }
+}}
+
+/**
+ * Makes inequality-based regions for fully ordered positions like
+ * integers, float64s, and chars, where, for every position, there is a
+ * 'next()' and 'previous()' operation.
+ * <p>
+ * If you want similar regions over, for example, Strings or rational numbers,
+ * you'd have to do something else.
+ * <p>
+ * The in edges are members of the region, as are the non-edges
+ * immediately following them. The out edges are not in the region, as
+ * are the non-edges immediately following them. Therefore, the empty
+ * region has args (true, []) while the full region has args
+ * (false, [])
+ *
+ * @param myBoundedLeft If true, then the even egdes are in-edges and the odd
+ *                      edges are out-edges. Otherwise, vice verse.
+ * @param myEdges is an ascending list of one-dimensional fully ordered
+ *                positions.
+ * @author Mark S. Miller
+ */
+def OrderedRegionMaker implements EventuallyDeepFrozen {
+    method __optSealedDispatch(brand) :any {
+      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+      }
+    }
+  
+    to (myType,
+        myName :String,
+        var myBoundedLeft :boolean,
+        var myEdges
+    ) :any {
+
+        /**
+         * Notational convenience
+         */
+        def region implements EventuallyDeepFrozen {
+            method __optSealedDispatch(brand) :any {
+              if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+              }
+            }
+          
+            to run(boundedLeft :boolean, edges) :any {
+                OrderedRegionMaker(myType, myName, boundedLeft, edges)
+            }
+        }
+
+        if (myEdges.size() >= 1 && myEdges[0].previous() <=> myEdges[0]) {
+            # if the first edge is the least element, get rid of it and
+            # flip parity
+            myEdges := myEdges(1, myEdges.size())
+            myBoundedLeft := !myBoundedLeft
+        }
+        myEdges := myEdges.snapshot()
+        def myInParity := if (myBoundedLeft) {0} else {1}
+        def myLen := myEdges.size()
+
+        /**
+         * Regions are directly ValueGuards, and delegate to settable for the
+         * rest of Guard behavior.
+         * <p>
+         * As guards, regions only accept positions in the region.
+         */
+        def self extends __makeGuard(self) implements EventuallyDeepFrozen {
+            method __optSealedDispatch(brand) :any {
+              if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+              }
+            }
+          
+
+            /**
+             * Returns a ConstList of edge positions in ascending order
+             */
+            to getEdges() :any {
+                myEdges
+            }
+
+            /**
+             * mostly prints in E sugared expression syntax
+             */
+            to __printOn(out :TextWriter) :void {
+                def printEdge(boundedLeft, edge :myType) :void {
+                    out.print("(",
+                              myName,
+                              if (boundedLeft) {" >= "} else {" < "},
+                              edge,
+                              ")")
+                }
+                def printInterval(left :myType, right :myType) :void {
+                    out.print(left, "..!", right)
+                }
+                if (myLen == 0) {
+                    if (myBoundedLeft) {
+                        out.print("<empty ", myName, " region>")
+                    } else {
+                        out.print("<full ", myName, " region>")
+                    }
+
+                } else if (myLen == 1) {
+                    printEdge(myBoundedLeft, myEdges[0])
+                } else {
+                    var i := if (myBoundedLeft) {
+                        printInterval(myEdges[0], myEdges[1])
+                        2
+                    } else {
+                        printEdge(false, myEdges[0])
+                        1
+                    }
+                    while (i + 1 < myLen) {
+                        out.print(" | ")
+                        printInterval(myEdges[i], myEdges[i+1])
+                        i += 2
+                    }
+                    if (i < myLen) {
+                        out.print(" | ")
+                        printEdge(true, myEdges[i])
+                    }
+                }
+            }
+
+            /**
+             * Is pos in the region?
+             * <p>
+             * If it's in the type but not in the region, the answer is false.
+             * If it's not in the type, a problem is thrown.
+             */
+            to run(pos :myType) :boolean {
+                # XXX linear time algorithm. For long myEdges lists,
+                # it should do a binary search.
+                for i => edge in myEdges {
+                    if (edge > pos) {
+                        # it's on or above an in edge if it's below
+                        # an out edge
+                        return i %% 2 != myInParity
+                    }
+                }
+                # or if it's past the last edge, and we aren't
+                # bounded right
+                myLen %% 2 != myInParity
+            }
+
+            /**
+             * All Regions are also ValueGuards, either coercing a
+             * specimen to a position in the region, or rejecting it.
+             */
+            to coerce(var specimen, optEjector) :any {
+                specimen := myType.coerce(specimen, optEjector)
+                if (self(specimen)) {
+                    specimen
+                } else {
+                    throw.eject(optEjector, "not in region")
+                }
+            }
+
+            /**
+             * Note that the empty region is bounded left, but it doesn't
+             * have a start
+             */
+            to isBoundedLeft() :boolean { myBoundedLeft }
+
+            /**
+             * Note that the empty region is bounded left, but it doesn't
+             * have a start.
+             * <p>
+             * Returns the start or null. The start is the least element
+             * which is *in* the region.
+             */
+            to getOptStart() :nullOk[myType] {
+                if (myBoundedLeft && myLen >= 1) {
+                    myEdges[0]
+                } else {
+                    null
+                }
+            }
+
+            /**
+             * Note that the empty region is bounded right, but it doesn't
+             * have a bound
+             */
+            to isBoundedRight() :boolean { myLen %% 2 == myInParity }
+
+            /**
+             * Note that the empty region is bounded right, but it doesn't
+             * have a bound.
+             * <p>
+             * Returns the bound or null. The right bound is the least
+             * element greater than all elements in the region. Unlike the
+             * left bound, it is *not* in the region.
+             */
+            to getOptBound() :nullOk[myType] {
+                if (myLen >= 1 && myLen %% 2 == myInParity) {
+                    myEdges[myLen -1]
+                } else {
+                    null
+                }
+            }
+
+            /**
+             * Does this region contain no positions?
+             * <p>
+             * An empty region can always be constructed by the intersection
+             * of a distinction and its complement, and is therefore an
+             * interval, but not a distinction.
+             */
+            to isEmpty() :boolean {
+                myLen == 0 && myBoundedLeft
+            }
+
+            /**
+             * Does this region contain all positions?
+             * <p>
+             * The full region is the intersection (and) of no regions, and
+             * is therefore a interval but not a distinction.
+             */
+            to isFull() :boolean {
+                myLen == 0 && !myBoundedLeft
+            }
+
+            /**
+             * All regions of a coordinate space can be made by and/or/nots
+             * of distinctions.
+             * <p>
+             * The not of a distinction must be a distinction. For this space,
+             * the distinctions are (myType < y) and (myType >= y).
+             */
+            to isDistinction() :boolean {
+                myLen == 1
+            }
+
+            /**
+             * The intersection of distinctions must be an interval (it may
+             * or may not also be a distinction).
+             * <p>
+             * Therefore, the
+             * intersection of intervals is also an interval. The
+             * intersection of no regions is the full region, which is a
+             * interval. The intersection of a distinction and its
+             * complement is the empty region, which is an interval. All
+             * distinctions are intervals. The complement of an interval
+             * need not be an interval. A non-interval is a complex
+             * region.
+             */
+            to isSimpleRegion() :boolean {
+                if (myLen <= 1) {
+                    # distinctions, empty, and full are all intervals
+                    true
+                } else if (myLen == 2) {
+                    # x..!y is an interval
+                    myBoundedLeft
+                } else {
+                    # nothing else is an interval
+                    false
+                }
+            }
+
+            /**
+             * A region can be asked to decompose itself into intervals.
+             * <p>
+             * The original region is the union (or) of these intervals.
+             * In the case of an OrderedRegion, the intervals returned are
+             * disjoint and ascending.
+             * <p>
+             * If the region is full, this returns a singleton list
+             * containing the full interval. If this region is empty, then
+             * this return an empty list, since the empty region is the
+             * union of no regions.
+             */
+            to getSimpleRegions() :any {
+                def flex := [].diverge()
+                if (! myBoundedLeft) {
+                    if (myLen == 0) {
+                        flex.push(region(false, []))
+                    } else {
+                        flex.push(region(false, [myEdges[0]]))
+                    }
+                }
+                var i := myInParity
+                while (i < myLen) {
+                    flex.push(region(true, myEdges(i, myLen.min(i+2))))
+                    i += 2
+                }
+                flex.snapshot()
+            }
+
+            /**
+             * An interval can be asked to decompose itself into distinctions.
+             * <p>
+             * The original interval is the intersection (and) of these
+             * distinctions.
+             * <p>
+             * The full interval returns a list of no distinctions. The
+             * empty interval return the list [(myType < 0), (myType >= 0)],
+             * ie, 0..!0.
+             */
+            to getDistinctions() :any {
+                if (myLen == 1) {
+                    # a distinctions is one inequality
+                    [self]
+
+                } else if (myLen == 2 && myBoundedLeft) {
+                    # an interval is the intersection of two inequalities
+                    [region(true, [myEdges[0]]),
+                    region(false, [myEdges[1]])]
+
+                } else if (myLen == 0) {
+                    if (myBoundedLeft) {
+                        # the empty region is the intersection of two
+                        # disjoint distinctions, for example, a
+                        # distinction and its complement, for example,
+                        # (myType < 0) and (myType >= 0)
+                        [region(false, [0]),
+                        region(true, [0])]
+                    } else {
+                        # the full region is the intersection of no
+                        # distinctions
+                        []
+                    }
+                } else {
+                    throw("can only get distinctions from an interval")
+                }
+            }
+
+            /**
+             * the region you get if you displace all my positions by
+             * offset.
+             * <p>
+             * Note that offset may not be of myType. For example,
+             * "(char &gt; 'a') + 3" is fine.
+             */
+            to add(offset) :any {
+                def flex := [].diverge()
+                for edge in myEdges {
+                    flex.push(edge + offset)
+                }
+                region(myBoundedLeft, flex)
+            }
+
+            /**
+             * the region you get if you displace all my positions by -offset
+             */
+            to subtract(offset) :any {
+                self + -offset
+            }
+
+            /**
+             * A region whose membership is the opposite of this one.
+             */
+            to not() :any {
+                region(!myBoundedLeft, myEdges)
+            }
+
+            /**
+             * only those positions in both regions
+             */
+            to and(other) :any {
+                def otherEdges := other.getEdges()
+                def otherLen := otherEdges.size()
+                def flex := [].diverge()
+                var i := -myInParity
+                var j := if (other.isBoundedLeft()) {0} else {-1}
+                var newBoundedLeft := true
+                while (i < myLen && j < otherLen) {
+                    def in1 := get(myEdges, i)
+                    def in2 := get(otherEdges, j)
+                    def out1 := get(myEdges, i + 1)
+                    def out2 := get(otherEdges, j + 1)
+                    def maxin := max(in1, in2)
+                    def minout := min(out1, out2)
+                    if (maxin == null || minout == null || maxin < minout) {
+                        if (maxin == null) {
+                            newBoundedLeft := false
+                        } else {
+                            flex.push(maxin)
+                        }
+                        if (minout != null) {
+                            flex.push(minout)
+                        }
+                    }
+                    if (out2 == null || (out1 != null && out1 < out2)) {
+                        i += 2
+                    } else {
+                        j += 2
+                    }
+                }
+                region(newBoundedLeft, flex)
+            }
+
+            /**
+             * all positions in either region
+             */
+            to or(other) :any {
+                !(!self & !other)
+            }
+
+            /**
+             * all position in me but not in other.
+             */
+            to butNot(other) :any {
+                self & !other
+            }
+
+            /**
+             * enumerates positions in ascending order.
+             * <p>
+             * This doesn't necessarily terminate.
+             */
+            to iterate(func) :void {
+                if (! myBoundedLeft) {
+                    throw("No least position")
+                }
+                var i := 0
+                var index := 0
+                while (index + 1 < myLen) {
+                    var pos := myEdges[index]
+                    def lim := myEdges[index+1]
+                    while (pos < lim) {
+                        func(i, pos)
+                        i += 1
+                        pos := pos.next()
+                    }
+                    index += 2
+                }
+                if (index < myLen) {
+                    var pos := myEdges[index]
+                    while (true) {
+                        func(i, pos)
+                        i += 1
+                        def nextPos := pos.next()
+                        if (pos <=> nextPos) {
+                            break
+                        }
+                        pos := nextPos
+                    }
+                }
+            }
+
+            /**
+             * returned object will enumerate positions in descending order
+             */
+            to descending() :any {
+                def descender {
+                    to iterate(func) :void {
+                        if (! (self.isBoundedRight())) {
+                            throw("No greatest position")
+                        }
+                        var i := 0
+                        var index := myLen -1
+                        while (index >= 1) {
+                            var pos := myEdges[index].previous()
+                            def lim := myEdges[index-1]
+                            while (pos >= lim) {
+                                func(i, pos)
+                                i += 1
+                                pos := pos.previous()
+                            }
+                            index -= 2
+                        }
+                        if (index == 0) {
+                            var pos := myEdges[0]
+                            while (def prevPos := pos.previous()
+                                   prevPos < pos
+                            ) {
+                                pos := prevPos
+                                func(i, pos)
+                                i += 1
+                            }
+                        }
+                    }
+                }
+            }
+
+            /**
+             * As a region, my comparison is a subset test.
+             */
+            to op__cmp(other) :float64 {
+                def selfExtra := (self & !other).isEmpty()
+                def otherExtra := (other & !self).isEmpty()
+                if (selfExtra) {
+                    if (otherExtra) {
+                        # Both have left-overs, so they're incomparable.
+                        # Return a NaN
+                        0.0/0.0
+                    } else {
+                        # Only self has left-overs, so we're a strict
+                        # superset of other
+                        1.0
+                    }
+                } else {
+                    if (otherExtra) {
+                        # Only other has left-overs, so we're a strict
+                        # subset of other
+                        -1.0
+                    } else {
+                        # No left-overs, so we're as-big-as each other
+                        0.0
+                    }
+                }
+            }
+        }
+    }
+}
+

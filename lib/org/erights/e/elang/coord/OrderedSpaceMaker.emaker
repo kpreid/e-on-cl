@@ -1,0 +1,215 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# MODIFIED by kpreid to be DeepFrozen
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def <erights> := <import:org.erights.*>
+
+def OrderedRegionMaker := <erights:e.elang.coord.OrderedRegionMaker>
+
+/**
+ * Makes an OrderedSpace for enhacing a type with Region & Twister
+ * forming operators.
+ * <p>
+ * Types of fully ordered elements can be wrapped in an OrderedSpace to
+ * become the currying operand for forming Regions and Twisters in a
+ * lambda-like way.
+ *
+ * @author Mark S. Miller
+ */
+def OrderedSpaceMaker0 implements EventuallyDeepFrozen {
+    method __optSealedDispatch(brand) :any {
+      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+      }
+    }
+  
+
+    /**
+     * Given a value of a type whose reflexive (x &lt;=&gt; x) instances are
+     * fully ordered, this returns the corresponding OrderedSpace
+     */
+    to spaceOfValue(value) :any {
+        if (value =~ i :int) {
+            int
+        } else if (value =~ f :float64) {
+            float64
+        } else if (value =~ c :char) {
+            char
+        } else {
+            # XXX kludge?  Assume it's type is fullyOrdered and make an
+            # OrderedSpace out of it
+            def type := value.__getAllegedType()
+            OrderedSpaceMaker0(type, E.toQuote(type))
+        }
+    }
+
+    /**
+     * start..!bound is equivalent to
+     * (space &gt;= start) & (space &lt; bound)
+     */
+    to op__till(start, bound) :any {
+        def space := OrderedSpaceMaker0.spaceOfValue(start)
+        (space >= start) & (space < bound)
+    }
+
+    /**
+     * start..stop is equivalent to
+     * (space &gt;= start) & (space &lt;= stop)
+     */
+    to op__thru(start, stop) :any {
+        def space := OrderedSpaceMaker0.spaceOfValue(start)
+        (space >= start) & (space <= stop)
+    }
+
+    /**
+     * Given a type whose reflexive (x &lt;=&gt; x) instances are fully
+     * ordered, this makes an OrderedSpace for making Regions and
+     * Twisters for those instances using operator notation.
+     */
+    to (myType, myName :String) :any {
+
+        /**
+         * Notational convenience
+         */
+        def region implements EventuallyDeepFrozen {
+            method __optSealedDispatch(brand) :any {
+              if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+              }
+            }
+          
+            to run(boundedLeft :boolean, edges) :any {
+                OrderedRegionMaker(myType, myName, boundedLeft, edges)
+            }
+        }
+
+        /**
+         * The OrderedSpace delegates to the myType.
+         * <p>
+         * Of all normal guard messages, the only one it implements itself
+         * rather than delegating is __printOn/1.
+         */
+        def OrderedSpace extends myType implements EventuallyDeepFrozen {
+            method __optSealedDispatch(brand) :any {
+              if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+              }
+            }
+          
+
+            /**
+             * Just uses the name used to construct this OrderedSpace
+             */
+            to __printOn(out :TextWriter) :void {
+                out.print(myName)
+            }
+
+            /**
+             * One step in executing the expansion of the relational
+             * operators
+             */
+            to op__cmp(myY :myType) :any {
+                def regionMaker {
+
+                    /**
+                     * (myType &lt; myY)
+                     */
+                    to belowZero() :any {
+                        region(false, [myY])
+                    }
+
+                    /**
+                     * (myType &lt;= myY)
+                     */
+                    to atMostZero() :any {
+                        def nextY := myY.next()
+                        if (myY <=> nextY) {
+                            # all positions &lt;= the last position means
+                            # all positions period.
+                            region(false, [])
+                        } else {
+                            region(false, [nextY])
+                        }
+                    }
+
+                    /**
+                     * (myType &lt;=&gt; myY)
+                     */
+                    to isZero() :any {
+                        def nextY := myY.next()
+                        if (myY <=> nextY) {
+                            # If myY is the last position, then myY..myY is
+                            # equivalent to myType &gt;= myY
+                            region(true, [myY])
+                        } else {
+                            region(true, [myY, nextY])
+                        }
+                    }
+
+                    /**
+                     * (myType &gt;= myY)
+                     */
+                    to atLeastZero() :any {
+                        region(true, [myY])
+                    }
+
+                    /**
+                     * (myType &gt; myY)
+                     */
+                    to aboveZero() :any {
+                        def nextY := myY.next()
+                        if (myY <=> nextY) {
+                            # If myY is the last position, then all positions
+                            # after it are no positions at all.
+                            region(true, [])
+                        } else {
+                            region(true, [nextY])
+                        }
+                    }
+                }
+            }
+
+            /**
+             * (myType + myOffset).
+             * <p>
+             * Note that myOffset doesn't have to be a member of myType. For
+             * example, "char + 3" is legal.
+             */
+            to add(myOffset) :any {
+                def twister implements EventuallyDeepFrozen {
+                    method __optSealedDispatch(brand) :any {
+                      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+                      }
+                    }
+                  
+                    to __printOn(out :TextWriter) :void {
+                        out.print("(", myName, " + ", myOffset, ")")
+                    }
+                    to (addend :myType) :any {
+                        addend + myOffset
+                    }
+                    to getOffset() :any {
+                        myOffset
+                    }
+                    to add(moreOffset) :any {
+                        OrderedSpace + (myOffset + moreOffset)
+                    }
+                    to subtract(moreOffset) :any {
+                        twister + -moreOffset
+                    }
+                }
+            }
+
+            /**
+             * (myType - offset)
+             */
+            to subtract(offset) :any {
+                OrderedSpace + -offset
+            }
+        }
+    }
+}
+
