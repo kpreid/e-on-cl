@@ -143,5 +143,45 @@ rjoin/1
 ? "abc" :DeepFrozen
 # value: "abc"
 
-? 'a' :DeepFrozen
-# value: 'a'
+Characters
+
+  ? 'a' :DeepFrozen
+  # value: 'a'
+
+ next/previous
+ 
+  ? 'a'.next()
+  # value: 'b'
+  
+  ? 'b'.previous()
+  # value: 'a'
+  
+  ? pragma.enable("accumulator")
+  > accum ' ' for x in 1..32 { _.previous() }
+  # value: '\u0000'
+  
+  ? pragma.enable("accumulator")
+  > accum ' ' for x in 1..32 { _.previous() }.previous()
+  # problem: there is no character before '\u0000'
+  
+  XXX test last-character.next()
+  
+ comparison
+ 
+  ? 'a' < 'b'
+  # value: true
+  
+  ? 'b' < 'a'
+  # value: false
+  
+  ? 'b' < 'b'
+  # value: false
+  
+  ? 'Q' > ' '
+  # value: true
+  
+  ? ' ' <=> ' '
+  # value: true
+
+  ? ' ' <=> '4'
+  # value: false

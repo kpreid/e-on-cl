@@ -22,12 +22,17 @@
       (case char
         ((#\Tab) (out "\\t"))
         ((#\Return) (out "\\r"))
-        ;((#\Linefeed) (out "\\n"))
+        ((#\Linefeed) (out (list char)))
         ((#\\) (out "\\\\"))
         (otherwise
-          (if (find char specials)
-            (out (list #\\ char))
-            (out (list char))))))
+          (cond 
+            ((find char specials)
+              (out (list #\\ char)))
+            ((< (char-code char) (char-code #\Space))
+              ; XXX should include some Unicode specials in the near-FFFF range, too
+              (out (format nil "\\u~4,'0D" (char-code char)))) ; xxx Unicode/ASCII assumption
+            (t 
+              (out (list char)))))))
     (e. tw |write| (copy-seq buf))))
 
 (defconstant +precedence-atom+ 0)

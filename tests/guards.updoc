@@ -152,8 +152,10 @@ char
   ? char
   # value: char
   
+  ? char + 3
+  # value: (char + 3)
+  
   XXX more tests
-  XXX is a space
 
 int
 
@@ -179,8 +181,10 @@ float64
   ? float64.getTheTrivialValue()
   # value: 0.0
   
+  ? float64 + 3
+  # value: (float64 + 3)
+
   XXX more tests
-  XXX is a space
 
 String
 

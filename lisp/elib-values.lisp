@@ -162,12 +162,42 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; --- Character ---
 
+(declaim (inline char-nearby))
+(defun char-nearby (char delta)
+  "Return the next or previous character after 'char', if possible."
+  (declare (character char)
+           (type (member +1 -1) delta))
+  (loop with code = (char-code char)
+        initially (assert (char= char (code-char code)) 
+                          (char)
+                          "~A is not a simple character" (e-quote char))
+        do (incf code delta)
+           (cond
+             ((< code 0)
+               (error "there is no character before ~A" (e-quote char)))
+             ((>= code char-code-limit)
+               (error "there is no character after ~A" (e-quote char))))
+        thereis (code-char code)))
+
 (def-vtable character
   (:|__printOn/1| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
       (e. e.syntax:+e-printer+ |printCharacter| tw this)
-      (e. tw |write| (make-string 1 :initial-element this)))))
+      (e. tw |write| (make-string 1 :initial-element this))))
+  (:|op__cmp/1| (this other)
+    (e-coercef other 'character)
+    (cond
+      ((char< this other) -1.0)
+      ((char> this other) 1.0)
+      ((char= this other) 0.0)
+      (t                 |NaN|)))
+  (:|next/0| (this)
+    "Return the next character in the total ordering of characters. Throws an exception if this is the last character."
+    (char-nearby this +1))
+  (:|previous/0| (this)
+    "Return the previous character in the total ordering of characters. Throws an exception if this is the first character."
+    (char-nearby this -1)))
 
 (defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen character))
   t)

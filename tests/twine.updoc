@@ -3,3 +3,6 @@
 
 ? __makeTwine
 # value: <makeTwine>
+
+? __makeTwine.fromSequence('a'..'z')
+# value: "abcdefghijklmnopqrstuvwxyz"

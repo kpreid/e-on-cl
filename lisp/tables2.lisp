@@ -21,7 +21,17 @@
 
 (defvar +the-make-twine+ (e-named-lambda "org.erights.e.elib.tables.makeTwine"
   :stamped +deep-frozen-stamp+
-  ))
+  (:|fromSequence/1| (iteratable) 
+    "Return a Twine composed of the characters in the given sequence (object that implements iterate/1).
+    
+The ConstList version of this is called fromIteratableValues, unfortunately. XXX decide what the right name for this operation is."
+    ; XXX duplicated code with ConstList
+    (let ((values))
+      (e. iteratable |iterate| (e-lambda (:|run| (k v)
+        (declare (ignore k))
+        ; out-of-dynamic-extent calls are harmless
+        (push v values))))
+      (coerce (nreverse values) 'string)))))
 
 ; --- Primitive safe mutable array access ---
 

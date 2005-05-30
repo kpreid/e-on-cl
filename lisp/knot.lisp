@@ -433,6 +433,9 @@
     (:|throw|            +the-thrower+)
   
     (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
+    (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
+    (:|char|             (make-instance 'cl-type-guard :type-specifier 'character))
+    
     (:|ConstList|        (make-instance 'cl-type-guard :type-specifier 'vector)) ; XXX and not string?
     (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
     (:|makeScope|        +the-make-scope+)
@@ -702,10 +705,11 @@ If a log message is produced, context-thunk is run to produce a string describin
           ("&term__quasiParser"  ,(typical-lazy "<import:org.quasiliteral.quasiterm.makeQBuilder>.getTerm__quasiParser()"))
       
           ; --- data guards: atomic ---
+          ; XXX should boolean be an ordered space?
           ("boolean"    ,(make-instance 'cl-type-guard :type-specifier 'e-boolean))
           ("&int"       ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.int>, \"int\")"))
-          ("float64"    ,(make-instance 'cl-type-guard :type-specifier 'float64))
-          ("char"       ,(make-instance 'cl-type-guard :type-specifier 'character))    
+          ("&float64"   ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.float64>, \"float64\")"))
+          ("&char"      ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.char>, \"char\")"))    
           ("String"     ,(make-instance 'cl-type-guard :type-specifier 'string))
           ("Twine"      ,(make-instance 'cl-type-guard :type-specifier 'elib:twine))
           ("TextWriter" ,elib:+the-text-writer-guard+)
