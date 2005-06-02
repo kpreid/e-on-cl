@@ -3,7 +3,43 @@
 
 (in-package :e.elang)
 
-; XXX support compilation of the CL code when appropriate
+(defun extract-outer-scope (inner-scope 
+    &aux (table-sym (gensym))
+         (bindings (inner-scope-bindings inner-scope)))
+  "Given an inner scope, return a form which generates an equivalent outer scope."
+  ; XXX call something on the Scope maker, don't make one directly
+  `(make-instance 'e.knot:scope
+    :slot-table
+      (let ((,table-sym (make-hash-table :test #'equal :size ',(length bindings))))
+        ,@(loop
+          with seen = (make-hash-table :test #'equal) 
+          for (k . v) in (inner-scope-bindings inner-scope)
+          unless (gethash k seen)
+            do (setf (gethash k seen) t)
+            and collect `(setf (gethash ',k ,table-sym) ,(binding-get-slot-code v)))
+        ,table-sym)
+    :fqn-prefix ',(inner-scope-fqn-prefix inner-scope)))
+
+(defun delta-extract-outer-scope (final-inner e-node initial-scope
+    &aux (rebound (e-coerce (e. (e. (e. e-node |staticScope|) |outNames|) |getKeys|) 'vector))
+         (table-sym (gensym)))
+  "Return a form which, when evaluated in the appropriate context for 'final-inner', returns the outer scope resulting from the evaluation of 'e-node', assuming that it has already been evaluated, and 'final-inner' is the resulting inner scope, and 'initial-scope' is the outer scope in which it was evaluated."
+  `(e.
+    ; XXX call something on the Scope maker, don't make one directly
+    (make-instance 'e.knot:scope
+      :slot-table
+        (let ((,table-sym (make-hash-table :test #'equal
+                                           :size ',(length rebound))))
+          ,@(loop for noun across rebound collect
+            `(setf (gethash ',noun ,table-sym)
+                   ,(binding-get-slot-code
+                     (inner-scope-noun-binding final-inner noun))))
+          ,table-sym)
+      :fqn-prefix ',(inner-scope-fqn-prefix final-inner))
+    |or|
+    ',initial-scope))
+
+; XXX support COMPILEing of the CL code when appropriate - SBCL isn't the world
 (defun e-to-cl (tree outer-scope)
   (e-coercef outer-scope 'e.knot:scope)
   (let* ((outer-name-map
@@ -26,7 +62,7 @@
         ,(make-lets local-vars `
           (values 
             ,form
-            ,(extract-outer-scope end-name-map)))))))
+            ,(delta-extract-outer-scope end-name-map tree outer-scope)))))))
 
 (defun cl-to-lambda (form &key (name (gensym "cl-to-lambda-")))
   "to show up in profiles"

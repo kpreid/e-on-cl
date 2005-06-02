@@ -136,23 +136,6 @@
              ,(binding-get-slot-code (inner-scope-noun-binding inner-scope noun)))))
 
 
-; XXX call something on the Scope maker, don't make one directly
-; XXX it would be nice if this didn't involve copying the entire scope, and could somehow reuse the original
-(defun extract-outer-scope (inner-scope 
-    &aux (table-sym (gensym))
-         (bindings (inner-scope-bindings inner-scope)))
-  `(make-instance 'e.knot:scope
-    :slot-table
-      (let ((,table-sym (make-hash-table :test #'equal :size ',(length bindings))))
-        ,@(loop
-          with seen = (make-hash-table :test #'equal) 
-          for (k . v) in (inner-scope-bindings inner-scope)
-          unless (gethash k seen)
-            do (setf (gethash k seen) t)
-            and collect `(setf (gethash ',k ,table-sym) ,(binding-get-slot-code v)))
-        ,table-sym)
-    :fqn-prefix ',(inner-scope-fqn-prefix inner-scope)))
-
 (defun inner-scope-bind (inner-scope noun-string binding)
   (if (inner-scope-noun-is-local inner-scope noun-string)
     (error "~S already in scope" noun-string)
