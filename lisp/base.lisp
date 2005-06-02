@@ -45,7 +45,7 @@
   (define-modify-macro e-coercef (result-type &optional ejector)
     e-coerce))
 
-; --- adequate queue implementation ---
+; --- plain queue implementation ---
 
 ; used for vat queues
 ; once we have thread dependencies, think about whether this can be optimized for locking purposes
@@ -69,6 +69,16 @@
 
 (defmethod queue-null ((queue queue))
   (not (or (queue-out queue) (queue-in queue))))
+
+; --- sorted queue ---
+
+(defclass sorted-queue ()
+  ((elements :type list :initform nil)))
+  
+(defgeneric sorted-queue-peek (q absent-thunk))
+(defgeneric sorted-queue-snapshot (q))
+(defgeneric sorted-queue-pop (q))
+(defgeneric sorted-queue-put (q key value))
 
 ; --- condition rules ---
 

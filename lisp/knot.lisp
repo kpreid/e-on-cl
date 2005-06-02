@@ -450,6 +450,7 @@
 
     (:|makeArray|        e.elib.tables:+the-make-array+)
     (:|makeFlexMap|      elib:+the-make-flex-map+)
+    (:|makeSortedQueue|  elib:+the-make-sorted-queue+)
     
     (:|FlexList|         elib:+the-flex-list-guard+)
     (:|Throwable|        elib:+the-exception-guard+)

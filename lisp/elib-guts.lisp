@@ -638,3 +638,59 @@
           ; XXX should we catch any problems arising here?
           (e. handler |handleResolution| (make-unconnected-ref problem)))
         nil)))))
+
+; --- sorted queue ---
+
+(defmethod sorted-queue-peek ((q sorted-queue) absent-thunk)
+  (with-slots (elements) q
+    (if elements
+      (first elements)
+      (funcall absent-thunk))))
+
+(defmethod sorted-queue-pop ((q sorted-queue))
+  (with-slots (elements) q
+    (if elements
+      (pop elements)
+      (error "empty queue"))))
+      
+(defmethod sorted-queue-snapshot ((q sorted-queue))
+  (with-slots (elements) q
+    (copy-list elements)))
+    
+(defmethod sorted-queue-put ((q sorted-queue) key value)
+  (declare (integer key))
+  (with-slots (elements) q
+    ;XXX more efficient than linear?
+    (if (or (null elements) (< key (car (first elements))))
+      (push (cons key value) elements)
+      (loop for prev = elements then (rest prev)
+            while prev
+            do (when (or (null (rest prev))
+                         (< key (car (second prev))))
+                 (push (cons key value) (rest prev))
+                 (return))
+            finally (error "fell off end of queue")))
+    nil))
+
+(defvar +the-make-sorted-queue+ (e-named-lambda "org.cubik.cle.prim.makeSortedQueue"
+  (:|run| ()
+    (make-instance 'sorted-queue))))
+
+(def-vtable sorted-queue
+  (:|__printOn/1| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| "<sorted queue of " (length (slot-value this 'elements)) ">"))
+  (:|peek/1| (this absent-thunk)
+    (block nil
+      (let ((p (sorted-queue-peek this (lambda () (return (e. absent-thunk |run|))))))
+        (vector (car p) (cdr p)))))
+  (:|pop/0| (this)
+    (let ((p (sorted-queue-pop this)))
+      (vector (car p) (cdr p))))
+  (:|put/2| (this key value)
+    (e-coercef key 'integer)
+    (sorted-queue-put this key value))
+  (:|asList/0| (this)
+    (map 'vector 
+         #'(lambda (c) (vector (car c) (cdr c)))
+         (sorted-queue-snapshot this))))

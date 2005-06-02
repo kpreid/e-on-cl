@@ -133,6 +133,7 @@
     :+the-any-map-guard+
     :+the-make-list+
     :+the-make-int+
+    :+the-make-sorted-queue+    
     
     :e-quote
     :e-print
@@ -185,6 +186,7 @@
 (defvar elib:+the-make-text-writer+)
 (defvar elib:+the-make-list+)
 (defvar elib:+the-make-int+)
+(defvar elib:+the-make-sorted-queue+)
 
 (defvar elib:+the-e+)
 
