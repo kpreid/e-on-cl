@@ -45,6 +45,8 @@
     :*compatible-catch-leakage*
     :*break-on-ejections*
     
+    :get-fine-universal-time
+    
     :vicious-cycle-error
     :synchronous-call-error
   
@@ -59,6 +61,7 @@
     :vat-safe-scope
     :vat-privileged-scope
     :vat-checking
+    :vat-enqueue-timed
   
     :e-call :e-call-dispatch :e.
     :e-send :e-send-dispatch :e<-

@@ -1,0 +1,42 @@
+  ? timer
+  # value: <a Timer>
+  
+  ? def t := timer.now(); t =~ tt :int ? (t == tt)
+  # value: true
+  
+  ? t > 1117718697755
+  # value: true
+  
+  ? timer.now() >= t
+  # value: true
+  
+  ? def r1 := timer.whenPast(def expected := timer.now() + 1000, thunk {
+  >   def delta := timer.now() - expected
+  >   println(`thunk 1 (${delta < 500})`)
+  >   11
+  > })
+  # value: <Promise>
+  
+  ? interp.waitAtTop(r1); r1
+  # value: <Promise>
+  
+  # stdout: thunk 1 (true)
+  #
+
+  ? timer.now() > (t + 1000)
+  # value: true
+    
+  ? r1
+  # value: 11
+
+  ? def r2 := timer.whenPast(timer.now() + 2000, thunk {println("timing test 1")})
+  # value: <Promise>
+    
+  ? def r3 := timer.whenPast(timer.now() + 1000, thunk {println("timing test 2")})
+  # value: <Promise>
+  
+  ? interp.waitAtTop(r2)
+  
+  # stdout: timing test 2
+  #         timing test 1
+  #

@@ -122,4 +122,18 @@
 (defmethod e-problem-unseal ((problem local-throw-sealed-box))
   (e-problem-unseal (local-throw-sealed-box-value problem)))
 
+; --- fine-grain universal time ---
+
+(defvar *apparent-internal-time-base*)
+
+; XXX will this be executed at all the right times?
+(loop with first-utime = (get-universal-time)
+      for  next-utime  = (get-universal-time)
+      until (/= first-utime next-utime)
+      finally
+        (setf *apparent-internal-time-base*
+          (- next-utime (/ (get-internal-real-time) internal-time-units-per-second))))
+              
+(defun get-fine-universal-time ()
+  (+ *apparent-internal-time-base* (/ (get-internal-real-time) internal-time-units-per-second)))
 

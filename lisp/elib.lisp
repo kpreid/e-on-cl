@@ -395,7 +395,10 @@ If there is no current vat at initialization time, captures the current vat at t
             :accessor vat-in-turn
             :type boolean
             :documentation "Whether some type of top-level turn is currently being executed in this vat. Used for consistency checking.")
-   (sends :initform (make-instance 'queue))
+   (sends :type queue
+          :initform (make-instance 'queue))
+   (time-queue :type sorted-queue
+               :initform (make-instance 'sorted-queue))
    (safe-scope :initform (e.knot:make-safe-scope)
                :accessor vat-safe-scope)))
 
@@ -419,15 +422,36 @@ If there is no current vat at initialization time, captures the current vat at t
     (loop until (queue-null sends)
           do    (funcall (dequeue sends)))))
 
+(defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
+  (destructuring-bind (&optional qtime &rest qfunc)
+      (sorted-queue-peek time-queue (lambda () nil))
+    (when (and qtime (<= qtime (get-fine-universal-time)))
+      (sorted-queue-pop time-queue)
+      (enqueue immediate-queue qfunc)
+      (return-from serve-event-with-time-queue t))
+    (if qtime
+      (let ((delta (min (- qtime (get-fine-universal-time))
+                        most-positive-fixnum)))
+        (e-util:serve-event (if timeout (min timeout delta)
+                                        delta)))
+      (if timeout
+        (e-util:serve-event timeout)
+        (e-util:serve-event)))))
+
 (defun vat-loop ()
-  (with-slots (sends) *vat*
+  (with-slots (sends time-queue) *vat*
     (loop
       (if (queue-null sends)
-        (e-util:serve-event)
+        (serve-event-with-time-queue time-queue sends)
         (progn
           (with-turn (*vat*)
             (funcall (dequeue sends)))
-          (e-util:serve-event 0))))))
+          (serve-event-with-time-queue time-queue sends 0))))))
+
+(defun vat-enqueue-timed (time func)
+  "Arrange for 'func' to be called with no arguments outside of a turn at universal time 'time' in the current vat."
+  (with-slots (time-queue) *vat*
+    (sorted-queue-put time-queue time func)))
 
 (defun establish-vat ()
   (assert (null *vat*))

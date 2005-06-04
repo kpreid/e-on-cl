@@ -658,7 +658,7 @@
     (copy-list elements)))
     
 (defmethod sorted-queue-put ((q sorted-queue) key value)
-  (declare (integer key))
+  #-sbcl (declare (real key)) ; apparent PCL bug triggered
   (with-slots (elements) q
     ;XXX more efficient than linear?
     (if (or (null elements) (< key (car (first elements))))
@@ -688,7 +688,7 @@
     (let ((p (sorted-queue-pop this)))
       (vector (car p) (cdr p))))
   (:|put/2| (this key value)
-    (e-coercef key 'integer)
+    (e-coercef key 'real)
     (sorted-queue-put this key value))
   (:|asList/0| (this)
     (map 'vector 

@@ -109,15 +109,30 @@
 ;   * gives the time at the start of the turn, as if it had just received a message updating its time, so a log can reify this message
 ;   * eventual-only time request
 
+(defconstant +java-epoch-delta+ 2208988800)
+
+(defun cl-to-java-time (ct)
+  (* 1000 (- ct +java-epoch-delta+)))
+
+(defun java-to-cl-time (jt)
+  (+ (/ jt 1000) +java-epoch-delta+))
+
 (defvar +the-timer+ (e-named-lambda "Timer"
   (:|__printOn/1| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<a Timer>")
     nil)
   (:|now/0| ()
-    ; translate between Java's and CL's epoch
-    ; make this number a constant if we ever need to do the reverse translation
-    (* 1000 (- (get-universal-time) 2208988800)))))
+    (cl-to-java-time (get-fine-universal-time)))
+  (:|whenPast/2| (time thunk
+      &aux (utime (java-to-cl-time time)))
+    (multiple-value-bind (p r) (make-promise)
+      (vat-enqueue-timed utime (lambda ()
+        (e. r |resolve|
+          (e. (e. (vat-safe-scope *vat*) |get| "trace") |runAsTurn|
+            thunk
+            (e-lambda (:|run| () (format nil "timer whenPast at ~A" time)))))))
+      p))))
 
 ; --- CL-PPCRE interface ---
 
