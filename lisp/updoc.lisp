@@ -8,6 +8,8 @@
     :updoc))
 (cl:in-package :e.updoc)
 
+; --- Updoc parsing ---
+
 (defun read-updoc-line (stream &aux line)
   (setf line (read-line stream nil nil))
   (unless line 
@@ -69,6 +71,8 @@
     (finish-testcase)
     (nreverse script)))
 
+; --- Utilities ---
+
 (defun make-problem-answer (condition)
   ; xxx sloppy
   "problem: foo -> (list \"problem\" \"foo\")"
@@ -83,6 +87,27 @@
 
 (defun (setf slot-place) (new slot)
   (e. slot |setValue| new))
+
+; --- XXX think of a name for this section ---
+
+(defclass result ()
+  ((failure-count :type integer
+                  :initarg :failures
+                  :initform 0
+                  :reader result-failure-count)
+   (step-count :type integer 
+               :initarg :steps
+               :initform 0
+               :reader result-step-count)))
+
+(defgeneric result+ (a b))
+
+(defmethod result+ ((a result) (b result))
+  (make-instance 'result 
+    :failures (+ (result-failure-count a) (result-failure-count b))
+    :steps    (+ (result-step-count a)    (result-step-count b))))
+
+; --- Script running ---
 
 (defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream)
   (symbol-macrolet ((scope (slot-place scope-slot))
@@ -133,7 +158,9 @@
                               (expects ,@answers)
                               (instead ,@new-answers)
                               (opt-backtrace ,backtrace)))
-            (fresh-line)))))))
+            (fresh-line)
+            (make-instance 'result :failures 1 :steps 1))
+          (make-instance 'result :failures 0 :steps 1))))))
 
 (defun updoc-file (file)
   (with-open-file (s file
@@ -175,25 +202,17 @@
                           |withPrefix| "__main$")
                       |with| "updoc" runner))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope
-          (passed-count 0))
+          (result (make-instance 'result)))
       (e. scope-slot |setValue| scope)
       (format t "~&~A" (enough-namestring file))
       (loop while script do
-        (funcall stepper (pop script))
-        ; XXX push passed-count incrementing down into the comparison logic, for more reliable verification
-        (incf passed-count))
-      (format t "~A~%" passed-count)))
-  nil)
+        (setf result (result+ result
+          (funcall stepper
+            (pop script)))))
+      (format t " ~A~%" (result-step-count result))
+      result)))
 
-(defun updoc-path-text (text)
-  (if (string= text "")
-    (return-from updoc-path-text))
-  (let ((pos (position #\Newline text)))
-    (if pos
-      (progn
-        (updoc-file (subseq text 0 pos))
-        (updoc-path-text (subseq text (1+ pos))))
-      (updoc-file text))))
+; --- Entry points, etc. ---
 
 ; XXX clean up the profile setup code; add command line options for profiling
 #+sbcl (defvar *use-sprof* nil)
@@ -219,30 +238,39 @@
   #+sbcl (when *use-sprof* (sb-sprof:stop-profiling) (sb-sprof:report))
   #+sbcl (when *use-profile* (sb-profile:report)))
 
-(defun updoc-rune-entry (&rest paths)
+(defun updoc-rune-entry (&rest paths
+    &aux (result (make-instance 'result)))
+
   ;(when (equal (first paths) "--confine") ...) ; XXX implement this - if nothing else to avoid the expense of making an io-scope
 
-  (profile-start)
-  
-  ; XXX use e.extern routines for file access  
-  (loop for path in paths do
-    (if #-clisp (cl-fad:directory-exists-p path)
-        ; otherwise "UNIX error 20 (ENOTDIR): Not a directory"
-        #+clisp (ignore-errors (cl-fad:directory-exists-p path))
-      (cl-fad:walk-directory path #'updoc-file
-        :test (lambda (path)
-                (member (pathname-type path)
-                  '("updoc" "emaker" "e" "e-awt" "e-swt" "caplet" "txt")
-                  :test #'string-equal)))
-      (updoc-file path)))
-    
-  (profile-finish)
-  (fresh-line)
-  (force-output))
+  (flet ((handle-file (pathname)
+          (setf result (result+ result (updoc-file pathname)))
+          nil))
 
-(defun updoc (parse-cache-file &rest args)
-  (with-vat
-    (assert (string/= parse-cache-file ".updoc" :start1 (- (length parse-cache-file) 6)))
-    (e.syntax:load-parse-cache-file parse-cache-file)
-    (updoc-rune-entry args)
-    (e.syntax:save-parse-cache-file parse-cache-file)))
+    (profile-start)
+    
+    ; XXX use e.extern routines for file access  
+    (loop for path in paths do
+      (if #-clisp (cl-fad:directory-exists-p path)
+          ; otherwise "UNIX error 20 (ENOTDIR): Not a directory"
+          #+clisp (ignore-errors (cl-fad:directory-exists-p path))
+        (cl-fad:walk-directory path #'handle-file
+          :test (lambda (path)
+                  (member (pathname-type path)
+                    '("updoc" "emaker" "e" "e-awt" "e-swt" "caplet" "txt")
+                    :test #'string-equal)))
+        (handle-file path)))
+      
+    (profile-finish)
+    (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
+      (result-failure-count result) 
+      (result-step-count result))
+    (force-output)))
+
+; XXX delete this code unless it's missed
+;(defun updoc (parse-cache-file &rest args)
+;  (with-vat
+;    (assert (string/= parse-cache-file ".updoc" :start1 (- (length parse-cache-file) 6)))
+;    (e.syntax:load-parse-cache-file parse-cache-file)
+;    (updoc-rune-entry args)
+;    (e.syntax:save-parse-cache-file parse-cache-file)))
