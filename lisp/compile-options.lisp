@@ -8,3 +8,4 @@
 ;(pushnew :e.vtable-collect.use-example *features*)
 ;(pushnew :e.vtable-collect.use-typelist *features*)
 
+;(pushnew :e.instrument.ref-shorten-uses *features*)

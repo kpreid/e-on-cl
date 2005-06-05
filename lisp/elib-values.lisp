@@ -772,7 +772,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   :stamped +deep-frozen-stamp+
   (:|coerce/2| (standard-coerce (lambda (specimen) (e-audit-check-dispatch +text-writer-stamp+ specimen))
                                 (lambda () +the-text-writer-guard+)
-                                (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))))))
+                                (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
+                                :test-shortened nil))))
 
 (defun hide-text-writer (tw)
   (with-result-promise (wrapped-tw)

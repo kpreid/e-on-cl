@@ -108,7 +108,13 @@
 (defmacro e<- (rec-form verb-des &rest args-forms)
   `(e-send-dispatch ,rec-form ,(e-util:mangle-verb (string verb-des) (length args-forms)) ,@args-forms))
 
-(defgeneric ref-shorten (ref))
+
+(defgeneric %ref-shorten (ref)
+  (:documentation "Implementation of reference shortening. Usage should call REF-SHORTEN instead, which optimizes common cases."))
+  
+;; REF-SHORTEN is defined *later* so that sbcl may "open-code test of type REF". This is here to declare the existence of the function.
+(declaim (ftype (function (t) t) ref-shorten))
+
 
 ;(declaim (ftype (function (t) (values (member near eventual broken)
 ;                                      &optional t))
@@ -208,12 +214,14 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defclass ref () ())
 
-(defmethod ref-shorten ((x t)) x)
+(defmethod %ref-shorten ((x t)) 
+  ; NOTE: this is also implemented in REF-SHORTEN
+  x)
 (defmethod ref-state ((x t))
   (declare (ignore x))
   'near)
   
-(defmethod ref-shorten ((x ref))
+(defmethod %ref-shorten ((x ref))
   (error "ref-shorten not implemented by ~W" (type-of x)))
 (defmethod ref-state ((x ref))
   (error "ref-state not implemented by ~W" (type-of x)))
@@ -256,7 +264,7 @@ If there is no current vat at initialization time, captures the current vat at t
            :type (array list)
            :documentation "Messages are pushed on the end of this vector.")))
 
-(defmethod ref-shorten ((ref promise-ref))
+(defmethod %ref-shorten ((ref promise-ref))
   ref)
 
 (defmethod ref-state ((ref promise-ref))
@@ -284,7 +292,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (when *compatible-catch-leakage*
     (e-coercef (slot-value this 'problem) +the-exception-guard+)))
 
-(defmethod ref-shorten ((x broken-ref))
+(defmethod %ref-shorten ((x broken-ref))
   x)
 (defmethod ref-state ((x broken-ref))
   (values 'broken (slot-value x 'problem)))
@@ -350,7 +358,8 @@ If there is no current vat at initialization time, captures the current vat at t
 
 ; XXX we could eliminate the need for these individual forwarders by having the methods specialized on 'ref forward to the ref-shortening of this ref if it's distinct
 
-(defmethod ref-shorten ((ref forwarding-ref))
+(defmethod %ref-shorten ((ref forwarding-ref))
+  ; NOTE: this is also implemented in REF-SHORTEN
   (with-slots (target) ref
     (setf target (ref-shorten target))))
 
@@ -1140,27 +1149,34 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 (declaim (inline standard-coerce))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun standard-coerce (test conform-guard-thunk error-thunk)
-    "Typical guard coercion. ref-shortens the specimen, applies the test and returns the shortened specimen if it's accepted, otherwise calls __conformTo/1 and tests it."
+  (defun standard-coerce (test conform-guard-thunk error-thunk &key (test-shortened t))
+    "Typical guard coercion. Returns a function which returns the first of these which passes the test, or ejects the result of error-thunk via opt-ejector: specimen, ref-shortened specimen, ref-shortened result of specimen.__conformTo(conform-guard-thunk.run()).
+
+If returning an unshortened reference is acceptable and the test doesn't behave differently on unshortened references, specify :test-shortened nil for an optimization."
     (declare (optimize (speed 3) (space 3)))
     (lambda (long-specimen opt-ejector)
-      (let ((specimen (ref-shorten long-specimen)))
-        (labels ((fail ()
-                  (eject-or-ethrow opt-ejector
-                    (funcall error-thunk specimen))))
-          (cond
-            ((funcall test specimen)
-              specimen)
-            ((not (eql (ref-state specimen) 'near))
-              ; avoid synchronous-call errors from __conformTo
-              (fail))
-            (t
-              (let ((coerced (ref-shorten 
-                               (e. specimen |__conformTo| 
-                                 (funcall conform-guard-thunk)))))
-                (if (funcall test coerced)
-                  coerced
-                  (fail))))))))))
+      (labels ((fail ()
+                (eject-or-ethrow opt-ejector
+                  (funcall error-thunk long-specimen))))
+        (if (funcall test long-specimen)
+          long-specimen
+          (let ((specimen (ref-shorten long-specimen)))
+            ; We shorten here even if test-shortened is false, because
+            ; if we didn't we'd pay for shortening twice in ref-state 
+            ; and the __conformTo call.
+            (cond
+              ((and test-shortened (funcall test specimen))
+                specimen)
+              ((not (eql (ref-state specimen) 'near))
+                ; avoid synchronous-call errors from __conformTo
+                (fail))
+              (t
+                (let ((coerced (ref-shorten 
+                                 (e. specimen |__conformTo| 
+                                   (funcall conform-guard-thunk)))))
+                  (if (funcall test coerced)
+                    coerced
+                    (fail)))))))))))
 
 (declaim (ftype (function (t t &optional t cl-type-guard) t) e-coerce-native))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))

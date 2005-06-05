@@ -13,6 +13,13 @@
              (when (> times 1)
                (format *trace-output* "~&; note: ~A loaded ~A times ~%" fqn times)))
            e.knot::*emaker-load-counts*)
+  
+  #+e.instrument.ref-shorten-uses
+    (let ((entries (maphash #'list e.elib::*instrument-ref-shorten-kinds*)))
+      (mapcar #'(lambda (l) (destructuring-bind (key times) l
+               (when (> times 0)
+                 (format *trace-output* "~&; XXX profiling: ~A shortened ~A times ~%" key times))))
+              (sort entries #'< :key #'second)))
 
   #+sbcl
     (sb-ext:quit :unix-status status)

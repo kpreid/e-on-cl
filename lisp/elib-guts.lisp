@@ -7,6 +7,23 @@
 
 ;;; Currently, this file is just defined as 'stuff moved from elib.lisp that doesn't actually need to be loaded before other files, so as to reduce dependencies requiring recompiling'.
 
+; --- reference shortening ---
+
+#+e.instrument.ref-shorten-uses 
+  (defvar *instrument-ref-shorten-kinds* (make-hash-table))
+
+(defun ref-shorten (x)
+  (declare (optimize (speed 3) (space 3) (safety 3) (compilation-speed 0)))
+  #+e.instrument.ref-shorten-uses
+    (incf (gethash (class-of x) *instrument-ref-shorten-kinds* 0))
+  (typecase x
+    ((not ref) x)
+    (forwarding-ref
+      (with-slots (target) x
+        (setf target (ref-shorten target))))
+    (t
+      (%ref-shorten x))))
+
 ; --- native-type guards ---
 
 (def-vtable cl-type-guard
@@ -568,7 +585,7 @@
   ((handler :initarg :handler))
   (:documentation "A Ref backed by a ProxyHandler."))
 
-(defmethod ref-shorten ((ref proxy-ref))
+(defmethod %ref-shorten ((ref proxy-ref))
   ref)
 
 (defmethod ref-state ((ref proxy-ref))
