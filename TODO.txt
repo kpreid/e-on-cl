@@ -114,3 +114,63 @@ This unfinished scrap of code from vtable-case-entry wouldn't have worked, but m
                 (...))
             ,@prefix-args
             ,args-sym))
+            
+---
+
+Possibly for use in float next/previous methods
+
+------ Begin Forwarded Message -------
+
+Subject:     Re: A function returning the next representable floating 
+             point value of an argument
+From:        Bruno Haible <bruno@clisp.org>
+Newsgroups:  comp.lang.lisp
+Date:        24 May 2005 19:39:44 GMT
+
+Christophe Rhodes wrote:
+>>     (t (multiple-value-bind (significand exponent integer-sign)
+>>            (integer-decode-float f)
+>>          (let ((result (float (* (1+ significand)
+>>                                  (expt (float-radix f) exponent))
+>>                               f)))
+>
+> Hmm.  Without thinking /too/ hard about this, I'd venture that this
+> isn't going to work in an implementation which represents its floating
+> point values as IEEE single-floats, for F at the boundary between one
+> exponent and the next, in round-to-even rounding mode.
+> ...
+> This would seem to be generating the next float further away from
+> zero, not the next greatest float, for negative f.
+
+You are right. But this one should work, uniformly producing the next
+greater single-float, considering -0.0 and +0.0 as equal and ignoring
+the problem of "denormalized floats":
+
+(defun single-float-above (f)
+  "Return the next representable single-float value greater than F."
+  (check-type f single-float)
+  (cond
+    ((zerop f) least-positive-single-float)
+    ((= most-positive-single-float f)
+     (error "~f is most-positive-single-float." f))
+    (t (multiple-value-bind (significand exponent integer-sign)
+           (integer-decode-float f)
+         (if (minusp integer-sign)
+           (progn
+             (when (zerop (logand significand (- significand 1)))
+               (setq significand (* (float-radix f) significand))
+               (setq exponent (- exponent 1)))
+             (float (* (1+ (- significand)) (expt (float-radix f) exponent))
+f))
+           (float (* (1+ significand) (expt (float-radix f) exponent)) f))))))
+
+The 'logand' part probably needs to be changed if (float-radix f) is not 2.
+However, I don't know how the significand (mantissa) is normalized in
+implementations where (float-radix f) is 4 or 16 or something like this.
+
+P.S.: What do you need this for? You can implement TYPEP and SUBTYPEP
+without needing this kind of operation on floating-point numbers.
+
+                      Bruno
+
+-------- End Forwarded Message --------
