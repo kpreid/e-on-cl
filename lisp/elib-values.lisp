@@ -214,6 +214,40 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; Just as in Java E arrays serve as ConstLists, so do vectors here, and we make the same assumption of non-mutation.
 
+; XXX this should be move to some utility section somewhere, or the equality section of elib-guts
+; xxx OPT memoize results since we're doing all this subtypeping?
+(declaim (ftype (function (t t) function) fast-sameness-test))
+(defun fast-sameness-test (a-type b-type)
+  "Return a function which will operate equivalently to EEQ-IS-SAME-EVER, provided that its two arguments are of a-type and b-type, respectively."
+  (flet ((either-subtypep (type)
+          (and (or (subtypep a-type type)
+                   (subtypep b-type type))
+               (not (or (subtypep 'ref a-type)
+                        (subtypep 'ref b-type))))))
+    (cond
+      ; disjoint types - will never succeed
+      ((subtypep `(and ,a-type ,b-type) nil)
+        (constantly nil))
+      ((either-subtypep '(or symbol))
+        #'eq)
+      ((either-subtypep '(or number character))
+        ; XXX this should really be a test for "is an eql-atomic type, as in def-atomic-sameness"
+        #'eql)
+      ; general comparison
+      (t 
+        #'eeq-is-same-ever))))
+
+; XXX we should have tests for the above but we don't have any test system for the Lisp side yet - this is the one-time code I wrote to test it:
+; (mapcar #'(lambda (x) (cons x (eval (car x)))) '(
+;   ((fast-sameness-test 't 't) (#'eeq-is-same-ever))
+;   ((fast-sameness-test 'integer 'float) (constantly nil))
+;   ((fast-sameness-test 'function 't) #'eeq-is-same-ever)
+;   ((fast-sameness-test 'symbol 't) #'eeq-is-same-ever)
+;   ((fast-sameness-test 'symbol 'function) (constantly nil))
+;   ((fast-sameness-test 'character '(member #\a)) #'eql)
+;   ((fast-sameness-test 'bit 'integer) #'eql)))
+
+        
 ; XXX documentation
 (def-vtable vector
   (:|__printOn/1| (this tw)
@@ -267,19 +301,23 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     nil)
   ; XXX OPT use less expensive eq tests if actual element type can be so tested
   (:|indexOf1/1| (vector elem)
-    (or (position elem vector :test #'eeq-is-same-ever)
+    (or (position elem vector :test (fast-sameness-test `(eql ,elem)
+                                                        (array-element-type vector)))
         -1))
   (:|lastIndexOf1/1| (vector elem)
-    (or (position elem vector :test #'eeq-is-same-ever
+    (or (position elem vector :test (fast-sameness-test `(eql ,elem)
+                                                        (array-element-type vector))
                               :from-end t)
         -1))
   (:|startOf/1| (vector subseq)
     (e-coercef subseq 'vector)
-    (or (search subseq vector :test #'eeq-is-same-ever)
+    (or (search subseq vector :test (fast-sameness-test (array-element-type subseq)
+                                                        (array-element-type vector)))
         -1))
   (:|lastStartOf/1| (vector subseq)
     (e-coercef subseq 'vector)
-    (or (search subseq vector :test #'eeq-is-same-ever
+    (or (search subseq vector :test (fast-sameness-test (array-element-type subseq)
+                                                        (array-element-type vector))
                               :from-end t)
         -1))
   (:|run/2| #'subseq)
