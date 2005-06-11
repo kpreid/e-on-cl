@@ -42,14 +42,19 @@
       ((string> this other)  1)
       (t                    (error "shouldn't happen: broken string comparison"))))
   (:|add/1| (a b)
+    "Concatenate this string and the other string."
+    ; XXX OPT: check the simple case of b being a string
     (concatenate 'string a (e-print b)))
   (:|startsWith/1| (this prefix)
+    "Return whether 'prefix' is a prefix of this string."
     (as-e-boolean (string= this prefix :end1 (min (length this) 
                                                   (length prefix)))))
   (:|endsWith/1| (this suffix)
+    "Return whether 'prefix' is a suffix of this string."
     (as-e-boolean (string= this suffix :start1 (max 0 (- (length this) (length suffix))))))
   ; XXX simplify structure of both split and replaceAll
   (:|split/1| (this sep)
+    "Return a list of substrings of this string which are separated by the string 'sep'. Will return empty elements at the end. The empty string results in a one-element result list."
     (e-coercef sep 'string)
     (when (string= sep "")
       (error "split: separator may not be empty"))
@@ -133,9 +138,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-atomic-sameness string string= sxhash)
 
 (defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen string))
+  "Strings are atomic."
   t)
 
 ; --- Cons ---
+
+; to have methods and a public maker eventually
 
 (def-vtable cons
   (:|__printOn/1| (this tw)
@@ -204,7 +212,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; --- ConstList (vector) ---
 
-; Just as in Java-E arrays serve as ConstLists, so do vectors here, and we make the same assumption of non-mutation.
+; Just as in Java E arrays serve as ConstLists, so do vectors here, and we make the same assumption of non-mutation.
 
 ; XXX documentation
 (def-vtable vector
@@ -214,13 +222,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|__optUncall/0| (this)
     `#(,+the-make-list+ "run" ,this))
   (:|asMap/0| (vector)
-    "Return a ConstMap mapping the indices of this vector to the elements of this vector. For example, ['a', 'b'].asMap() == [0 => 'a', 1 => 'b']."
+    "Return a ConstMap mapping the indices of this list to the elements of this list. For example, ['a', 'b'].asMap() == [0 => 'a', 1 => 'b']."
     ; xxx offer empty map constant when vector is empty?
     (e. +the-make-const-map+ |fromColumns|
       (let ((k -1)) (map '#.`(vector (integer 0 (,array-dimension-limit))) (lambda (v) (declare (ignore v)) (incf k)) vector))
       vector))
   (:|asKeys/0| (vector)
-    "Return a ConstMap mapping the elements of this vector to null."
+    "Return a ConstMap mapping the elements of this list to null."
     ; XXX preserve internal-element-type if possible
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda (:|iterate| (f)
@@ -228,19 +236,24 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
           (e. f |run| key nil))))
       +e-false+))
   (:|asSet/0| (vector)
-    "Return a ConstSet with the elements of this vector, omitting duplicates."
+    "Return a ConstSet with the elements of this list, omitting duplicates."
     (e. (e. (e. (vat-safe-scope *vat*) 
                 |get| "import__uriGetter")
             |get| "org.cubik.cle.prim.makeConstSet") 
         |make| (e. vector |asKeys|)))
   (:|size/0| #'length)
   (:|get/1| (this index)
+    "Return the 'index'th element of this list."
     (aref this (e-coerce index 'integer)))
-  (:|last/0| (v) (aref v (1- (length v))))
+  (:|last/0| (v) 
+    "Return the last element of this list, or throw if it is empty."
+    (aref v (1- (length v))))
   (:|add/1| (this other) 
+    "Return the concatenation of both lists."
     (e-coercef other 'vector)
     (concatenate 'vector this other))
   (:|multiply/1| (vector times)
+    "Return a list containing the elements of this list repeated 'times' times."
     (let* ((step (length vector))
            (result (make-array (* step times)
                     :element-type (array-element-type vector))))
@@ -252,7 +265,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
           for elem across vector
           do  (e. func |run| i elem))
     nil)
-  ; XXX use less expensive eq tests if actual element type can be so tested
+  ; XXX OPT use less expensive eq tests if actual element type can be so tested
   (:|indexOf1/1| (vector elem)
     (or (position elem vector :test #'eeq-is-same-ever)
         -1))

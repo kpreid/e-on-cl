@@ -18,11 +18,14 @@
 (defgeneric inner-scope-noun-binding (scope noun-string)
   (:documentation "Return the binding object for a given noun in this scope. Signals UNBOUND-VARIBLE if there is no binding."))
 
-(defgeneric inner-scope-fqn-prefix (scope))
+(defgeneric inner-scope-fqn-prefix (scope)
+  (:documentation "Return the FQN prefix for objects defined in this scope."))
 
+; XXX this appears to be a completely unreferenced and unimplemented function - remove
 (defgeneric inner-scope-to-outer-scope (inner-scope))
 
-(defgeneric inner-scope-bindings (inner-scope))
+(defgeneric inner-scope-bindings (inner-scope)
+  (:documentation "Return an alist of the nouns defined in this scope and their binding objects."))
 
 (defgeneric inner-scope-noun-is-local (scope noun-string)
   (:documentation "Returns whether the given noun is bound inside of a scope box, and therefore should not be allowed to be rebound."))
@@ -89,8 +92,9 @@
         (inner-scope-meta-state-bindings (rest inner-scope))))
   
 
-; base class for simple 'inheriting' scopes
-(defclass inner-scope () ((rest :initarg :rest)))
+(defclass inner-scope () 
+  ((rest :initarg :rest))
+  (:documentation "Base class for simple 'inheriting' scopes. Forwards all operations to its 'rest' slot."))
 
 (defmethod print-object ((obj inner-scope) stream)
   (print-unreadable-object (obj stream :type t :identity nil)
@@ -128,15 +132,17 @@
 (defclass object-inner-scope (inner-scope)
   ((nouns :initarg :nouns
           :type list))
-  (:documentation "XXX document this"))
+  (:documentation "Marks the boundary of an object definition, the scope which meta.getState() (implemented via inner-scope-meta-state-bindings) operates on."))
 
 (defmethod inner-scope-meta-state-bindings ((inner-scope object-inner-scope))
+  "Return a list of forms which evaluate to vector pairs for constructing the map which meta.getState returns."
   (loop for noun in (slot-value inner-scope 'nouns) collect
     `(vector ,(concatenate 'string "&" noun)
              ,(binding-get-slot-code (inner-scope-noun-binding inner-scope noun)))))
 
 
 (defun inner-scope-bind (inner-scope noun-string binding)
+  "Return an inner scope with a binding added; fail if it is already defined locally."
   (if (inner-scope-noun-is-local inner-scope noun-string)
     (error "~S already in scope" noun-string)
     (cons (cons noun-string binding) inner-scope)))
@@ -147,13 +153,18 @@
 
 ; --- inner scope noun bindings ---
 
-(defgeneric binding-get-code      (binding))
-(defgeneric binding-get-slot-code (binding))
-(defgeneric binding-set-code      (binding value-form))
-(defgeneric binding-let-entry     (binding))
-(defgeneric binding-smash-code    (binding broken-ref-form))
+(defgeneric binding-get-code      (binding)
+  (:documentation "Return a form which evaluates to the value of the binding."))
+(defgeneric binding-get-slot-code (binding)
+  (:documentation "Return a form which evaluates to the slot of the binding."))
+(defgeneric binding-set-code      (binding value-form)
+  (:documentation "Return a form which will set the value of the binding to the result of evaluating value-form."))
+(defgeneric binding-let-entry     (binding)
+  (:documentation "Return the LET clause which must be scoped outside of all uses of this binding.")) ; XXX is it let*?
+(defgeneric binding-smash-code    (binding broken-ref-form)
+  (:documentation "Return a form which should be evaluated iff the binding is to remain in scope without its ordinary initialization code running. This is used to implement MatchBindExpr."))
 
-; slot bindings - represented as symbols for historical reasons - XXX change that
+; slot bindings - represented as symbols for historical reasons - xxx change that?
 
 (defmethod binding-get-code ((binding symbol))
   `(e. ,binding |getValue|))

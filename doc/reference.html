@@ -1,0 +1,22 @@
+<html><head>
+<title>E-on-CL Reference Requirements</title>
+
+<body>
+
+<h2>Immutability</h2>
+
+<p>All of these objects, when used as E-references, must be treated as immutable:
+
+<ul>
+<li><code>cl:string
+<li><code>cl:cons
+<li><code>cl:array
+</ul>
+
+<p>Symbols may be mutated, even though E-on-CL treats them as immutable atoms, as the mutable components of symbols are not exposed to the E system.</p>
+
+<h2>Equivalence</h2>
+
+<p>An <code>e.elib:ref</code> to an object must be treated equivalently to the object itself. This may be accomplished by dereference using <code>ref-shorten</code>, <code>e-coerce</code>, or <code>e-coercef</code>.</p>
+
+<p>No distinctions may be made between objects that <code>e.elib:equalizer</code>s consider equal.</p>

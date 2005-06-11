@@ -109,6 +109,7 @@
                 (scope-slot-ordering this)))
            ,fqn-prefix))))
   (:|or/1| (inner outer)
+    "Return a scope which maps all nouns either scope does, preferring this scope's slots. The FQN prefix will be that of this scope."
     (e-coercef outer 'scope)
     (make-instance 'scope
       :fqn-prefix (slot-value inner 'fqn-prefix)
@@ -122,12 +123,15 @@
               (setf (gethash noun new-table) slot)))
           new-table)))
   (:|maps/1| (this noun)
+    "Return whether this scope has a slot for the given noun string."
     (e-coercef noun 'string)
     (with-slots (slot-table) this
       (as-e-boolean (nth-value 1 (gethash noun slot-table)))))
   (:|get/1| (scope noun)
+    "Return the value of this scope's slot for the given noun string, or throw if it has no slot."
     (e. (e. scope |getSlot| noun) |getValue|))
   (:|getSlot/1| (this noun)
+    "Return this scope's slot for the given noun string, or throw if it has no slot."
     (e-coercef noun 'string)
     (with-slots (slot-table) this
       (multiple-value-bind (slot present) (gethash noun slot-table)
@@ -135,6 +139,7 @@
           slot
           (error "binding not in scope: ~A" (e-quote noun))))))
   (:|fetch/2| (this noun absent-thunk)
+    "Return the value of this scope's slot for the given noun string, or the result of absent-thunk if it has no slot."
     (e-coercef noun 'string)
     (with-slots (slot-table) this
       (multiple-value-bind (slot present) (gethash noun slot-table)
@@ -142,6 +147,7 @@
           (e. slot |getValue|)
           (e. absent-thunk |run|)))))
   (:|put/2| (this noun value)
+    "Set the value of this scope's slot for the given noun string, or throw if it has no slot."
     (e. (e. this |getSlot| noun) |setValue| value))
   (:|getState/0| (this)
     "Return a ConstMap containing the bindings in this scope, as \"&\" + noun => slot."
@@ -154,8 +160,10 @@
                         (gethash noun slot-table)))
       nil))
   (:|with/2| (scope noun value)
+    "Return a scope which has an immutable slot for 'value' bound to 'noun', and this scope's other bindings and FQN prefix."
     (e. scope |withSlot| noun (make-instance 'e-simple-slot :value value)))
   (:|withSlot/2| (scope new-noun new-slot)
+    "Return a scope which has 'new-slot' bound to 'new-noun', and this scope's other bindings and FQN prefix."
     (e-coercef new-noun 'string)
     ; xxx support efficient accumulation?
     (with-slots (slot-table) scope
@@ -169,6 +177,7 @@
             (setf (gethash new-noun new-table) new-slot)
             new-table))))
   (:|withPrefix/1| (scope new)
+    "Return a scope which is identical to this scope, except for having the given FQN prefix."
     (e-coercef new 'string)
     (with-slots (slot-table) scope
       (make-instance 'scope 
@@ -212,6 +221,7 @@
     (e. tw |print| "<__loop>")
     nil)
   (:|run/1| (body)
+    "Call body.run(), which must return a boolean, until it returns false."
     (loop while (e-is-true (e. body |run|))))))
 
 (defvar +the-thrower+ (e-named-lambda "org.erights.e.elib.prim.throw"
@@ -231,6 +241,9 @@
              (make-condition 'elib::free-problem :value problem))))))
 
 (defun split-fqn-prefix (fqn)
+  ; xxx consider replacing with SPLIT-SEQUENCE
+  ; XXX write tests for this particular function
+  "Return a list of the components of this FQN prefix. XXX need to document precise empty-element and empty-string behavior."
   (let ((pos (position #\. fqn)))
     (if pos
       (cons (subseq fqn 0 pos) (split-fqn-prefix (subseq fqn (1+ pos))))
@@ -244,10 +257,12 @@
     (flet ((match (ch) (position ch specials)))
       (e-named-lambda "org.quasiliteral.text.FirstCharSplitter"
         (:|findIn/1| (str)
+          "Equivalent to .findInFrom(str, 0)."
           (e-coercef str 'string)
           (or (position-if #'match str)
               -1))
         (:|findInFrom/2| (str start) ; XXX write tests
+          "Return the first index greater than 'start' of a character of 'str' which is one of the special characters of this splitter, or -1 if no such index exists."
           (e-coercef str 'string)
           (e-coercef start `(integer 0 ,(length str)))
           (or (position-if #'match str :start start)
@@ -256,6 +271,7 @@
 (defun uncall-to-unget (loader portrayal)
   (e-coercef portrayal '(or null vector))
   ; xxx I do not understand the justification in the doc-comment of Java-E baseLoader#optUnget.
+  "Converts an optional uncall value into an optional unget value. That is, returns 'name' if 'portrayal' matches [==loader, ==\"get\", [name]]; otherwise null."
   (if (and portrayal 
            (=   (length portrayal) 3)
            (eql (aref portrayal 0) loader)
@@ -265,6 +281,7 @@
         (aref args 0)))))
 
 (defun unget-to-uncall (loader name)
+  "Converts an optional unget value into an optional uncall value. Currently does not check whether 'name' is a string."
   (if name
     `#(,loader "get" #(,name))))
 
@@ -272,6 +289,7 @@
 
 ; XXX look into whether e-lambda, now that it has matcher support, would be cleaner for implementing this
 (defun wrap-function (f &key stamps)
+  "Return an E function value corresponding to the given Lisp function value."
   (labels ((wrapper (mverb &rest args)
       (cond
         ((eql mverb (e-util:mangle-verb "run" (length args)))
@@ -280,6 +298,7 @@
           (multiple-value-call #'vector (apply f args)))
         (t
           (case mverb
+            ; XXX provide getAllegedType
             ((:|__printOn/1|) (destructuring-bind (tw) args
               (e-coercef tw +the-text-writer-guard+)
               (e. tw |print| "<native function ")
@@ -294,7 +313,6 @@
                              (string= verb "tuple"))
                          (e-util:function-responds-to f arity))
                     (e-is-true (elib:miranda #'wrapper mverb args nil))))))
-            ; XXX would it hurt to have elib:miranda provide the magic verb?
             ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
               (not (not (find auditor stamps :test #'eeq-is-same-ever)))))
             (otherwise
@@ -303,6 +321,7 @@
     #'wrapper))
 
 (defun make-symbol-accessor (symbol)
+  "Return an E object providing access to the mutable properties of 'symbol'."
   (e-named-lambda "org.cubik.cle.prim.lisp$symbolAccessor"
     (:|__printOn/1| (tw)
       (e-coercef tw +the-text-writer-guard+)

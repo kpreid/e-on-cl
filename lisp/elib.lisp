@@ -1264,7 +1264,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 ; --- Equalizer ---
 
-; xxx worth caching equalizer per-thread?
+; XXX OPT cache equalizer per-thread (in vat?)
 (defun eeq-is-same-yet     (a b)
   (e-is-true (e. (make-equalizer) |sameYet| a b)))
 (defun eeq-is-same-ever    (a b)
