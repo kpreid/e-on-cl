@@ -14,12 +14,14 @@
   "Equivalent to the cl:lambda macro, except that it attempts to have 'name' show up in backtraces and function printing if possible. 'name' is not evaluated and must be a function name suitable for FLET/LABELS."
   `(flet ((,name ,@def)) #',name))  
 
-(defun serve-event (&rest args)
-  (apply 
-    #+sbcl #'sb-sys:serve-event
-    #+cmu #'system:serve-event
-    #-(or sbcl cmu) (error "No serve-event")
-    args))
+#+sbcl (setf (fdefinition 'serve-event) #'sb-sys:serve-event)
+#+cmu  (setf (fdefinition 'serve-event) #'system:serve-event)
+
+(unless (fboundp 'serve-event)
+  (defun serve-event (&optional timeout)
+    "Portable fake serve-event if we don't have a real one."
+    (when timeout (sleep timeout))
+    nil))
 
 ; --- RUN-PROGRAM and friends ---
 
