@@ -51,6 +51,7 @@ def IPAuthor implements DeepFrozen {
 
     # XXX SBCL internal function
     def _write := lisp["SB-UNIX", "UNIX-WRITE"]::"function"
+    def _strerror := lisp["SB-IMPL", "STRERROR"]::"function"
   
     def IP0 {
       to __printOn(out :TextWriter) {
@@ -123,9 +124,19 @@ def IPAuthor implements DeepFrozen {
               to flush() {
                 def v := clCoerce(outBuffer.snapshot(), read("(cl:vector (cl:unsigned-byte 8))"))
                 
-                def [elementsWritten, ==0] := _write.tuple(socketFD, v, 0, v.size())
-                outBuffer.setRun(0, elementsWritten, [])
-                outBackend.setAvailable(maxOutAvailable - outBuffer.size())
+                def [elementsWritten, errno] := _write.tuple(socketFD, v, 0, v.size())
+                
+                if (errno != 0) { 
+                  # XXX library function for errno processing - merge with read/3 in sockets.lisp
+                  # XXX typed exception; javaism
+                  def p := `file descriptor write error for $outStream: $errno (${_strerror(errno)})` :<type:java.lang.Exception>
+                  traceln(p)
+                  outStream.fail(p)
+                } else {
+
+                  outBuffer.setRun(0, elementsWritten, [])
+                  outBackend.setAvailable(maxOutAvailable - outBuffer.size())
+                }
               }
               
             })
