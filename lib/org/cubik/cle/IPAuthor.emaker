@@ -47,6 +47,7 @@ def IPAuthor implements DeepFrozen {
     def makeInstance := lisp["CL", "MAKE-INSTANCE"]::"function"
     def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
     def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
+    def makeFDRef := lisp["E.SOCKETS", "MAKE-FD-REF"]::"function"
 
     # XXX SBCL internal function
     def _write := lisp["SB-UNIX", "UNIX-WRITE"]::"function"
@@ -90,6 +91,7 @@ def IPAuthor implements DeepFrozen {
               l`:protocol`, l`:tcp`)
             
             def socketFD := (lisp["SB-BSD-SOCKETS", "SOCKET-FILE-DESCRIPTOR"]::"function")(socket)
+            def fdRef := makeFDRef(socketFD)
               
             socket.setNonBlocking(true)
             escape err {
@@ -161,8 +163,8 @@ def IPAuthor implements DeepFrozen {
               withTurn(lispFunction(thunk {
               
                 escape error {
-                  escape eof {
-                    def elements := socket.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eof)
+                  escape eofExit {
+                    def elements := fdRef.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eofExit)
                     #traceln(`$inStream: read $elements from socket`)
                     inBuffer.append(elements)
                   } catch _ {
