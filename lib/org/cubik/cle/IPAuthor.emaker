@@ -76,6 +76,14 @@ def IPAuthor implements DeepFrozen {
         
           to connect(=> textStreams :nullOk[String] := null) {
           
+            def nameObj {
+              to __printOn(out :TextWriter) {
+                out.print(".".rjoin(map.v(E.toString, hostSpec)))
+                out.write(":")
+                out.print(portSpec)
+              }
+            }
+          
             def [Element, clElementType, clExternalFormat] :=
               if (textStreams =~ encoding :notNull) {
                 # XXX use a common charset-name-to-external-format routine (see extern.lisp)
@@ -111,9 +119,7 @@ def IPAuthor implements DeepFrozen {
             
             def outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
               to __printOn(out :TextWriter) {
-                out.print(".".rjoin(map.v(E.toString, hostSpec)))
-                out.write(":")
-                out.print(portSpec)
+                out.printSame(nameObj)
               }
               
               to write(elements :List) {
@@ -143,9 +149,7 @@ def IPAuthor implements DeepFrozen {
             
             def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
               to __printOn(out :TextWriter) {
-                out.print(".".rjoin(map.v(E.toString, hostSpec)))
-                out.write(":")
-                out.print(portSpec)
+                out.printSame(nameObj)
               }
               
               to semiObtain(atLeast :int, atMost :Range, proceed, report) {
