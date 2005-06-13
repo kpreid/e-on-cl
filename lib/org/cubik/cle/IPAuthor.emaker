@@ -24,6 +24,8 @@ def IPAuthor implements DeepFrozen {
   # This is somewhat an experiment in writing close-to-the-implementation code in E
   # XXX can we give a smaller authority than all-of-lisp practically? 
   to run(lisp) {
+
+    def makeFDInStream := <import:org.cubik.cle.io.makeFDInStreamAuthor>(lisp)
   
     # XXX this is horribly verbose. the lisp interface needs some shortcuts
     def intern := lisp["CL", "INTERN"]::"function"
