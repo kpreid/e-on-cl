@@ -493,8 +493,7 @@
       (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elib.slot.makeBaseGuardAuthor") 
           |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))))
 
-; XXX ++
-(defvar vm-node-maker-importer
+(defvar +vm-node-maker-importer+
   (let* ((prefix "org.erights.e.elang.evm."))
     (e-named-lambda "vm-node-maker-importer"
       :stamped +deep-frozen-stamp+
@@ -514,9 +513,8 @@
               (return-from opt-unget (concatenate 'string prefix (string node-type)))))
           nil)))))
 
-; XXX ++
 ; XXX optUnget?
-(defvar vm-node-type-importer (e-named-lambda "vm-node-type-importer"
+(defvar +vm-node-type-importer+ (e-named-lambda "vm-node-type-importer"
   :stamped +deep-frozen-stamp+
   (:|fetch/2| (fqn absent-thunk
       &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
@@ -670,8 +668,8 @@ If a log message is produced, context-thunk is run to produce a string describin
                     (make-primitive-loader)
                     (make-safe-extern-loader)
                     emaker-importer
-                    vm-node-type-importer
-                    vm-node-maker-importer))))
+                    +vm-node-type-importer+
+                    +vm-node-maker-importer+))))
             (e-named-lambda "org.cubik.cle.prim.ImportLoaderMagic"
               :stamped +deep-frozen-stamp+
               (:|__printOn/1| (tw) (e. real-loader |__printOn| tw))

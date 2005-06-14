@@ -89,7 +89,7 @@
     :e-var-slot
     :e-guarded-slot
     :native-e-slot
-    :the-unset-slot
+    :+the-unset-slot+
     :+the-make-simple-slot+
     :place-slot
     
@@ -169,6 +169,8 @@
     :+the-make-weak-ref+
     
     :+the-make-proxy-resolver+))
+
+(defvar elib:+the-unset-slot+)
 
 (defvar elib:+the-any-map-guard+)
 (defvar elib:+the-flex-list-guard+)

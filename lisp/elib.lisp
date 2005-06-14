@@ -1054,7 +1054,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
     (declare (ignore this new-value))
     (error "internal error: slot variable never assigned")))
 
-(defvar the-unset-slot (make-instance 'e-unset-slot))
+(defvar +the-unset-slot+ (make-instance 'e-unset-slot))
 
 
 (defclass e-var-slot (vat-checking) 

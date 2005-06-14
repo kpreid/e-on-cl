@@ -176,7 +176,7 @@
   `(e. ,binding |setValue| ,value-form))
 
 (defmethod binding-let-entry ((binding symbol))
-  `(,binding ,elib:the-unset-slot))
+  `(,binding ,elib:+the-unset-slot+))
 
 (defmethod binding-smash-code ((binding symbol) broken-ref-form)
   `(setq ,binding (make-instance 'elib:e-simple-slot :value ,broken-ref-form)))
