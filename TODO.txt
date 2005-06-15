@@ -6,16 +6,20 @@ Major bugs:
 
 Minor bugs:
   
-  - The profiling options in updoc.lisp don't work for me.
-    - for sb-profile, this appears to be a known bug - see sbcl BUGS #373
-    - for sb-sprof, still unknown.
-  - clrune <relative-path-to-script> doesn't work because file__uriGetter doesn't accept relative paths.
+  - the sb-sprof profiling option in updoc.lisp doesn't work. The SBCL release after 0.9.1 might improve this.
+  - clrune <relative-path-to-script> doesn't work because file__uriGetter doesn't accept relative paths. This is a design issue.
+
+Internal bugs:
+
+  - inferred-arity mverbs don't work for def-vtable methods
+  - updoc can't be safely exposed to E since it's a top loop, which means we can't meta-test it
 
 Little features:
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
   - socket IO
   - more complete file IO
   - have updoc stop running a given script when a mismatch has occurred and a later step depends on a binding made/shadowed by that step
+  - updoc should take options: profiling options, --confine
 
 Big features:
   - term trees
@@ -23,7 +27,7 @@ Big features:
   - boot-comm system
   - threaded vats
   - Audited Selfless for E-objects
-  - VatTP/CapTP (XXX is the name Pluribus still in use?)
+  - Pluribus
 
 Code cleanups not marked in the code:
   - delete explicit /arity from e-lambdas wherever possible
