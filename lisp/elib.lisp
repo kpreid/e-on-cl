@@ -564,7 +564,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
-  (defun vtable-entry-mverb (desc
+  (defun vtable-entry-mverb (desc prefix-arity
       &aux (verb-or-mverb-string (string (first desc))))
     (if (find #\/ verb-or-mverb-string)
       (intern verb-or-mverb-string "KEYWORD")
@@ -575,10 +575,10 @@ If there is no current vat at initialization time, captures the current vat at t
               (assert (cddr desc) () "Inferring arity for function vtable entry not supported: ~S" desc)
               (e.util:lambda-list-arguments-range (second desc)))
           (assert (= min max) () "Variable arguments not yet supported for vtable-case-entry arity inference")
-          min))))
+          (- min prefix-arity)))))
 
   (defun vtable-case-entry (desc args-sym prefix-args &key type-name
-      &aux (mverb (vtable-entry-mverb desc)))
+      &aux (mverb (vtable-entry-mverb desc (length prefix-args))))
     "Return a CASE clause whose key is a mangled-verb, suitable for implementing method dispatch for E objects.
 
 The first element of the desc is a string designator for the verb. If it contains a slash, it is treated as a mangled-verb (verb/arity); if not, the second element must be a lambda list, which is used to determine the number of arguments.
@@ -621,13 +621,13 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
 		  (*package* (or (symbol-package sym) (find-package :cl))))
               (write-to-string sym))))) 'vector))
                             
-  (defun vtable-entry-message-desc-pair (entry &rest keys
-      &aux (mverb (vtable-entry-mverb entry)))
+  (defun vtable-entry-message-desc-pair (entry &rest keys &key (prefix-arity 0) &allow-other-keys
+      &aux (mverb (vtable-entry-mverb entry prefix-arity)))
     (vector (symbol-name mverb) 
             (apply #'vtable-entry-message-desc entry keys)))
   
   (defun vtable-entry-message-desc (entry &key (prefix-arity 0)
-      &aux (mverb (vtable-entry-mverb entry))
+      &aux (mverb (vtable-entry-mverb entry prefix-arity))
            (impl-desc (rest entry)))
     (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
       ; XXX *TEMPORARY* workaround for ABCL's lack of MAKE-LOAD-FORM support
@@ -697,7 +697,9 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
           
           ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
             (as-e-boolean (or
-              (member (e-util:mangle-verb verb arity) ',(mapcar #'car method-entries))
+              (member (e-util:mangle-verb verb arity) 
+                      ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
+                                method-entries))
               (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
           ((elib:audited-by-magic-verb) (destructuring-bind (auditor) ,args-sym
             (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
@@ -880,7 +882,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
     #+e.vtable-collect.use-example
     (defmethod vtable-collect-message-types ((specimen ,type-spec) narrowest-type)
       (if (subtypep ',type-spec narrowest-type)
-        (list* ,@(mapcar #'vtable-entry-message-desc-pair entries)
+        (list* ,@(mapcar #'(lambda (entry) (vtable-entry-message-desc-pair entry :prefix-arity 1)) entries)
           (call-next-method))
         (call-next-method)))
     
@@ -892,7 +894,9 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
             (vtable-case-entry desc 'args `(rec) :type-name (prin1-to-string type-spec)))
         ((:|__respondsTo/2|) (destructuring-bind (verb arity) args
           (as-e-boolean (or
-            (member (e-util:mangle-verb verb arity) ',(mapcar #'car entries))
+            (member (e-util:mangle-verb verb arity) 
+                    ',(mapcar (lambda (entry) (vtable-entry-mverb entry 1)) 
+                              entries))
             (e-is-true (call-next-method))))))
   
         (otherwise (call-next-method))))))
