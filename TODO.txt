@@ -11,7 +11,6 @@ Minor bugs:
 
 Internal bugs:
 
-  - inferred-arity mverbs don't work for def-vtable methods
   - updoc can't be safely exposed to E since it's a top loop, which means we can't meta-test it
 
 Little features:
@@ -30,7 +29,6 @@ Big features:
   - Pluribus
 
 Code cleanups not marked in the code:
-  - delete explicit /arity from e-lambda and vtable methods wherever possible
   - reorganize: rename elang-transform.lisp to compiler-transform?
   - reorganize: rename elib.lisp once it's been pared down to just the external macros and stuff
   - reorganize: move stuff that isn't really about the root scopes out of knot.lisp
