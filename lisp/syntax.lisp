@@ -66,12 +66,12 @@
   "Centralized object for generating E source and E-like text."
   :stamped +deep-frozen-stamp+
   
-  (:|__printOn/1| (tw)
+  (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<E-syntax printer>")
     nil)
   
-  (:|printDocComment/2| (tw text)
+  (:|printDocComment| (tw text)
     ; XXX have a strictness (about */) argument
     "Print a \"/** */\" documentation comment with a trailing line break on 'tw', if 'text' is not an empty string."
     (e-coercef tw +the-text-writer-guard+)
@@ -85,7 +85,7 @@
       (e. tw |println|))
     nil)
   
-  (:|printVerb/2| (tw verb)
+  (:|printVerb| (tw verb)
     "Print a verb with appropriate quoting, as in CallExpr or EMethod."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef verb 'string)
@@ -94,7 +94,7 @@
       (e. tw |quote| verb))
     nil)
    
-  (:|printNoun/2| (tw noun)
+  (:|printNoun| (tw noun)
     "Print a noun with appropriate quoting, as in NounExpr."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef noun 'string)
@@ -105,7 +105,7 @@
         (e. tw |quote| noun)))
     nil)
   
-  (:|printPropertySlot/2| (tw prop-name)
+  (:|printPropertySlot| (tw prop-name)
     "The print representation of a property-slot object. Not parsable."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef prop-name 'string)
@@ -114,14 +114,14 @@
       (e. tw |write| prop-name)
       (e. tw |quote| prop-name)))
   
-  (:|printString/2| (tw this)
+  (:|printString| (tw this)
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef this 'string)
     (e. tw |write| "\"")
     (print-escaped tw this "\"")
     (e. tw |write| "\""))
   
-  (:|printCons/2| (tw this)
+  (:|printCons| (tw this)
     "The print representation of a Lisp cons. Not parsable."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef this 'cons)
@@ -131,7 +131,7 @@
     (e. tw |write| " > + ")
     (e. tw |quote| (cdr this)))
   
-  (:|printCharacter/2| (tw this)
+  (:|printCharacter| (tw this)
     "The print representation of a character."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef this 'character)
@@ -140,7 +140,7 @@
     (print-escaped tw (vector this) "\'")
     (e. tw |write| "'"))
   
-  (:|printList/3| (tw this quote-elements)
+  (:|printList| (tw this quote-elements)
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef this 'vector)
     (e-coercef quote-elements 'e-boolean)
@@ -153,7 +153,7 @@
               do (e. tw |print| sep element))
         (e. tw |print| #|[|# "]"))))
   
-  (:|printMethodHeader/6| (tw is-kernel doc-comment verb params opt-result-guard)
+  (:|printMethodHeader| (tw is-kernel doc-comment verb params opt-result-guard)
     "Print a to/method as in an EScript or interface sugar."
     ; XXX should we have quoting options for params and opt-result-guard?
     (e-coercef tw +the-text-writer-guard+)
@@ -173,7 +173,7 @@
       (e. tw |print| " :")
       (e. tw |print| opt-result-guard)))
   
-  (:|printGuardedNounPattern/3| (tw opt-name opt-guard)
+  (:|printGuardedNounPattern| (tw opt-name opt-guard)
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef opt-name '(or null string))
     (if opt-name
@@ -183,7 +183,7 @@
       (e. tw |print| " :")
       (e. tw |print| opt-guard)))
 
-  (:|printExprBlock/2| (tw node)
+  (:|printExprBlock| (tw node)
     "Print the EExpr 'node' on 'tw' enclosed in braces."
     (e. tw |print| "{" #|}|#)
     (let ((tw2 (e. tw |indent|)))
@@ -191,10 +191,10 @@
       (e. node |welcome| (e. +e-printer+ |makePrintENodeVisitor| tw +precedence-outer+)))
     (e. tw |lnPrint| #|{|# "}"))
 
-  (:|makePrintENodeVisitor/1| (tw)
+  (:|makePrintENodeVisitor| (tw)
     (e. +e-printer+ |makePrintENodeVisitor| tw +precedence-outer+))
   
-  (:|makePrintENodeVisitor/2| (tw precedence)
+  (:|makePrintENodeVisitor| (tw precedence)
     "Return an ETreeVisitor which prints nodes to 'tw' in standard E syntax. 'precedence' controls whether the expression is parenthesized. 
 
 XXX make precedence values available as constants"
@@ -232,19 +232,19 @@ XXX make precedence values available as constants"
                     (e-coercef index 'integer)
                     (e. tw |print| tag "{" index "}"))))
         (e-named-lambda "org.erights.e.elang.syntax.ePrinter$printVisitor"
-          (:|__printOn/1| (ptw)
+          (:|__printOn| (ptw)
             (e-coercef ptw +the-text-writer-guard+)
             (e. ptw |print| "<E-syntax node visitor printing to " tw ">")
             nil)
           
-          (:|visitAssignExpr/3| (opt-original noun-expr value-expr)
+          (:|visitAssignExpr| (opt-original noun-expr value-expr)
             (declare (ignore opt-original))
             (precedential (+precedence-assign+)
               (subprint noun-expr +precedence-in-assign-left+)
               (e. tw |print| " := ")
               (subprint value-expr +precedence-in-assign-right+)))
           
-          (:|visitCallExpr/4| (opt-original rec verb args)
+          (:|visitCallExpr| (opt-original rec verb args)
             (declare (ignore opt-original))
             (subprint rec +precedence-call-rec+)
             (e. tw |print| ".")
@@ -256,7 +256,7 @@ XXX make precedence values available as constants"
                      (subprint arg +precedence-outer+))
             (e. tw |print| #|(|# ")"))
           
-          (:|visitCatchExpr/4| (opt-original attempt catch-pattern catch-body)
+          (:|visitCatchExpr| (opt-original attempt catch-pattern catch-body)
             (declare (ignore opt-original))
             ; XXX don't call back to the node for printing
             (e. tw |print| "try ")
@@ -266,7 +266,7 @@ XXX make precedence values available as constants"
             (e. tw |print| " ")
             (subprint-block catch-body))
           
-          (:|visitDefineExpr/3| (opt-original pattern specimen)
+          (:|visitDefineExpr| (opt-original pattern specimen)
             (declare (ignore opt-original))
             (precedential (+precedence-define+)
               (e. tw |print| "def ")
@@ -274,7 +274,7 @@ XXX make precedence values available as constants"
               (e. tw |print| " := ")
               (subprint specimen +precedence-define-right+)))
           
-          (:|visitEscapeExpr/5| (opt-original ejector-patt body catch-patt catch-body)
+          (:|visitEscapeExpr| (opt-original ejector-patt body catch-patt catch-body)
             (declare (ignore opt-original))
             (e. tw |print| "escape ")
             (subprint ejector-patt nil)
@@ -286,7 +286,7 @@ XXX make precedence values available as constants"
               (e. tw |print| " ")
               (subprint-block catch-body)))
                     
-          (:|visitFinallyExpr/3| (opt-original attempt unwinder)
+          (:|visitFinallyExpr| (opt-original attempt unwinder)
             (declare (ignore opt-original))
             ; XXX don't call back to the node for printing
             (e. tw |print| "try ")
@@ -294,11 +294,11 @@ XXX make precedence values available as constants"
             (e. tw |print| " finally ")
             (subprint-block unwinder))
           
-          (:|visitHideExpr/2| (opt-original body)
+          (:|visitHideExpr| (opt-original body)
             (declare (ignore opt-original))
             (subprint-block body))
           
-          (:|visitIfExpr/4| (opt-original cond true-block false-block)
+          (:|visitIfExpr| (opt-original cond true-block false-block)
             (declare (ignore opt-original))
             (e. tw |print| "if (" #|)|#)
             (subprint cond +precedence-outer+)
@@ -308,7 +308,7 @@ XXX make precedence values available as constants"
               (e. tw |print| " else ")
               (subprint-block false-block)))
           
-          (:|visitLiteralExpr/2| (opt-original value)
+          (:|visitLiteralExpr| (opt-original value)
             (declare (ignore opt-original))
             (e-coercef value '(or string integer character float64))
             (etypecase value
@@ -321,26 +321,26 @@ XXX make precedence values available as constants"
               (character
                 (e. +e-printer+ |printString| tw value))))
           
-          (:|visitMetaContextExpr/1| (opt-original)
+          (:|visitMetaContextExpr| (opt-original)
             (declare (ignore opt-original))
             (e. tw |print| "meta.context()"))
           
-          (:|visitMetaStateExpr/1| (opt-original)
+          (:|visitMetaStateExpr| (opt-original)
             (declare (ignore opt-original))
             (e. tw |print| "meta.getState()"))
           
-          (:|visitMatchBindExpr/3| (opt-original specimen pattern)
+          (:|visitMatchBindExpr| (opt-original specimen pattern)
             (declare (ignore opt-original))
             (precedential (+precedence-matchbind+)
               (subprint specimen +precedence-matchbind-left+)
               (e. tw |print| " =~ ")
               (subprint pattern nil)))
           
-          (:|visitNounExpr/2| (opt-original noun)
+          (:|visitNounExpr| (opt-original noun)
             (declare (ignore opt-original))
             (e. +e-printer+ |printNoun| tw noun))
           
-          (:|visitObjectExpr/5| (opt-original doc-comment qualified-name auditors script)
+          (:|visitObjectExpr| (opt-original doc-comment qualified-name auditors script)
             (declare (ignore opt-original))
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
@@ -353,7 +353,7 @@ XXX make precedence values available as constants"
                        (subprint sub nil)))
             (subprint script nil))
           
-          (:|visitSeqExpr/2| (opt-original subs)
+          (:|visitSeqExpr| (opt-original subs)
             (declare (ignore opt-original))
             (precedential (+precedence-seq+)
               (loop for sep = "" then #\Newline
@@ -361,13 +361,13 @@ XXX make precedence values available as constants"
                     do (e. tw |print| sep)
                        (subprint sub +precedence-in-seq+))))
           
-          (:|visitSlotExpr/2| (opt-original noun)
+          (:|visitSlotExpr| (opt-original noun)
             (declare (ignore opt-original))
             (precedential (+precedence-slot-expr+)
               (e. tw |print| "&")
               (subprint noun +precedence-in-slot-expr+)))
           
-          (:|visitEScript/3| (opt-original opt-methods opt-matcher)
+          (:|visitEScript| (opt-original opt-methods opt-matcher)
             (declare (ignore opt-original))
             ; XXX print patterns and opt-result-guard directly
             (if opt-methods
@@ -385,7 +385,7 @@ XXX make precedence values available as constants"
                 (e. tw |print| " ")
                 (subprint opt-matcher nil))))
             
-          (:|visitEMethod/6| (opt-original doc-comment verb patterns opt-result-guard body)
+          (:|visitEMethod| (opt-original doc-comment verb patterns opt-result-guard body)
             (declare (ignore opt-original))
             (e. tw |println|)
             (e. +e-printer+ |printMethodHeader| tw +e-true+
@@ -393,25 +393,25 @@ XXX make precedence values available as constants"
               verb
               (map 'vector
                 (lambda (pattern)
-                  (e-lambda (:|__printOn/1| (tw)
+                  (e-lambda (:|__printOn| (tw)
                     (e-coercef tw +the-text-writer-guard+)
                     (subprint pattern +precedence-outer+ :tw tw))))
                 patterns) 
               (when opt-result-guard
-                (e-lambda (:|__printOn/1| (tw)
+                (e-lambda (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
                   (subprint opt-result-guard +precedence-in-guard+ :tw tw)))))
             (e. tw |print| " ")
             (subprint-block body))
           
-          (:|visitEMatcher/3| (opt-original pattern body)
+          (:|visitEMatcher| (opt-original pattern body)
             (declare (ignore opt-original))
             (e. tw |print| "match ")
             (subprint pattern nil)
             (e. tw |print| " ")
             (subprint-block body))
           
-          (:|visitCdrPattern/3| (opt-original list-patt rest-patt)
+          (:|visitCdrPattern| (opt-original list-patt rest-patt)
             (declare (ignore opt-original))
             (subprint list-patt nil)
             (e. tw |print| " + ")
@@ -421,11 +421,11 @@ XXX make precedence values available as constants"
           (:|visitSlotPattern/3| (noun-pattern-printer "&"))
           (:|visitVarPattern/3| (noun-pattern-printer "var "))
 
-          (:|visitIgnorePattern/1| (opt-original)
+          (:|visitIgnorePattern| (opt-original)
             (declare (ignore opt-original))
             (e. tw |print| "_"))
           
-          (:|visitListPattern/2| (opt-original subpatts)
+          (:|visitListPattern| (opt-original subpatts)
             (declare (ignore opt-original))
             (e. tw |print| "[" #|]|#)
             (loop for sep = "" then ", "
@@ -434,7 +434,7 @@ XXX make precedence values available as constants"
                      (subprint patt nil))
             (e. tw |print| #|[|# "]"))
           
-          (:|visitSuchThatPattern/3| (opt-original subpatt condition)
+          (:|visitSuchThatPattern| (opt-original subpatt condition)
             (declare (ignore opt-original))
             (subprint subpatt nil)
             (e. tw |print| " ? ")
@@ -597,9 +597,9 @@ XXX make precedence values available as constants"
 (defvar +prim-parser+ (e-named-lambda
   "org.cubik.cle.prim.parser"
   :stamped +deep-frozen-stamp+
-  (:|run/2| (source syntax-ejector)
+  (:|run| (source syntax-ejector)
     (e-source-to-tree source :syntax-ejector syntax-ejector))
-  (:|run/1| (source)
+  (:|run| (source)
     (e-source-to-tree source))))
 
 ; --- Parse cache files ---
@@ -653,7 +653,7 @@ XXX make precedence values available as constants"
 ; --- ---
 
 (def-vtable e-syntax-error
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "syntax error: ")
     (e. tw |print| (princ-to-string this))))

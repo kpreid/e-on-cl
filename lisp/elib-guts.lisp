@@ -27,14 +27,14 @@
 ; --- native-type guards ---
 
 (def-vtable cl-type-guard
-  (:|coerce/2| (guard specimen opt-ejector)
+  (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (cl-type-specifier guard) opt-ejector guard))
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (cl-type-simple-expr (cl-type-specifier this))))
-  (:|getFQName/0| (this)
+  (:|getFQName| (this)
     (cl-type-fq-name (cl-type-specifier this)))
-  (:|getTheTrivialValue/0| (this)
+  (:|getTheTrivialValue| (this)
     (with-slots (ts trivial-box) this
       (car (or trivial-box
            (setf trivial-box (list (e-coerce
@@ -47,7 +47,7 @@
                ; should there be an ejector?
                (t (error "No trivial value available")))
              this)))))))
-  (:|getDocComment/0| (this)
+  (:|getDocComment| (this)
     (with-slots (ts) this
       (let ((documentation (documentation ts 'type)))
         ; The CONS case is a workaround for an apparent bug in OpenMCL 0.14.2-p1.
@@ -56,14 +56,14 @@
           (string documentation)
           (cons   (first documentation))
           (null   "")))))
-  (:|getSupers/0| (this) 
+  (:|getSupers| (this) 
     "Supertype information is not currently available for primitive types."
     (declare (ignore this))
     #())
-  (:|getAuditors/0| (this)
+  (:|getAuditors| (this)
     (declare (ignore this))
     #())
-  (:|getMessageTypes/0| (this)
+  (:|getMessageTypes| (this)
     ; xxx this is a bit inefficient
     (with-slots (ts) this
       (message-pairs-to-map-including-miranda-messages (vtable-message-types ts)))))
@@ -103,10 +103,10 @@
 
 (defvar +the-audit-checker+ (e-named-lambda "org.erights.e.elib.slot.auditChecker"
   :stamped +deep-frozen-stamp+
-  (:|__printOn/1| (tw)
+  (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "__auditedBy")) ; XXX move to e.syntax?
-  (:|run/2| (auditor specimen)
+  (:|run| (auditor specimen)
     (as-e-boolean (e-audit-check-dispatch auditor specimen)))))
 
 ; --- local resolver ---
@@ -139,48 +139,48 @@
           +e-true+)))))
 
 (def-vtable local-resolver
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (if (slot-value this 'ref)
                      "<Resolver>"
                      "<Closed Resolver>")))
   ; XXX resolve/2
   (:|resolveRace/1| #'resolve-race)
-  (:|resolve/1| (this target)
+  (:|resolve| (this target)
     (unless (e-is-true (resolve-race this target))
       (error "already resolved")))
-  (:|smash/1| (this problem)
+  (:|smash| (this problem)
     "Equivalent to this.resolve(Ref.broken(problem))."
     ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
     (unless (resolve-race this (elib:make-unconnected-ref (e-coerce problem 'condition)))
       (error "Already resolved")))
-  (:|isDone/0| (this)
+  (:|isDone| (this)
     "Returns whether this resolver's promise has been resolved already."
     (as-e-boolean (not (slot-value this 'ref)))))
 
 ; --- e-boolean ---
 
 (def-vtable e-boolean
-  (:|__printOn/1| (this tw) ; XXX move to e.syntax?
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (if (e-is-true this)
                      "true"
                      "false")))
-  (:|and/1| (this other)
+  (:|and| (this other)
     "Boolean and."
     (e-coercef other 'e-boolean)
     (if (e-is-true this) other +e-false+))
-  (:|not/0| (this)
+  (:|not| (this)
     "Boolean negation."
     (if (eql this +e-false+) +e-true+ +e-false+))
-  (:|or/1| (this other)
+  (:|or| (this other)
     "Boolean or."
     (e-coercef other 'e-boolean)
     (if (e-is-true this) +e-true+ other))
-  (:|pick/2| (this true-value false-value)
+  (:|pick| (this true-value false-value)
     "Return the first argument if this is true, otherwise return the second argument."
     (if (e-is-true this) true-value false-value))
-  (:|xor/1| (this other)
+  (:|xor| (this other)
     "Boolean exclusive or."
     (e-coercef other 'e-boolean)
     (if (e-is-true this) (e. other |not|) other)))
@@ -200,7 +200,7 @@
              (error "ejector ~S no longer in scope" (slot-value this 'label))))))
              
   (def-vtable ejector
-    (:|__printOn/1| (this tw) 
+    (:|__printOn| (this tw) 
       (e-coercef tw +the-text-writer-guard+)
       (with-slots (label) this
         (e. tw |print| "<" label " ejector>")))
@@ -615,17 +615,17 @@
 
 
 (defvar +the-make-proxy-resolver+ (e-named-lambda "org.erights.e.elib.ref.makeProxyResolver"
-  (:|run/2| (opt-handler opt-identity &aux ref-slot)
+  (:|run| (opt-handler opt-identity &aux ref-slot)
     ; XXX ref-slot will eventually be a weak reference
     (unless opt-handler
       (error "null is not allowed as the handler"))
     (unless (eeq-is-settled opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
     (e-named-lambda "org.erights.e.elib.ref.makeProxyResolver$proxyResolver"
-      (:|__printOn/1| (tw)
+      (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<Proxy Resolver>"))
-      (:|getProxy/0| ()
+      (:|getProxy| ()
         "Return the Ref for this resolver, creating a new one if necessary."
         (unless (and ref-slot (e. ref-slot |getValue|))
           (setf ref-slot (make-instance 'e-simple-slot :value
@@ -638,7 +638,7 @@
                     :handler opt-handler))
               (error "this ProxyResolver is resolved and therefore its proxy is not available")))))
         (e. ref-slot |getValue|))
-      (:|smash/1| (problem)
+      (:|smash| (problem)
         (unless opt-handler
           (error "already resolved"))
         (let ((ref (and ref-slot (e. ref-slot |getValue|))))
@@ -694,20 +694,20 @@
     (make-instance 'sorted-queue))))
 
 (def-vtable sorted-queue
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<sorted queue of " (length (slot-value this 'elements)) ">"))
-  (:|peek/1| (this absent-thunk)
+  (:|peek| (this absent-thunk)
     (block nil
       (let ((p (sorted-queue-peek this (lambda () (return (e. absent-thunk |run|))))))
         (vector (car p) (cdr p)))))
-  (:|pop/0| (this)
+  (:|pop| (this)
     (let ((p (sorted-queue-pop this)))
       (vector (car p) (cdr p))))
-  (:|put/2| (this key value)
+  (:|put| (this key value)
     (e-coercef key 'real)
     (sorted-queue-put this key value))
-  (:|asList/0| (this)
+  (:|asList| (this)
     (map 'vector 
          #'(lambda (c) (vector (car c) (cdr c)))
          (sorted-queue-snapshot this))))

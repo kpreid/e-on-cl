@@ -6,7 +6,7 @@
 ; XXX this is the leftovers from being split into other files
 
 (def-vtable unbound-variable
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let ((e-var-name (slot-symbol-var-name (cell-error-name this))))
       (if (and e-var-name *java-e-compatible*)

@@ -20,7 +20,7 @@
 
 #+sbcl
 (def-vtable sb-bsd-sockets:socket
-  (:|connect/3| (this host port opt-ejector)
+  (:|connect| (this host port opt-ejector)
     (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
     (e-coercef port '(unsigned-byte 16))
     (handler-case
@@ -29,15 +29,15 @@
         (eject-or-ethrow opt-ejector condition))))
   
   ; XXX implement vtable macros then write one for this get-and-setf template
-  (:|getNonBlocking/0| (this) (as-e-boolean (non-blocking-mode this)))
-  (:|setNonBlocking/1| (this new) (setf (non-blocking-mode this) (e-is-true new)))
+  (:|getNonBlocking| (this) (as-e-boolean (non-blocking-mode this)))
+  (:|setNonBlocking| (this new) (setf (non-blocking-mode this) (e-is-true new)))
   
   (:|getSockoptSendBuffer/0| #'sockopt-send-buffer)
-  (:|setSockoptSendBuffer/1| (this new) (setf (sockopt-send-buffer this) new))
+  (:|setSockoptSendBuffer| (this new) (setf (sockopt-send-buffer this) new))
   (:|getSockoptReceiveBuffer/0| #'sockopt-receive-buffer)
-  (:|setSockoptReceiveBuffer/1| (this new) (setf (sockopt-receive-buffer this) new))
+  (:|setSockoptReceiveBuffer| (this new) (setf (sockopt-receive-buffer this) new))
   
-  (:|read/3| (this max-octets error-ejector eof-ejector)
+  (:|read| (this max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the socket, and return them as a ConstList."
     (e. (make-fd-ref (socket-file-descriptor this)) |read| max-octets error-ejector eof-ejector))
   )

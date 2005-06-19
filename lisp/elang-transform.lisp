@@ -234,10 +234,10 @@
 (def-expr-transformation |MetaContextExpr| (onm
     &aux (prefix (inner-scope-fqn-prefix onm)))
   (values () onm `',(e-named-lambda "org.erights.e.elang.scope.StaticContext"
-    (:|__printOn/1| (tw)
+    (:|__printOn| (tw)
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<static context>"))
-    (:|getFQNPrefix/0| ()
+    (:|getFQNPrefix| ()
       prefix))))
 
 (def-expr-transformation |MetaStateExpr| (onm)
@@ -389,7 +389,7 @@
           ; XXX gack. less setf: the witness is self-referential, so it'll need to be either e-named-lambda-in-LABELS somehow, or a promise
           ,@(when has-auditors
             `((setf ,witness-sym (e-named-lambda "org.erights.e.elang.evm.AuditWitness"
-                (:|__printOn/1| (tw)
+                (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
                   (e. tw |print| 
                     "<"
@@ -398,13 +398,13 @@
                     ',(e-util:aan fqn)
                     ">")
                   nil)
-                (:|ask/1| (other-auditor)
+                (:|ask| (other-auditor)
                   "Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor"
                   ,witness-check-form
                   (if (e-is-true (e. other-auditor |audit| ',this-expr ,witness-sym))
                     (push other-auditor ,approvers-sym))
                   nil)
-                (:|getSlot/1| (slot-name)
+                (:|getSlot| (slot-name)
                   "Returns the named slot in the audited object's lexical scope.
 
 XXX This is an excessively large authority and will probably be replaced."

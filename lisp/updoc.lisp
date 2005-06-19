@@ -172,12 +172,12 @@
            (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain"))
            (stepper (make-stepper file scope-slot wait-hook-slot eval-out-stream eval-err-stream))
            (runner (e-named-lambda "org.cubik.cle.updoc.Runner"
-              (:|__printOn/1| (tw)
+              (:|__printOn| (tw)
                 (e-coercef tw +the-text-writer-guard+)
                 ; XXX we should eventually be using an e.extern file-cap for this, at which point we shouldn't be printing <file: ourselves
                 ; XXX giving all updoc scripts the authority to see their own pathname. This could be considered a problem when we implement confined updoc.
                 (e. tw |print| "<updoc runner for <file:" (enough-namestring file) ">>"))
-              (:|push/2| (expr answers-vector)
+              (:|push| (expr answers-vector)
                 "Add another test to be executed immediately after the current one. 'expr' should be an E expression node, and 'answers-vector' should be like [[\"value\", \"<the-expected-object>\"]]. XXX this will eventually be changed to enter tests in sequence order when called within a single turn."
                 (push (list (e-print expr) ; XXX quote insufficient in the general case
                             (map 'list #'(lambda (x) (coerce x 'list))
@@ -185,11 +185,11 @@
                 nil)))
            (interp (e-named-lambda "org.cubik.cle.updocInterp"
              ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
-             (:|gc/0| () (e. e.extern:+gc+ |run|))
-             (:|getProps/0| ()
+             (:|gc| () (e. e.extern:+gc+ |run|))
+             (:|getProps| ()
                ; XXX internal symbol
                e.knot::+eprops+)
-             (:|waitAtTop/1| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
+             (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
                (e. wait-hook-slot |setValue|
                  (e. (e. (vat-safe-scope *vat*) |get| "Ref") |whenResolved| ref
                    (e-lambda (:|run| (ref)

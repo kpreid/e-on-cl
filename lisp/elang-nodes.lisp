@@ -77,9 +77,9 @@
     (get ',class-sym 'static-maker)
     ; XXX don't ignore span-sym
     (e-named-lambda ,(concatenate 'string "org.erights.e.elang.evm.make" (symbol-name class-sym))
-      (:|asType/0| () 
+      (:|asType| () 
         (make-instance 'cl-type-guard :type-specifier ',class-sym))
-      (:|getParameterSubnodeFlags/0| ()
+      (:|getParameterSubnodeFlags| ()
         "Return a list of booleans which indicate whether the corresponding parameter (as used in makers and visitors) is a 'subnode' of the node (e.g. HideExpr's sole parameter) or not (e.g. LiteralExpr's sole parameter). XXX clarify"
         ; XXX make this constant - note that e-booleans currently aren't compilable
         (map 'vector #'as-e-boolean ',subnode-flags))
@@ -235,7 +235,7 @@
   t)
 
 (def-vtable |ENode|
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let ((quote (e-is-true (e. tw |isQuoting|))))
       (when quote
@@ -244,22 +244,22 @@
         (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw))
       (when quote
         (e. tw |print| "`"))))
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     `#(,(let ((sm (get (observable-type-of this) 'static-maker)))
           (assert sm () "Missing maker for E-node class ~A" (observable-type-of this))
           sm)
        "run"
        #(nil ,@(node-visitor-arguments this) nil)))
-  (:|asText/0| (this)
+  (:|asText| (this)
     (e-print this))
-  (:|quasiTypeTag/0| (this)
+  (:|quasiTypeTag| (this)
     (declare (ignore this))
     "e??")
-  (:|staticScope/0| (this)
+  (:|staticScope| (this)
     "Return a static scope analysis of this subtree that doesn't depend on the enclosing context."
     ; xxx in Java-E this caches the result (doing so will require StaticScope to be Selfless)
     (node-static-scope this))
-  (:|substitute/1| (this args)
+  (:|substitute| (this args)
     "Quasiliteral ValueMaker interface"
     (e-coercef args 'vector)
     ; XXX the test is a non-transparent optimization: if a tree has quasi-fields anyway, we'll return them instead of failing now as index-out-of-range
@@ -272,19 +272,19 @@
                   "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
               |run| args))
       this))
-  (:|welcome/1| (this visitor)
+  (:|welcome| (this visitor)
     (e-call
       visitor
       ; xxx should we use our alleged type method instead of observable-type-of?
       (concatenate 'string "visit" (symbol-name (observable-type-of this))) 
       (cons this (node-visitor-arguments this))))
-  (:|lnPrintOn/2| (this tw priority)
+  (:|lnPrintOn| (this tw priority)
     "Java-E compatibility"
     (declare (ignore priority)) ; XXX
     (e. tw |println|)
     (e. this |welcome|
       (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw)))
-  (:|subPrintOn/2| (this tw priority)
+  (:|subPrintOn| (this tw priority)
     "Java-E compatibility"
     (declare (ignore priority)) ; XXX
     (e. this |welcome|
@@ -360,11 +360,11 @@
 (def-indexed-node-properties |SuchThatPattern| ("pattern" "test"))
 
 (def-vtable |EExpr|
-  (:|quasiTypeTag/0| (this)
+  (:|quasiTypeTag| (this)
     (declare (ignore this))
     "e")
   (:|eval/1| #'eval-e)
-  (:|evalToPair/1| (this scope)
+  (:|evalToPair| (this scope)
     "Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings."
     (multiple-value-call #'vector (eval-e this scope))))
 
@@ -379,7 +379,7 @@
 (def-vtable |LiteralExpr|)
 
 (def-vtable |NounExpr|
-  (:|name/0| (this)
+  (:|name| (this)
     (nth 0 (node-elements this))))
 
 (def-vtable |ObjectExpr|)
@@ -393,12 +393,12 @@
 (def-vtable |EMatcher|)
     
 (def-vtable |EScript|
-  (:|getDocComment/0| (this)
+  (:|getDocComment| (this)
     (nth 0 (node-elements this))))
     
 
 (def-vtable |Pattern|
-  (:|quasiTypeTag/0| (this)
+  (:|quasiTypeTag| (this)
     (declare (ignore this))
     "epatt"))
 
@@ -460,7 +460,7 @@
     (e-named-lambda "org.erights.e.elang.FalseGuard"
       :stamped +deep-frozen-stamp+
       "This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object."
-      (:|__printOn/1| (tw) 
+      (:|__printOn| (tw) 
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| opt-guard-string)))))
 

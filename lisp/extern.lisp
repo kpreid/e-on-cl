@@ -47,7 +47,7 @@
              (make-pathname :directory (cons :absolute (coerce (subseq path-components 0 (1- (length path-components))) 'list))
                             :name      (aref path-components (1- (length path-components))))))
     (e-named-lambda "FileGetter"
-      (:|__printOn/1| (tw)
+      (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<file://")
         (if (/= 0 (length path-components))
@@ -56,7 +56,7 @@
           (e. tw |print| "/"))
         (e. tw |print| ">")
         nil)
-      (:|getPath/0| ()
+      (:|getPath| ()
         (with-text-writer-to-string (tw)
           (loop for x across path-components do
               (e. tw |print| "/" x))
@@ -64,7 +64,7 @@
             ; must be the root
             ; xxx Java-E appends a / to the regular path iff the file exists and is a directory. should we do this?
             (e. tw |print| "/"))))
-      (:|get/1| (subpath)
+      (:|get| (subpath)
         (e-coercef subpath 'string)
         (let* ((splat (e. subpath |split| "/")))
           (make-file-getter
@@ -73,18 +73,18 @@
               (loop for component across splat
                     when (/= 0 (length component))
                     collect component)))))
-      (:|getTwine/0| ()
+      (:|getTwine| ()
         ; XXX doesn't actually add twine info
         (read-entire-file (get-cl-pathname)))
-      (:|textReader/0| (&aux (file (open (get-cl-pathname) :if-does-not-exist :error)))
+      (:|textReader| (&aux (file (open (get-cl-pathname) :if-does-not-exist :error)))
         ; XXX external format, etc.
         (e-named-lambda "textReader"
           ; XXX there'll probably be other situations where we want Readers so we should have a common implementation. we could even write it in E code?
           "Java-E compatibility"
-          (:|readText/0| ()
+          (:|readText| ()
             "Return the entire remaining contents of the file."
             (read-entire-stream file))))
-      (:|iterate/1| (f)
+      (:|iterate| (f)
         (loop for subpath in (cl-fad:list-directory (get-cl-pathname))
           do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath)))))))
 
@@ -93,7 +93,7 @@
 (defvar +gc+ (e-named-lambda "org.cubik.cle.prim.gc"
   ; xxx extension: reliability/0 => "NONE", "FULL", "PARTIAL", "UNKNOWN"
   ; appropriately exposed, this would allow our test suite to test weak pointers if the GC is sufficiently reliable to not cause false failures
-  (:|run/0| ()
+  (:|run| ()
     "Perform as much immediate garbage collection as the underlying implementation provides."
     #+sbcl  (sb-ext:gc :full t)
     #+cmu   (extensions:gc) ; other documentation claimed SYSTEM:GC
@@ -118,13 +118,13 @@
   (+ (/ jt 1000) +java-epoch-delta+))
 
 (defvar +the-timer+ (e-named-lambda "Timer"
-  (:|__printOn/1| (tw)
+  (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<a Timer>")
     nil)
-  (:|now/0| ()
+  (:|now| ()
     (cl-to-java-time (get-fine-universal-time)))
-  (:|whenPast/2| (time thunk
+  (:|whenPast| (time thunk
       &aux (utime (java-to-cl-time time)))
     (multiple-value-bind (p r) (make-promise)
       (vat-enqueue-timed utime (lambda ()
@@ -147,17 +147,17 @@
 
 ; compatibility with Java-E's use of org.apache.oro.text.regex.*
 (defvar +rx-perl5-compiler+ (e-named-lambda "org.apache.oro.text.regex.makePerl5Compiler"
-  (:|run/0| ()
+  (:|run| ()
     (e-named-lambda "org.apache.oro.text.regex.perl5Compiler"
-      (:|compile(String)/1| (s)
+      (:|compile(String)| (s)
         (e-coercef s 'string)
         ;(print (list 'oro-compiling s))
         (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s)))))))
   
 (defvar +rx-perl5-matcher+ (e-named-lambda "org.apache.oro.text.regex.makePerl5Matcher"
-  (:|run/0| (&aux result-obj)
+  (:|run| (&aux result-obj)
     (e-named-lambda "org.apache.oro.text.regex.perl5Matcher"
-      (:|matches(PatternMatcherInput, Pattern)/2| (input pattern)
+      (:|matches(PatternMatcherInput, Pattern)| (input pattern)
         (e-coercef input 'string)
         (e-coercef pattern 'ppcre-scanner-box)
         (multiple-value-bind (match-start match-end reg-starts reg-ends)
@@ -165,9 +165,9 @@
           ;(print (list 'oro-results match-start match-end reg-starts reg-ends))
           (setf result-obj (if match-start
             (e-named-lambda "org.apache.oro.text.regex.perl5Matcher$matchResult"
-              (:|groups/0| () 
+              (:|groups| () 
                 (1+ (length reg-starts)))
-              (:|group/1| (index) 
+              (:|group| (index) 
                 (e-coercef index 'unsigned-byte)
                 (if (= index 0)
                   (subseq input match-start match-end)
@@ -179,5 +179,5 @@
                       nil)))))
             nil))
           (as-e-boolean result-obj)))
-      (:|getMatch/0| ()
+      (:|getMatch| ()
         result-obj)))))

@@ -7,7 +7,7 @@
 ; --- Nil ---
 
 (def-vtable null
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "null")))
@@ -18,12 +18,12 @@
 ; --- String ---
 
 (def-vtable string
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
       (e. e.syntax:+e-printer+ |printString| tw this)
       (e. tw |write| this)))
-  (:|__conformTo/1| (this guard)
+  (:|__conformTo| (this guard)
     (setf guard (ref-shorten guard))
     ; XXX should this coercion be in the condition guard instead?
     (cond
@@ -33,7 +33,7 @@
           :format-control "~A" 
           :format-arguments (list this)))
       (t this)))
-  (:|op__cmp/1| (this other)
+  (:|op__cmp| (this other)
     ; XXX is this also available for EList, and if so can we move it there with no loss of efficiency?
     (e-coercef other 'string)
     (cond
@@ -41,19 +41,19 @@
       ((string< this other) -1)
       ((string> this other)  1)
       (t                    (error "shouldn't happen: broken string comparison"))))
-  (:|add/1| (a b)
+  (:|add| (a b)
     "Concatenate this string and the other string."
     ; XXX OPT: check the simple case of b being a string
     (concatenate 'string a (e-print b)))
-  (:|startsWith/1| (this prefix)
+  (:|startsWith| (this prefix)
     "Return whether 'prefix' is a prefix of this string."
     (as-e-boolean (string= this prefix :end1 (min (length this) 
                                                   (length prefix)))))
-  (:|endsWith/1| (this suffix)
+  (:|endsWith| (this suffix)
     "Return whether 'prefix' is a suffix of this string."
     (as-e-boolean (string= this suffix :start1 (max 0 (- (length this) (length suffix))))))
   ; XXX simplify structure of both split and replaceAll
-  (:|split/1| (this sep)
+  (:|split| (this sep)
     "Return a list of substrings of this string which are separated by the string 'sep'. Will return empty elements at the end. The empty string results in a one-element result list."
     (e-coercef sep 'string)
     (when (string= sep "")
@@ -79,7 +79,7 @@
         (loop while (pick))
         result)))
 
-  (:|rjoin/1| (this items)
+  (:|rjoin| (this items)
     "Return the strings in 'items' concatenated and separated by this string.
     
 someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty string."
@@ -98,7 +98,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                  (princ item out))
         string)))
 
-  (:|replaceAll/2| (this old new)
+  (:|replaceAll| (this old new)
     "Return this string with all occurrences of the string 'old' (searching from the beginning) replaced with the string 'new'."
     (declare (optimize (debug 3)))
     (e-coercef old 'string)
@@ -146,7 +146,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; to have methods and a public maker eventually
 
 (def-vtable cons
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. e.syntax:+e-printer+ |printCons| tw this)))
 
@@ -157,7 +157,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- Symbol ---
 
 (def-vtable symbol
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     ; xxx does with-standard-io-syntax constitute adequate measures to hide any effects from dynamic variables?
     (e. tw |print| 
@@ -188,22 +188,22 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         thereis (code-char code)))
 
 (def-vtable character
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
       (e. e.syntax:+e-printer+ |printCharacter| tw this)
       (e. tw |write| (make-string 1 :initial-element this))))
-  (:|op__cmp/1| (this other)
+  (:|op__cmp| (this other)
     (e-coercef other 'character)
     (cond
       ((char< this other) -1.0)
       ((char> this other) 1.0)
       ((char= this other) 0.0)
       (t                 |NaN|)))
-  (:|next/0| (this)
+  (:|next| (this)
     "Return the next character in the total ordering of characters. Throws an exception if this is the last character."
     (char-nearby this +1))
-  (:|previous/0| (this)
+  (:|previous| (this)
     "Return the previous character in the total ordering of characters. Throws an exception if this is the first character."
     (char-nearby this -1)))
 
@@ -250,18 +250,18 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         
 ; XXX documentation
 (def-vtable vector
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. e.syntax:+e-printer+ |printList| tw this +e-true+))
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     `#(,+the-make-list+ "run" ,this))
-  (:|asMap/0| (vector)
+  (:|asMap| (vector)
     "Return a ConstMap mapping the indices of this list to the elements of this list. For example, ['a', 'b'].asMap() == [0 => 'a', 1 => 'b']."
     ; xxx offer empty map constant when vector is empty?
     (e. +the-make-const-map+ |fromColumns|
       (let ((k -1)) (map '#.`(vector (integer 0 (,array-dimension-limit))) (lambda (v) (declare (ignore v)) (incf k)) vector))
       vector))
-  (:|asKeys/0| (vector)
+  (:|asKeys| (vector)
     "Return a ConstMap mapping the elements of this list to null."
     ; XXX preserve internal-element-type if possible
     (e. +the-make-const-map+ |fromIteratable|
@@ -269,24 +269,24 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (loop for key across vector do
           (e. f |run| key nil))))
       +e-false+))
-  (:|asSet/0| (vector)
+  (:|asSet| (vector)
     "Return a ConstSet with the elements of this list, omitting duplicates."
     (e. (e. (e. (vat-safe-scope *vat*) 
                 |get| "import__uriGetter")
             |get| "org.cubik.cle.prim.makeConstSet") 
         |make| (e. vector |asKeys|)))
   (:|size/0| #'length)
-  (:|get/1| (this index)
+  (:|get| (this index)
     "Return the 'index'th element of this list."
     (aref this (e-coerce index 'integer)))
-  (:|last/0| (v) 
+  (:|last| (v) 
     "Return the last element of this list, or throw if it is empty."
     (aref v (1- (length v))))
-  (:|add/1| (this other) 
+  (:|add| (this other) 
     "Return the concatenation of both lists."
     (e-coercef other 'vector)
     (concatenate 'vector this other))
-  (:|multiply/1| (vector times)
+  (:|multiply| (vector times)
     "Return a list containing the elements of this list repeated 'times' times."
     (let* ((step (length vector))
            (result (make-array (* step times)
@@ -294,27 +294,27 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (dotimes (i times)
         (setf (subseq result (* step i)) vector))
       result))
-  (:|iterate/1| (vector func)
+  (:|iterate| (vector func)
     (loop for i from 0
           for elem across vector
           do  (e. func |run| i elem))
     nil)
   ; XXX OPT use less expensive eq tests if actual element type can be so tested
-  (:|indexOf1/1| (vector elem)
+  (:|indexOf1| (vector elem)
     (or (position elem vector :test (fast-sameness-test `(eql ,elem)
                                                         (array-element-type vector)))
         -1))
-  (:|lastIndexOf1/1| (vector elem)
+  (:|lastIndexOf1| (vector elem)
     (or (position elem vector :test (fast-sameness-test `(eql ,elem)
                                                         (array-element-type vector))
                               :from-end t)
         -1))
-  (:|startOf/1| (vector subseq)
+  (:|startOf| (vector subseq)
     (e-coercef subseq 'vector)
     (or (search subseq vector :test (fast-sameness-test (array-element-type subseq)
                                                         (array-element-type vector)))
         -1))
-  (:|lastStartOf/1| (vector subseq)
+  (:|lastStartOf| (vector subseq)
     (e-coercef subseq 'vector)
     (or (search subseq vector :test (fast-sameness-test (array-element-type subseq)
                                                         (array-element-type vector))
@@ -322,12 +322,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         -1))
   (:|run/2| #'subseq)
   (:|run/1| #'subseq)
-  (:|with/1| (vector elem)
+  (:|with| (vector elem)
     (concatenate 'vector vector (list elem)))
   (:|snapshot/0| #'identity)
-  (:|diverge/0| (this)
+  (:|diverge| (this)
     (e. this |diverge| +the-any-guard+))
-  (:|diverge/1| (this value-guard)
+  (:|diverge| (this value-guard)
     "Returns a FlexList with the same initial contents as this, with the specified element guard."
     (e. (e. (e. (vat-safe-scope *vat*) 
                 |get| "import__uriGetter")
@@ -335,7 +335,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       |diverge|
       this
       value-guard))
-  (:|printOn/4| (this left sep right tw)
+  (:|printOn| (this left sep right tw)
     "Prints 'left', the values separated by 'sep', and 'right'.
 
 'left' value0 'sep' ... 'right'"
@@ -355,7 +355,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (def-vtable make-e-list
   ; XXX write tests for this
-  (:|fromIteratableValues/1| (this iteratable) 
+  (:|fromIteratableValues| (this iteratable) 
     (declare (ignore this))
     (let ((values))
       (e. iteratable |iterate| (e-lambda (:|run| (k v)
@@ -447,7 +447,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   t)
 
 (def-vtable integer
-  (:|__conformTo/1| (this guard) ; XXX should this be implemented by the guard? same question for float32 too
+  (:|__conformTo| (this guard) ; XXX should this be implemented by the guard? same question for float32 too
     ; XXX should use coerce/observable-type, not typep
     (setf guard (ref-shorten guard))
     (if (and (typep guard 'cl-type-guard) 
@@ -458,47 +458,47 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       this))
   (:|previous/0| #'1-)
   (:|next/0| #'1+)
-  (:|isNaN/0| (this)
+  (:|isNaN| (this)
     (declare (ignore this))
     +e-false+))
 
 (def-fqn integer "org.cubik.cle.native.int")
 
 (def-vtable float
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| 
       (with-standard-io-syntax
         (let ((*read-default-float-format* 'double-float)
               (*print-readably* nil)) ; for clisp
           (prin1-to-string this)))))
-  (:|isNaN/0| (this)
+  (:|isNaN| (this)
     (declare (ignore this))
     +e-false+))
 
 (def-vtable (eql #.|NaN|)
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "NaN"))
-  (:|isNaN/0| (this)
+  (:|isNaN| (this)
     (declare (ignore this))
     +e-true+))
 
 (def-vtable (eql #.|Infinity|)
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "Infinity")))
 
 (def-vtable (eql #.|-Infinity|)
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "-Infinity")))
 
 (defvar +the-make-int+ (e-named-lambda "org.cubik.cle.prim.makeInt"
-  (:|run/1| (value)
+  (:|run| (value)
     (e-coercef value 'string)
     (handler-case
       (parse-integer value)
@@ -510,7 +510,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX the <typename: desc> is inherited from Java-E: consider whether it's the Right Thing
 (def-vtable condition
-  (:|__printOn/1| (this tw
+  (:|__printOn| (this tw
       &aux (interesting-type (not (typep this 'simple-error))))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "problem: ")
@@ -524,12 +524,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 	(princ-to-string this)))
     (when interesting-type
       (e. tw |print| ">")))
-  (:|leaf/0| (this)
+  (:|leaf| (this)
     "Java-E compatibility; currently just returns self."
     this))
 
 (def-vtable type-error
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let* ((specimen (type-error-datum this))
            (observed-type (observable-type-of specimen))) 
@@ -545,14 +545,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (def-vtable synchronous-call-error
   ; XXX should we really be doing this?
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (format nil "problem: ~A" this))))
                       
 ; A vtable for CL:UNBOUND-VARIABLE is defined in elang.lisp.
 
 (def-vtable local-throw-sealed-box
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<sealed problem>")))
@@ -600,7 +600,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (tk-snap-hash a))
   
 (def-vtable traversal-key
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print|
       "<key:"
@@ -649,7 +649,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defvar +the-make-type-desc+ (e-named-lambda
   "org.erights.e.elib.base.makeTypeDesc"
   :stamped +deep-frozen-stamp+
-  (:|run/5| (doc-comment fq-name supers auditors mtypes)
+  (:|run| (doc-comment fq-name supers auditors mtypes)
     (e-coercef doc-comment 'string)
     (e-coercef fq-name     '(or null string))
     (e-coercef supers      'vector)
@@ -670,7 +670,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defvar +the-make-message-desc+ (e-named-lambda
   "org.erights.e.elib.base.makeMessageDesc"
   :stamped +deep-frozen-stamp+
-  (:|run/4| (doc-comment verb params opt-result-guard)
+  (:|run| (doc-comment verb params opt-result-guard)
     (e-coercef doc-comment 'string)
     (e-coercef verb        'string)
     (e-coercef params      '(vector param-desc))
@@ -688,7 +688,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defvar +the-make-param-desc+ (e-named-lambda
   "org.erights.e.elib.base.makeParamDesc"
   :stamped +deep-frozen-stamp+
-  (:|run/2| (opt-name opt-guard)
+  (:|run| (opt-name opt-guard)
     (e-coercef opt-name '(or null string))
     (e-coercef opt-guard 't)
     (make-instance 'param-desc :opt-name opt-name :opt-guard opt-guard))))
@@ -697,7 +697,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; Hmm. Could we write something like DEF-STRUCTOID-VTABLE to implement the common features of these?
 
 (def-vtable type-desc
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let* ((simple-name (copy-seq (simplify-fq-name (or (type-desc-opt-fq-name this) "_"))))
            (initial (position-if #'both-case-p simple-name)))
@@ -705,11 +705,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (setf (char simple-name initial)
               (char-upcase (char simple-name initial))))
       (e. tw |print| simple-name)))
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     (with-slots (doc-comment opt-fq-name supers auditors message-types-v) this
       `#(,+the-make-type-desc+ "run" #(,doc-comment ,opt-fq-name ,supers ,auditors ,message-types-v))))
   (:|getOptFQName/0| #'type-desc-opt-fq-name)
-  (:|getFQName/0| (td)
+  (:|getFQName| (td)
     (or (type-desc-opt-fq-name td) "_"))
   (:|getDocComment/0| #'type-desc-doc-comment)
   (:|getSupers/0| #'type-desc-supers)
@@ -717,11 +717,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getMessageTypes/0| #'type-desc-message-types))
 
 (def-vtable message-desc
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (verb doc-comment params opt-result-guard) this
       (e. e.syntax:+e-printer+ |printMethodHeader| tw +e-false+ doc-comment verb params opt-result-guard)))
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     (with-slots (doc-comment verb params opt-result-guard) this
       `#(,+the-make-message-desc+ "run" #(,doc-comment ,verb ,params ,opt-result-guard))))
   (:|getVerb/0|           #'message-desc-verb)
@@ -730,16 +730,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getOptResultGuard/0| #'message-desc-opt-result-guard))
 
 (def-vtable param-desc
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (opt-name opt-guard) this
       (e. e.syntax:+e-printer+ |printGuardedNounPattern| tw opt-name opt-guard)))
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     (with-slots (opt-name opt-guard) this
       `#(,+the-make-param-desc+ "run" #(,opt-name ,opt-guard))))
   (:|getOptName/0|  #'param-desc-opt-name)
   (:|getOptGuard/0| #'param-desc-opt-guard)
-  (:|getName/0| (this)
+  (:|getName| (this)
     "Returns _ if this ParamDesc has no name."
     (or (param-desc-opt-name this) "_")))
 
@@ -764,7 +764,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defvar +the-make-weak-ref+ (e-named-lambda "org.erights.e.elib.vat.makeWeakRef"
   ; XXX run/4
-  (:|run/2| (referent reactor)
+  (:|run| (referent reactor)
     "Make a weak reference to the given ref. If 'reactor' is not null, invoke its run/0 method when the referent is GCed."
     ; XXX what happens for fixnums, null, etc? should we disallow all selfless objects?
     (assert (null reactor) () "Sorry, reactors not implemented yet")
@@ -791,7 +791,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     #+sbcl sb-ext:weak-pointer
     #+cmu extensions:weak-pointer
     #+(or ccl clisp) weak-ref-impl
-  (:|__printOn/1| (this tw
+  (:|__printOn| (this tw
       &aux (value (e. this |get|)))
     (e-coercef tw +the-text-writer-guard+)
     (if value
@@ -800,7 +800,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (e. tw |quote| value)
         (e. tw |print| ">"))
       (e. tw |print| "<dead weak ref>")))
-  (:|get/0| (this)
+  (:|get| (this)
     "Return the normal ref which is this weak ref's referent, or null if it has been GCed. This method cannot distinguish a weak reference to null."
     #+sbcl  (sb-ext:weak-pointer-value this)
     #+cmu   (extensions:weak-pointer-value this)
@@ -814,7 +814,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defvar +text-writer-stamp+ (e-named-lambda
   "org.erights.e.elib.print.TextWriterStamp"
   :stamped +deep-frozen-stamp+
-  (:|audit/2| (object-expr witness)
+  (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
 
@@ -822,14 +822,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   "org.erights.e.elib.print.TextWriterGuard"
   :stamped +deep-frozen-stamp+
   (:|coerce/2| (standard-coerce (lambda (specimen) (e-audit-check-dispatch +text-writer-stamp+ specimen))
-                                (lambda () +the-text-writer-guard+)
-                                (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
-                                :test-shortened nil))))
+                              (lambda () +the-text-writer-guard+)
+                              (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
+                              :test-shortened nil))))
 
 (defun hide-text-writer (tw)
   (with-result-promise (wrapped-tw)
     (e-named-lambda "org.cubik.cle.prim.TextWriterHint"
-      (:|__conformTo/1| (guard)
+      (:|__conformTo| (guard)
         (if (eeq-is-same-ever guard +the-text-writer-guard+)
           tw
           wrapped-tw))
@@ -924,10 +924,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                          (assert (every #'(lambda (s) (e. s |getValue|)) open-flags) () "closed TextWriter")))
                 (e-named-lambda "org.erights.e.elib.print.TextWriter"
                   :stamped +text-writer-stamp+
-                  (:|__printOn/1| (ptw)
+                  (:|__printOn| (ptw)
                     (e-coercef ptw +the-text-writer-guard+)
                     (e. ptw |print| "<textWriter>"))
-                  (:|close/0| ()
+                  (:|close| ()
                     "Prevent this TextWriter from printing anything more; close the underlying stream if appropriate."
                     (assert-open)
                     (when should-close
@@ -936,18 +936,18 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                     (setf delegate nil)
                     ;(format *trace-output* "~&;~A closed~%" tw)
                     nil)
-                  (:|flush/0| ()
+                  (:|flush| ()
                     (assert-open)
                     (when delegate
                       (e. delegate |flush|))
                     nil)
-                  (:|write/1| (text)
+                  (:|write| (text)
                     (assert-open)
                     (e. syntax |write| text)
                     (when autoflush
                       (e. delegate |flush|))
                     nil)
-                  (:|printSame/1| (thing)
+                  (:|printSame| (thing)
                     ; XXX lousy name
                     ;(format *trace-output* "~&;~A printSame ~A~%" tw thing)
                     (setf thing (ref-shorten thing))
@@ -967,29 +967,29 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                               (e. sub-tw |close|))))
                         (e. syntax |exitReference|)))
                     nil)
-                  (:|isQuoting/0| () (e. syntax |isQuoting|))
-                  (:|printAll/1| (vector)
+                  (:|isQuoting| () (e. syntax |isQuoting|))
+                  (:|printAll| (vector)
                     (e-coercef vector 'vector)
                     (loop for x across vector do (e. tw |print| x))
                     nil)
-                  (:|println/1| (obj)
+                  (:|println| (obj)
                     (e. tw |print| obj)
                     (e. tw |write| #.(string #\Newline))
                     nil)
-                  (:|println/0| ()
+                  (:|println| ()
                     (e. tw |write| #.(string #\Newline))
                     nil)
-                  (:|lnPrint/1| (obj)
+                  (:|lnPrint| (obj)
                     (e. tw |write| #.(string #\Newline))
                     (e. tw |print| obj)
                     nil)
-                  (:|indent/0| ()
+                  (:|indent| ()
                     (e. tw |indent| indent-step))
-                  (:|indent/1| (step)
+                  (:|indent| (step)
                     (e-coercef step 'string)
                     (nest :syntax (e. syntax |indent| step)
                           :should-close nil))
-                  (:|withAutoflush/0| ()
+                  (:|withAutoflush| ()
                     (nest :autoflush t))
                   (otherwise (mverb &rest args
                       &aux (mv-string (symbol-name mverb))
@@ -1031,13 +1031,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     :is-quoting quote
     :autoflush autoflush
     :delegate (e-named-lambda "org.cubik.cle.internal.StreamTWDelegate"
-      (:|write/1| (text)
+      (:|write| (text)
         (princ text stream)
         nil)
-      (:|flush/0| () 
+      (:|flush| () 
         (force-output stream)
         nil)
-      (:|close/0| ()
+      (:|close| ()
         (when should-close-underlying 
           (close stream))
         nil))))
@@ -1048,13 +1048,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
            :type string)))
            
 (def-vtable string-buffer
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     ; XXX should we not print the brackets if not isQuoting?
     (e. tw |print| "<stringBuffer ")
     (e. tw |quote| (copy-seq (slot-value this 'buffer)))
     (e. tw |print| ">"))
-  (:|snapshot/0| (this)
+  (:|snapshot| (this)
     ; XXX make non-adjustable exact-sized string
     (copy-seq (slot-value this 'buffer))))
 
@@ -1073,7 +1073,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (vector (make-text-writer
                 :syntax (e. options |fetch| "syntax" (e-lambda (:|run| () +standard-syntax+)))
                 :delegate (e-named-lambda "org.cubik.cle.internal.StringTWDelegate"
-                  (:|write/1| (piece
+                  (:|write| (piece
                       &aux (old-size (length buffer))
                            (new-size (+ (length piece) old-size)))
                     ; XXX code copied from FlexList#replace/5. Is this a sign?
@@ -1081,10 +1081,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                       (adjust-array buffer (* new-size 2)))
                     (setf (fill-pointer buffer) new-size)
                     (replace buffer piece :start1 old-size))
-                  (:|flush/0| () nil)
-                  (:|close/0| () nil)))
+                  (:|flush| () nil)
+                  (:|close| () nil)))
               (make-instance 'string-buffer :buffer buffer))))
-  (:|run/2| (underlying autoflush)
+  (:|run| (underlying autoflush)
     "For Java-E compatibility. Returns the original stream, or its withAutoflush/0. CL-E provides TextWriters where Java-E provides Java streams, and in Java-E this would wrap a Java stream in a TextWriter."
     (if (e-is-true autoflush)
       (e. underlying |withAutoflush|)
@@ -1096,21 +1096,21 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defvar +the-e+ (e-named-lambda "org.erights.e.elib.prim.E"
   :stamped +deep-frozen-stamp+
-  (:|__printOn/1| (tw) ; XXX this can be deleted, I think - try later
+  (:|__printOn| (tw) ; XXX this can be deleted, I think - try later
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<E>"))
-  (:|call/3| (r v a)
+  (:|call| (r v a)
     (e-coercef v 'string)
     (e-coercef a 'vector)
     (e-call r v a))
-  (:|callWithPair/2| (rec verb-args)
+  (:|callWithPair| (rec verb-args)
     (e-coercef verb-args '(vector * 2))
     (e-call rec (aref verb-args 0) (aref verb-args 1)))
-  (:|send/3| (r v a)
+  (:|send| (r v a)
     (e-coercef v 'string)
     (e-coercef a 'vector)
     (e-send r v a))
-  (:|sendOnly/3| (r v a)
+  (:|sendOnly| (r v a)
     ; xxx provide actual send-only
     (e-coercef v 'string)
     (e-coercef a 'vector)

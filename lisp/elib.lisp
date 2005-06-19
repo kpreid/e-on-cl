@@ -720,7 +720,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (let* ((type-name (string type-designator)))
     `(let ((mverb ,mverb-form)
            (args ,args-form)
-           (,verb-list-sym ',(mapcar #'car entries)))
+           (,verb-list-sym ',(mapcar #'(lambda (entry) (vtable-entry-mverb entry 0)) entries)))
       (case mverb
         ,@(loop for desc in entries 
                 collect (if (eql (car desc) 'otherwise)
@@ -741,50 +741,50 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
 ;(declaim (inline miranda))
 (def-miranda miranda +miranda-message-descs+ "MirandaMethods" (mverb args)
   
-    (:|__printOn/1| (tw)
+    (:|__printOn| (tw)
       ; FUNCTION-based E-objects must always implement their own __printOn/1.
       (assert (not (typep self 'function)))
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<" (e-util:aan (simplify-fq-name (cl-type-fq-name (observable-type-of self)))) ">"))
 
-    (:|__getAllegedType/0| ()
+    (:|__getAllegedType| ()
       ; FUNCTION-based E-objects must always implement their own __getAllegedType/1.
       (assert (not (typep self 'function)))
       (scan-example-for-vtable-message-types self)
       (make-instance 'cl-type-guard :type-specifier (observable-type-of self)))
 
-    (:|__respondsTo/2| (verb arity)
+    (:|__respondsTo| (verb arity)
       ; The object itself must handle returning true for those verbs which it implements.
       (as-e-boolean (member (e-util:mangle-verb verb arity) miranda-mverbs)))
 
-    (:|__conformTo/1| (guard)
+    (:|__conformTo| (guard)
       (declare (ignore guard))
       self)
 
-    (:|__optSealedDispatch/1| (brand)
+    (:|__optSealedDispatch| (brand)
       (declare (ignore brand))
       nil)
 
-    (:|__optUncall/0| () nil)
+    (:|__optUncall| () nil)
 
-    (:|__whenMoreResolved/1| (reactor)
+    (:|__whenMoreResolved| (reactor)
       (e<- reactor |run| self)
       nil)
 
-    (:|__whenBroken/1| (reactor)
+    (:|__whenBroken| (reactor)
       (declare (ignore reactor))
       nil)
 
-    (:|__order/2| (nested-verb nested-args)
+    (:|__order| (nested-verb nested-args)
       ; XXX document further (original doc is Mozilla-licensed)
       "Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this."
       (vector (e-call self nested-verb nested-args) self))
 
-    (:|__reactToLostClient/1| (problem)
+    (:|__reactToLostClient| (problem)
       (declare (ignore problem))
       nil)
 
-    (:|__getPropertySlot/1| (prop-name)
+    (:|__getPropertySlot| (prop-name)
       (e-coercef prop-name 'string)
       ; XXX should we have a fqn derived from the original object? a print derived from its simple name?
       (let* ((cap-name (string-upcase prop-name :end (min 1 (length prop-name))))
@@ -793,17 +793,17 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
              (set-verb (e-util:mangle-verb (concatenate 'string "set" cap-name) 1)))
       (e-named-lambda "org.cubik.cle.prim.DefaultPropertySlot"
         "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object."
-        (:|__printOn/1| (tw)
+        (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. e.syntax:+e-printer+ |printPropertySlot| tw prop-name))
-        (:|getValue/0| ()
+        (:|getValue| ()
           "E.call(target, `get$Property`)"
           (e-call-dispatch self get-verb))
-        (:|setValue/1| (new)
+        (:|setValue| (new)
           "E.call(target, `set$Property`, new); null"
           (e-call-dispatch self set-verb new)
           nil)
-        (:|isFinal/0| ()
+        (:|isFinal| ()
           (e. (e-coerce (e. self |__respondsTo| set-name 1) 'e-boolean) |not|)))))
 
     (otherwise (mverb args)
@@ -936,7 +936,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it."
   ; NOTE: Eventually, deep-frozen-stamp & thread-and-process-wide-semantics-safe-stamp => directly sharable across threads, like Java-E does with all Java-PassByCopy.
-  (:|audit/2| (object-expr witness)
+  (:|audit| (object-expr witness)
     ; XXX audit/2 is an E-language-dependent interface, but we must implement it to allow E code to employ these stamps. Should we then define a more general interface? 'audit(language, expr, witness)'? Same questions apply to other primitive stamps.
     (declare (ignore object-expr witness))
     +e-true+)))
@@ -947,7 +947,7 @@ While this is a process-wide object, its stamps should not be taken as significa
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it."
   :stamped +deep-frozen-stamp+
-  (:|audit/2| (object-expr witness)
+  (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
 
@@ -1011,7 +1011,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 (defvar +the-make-simple-slot+ (e-named-lambda "org.erights.e.elib.slot.makeFinalSlot"
   :stamped +deep-frozen-stamp+
-  (:|run/1| (value)
+  (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
 (defclass e-simple-slot () 
@@ -1024,22 +1024,22 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
     (format stream "& ~W" (slot-value slot 'value))))
 
 (def-vtable e-simple-slot
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     `#(,+the-make-simple-slot+ "run" #(,(slot-value this 'value))))
-  (:|__printOn/1| (this tw) ; XXX move to e.syntax?
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<& ")
     (e. tw |quote| (slot-value this 'value))
     (e. tw |print| ">")
     nil)
-  (:|getValue/0| (this)
+  (:|getValue| (this)
     "Returns the constant value of this slot."
     (slot-value this 'value))
-  (:|setValue/1| (this new-value)
+  (:|setValue| (this new-value)
     "Always fails."
     (declare (ignore new-value))
     (error "not an assignable slot: ~A" (e-quote this)))
-  (:|isFinal/0| (this)
+  (:|isFinal| (this)
     "Returns true."
     (declare (ignore this))
     +e-true+))
@@ -1051,10 +1051,10 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 (defclass e-unset-slot () ())
 
 (def-vtable e-unset-slot
-  (:|getValue/0| (this)
+  (:|getValue| (this)
     (declare (ignore this))
     (error "internal error: slot variable never assigned"))
-  (:|setValue/1| (this new-value)
+  (:|setValue| (this new-value)
     (declare (ignore this new-value))
     (error "internal error: slot variable never assigned")))
 
@@ -1065,17 +1065,17 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   ((value :initarg :value)))
 
 (def-vtable e-var-slot
-  (:|__printOn/1| (this tw) ; XXX move to e.syntax?
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<var ")
     (e. tw |quote| (slot-value this 'value))
     (e. tw |print| ">"))
-  (:|getValue/0| (this)
+  (:|getValue| (this)
     (slot-value this 'value))
-  (:|setValue/1| (this new-value)
+  (:|setValue| (this new-value)
     (setf (slot-value this 'value) new-value)
     nil)
-  (:|isFinal/0| (this)
+  (:|isFinal| (this)
     (declare (ignore this))
     +e-false+))
 
@@ -1093,7 +1093,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
     (setf value (e. guard |coerce| value opt-ejector))))
 
 (def-vtable e-guarded-slot
-  (:|__printOn/1| (this tw) ; XXX move to e.syntax?
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (guard value) this
       (e. tw |print| "<var ")
@@ -1101,13 +1101,13 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
       (e. tw |print| " :")
       (e. tw |quote| guard)
       (e. tw |print| ">")))
-  (:|getValue/0| (this)
+  (:|getValue| (this)
     (slot-value this 'value))
-  (:|setValue/1| (this new-value)
+  (:|setValue| (this new-value)
     (with-slots (guard value) this
       (setf value (e. guard |coerce| new-value nil)))
     nil)
-  (:|isFinal/0| (this)
+  (:|isFinal| (this)
     (declare (ignore this))
     +e-false+))
 
@@ -1125,11 +1125,11 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
       (get-setf-expansion place environment)
     `(let* (,@(mapcar #'list vars vals))
       (e-named-lambda "org.cubik.cle.prim.PlaceSlot"
-        (:|getValue/0| ()             ,reader-form)
-        (:|setValue/1| (,@store-vars) ,writer-form nil)
-        (:|readOnly/0| ()
+        (:|getValue| ()             ,reader-form)
+        (:|setValue| (,@store-vars) ,writer-form nil)
+        (:|readOnly| ()
           (e-named-lambda "org.cubik.cle.prim.ReadOnlyPlaceSlot"
-            (:|getValue/0| ()         ,reader-form)))))))
+            (:|getValue| ()         ,reader-form)))))))
 
 ; --- guards ---
 
@@ -1137,10 +1137,10 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (declare (optimize (speed 3) (space 3)))
   (defvar +the-void-guard+ (e-named-lambda "org.erights.e.elib.slot.VoidGuard"
     :stamped +deep-frozen-stamp+
-    (:|__printOn/1| (tw) ; XXX move to e.syntax?
+    (:|__printOn| (tw) ; XXX move to e.syntax?
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "void"))
-    (:|coerce/2| (specimen opt-ejector)
+    (:|coerce| (specimen opt-ejector)
       (declare (ignore specimen opt-ejector))
       nil))))
 

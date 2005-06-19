@@ -75,9 +75,9 @@
 
 (defvar +the-make-scope+ (e-named-lambda "org.erights.e.elang.scope.makeScope"
   :stamped +deep-frozen-stamp+
-  (:|asType/0| ()
+  (:|asType| ()
     (make-instance 'cl-type-guard :type-specifier 'scope))
-  (:|fromState/2| (state fqn-prefix)
+  (:|fromState| (state fqn-prefix)
     "XXX document"
     (e-coercef state +the-any-map-guard+)
     (e-coercef fqn-prefix 'string)
@@ -91,11 +91,11 @@
 ; XXX reduce code duplication among get/fetch methods
 
 (def-vtable scope
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<scope " (slot-value this 'fqn-prefix) ">")
     nil)
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     (with-slots (slot-table fqn-prefix) this
       `#(,+the-make-scope+
          "fromState" 
@@ -108,7 +108,7 @@
                     (vector (concatenate 'string "&" noun) slot)))
                 (scope-slot-ordering this)))
            ,fqn-prefix))))
-  (:|or/1| (inner outer)
+  (:|or| (inner outer)
     "Return a scope which maps all nouns either scope does, preferring this scope's slots. The FQN prefix will be that of this scope."
     (e-coercef outer 'scope)
     (make-instance 'scope
@@ -122,15 +122,15 @@
             (loop for noun being each hash-key of old-table using (hash-value slot) do
               (setf (gethash noun new-table) slot)))
           new-table)))
-  (:|maps/1| (this noun)
+  (:|maps| (this noun)
     "Return whether this scope has a slot for the given noun string."
     (e-coercef noun 'string)
     (with-slots (slot-table) this
       (as-e-boolean (nth-value 1 (gethash noun slot-table)))))
-  (:|get/1| (scope noun)
+  (:|get| (scope noun)
     "Return the value of this scope's slot for the given noun string, or throw if it has no slot."
     (e. (e. scope |getSlot| noun) |getValue|))
-  (:|getSlot/1| (this noun)
+  (:|getSlot| (this noun)
     "Return this scope's slot for the given noun string, or throw if it has no slot."
     (e-coercef noun 'string)
     (with-slots (slot-table) this
@@ -138,7 +138,7 @@
         (if present
           slot
           (error "binding not in scope: ~A" (e-quote noun))))))
-  (:|fetch/2| (this noun absent-thunk)
+  (:|fetch| (this noun absent-thunk)
     "Return the value of this scope's slot for the given noun string, or the result of absent-thunk if it has no slot."
     (e-coercef noun 'string)
     (with-slots (slot-table) this
@@ -146,23 +146,23 @@
         (if present
           (e. slot |getValue|)
           (e. absent-thunk |run|)))))
-  (:|put/2| (this noun value)
+  (:|put| (this noun value)
     "Set the value of this scope's slot for the given noun string, or throw if it has no slot."
     (e. (e. this |getSlot| noun) |setValue| value))
-  (:|getState/0| (this)
+  (:|getState| (this)
     "Return a ConstMap containing the bindings in this scope, as \"&\" + noun => slot."
     (e. +the-make-const-map+ |fromIteratable| this +e-true+))
-  (:|iterate/1| (scope afunc)
+  (:|iterate| (scope afunc)
     "Iterate over the bindings in this scope, as \"&\" + noun => slot."
     (with-slots (slot-table) scope
       (loop for noun across (scope-slot-ordering scope) do
         (e. afunc |run| (concatenate 'string "&" noun) 
                         (gethash noun slot-table)))
       nil))
-  (:|with/2| (scope noun value)
+  (:|with| (scope noun value)
     "Return a scope which has an immutable slot for 'value' bound to 'noun', and this scope's other bindings and FQN prefix."
     (e. scope |withSlot| noun (make-instance 'e-simple-slot :value value)))
-  (:|withSlot/2| (scope new-noun new-slot)
+  (:|withSlot| (scope new-noun new-slot)
     "Return a scope which has 'new-slot' bound to 'new-noun', and this scope's other bindings and FQN prefix."
     (e-coercef new-noun 'string)
     ; xxx support efficient accumulation?
@@ -176,17 +176,17 @@
               (setf (gethash noun new-table) slot))
             (setf (gethash new-noun new-table) new-slot)
             new-table))))
-  (:|withPrefix/1| (scope new)
+  (:|withPrefix| (scope new)
     "Return a scope which is identical to this scope, except for having the given FQN prefix."
     (e-coercef new 'string)
     (with-slots (slot-table) scope
       (make-instance 'scope 
         :fqn-prefix new
         :slot-table slot-table)))
-  (:|getFQNPrefix/0| (scope)
+  (:|getFQNPrefix| (scope)
     (slot-value scope 'fqn-prefix))
   
-  (:|optExtract/1| (this key)
+  (:|optExtract| (this key)
     "Same as ConstMap#optExtract/1. Added to support using Scopes in map-patterns."
     (block nil
       (vector
@@ -194,7 +194,7 @@
           (e-lambda (:|run| ()
             (return nil))))
         (e. this |without| key))))
-  (:|without/1| (scope removed-noun)
+  (:|without| (scope removed-noun)
     "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."
     (e-coercef removed-noun 'string)
     (with-slots (slot-table fqn-prefix) scope
@@ -216,25 +216,25 @@
 
 (defvar +the-looper+ (e-named-lambda "org.erights.e.elang.interp.loop"
   :stamped +deep-frozen-stamp+
-  (:|__printOn/1| (tw)
+  (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<__loop>")
     nil)
-  (:|run/1| (body)
+  (:|run| (body)
     "Call body.run(), which must return a boolean, until it returns false."
     (loop while (e-is-true (e. body |run|))))))
 
 (defvar +the-thrower+ (e-named-lambda "org.erights.e.elib.prim.throw"
   :stamped +deep-frozen-stamp+
-  (:|__printOn/1| (tw)
+  (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "throw")
     nil)
-  (:|run/1| (problem)
+  (:|run| (problem)
     (error (e-problem-to-condition (e-coerce problem 'condition))))
-  (:|eject/2| (opt-ejector problem)
+  (:|eject| (opt-ejector problem)
     (elib:eject-or-ethrow opt-ejector (e-problem-to-condition problem)))
-  (:|free/1| (problem)
+  (:|free| (problem)
     ; XXX there should be a function for this
     (error (if *compatible-catch-leakage*
              problem
@@ -252,16 +252,16 @@
         nil))))
 
 (defvar +make-first-char-splitter+ (e-named-lambda "org.quasiliteral.text.makeFirstCharSplitter"
-  (:|run/1| (specials)
+  (:|run| (specials)
     (e-coercef specials 'string)
     (flet ((match (ch) (position ch specials)))
       (e-named-lambda "org.quasiliteral.text.FirstCharSplitter"
-        (:|findIn/1| (str)
+        (:|findIn| (str)
           "Equivalent to .findInFrom(str, 0)."
           (e-coercef str 'string)
           (or (position-if #'match str)
               -1))
-        (:|findInFrom/2| (str start) ; XXX write tests
+        (:|findInFrom| (str start) ; XXX write tests
           "Return the first index greater than 'start' of a character of 'str' which is one of the special characters of this splitter, or -1 if no such index exists."
           (e-coercef str 'string)
           (e-coercef start `(integer 0 ,(length str)))
@@ -323,24 +323,24 @@
 (defun make-symbol-accessor (symbol)
   "Return an E object providing access to the mutable properties of 'symbol'."
   (e-named-lambda "org.cubik.cle.prim.lisp$symbolAccessor"
-    (:|__printOn/1| (tw)
+    (:|__printOn| (tw)
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<" symbol ">")
       nil)
-    (:|getValue/0| ()
+    (:|getValue| ()
       "CL:SYMBOL-VALUE"
       (symbol-value symbol))
-    (:|getFunction/0| ()
+    (:|getFunction| ()
       "CL:SYMBOL-FUNCTION with a wrapper"
       (wrap-function (symbol-function symbol)))
-    (:|setValue/1| (new)
+    (:|setValue| (new)
       "(SETF CL:SYMBOL-VALUE)"
       (setf (symbol-value symbol) new)
       nil)))
 
 (defvar +lisp+ (e-named-lambda "org.cubik.cle.prim.lisp"
   "This object is the maximum possible authority that an E program may hold, offering near-complete access to the underlying Lisp system. Handle with care."
-  (:|get/2| (package-name symbol-name)
+  (:|get| (package-name symbol-name)
     ; xxx should allow ejectors/absent-thunks for missing package and symbol
     "Returns the named symbol in the named package. This is CL:FIND-SYMBOL, except that it throws an exception instead of returning nil, and takes the package argument first."
     (e-coercef package-name 'string)
@@ -363,7 +363,7 @@
 
 (defvar +the-make-path-loader+ (e-named-lambda "org.cubik.cle.prim.makePathLoader"
   :stamped +deep-frozen-stamp+
-  (:|run/2| (name fetchpath
+  (:|run| (name fetchpath
       &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |eventually|)))
     (e-coercef name 'string)
     (e-coercef fetchpath 'vector)
@@ -372,11 +372,11 @@
         ; :stamped (deep-frozen-if-every fetchpath)
         #+eventually-frozen-path-loader :stamped
         #+eventually-frozen-path-loader eventually-deep-frozen
-        (:|__printOn/1| (tw)
+        (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. tw |print| "<" name ":*>")
           nil)
-        #+eventually-frozen-path-loader (:|__optSealedDispatch/1| (brand)
+        #+eventually-frozen-path-loader (:|__optSealedDispatch| (brand)
           ; XXX this implementation of the EventuallyDeepFrozen state check is not really *correct* per the auditor's rules, but will handle the correct cases, since we know that the parts of this which are not actually DeepFrozen 
           (cond
             ((eeq-is-same-ever brand (e. eventually-deep-frozen |getPeekBrand|))
@@ -384,22 +384,22 @@
                   |seal|
                   (e. +the-make-const-map+ |fromPairs|
                     `#(#("&fetchpath" ,(make-instance 'e-simple-slot :value fetchpath))))))))
-        (:|fetch/2| (fqn absent-thunk)
+        (:|fetch| (fqn absent-thunk)
           (if (string= ".*" fqn :start2 (- (length fqn) 2))
             (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
             (loop for sub across fetchpath
-                  do (block continue (return (e. sub |fetch| fqn (e-named-lambda "org.cubik.cle.prim.makePathLoader$loader$continueSearchThunk" (:|run/0| () (return-from continue))))))
+                  do (block continue (return (e. sub |fetch| fqn (e-named-lambda "org.cubik.cle.prim.makePathLoader$loader$continueSearchThunk" (:|run| () (return-from continue))))))
                   finally (e. absent-thunk |run|))))
-        (:|get/1| (fqn) 
+        (:|get| (fqn) 
           (e. loader |fetch| fqn 
-            (e-named-lambda "org.cubik.cle.prim.makePathLoader$loader$getFailureThunk" (:|run/0| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
-        (:|optUncall/1| (specimen)
+            (e-named-lambda "org.cubik.cle.prim.makePathLoader$loader$getFailureThunk" (:|run| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
+        (:|optUncall| (specimen)
           (loop for sub across fetchpath thereis
             (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))
                  (progn
                    ;(format t "~&; ~A for optUnget of ~A querying sub ~A~%" (e-quote loader) (e-quote specimen) (e-quote sub))
                    (unget-to-uncall loader (e. sub |optUnget| specimen))))))
-        (:|optUnget/1| (specimen)
+        (:|optUnget| (specimen)
           ; xxx this is how Java-E does it, and claims a justification, but *what*?
           (uncall-to-unget loader (e. loader |optUncall| specimen))))))))
 
@@ -480,7 +480,7 @@
     (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
-      (e. (load-emaker-without-cache "org.erights.e.elib.serial.DeepFrozenAuthor" (e-named-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" (:|run/0| () (error "DeepFrozenAuthor missing")))) 
+      (e. (load-emaker-without-cache "org.erights.e.elib.serial.DeepFrozenAuthor" (e-named-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" (:|run| () (error "DeepFrozenAuthor missing")))) 
           |run| 
           elib:+deep-frozen-stamp+
           elib:+the-make-traversal-key+))
@@ -497,7 +497,7 @@
   (let* ((prefix "org.erights.e.elang.evm."))
     (e-named-lambda "vm-node-maker-importer"
       :stamped +deep-frozen-stamp+
-      (:|fetch/2| (fqn absent-thunk
+      (:|fetch| (fqn absent-thunk
           &aux (local-name (e.util:without-prefix fqn prefix)))
         (if local-name
           (let* ((sym (find-symbol local-name :e.elang.vm-node)))
@@ -505,7 +505,7 @@
                      (get sym 'static-maker))
                 (e. absent-thunk |run|)))
           (e. absent-thunk |run|)))
-      (:|optUnget/1| (specimen)
+      (:|optUnget| (specimen)
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
           (do-symbols (node-type (find-package :e.elang.vm-node))
@@ -516,7 +516,7 @@
 ; XXX optUnget?
 (defvar +vm-node-type-importer+ (e-named-lambda "vm-node-type-importer"
   :stamped +deep-frozen-stamp+
-  (:|fetch/2| (fqn absent-thunk
+  (:|fetch| (fqn absent-thunk
       &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
     (if local-name
       (let* ((sym (find-symbol local-name :e.elang.vm-node)))
@@ -538,7 +538,7 @@
 ; this could be less primitive, but then it would have more dependencies
 (defvar +traceln+ (elib:e-named-lambda "org.cubik.cle.prim.traceln"
   :stamped +deep-frozen-stamp+
-  (:|run/1| (message)
+  (:|run| (message)
     ; xxx use stream writer on *trace-output*?
     ; xxx Should we tag traceln according to the FQN-prefix of the safe scope, or in nested scopes such as emakers' FQN-prefix-scopes?
     (format *trace-output* "~&~A"
@@ -565,7 +565,7 @@ If a log message is produced, context-thunk is run to produce a string describin
 (defun make-lazy-eval-slot (scope source &aux value this)
   (setf this (e-named-lambda "LazyEvalSlot"
     :stamped +deep-frozen-stamp+ ; XXX this stamp is only appropriate when the resulting value is also DeepFrozen
-    (:|getValue/0| ()
+    (:|getValue| ()
       (when source
         (let ((source-here source))
           (multiple-value-bind (promise resolver) (make-promise)
@@ -578,22 +578,22 @@ If a log message is produced, context-thunk is run to produce a string describin
               (error (p)
                 (e. resolver |smash| p))))))
       value)
-    (:|setValue/1| (new)
+    (:|setValue| (new)
       (declare (ignore new))
       (error "not an assignable slot: ~A" (e-quote this)))
-    (:|isFinal/0| () elib:+e-true+))))
+    (:|isFinal| () elib:+e-true+))))
 
 (defun make-lazy-apply-slot (maker &aux value-box)
   (e-named-lambda "lazyApplySlot"
     :stamped +deep-frozen-stamp+
-    (:|getValue/0| ()
+    (:|getValue| ()
       (unless value-box
         (multiple-value-bind (promise resolver) (make-promise)
           ; XXX doesn't handle failure
           (setf value-box (list promise))
           (e. resolver |resolve| (funcall maker))))
       (car value-box))
-    (:|isFinal/0| () elib:+e-true+)))
+    (:|isFinal| () elib:+e-true+)))
 
 (defun make-safe-extern-loader ()
   (lazy-value-scope ("__cle_safe_extern" "")
@@ -606,7 +606,7 @@ If a log message is produced, context-thunk is run to produce a string describin
     ("org.cubik.cle.prim.simplifyFQName" 
       (e-named-lambda "org.cubik.cle.prim.simplifyFQName" 
         :stamped +deep-frozen-stamp+
-        (:|run/1| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
+        (:|run| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
     ))
 
 (defun f+ (f1 f2)
@@ -617,7 +617,7 @@ If a log message is produced, context-thunk is run to produce a string describin
 (defvar +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
   (e. (load-emaker-without-cache
         "org.erights.e.elib.ref.RefAuthor" 
-        (e-named-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" (:|run/0| () (error "RefAuthor missing")))) 
+        (e-named-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" (:|run| () (error "RefAuthor missing")))) 
       |run|
       (wrap-function (f+ #'vector #'make-promise)
                      :stamps (list +deep-frozen-stamp+))
@@ -651,7 +651,7 @@ If a log message is produced, context-thunk is run to produce a string describin
            (let ((deep-frozen-cache (make-hash-table :test #'equal)))
              (e-named-lambda "org.cubik.cle.internal.emakerImporter"
                :stamped +deep-frozen-stamp+
-               (:|fetch/2| (fqn absent-thunk)
+               (:|fetch| (fqn absent-thunk)
                  (e-coercef fqn 'string)
                  (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
                    (if cache-present
@@ -672,7 +672,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                     +vm-node-maker-importer+))))
             (e-named-lambda "org.cubik.cle.prim.ImportLoaderMagic"
               :stamped +deep-frozen-stamp+
-              (:|__printOn/1| (tw) (e. real-loader |__printOn| tw))
+              (:|__printOn| (tw) (e. real-loader |__printOn| tw))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
  
@@ -786,7 +786,7 @@ If a log message is produced, context-thunk is run to produce a string describin
           ("&__comparer"        ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
           ("__MatchContext"     ,(e-named-lambda "org.erights.e.elib.slot.MatchContext"
-            (:|coerce/2| (specimen opt-ejector)
+            (:|coerce| (specimen opt-ejector)
               (vector specimen opt-ejector))))
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
           ("&__makeVerbFacet" ,(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))

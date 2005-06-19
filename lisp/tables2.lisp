@@ -21,7 +21,7 @@
 
 (defvar +the-make-twine+ (e-named-lambda "org.erights.e.elib.tables.makeTwine"
   :stamped +deep-frozen-stamp+
-  (:|fromSequence/1| (iteratable) 
+  (:|fromSequence| (iteratable) 
     "Return a Twine composed of the characters in the given sequence (object that implements iterate/1).
     
 The ConstList version of this is called fromIteratableValues, unfortunately. XXX decide what the right name for this operation is."
@@ -131,33 +131,33 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (def-vtable const-map
   ; XXX import documentation strings lazily from EMap interface
-  (:|__optUncall/0| (this)
+  (:|__optUncall| (this)
     `#(,+the-make-const-map+ "fromColumns" ,(e. this |getPair|)))
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (= 0 (e. this |size|))
       (e. tw |print| "[].asMap()")
       (e. this |printOn| "[" " => " ", " "]" tw)))
-  (:|keyType/0| (this) (declare (ignore this)) +the-any-guard+)
-  (:|valueType/0| (this) (declare (ignore this)) +the-any-guard+)
+  (:|keyType| (this) (declare (ignore this)) +the-any-guard+)
+  (:|valueType| (this) (declare (ignore this)) +the-any-guard+)
   (:|snapshot/0| #'identity)
   (:|readOnly/0| #'identity)
   
   ; The folowing are methods equally applicable to non-const maps, but all of them are currently implemented in E.
   
-  (:|get/1| (this key)
+  (:|get| (this key)
     (e. this |fetch|
       key
       (e-lambda (:|run| ()
         ; XXX can this error be made more informative?
         (error "~A not found" (e-quote key))))))
-  (:|maps/1| (this key)
+  (:|maps| (this key)
     (block nil
       (e. this |fetch| key (e-lambda (:|run| () (return +e-false+))))
       +e-true+))
   
   ; xxx with is generally used repeatedly: have a special efficiently-accumulating map
-  (:|with/2| (map new-key new-value)
+  (:|with| (map new-key new-value)
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda (:|iterate| (f)
         (e. map |iterate| f)
@@ -166,7 +166,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       +e-false+))
 
   ; xxx using more complicated and slow version to imitate Java-E's ordering behavior
-  (:|without/1| (map key-to-remove)
+  (:|without| (map key-to-remove)
     "Return a ConstMap including all entries in this map except for the given key, which is replaced in the ordering with the last element of the map."
     (if (e-is-true (e. map |maps| key-to-remove))
       (let (last-pair 
@@ -188,7 +188,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           +e-true+))
       map))
 
-  (:|optExtract/1| (this key)
+  (:|optExtract| (this key)
     (block nil
       (vector
         (e. this |fetch| key
@@ -196,7 +196,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             (return nil))))
         (e. this |without| key))))
 
-  (:|extract/2| (this key default)
+  (:|extract| (this key default)
     (block nil
       (vector
         (e. this |fetch| key
@@ -204,7 +204,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             (return (vector default this)))))
         (e. this |without| key))))
   
-  (:|and/1| (map mask)
+  (:|and| (map mask)
     (e-coercef mask +the-any-map-guard+)
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda (:|iterate| (f)
@@ -216,7 +216,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       +e-true+))
 
   ; simpler but not-like-Java-E butNot. XXX discuss whether it would be acceptable to use this
-  ;(:|butNot/1| (map mask)
+  ;(:|butNot| (map mask)
   ;  (e-coercef mask +the-any-map-guard+)
   ;  (e. +the-make-const-map+ |fromIteratable|
   ;    (e-lambda (:|iterate| (f)
@@ -227,7 +227,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   ;      nil))
   ;    +e-true+))
 
-  (:|butNot/1| (map mask)
+  (:|butNot| (map mask)
     (e-coercef mask +the-any-map-guard+)
     (let* ((map-keys (e-coerce (e. map |getKeys|) 'vector))
            (ordering (make-array (length map-keys) 
@@ -247,9 +247,9 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           nil))
         +e-true+)))
   
-  (:|or/1| (front behind)        (e. front |or| behind +e-false+ 'nil))
-  (:|or/2| (front behind strict) (e. front |or| behind strict    'nil))
-  (:|or/3| (front behind strict opt-ejector)
+  (:|or| (front behind)        (e. front |or| behind +e-false+ 'nil))
+  (:|or| (front behind strict) (e. front |or| behind strict    'nil))
+  (:|or| (front behind strict opt-ejector)
     (cond
       ((eql 0 (e. front  |size|)) (e. behind |snapshot|))
       ((eql 0 (e. behind |size|)) (e. front |snapshot|))
@@ -261,14 +261,14 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             nil))
           strict opt-ejector))))
   
-  (:|iterate/1| (map func)
+  (:|iterate| (map func)
     (let* ((pair (ref-shorten (e. map |getPair|))))
       (loop for key   across (aref pair 0)
             for value across (aref pair 1)
             do (e. func |run| key value))
       nil))
   
-  (:|printOn/5| (map left-s map-s sep-s right-s tw)
+  (:|printOn| (map left-s map-s sep-s right-s tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| left-s)
     (let ((this-sep ""))
@@ -280,8 +280,8 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
         (setf this-sep sep-s)))))
     (e. tw |write| right-s))
   
-  (:|diverge/0| (this) (e. this |diverge| +the-any-guard+ +the-any-guard+))
-  (:|diverge/2| (this key-guard value-guard)
+  (:|diverge| (this) (e. this |diverge| +the-any-guard+ +the-any-guard+))
+  (:|diverge| (this key-guard value-guard)
     (let ((flex-map (e. +the-make-flex-map+ |fromTypes| key-guard value-guard)))
       (e. flex-map |putAll| this +e-true+ (e-lambda (:|run| (problem)
         ; xxx explain exactly what keys, after the problem argument becomes more informative
@@ -323,21 +323,21 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             do (setf (hashref key table) i)))))
 
 (def-vtable genhash-const-map-impl
-  (:|getPair/0| (this)
+  (:|getPair| (this)
     (with-slots (keys values) this
       (vector keys values)))
   (:|snapshot/0| #'identity)
-  (:|fetch/2| (this key absent-thunk)
+  (:|fetch| (this key absent-thunk)
     (with-slots (table keys values) this
       (let ((index (hashref key table)))
         (if index
           (aref values index)
           (e. absent-thunk |run|)))))
-  (:|size/0| (this)
+  (:|size| (this)
     (with-slots (keys) this (length keys)))
-  (:|getKeys/0| (this)
+  (:|getKeys| (this)
     (with-slots (keys) this keys))
-  (:|getValues/0| (this)
+  (:|getValues| (this)
     (with-slots (values) this values)))
 
 ; --- genhash FlexMap ---
@@ -386,7 +386,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
               snapshot nil)))))
 
 (def-vtable genhash-flex-map-impl
-  (:|__printOn/1| (this tw)
+  (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     ; XXX call e-printer
     ; XXX this is duplicated code with simple-flex-map, because we expect to throw out most of the CL-written flex-map machinery
@@ -395,13 +395,13 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (e. (slot-value this 'self) |printOn| "[" " => " ", " "]" tw))
     (e. tw |print| ".diverge()"))
 
-  (:|size/0| (this)
+  (:|size| (this)
     (with-slots (snapshot keys) this
       (if snapshot
         (e. snapshot |size|)
         (length keys))))
 
-  (:|put/4| (this key value strict opt-ejector)
+  (:|put| (this key value strict opt-ejector)
     (ensure-storage this)
     (with-slots (table keys values key-guard value-guard) this
       (e-coercef key key-guard)
@@ -420,7 +420,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     nil)
 
   ; XXX need to change the protocol to have an ejector
-  (:|removeKey/2| (this key strict &aux opt-ejector)
+  (:|removeKey| (this key strict &aux opt-ejector)
     (ensure-storage this)
     (with-slots (table keys values key-guard value-guard) this
       (e-coercef key key-guard)
@@ -443,10 +443,10 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     nil)
 
   ; XXX to be moved to flexmap shell?
-  (:|keyType/0|   (this) (slot-value this 'key-guard))
-  (:|valueType/0| (this) (slot-value this 'value-guard))
+  (:|keyType|   (this) (slot-value this 'key-guard))
+  (:|valueType| (this) (slot-value this 'value-guard))
 
-  (:|fetch/2| (this key absent-thunk)
+  (:|fetch| (this key absent-thunk)
     (with-slots (snapshot table keys values key-guard) this
       (e-coercef key key-guard)
       (if snapshot
@@ -456,13 +456,13 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             (aref values index)
             (e. absent-thunk |run|))))))
 
-  (:|getPair/0| (this)
+  (:|getPair| (this)
     (with-slots (snapshot keys values) this 
       (if snapshot
         (e. snapshot |getPair|)
         (vector (copy-seq keys) (copy-seq values)))))
 
-  (:|getKeys/0| (this)
+  (:|getKeys| (this)
     (with-slots (snapshot keys) this
       (if snapshot
         (e. snapshot |getKeys|)
@@ -475,13 +475,13 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defvar +the-make-const-map+ (e-named-lambda "org.erights.e.elib.tables.makeConstMap"
   :stamped +deep-frozen-stamp+
-  (:|__printOn/1| (tw)
+  (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "__makeMap"))
-  (:|asType/0| ()
+  (:|asType| ()
     ; XXX we provide the sugared Map guard instead of the primitive one - is this really appropriate?
     (e. (vat-safe-scope *vat*) |get| "Map"))
-  (:|fromPairs/1| (pairs)
+  (:|fromPairs| (pairs)
     (e-coercef pairs 'vector)
     (loop
       with keys   = (make-array (length pairs))
@@ -492,19 +492,19 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       do (setf (aref keys i)   (aref pair 0)
                (aref values i) (aref pair 1))
       finally (return (e. +the-make-const-map+ |fromColumns| keys values))))
-  (:|fromColumns/2| (keys values)
+  (:|fromColumns| (keys values)
     ; XXX Java-E uses the valueType of keys and values
     (e-coercef keys 'vector)
     (e-coercef values 'vector)
     (make-instance 'genhash-const-map-impl :keys keys :values values))
-  (:|fromProperties/1| (props)
+  (:|fromProperties| (props)
     "Java-E compatibility. Makes a ConstMap from whatever we're providing that imitates a Java properties(?) object."
     ; XXX this should probably become coercion to ConstMap
     (declare (ignore props))
     (e. +the-make-const-map+ |fromPairs| #()))
-  (:|fromIteratable/2| (iteratable estrict)
+  (:|fromIteratable| (iteratable estrict)
     (e. +the-make-const-map+ |fromIteratable| iteratable estrict nil))
-  (:|fromIteratable/3| (iteratable estrict opt-ejector)
+  (:|fromIteratable| (iteratable estrict opt-ejector)
     "Given an Iteratable, return the ConstMap constructed from its elements. If estrict is false, later elements override earlier ones."
     ; XXX have version with capacity argument
     (let* ((strict (e-is-true estrict))
@@ -539,7 +539,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 ; XXX support fromTypes/3 then make and/1 use the capacity arg
 (defvar +the-make-flex-map+ (e-lambda "org.erights.e.elib.tables.makeFlexMap"
   :stamped +deep-frozen-stamp+
-  (:|fromTypes/2| (key-guard value-guard)
+  (:|fromTypes| (key-guard value-guard)
     ; XXX try coerce to primitive and make use of that
     ;     "If the guards coerce to primitive-type guards, then the map will use the coercion result instead of the provided guard, and may be able to transparently use a more efficient internal representation."
     ; XXX specialize columns when possible
