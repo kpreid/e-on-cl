@@ -265,7 +265,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Return a ConstMap mapping the elements of this list to null."
     ; XXX preserve internal-element-type if possible
     (e. +the-make-const-map+ |fromIteratable|
-      (e-lambda (:|iterate| (f)
+      (e-named-lambda "org.cubik.cle.prim.listAsKeysIterator" (:|iterate| (f)
         (loop for key across vector do
           (e. f |run| key nil))))
       +e-false+))
@@ -358,10 +358,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|fromIteratableValues| (this iteratable) 
     (declare (ignore this))
     (let ((values))
-      (e. iteratable |iterate| (e-lambda (:|run| (k v)
+      (e. iteratable |iterate| (efun (k v)
         (declare (ignore k))
         ; out-of-dynamic-extent calls are harmless
-        (push v values))))
+        (push v values)))
       (coerce (nreverse values) 'vector))))
 
 (defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen make-e-list))
@@ -956,7 +956,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                       (let* ((sub-syntax (e. syntax |enterReference|))
                              (sub-tw (nest :should-close nil
                                            :syntax sub-syntax)))
-                        (if (block nil (e. seen |fetch| key (e-lambda (:|run| () (return nil))))
+                        (if (block nil (e. seen |fetch| key (efun () (return nil)))
                                                   t)
                           (e. sub-syntax |cycle|)
                           (progn
@@ -1071,7 +1071,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                               :adjustable t
                               :fill-pointer 0)))
       (vector (make-text-writer
-                :syntax (e. options |fetch| "syntax" (e-lambda (:|run| () +standard-syntax+)))
+                :syntax (e. options |fetch| "syntax" (efun () +standard-syntax+))
                 :delegate (e-named-lambda "org.cubik.cle.internal.StringTWDelegate"
                   (:|write| (piece
                       &aux (old-size (length buffer))

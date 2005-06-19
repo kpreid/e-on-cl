@@ -131,7 +131,7 @@
         (e. r |resolve|
           (e. (e. (vat-safe-scope *vat*) |get| "trace") |runAsTurn|
             thunk
-            (e-lambda (:|run| () (format nil "timer whenPast at ~A" time)))))))
+            (efun () (format nil "timer whenPast at ~A" time))))))
       p))))
 
 ; --- CL-PPCRE interface ---

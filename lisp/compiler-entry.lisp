@@ -47,9 +47,9 @@
              (inner-scope-nest ; XXX this is wrong; outer scopes should have scope-box marks just as inner scopes do (see Scope#nestOuter)
                ; XXX decide what the official interface to getting slots from a Scope is
                (let (inner-scope)
-                 (e. outer-scope |iterate| (e-lambda (:|run| (k v)
+                 (e. outer-scope |iterate| (efun (k v)
                    (assert (char= #\& (char k 0)))
-                   (push (cons (subseq k 1) (binding-for-slot v)) inner-scope))))
+                   (push (cons (subseq k 1) (binding-for-slot v)) inner-scope)))
                  (nreverse inner-scope))))))
     (multiple-value-bind (local-vars end-name-map form) (transform tree outer-name-map)
       `(locally

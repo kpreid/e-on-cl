@@ -191,8 +191,7 @@
     (block nil
       (vector
         (e. this |fetch| key
-          (e-lambda (:|run| ()
-            (return nil))))
+          (efun () (return nil)))
         (e. this |without| key))))
   (:|without| (scope removed-noun)
     "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."

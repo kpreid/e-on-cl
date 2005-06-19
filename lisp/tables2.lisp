@@ -27,15 +27,15 @@
 The ConstList version of this is called fromIteratableValues, unfortunately. XXX decide what the right name for this operation is."
     ; XXX duplicated code with ConstList
     (let ((values))
-      (e. iteratable |iterate| (e-lambda (:|run| (k v)
+      (e. iteratable |iterate| (efun (k v)
         (declare (ignore k))
         ; out-of-dynamic-extent calls are harmless
-        (push v values))))
+        (push v values)))
       (coerce (nreverse values) 'string)))))
 
 ; --- Primitive safe mutable array access ---
 
-(defvar +the-flex-array-array-brand+ (e-lambda))
+(defvar +the-flex-array-array-brand+ (e-named-lambda "org.cubik.cle.prim.flexArrayArrayBrand"))
 (defclass flex-array-array-sealed-box ()
   ((array :initarg :array
          :accessor unseal-flex-array-array-sealed-box)))
@@ -148,18 +148,18 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (:|get| (this key)
     (e. this |fetch|
       key
-      (e-lambda (:|run| ()
+      (efun ()
         ; XXX can this error be made more informative?
-        (error "~A not found" (e-quote key))))))
+        (error "~A not found" (e-quote key)))))
   (:|maps| (this key)
     (block nil
-      (e. this |fetch| key (e-lambda (:|run| () (return +e-false+))))
+      (e. this |fetch| key (efun () (return +e-false+)))
       +e-true+))
   
   ; xxx with is generally used repeatedly: have a special efficiently-accumulating map
   (:|with| (map new-key new-value)
     (e. +the-make-const-map+ |fromIteratable|
-      (e-lambda (:|iterate| (f)
+      (e-named-lambda "org.cubik.cle.prim.mapWithIterator" (:|iterate| (f)
         (e. map |iterate| f)
         (e. f |run| new-key new-value)
         nil))
@@ -171,11 +171,11 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (if (e-is-true (e. map |maps| key-to-remove))
       (let (last-pair 
             removing-nonlast)
-        (e. map |iterate| (e-lambda (:|run/2| (&rest p) (setf last-pair p))))
+        (e. map |iterate| (efun (k v) (setf last-pair (list k v))))
         (setf removing-nonlast (not (eeq-is-same-ever (first last-pair) key-to-remove)))
         (e. +the-make-const-map+ |fromIteratable|
-          (e-lambda (:|iterate| (f)
-            (e. map |iterate| (e-lambda (:|run| (key value)
+          (e-named-lambda "org.cubik.cle.prim.mapWithoutIterator" (:|iterate| (f)
+            (e. map |iterate| (efun (key value)
               (cond
                 ((and last-pair removing-nonlast (eeq-is-same-ever key key-to-remove))
                   (e. f |run| (first last-pair) (second last-pair)))
@@ -183,7 +183,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                   #|do nothing|#)
                 (t
                   (e. f |run| key value)))
-              nil)))
+              nil))
             nil))
           +e-true+))
       map))
@@ -192,26 +192,25 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (block nil
       (vector
         (e. this |fetch| key
-          (e-lambda (:|run| ()
-            (return nil))))
+          (efun () (return nil)))
         (e. this |without| key))))
 
   (:|extract| (this key default)
     (block nil
       (vector
         (e. this |fetch| key
-          (e-lambda (:|run| ()
-            (return (vector default this)))))
+          (efun ()
+            (return (vector default this))))
         (e. this |without| key))))
   
   (:|and| (map mask)
     (e-coercef mask +the-any-map-guard+)
     (e. +the-make-const-map+ |fromIteratable|
-      (e-lambda (:|iterate| (f)
-        (e. map |iterate| (e-lambda (:|run| (key value)
+      (e-named-lambda "org.cubik.cle.prim.mapAndIterator" (:|iterate| (f)
+        (e. map |iterate| (efun (key value)
           (when (e-is-true (e. mask |maps| key))
             (e. f |run| key value))
-          nil)))
+          nil))
         nil))
       +e-true+))
 
@@ -241,7 +240,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                    (setf (aref ordering i) (vector-pop ordering)))
                  (incf i)))
       (e. +the-make-const-map+ |fromIteratable|
-        (e-lambda (:|iterate| (f)
+        (e-named-lambda "org.cubik.cle.prim.mapButNotIterator" (:|iterate| (f)
           (loop for key across ordering do
             (e. f |run| key (e. map |get| key)))
           nil))
@@ -255,7 +254,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       ((eql 0 (e. behind |size|)) (e. front |snapshot|))
       (t 
         (e. +the-make-const-map+ |fromIteratable|
-          (e-lambda (:|iterate| (f)
+          (e-named-lambda "org.cubik.cle.prim.mapButNotIterator" (:|iterate| (f)
             (e. behind |iterate| f)
             (e. front |iterate| f)
             nil))
@@ -272,23 +271,23 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| left-s)
     (let ((this-sep ""))
-      (e. map |iterate| (e-lambda (:|run| (key value)
+      (e. map |iterate| (efun (key value)
         (e. tw |write| this-sep)
         (e. tw |quote| key)
         (e. tw |write| map-s)
         (e. tw |quote| value)
-        (setf this-sep sep-s)))))
+        (setf this-sep sep-s))))
     (e. tw |write| right-s))
   
   (:|diverge| (this) (e. this |diverge| +the-any-guard+ +the-any-guard+))
   (:|diverge| (this key-guard value-guard)
     (let ((flex-map (e. +the-make-flex-map+ |fromTypes| key-guard value-guard)))
-      (e. flex-map |putAll| this +e-true+ (e-lambda (:|run| (problem)
+      (e. flex-map |putAll| this +e-true+ (efun (problem)
         ; xxx explain exactly what keys, after the problem argument becomes more informative
         (declare (ignore problem))
         (error "duplicate keys in ~A under ~A coercion"
           (e-quote this)
-          (e-quote key-guard)))))
+          (e-quote key-guard))))
       flex-map)))
 
 
@@ -537,7 +536,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (make-instance 'genhash-flex-map-impl))
 
 ; XXX support fromTypes/3 then make and/1 use the capacity arg
-(defvar +the-make-flex-map+ (e-lambda "org.erights.e.elib.tables.makeFlexMap"
+(defvar +the-make-flex-map+ (e-named-lambda "org.erights.e.elib.tables.makeFlexMap"
   :stamped +deep-frozen-stamp+
   (:|fromTypes| (key-guard value-guard)
     ; XXX try coerce to primitive and make use of that

@@ -78,8 +78,8 @@
     :with-result-promise
     
     :def-vtable
-    :e-lambda
     :e-named-lambda
+    :e-lambda :efun
     :miranda
     :message-pairs-to-map-including-miranda-messages
     :or-miranda-message-descs

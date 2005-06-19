@@ -393,12 +393,12 @@ XXX make precedence values available as constants"
               verb
               (map 'vector
                 (lambda (pattern)
-                  (e-lambda (:|__printOn| (tw)
+                  (e-named-lambda "syntax-printer" (:|__printOn| (tw)
                     (e-coercef tw +the-text-writer-guard+)
                     (subprint pattern +precedence-outer+ :tw tw))))
                 patterns) 
               (when opt-result-guard
-                (e-lambda (:|__printOn| (tw)
+                (e-named-lambda "syntax-printer" (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
                   (subprint opt-result-guard +precedence-in-guard+ :tw tw)))))
             (e. tw |print| " ")

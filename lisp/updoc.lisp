@@ -140,9 +140,9 @@
             (collect-streams)
             (if new-result
               (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))
-            (e. (e. scope |get| "Ref") |whenResolved| wait-hook (e-lambda (:|run| (x)
+            (e. (e. scope |get| "Ref") |whenResolved| wait-hook (efun (x)
               (declare (ignore x))
-              (return-from step-user-region))))
+              (return-from step-user-region)))
             (vat-loop))
           (collect-streams))
         ; --- end ---
@@ -192,9 +192,9 @@
              (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
                (e. wait-hook-slot |setValue|
                  (e. (e. (vat-safe-scope *vat*) |get| "Ref") |whenResolved| ref
-                   (e-lambda (:|run| (ref)
+                   (efun (ref)
                      (declare (ignore ref))
-                     old-wait))))
+                     old-wait)))
                nil)))
            (scope (e. (e. (make-io-scope :stdout eval-out-stream 
                                          :stderr eval-err-stream

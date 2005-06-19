@@ -645,8 +645,15 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       `(((,verb) ,@body))))
   )
 
-(defmacro e-lambda (&body entries)
-    `(e-named-lambda ,(format nil "~A$_" (namestring (or *compile-file-truename* *load-truename* #p"<cl-eval>"))) ,@entries))
+(defun gen-fqn ()
+  (format nil "~A$_" (namestring (or *compile-file-truename* *load-truename* #p"<cl-eval>"))))
+
+(defmacro efun (method-first &body method-rest)
+  `(e-named-lambda ,(gen-fqn) (:|run| ,method-first ,@method-rest)))
+
+; to be reclaimed
+; (defmacro e-lambda (&body entries)
+;     `(e-named-lambda ,(gen-fqn) ,@entries))
 
 (defmacro e-named-lambda (type-designator &body entries)
   (let* ((type-name (string type-designator))
