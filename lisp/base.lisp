@@ -10,8 +10,8 @@
 #+sbcl
 (defun %eval (expr lexenv)
   (let ((fun (sb-c:compile-in-lexenv nil
-				     `(lambda () ,expr)
-				     lexenv)))
+                                     `(lambda () ,expr)
+                                     lexenv)))
     (funcall fun)))
 
 ; --- ---
@@ -38,8 +38,8 @@ This variable is deprecated and will be replaced by more fine-grained and well-d
   ; XXX these are the double-float versions - make this explicit
   (defconstant |NaN| 
     (or #+(and sbcl ppc)
-	  (with-appropriate-floating-point-rules
-	    (- sb-ext:double-float-positive-infinity sb-ext:double-float-positive-infinity))
+          (with-appropriate-floating-point-rules
+            (- sb-ext:double-float-positive-infinity sb-ext:double-float-positive-infinity))
         '|NaN|)
     "The double-float Not-a-Number value if available, or a symbol.")
   (defconstant |Infinity|

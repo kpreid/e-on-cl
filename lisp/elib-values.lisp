@@ -519,9 +519,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e. tw |print|
       ; CMUCL workaround
       (if (typep this 'simple-condition)
-	(apply #'format nil (simple-condition-format-control this)
-	                    (simple-condition-format-arguments this))
-	(princ-to-string this)))
+        (apply #'format nil (simple-condition-format-control this)
+                            (simple-condition-format-arguments this))
+        (princ-to-string this)))
     (when interesting-type
       (e. tw |print| ">")))
   (:|leaf| (this)

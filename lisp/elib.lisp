@@ -618,7 +618,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
         (make-instance 'param-desc :opt-name
           (with-standard-io-syntax
             (let ((*print-case* :downcase)
-		  (*package* (or (symbol-package sym) (find-package :cl))))
+                  (*package* (or (symbol-package sym) (find-package :cl))))
               (write-to-string sym))))) 'vector))
                             
   (defun vtable-entry-message-desc-pair (entry &rest keys &key (prefix-arity 0) &allow-other-keys

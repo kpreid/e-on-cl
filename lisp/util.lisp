@@ -184,9 +184,9 @@
   (let ((save (sb-int:get-floating-point-modes)))
     (unwind-protect
       (progn
-	(sb-int:set-floating-point-modes
+        (sb-int:set-floating-point-modes
           :traps '())
-	(funcall f))
+        (funcall f))
       (apply #'sb-int:set-floating-point-modes save))))
 
 #-(or (and sbcl x86))
@@ -215,9 +215,9 @@
         (list (ccl:arglist function))
       #+cmu
         (list
-	  (let ((*package* (find-package :cl-user)))
-	    (read-from-string
-	      (kernel:%function-arglist function)))) ; XXX is this a supported interface? probably not
+          (let ((*package* (find-package :cl-user)))
+            (read-from-string
+              (kernel:%function-arglist function)))) ; XXX is this a supported interface? probably not
       (cdr (function-lambda-expression function))
       '((&rest <unknown-lambda-list>)))))
 
