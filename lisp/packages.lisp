@@ -35,7 +35,9 @@
     
     :lambda-list-arguments-range
     :function-arguments-range
-    :function-responds-to))
+    :function-responds-to
+    
+    :backtrace-value))
 
 (cl:defpackage :e.elib
   (:nicknames :elib)

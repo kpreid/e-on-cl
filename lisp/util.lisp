@@ -119,7 +119,7 @@
         (error "Don't know where to find external-process-output-stream")
       args)))
 
-; --- ---
+; --- misc functions ---
 
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
   ; Regarding the SBCL conditionals below: I want this code fast, but there seems to be *no* way to get SBCL not to output warnings on the parts which it can't optimize *at every point at which it is inlined*.
@@ -161,7 +161,9 @@
   (if (and (>= (length string) split-index)
            (string= prefix string :end2 split-index))
     (subseq string split-index)))
-  
+
+; --- floating-point rules ---
+
 ; I was going to use this to get NaN/Infinity for OpenMCL, but when I tried:
 ; 2 > (/ 1d0 0d0)
 ; Unhandled exception 11 at 0x00004774, context->regs at #xf0135458
@@ -197,6 +199,8 @@
 
 (defmacro with-appropriate-floating-point-rules (&body forms)
   `(%with-appropriate-floating-point-rules (lambda () ,@forms)))
+
+; --- lambda lists ---
 
 #+sbcl (eval-when (:compile-toplevel :load-toplevel :execute)
          (require :sb-introspect))
@@ -263,3 +267,27 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 ; [11:04] piso: kpreid: allegro and abcl have ARGLIST
 ; [11:05] rtoy_: function-lambda-expression might work, but it's not required to return anything useful.
 
+; --- backtrace ---
+
+(defun backtrace-value ()
+  "Returns a value describing the stack in unspecified detail, suitable for printing."
+  (or
+    #+sbcl 
+      (sb-ext:backtrace-as-list)
+    #+abcl ; xxx untested
+      (ext:backtrace-as-list)
+    #+cmu ; xxx untested
+      (with-output-to-string (*debug-io*)
+        (debug:backtrace))
+    ;; xxx this makes OpenMCL 0.14.2-p1 die reliably: 
+    ;; Can't find active area, -> kernel debugger
+    ;; #+openmcl
+    ;;   (with-output-to-string (*debug-io*)
+    ;;     ;; Unfortunately, this has two detail levels: "not enough", and "too much". We'll take "too much".
+    ;;     (ccl:print-call-history))
+    nil))
+    
+;; From IRC, some time ago:
+;;   <kpreid> Are there any semi-portable interfaces to capture a stack trace, as a debugger might do interactively?
+;;   <tbmoore> kpreid: The swank support, perhaps.
+;; So we could perhaps avoid reinventing some platform layering by using SWANK - but it'd be another dependency, and a rather odd one. Hm. -- kpreid 2005-06-19

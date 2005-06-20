@@ -895,7 +895,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                       ; XXX this tracing is too noisy for running the tests - we need a 'store-but-don't-print' trace, or a tracelog like Java-E.
                       ((e-catchable-condition (lambda (condition)
                         #-(or) (declare (ignore condition))
-                        #+(or) (e. (e. (vat-safe-scope *vat*) |get| "traceln") |run| (format nil "problem while printing ~S: ~A (~S)~%~:W" thing (e-quote condition) condition (sb-debug:backtrace-as-list))))))
+                        #+(or) (e. (e. (vat-safe-scope *vat*) |get| "traceln") |run| (format nil "problem while printing ~S: ~A (~S)~%~:W" thing (e-quote condition) condition (e.util:backtrace-value))))))
                     (e. thing |__printOn| wrapped-tw))
                   (e-catchable-condition (condition)
                     (e. syntax |problem| (funcall nest :in-error-printing t)

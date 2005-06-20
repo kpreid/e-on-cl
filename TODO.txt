@@ -36,15 +36,6 @@ Code cleanups not marked in the code:
 
 ---
 
-Notes on capturing stack trace:
-  SBCL offers sb-debug:backtrace-as-list. CMUCL does not have this.
-  
-  <kpreid> Are there any semi-portable interfaces to capture a stack trace, as a debugger might do interactively?
-  <tbmoore> kpreid: The swank support, perhaps.
-  
-  <Xach> swank doesn't use backtrace-as-list in the sbcl backend, but it does in the abcl backend
-  <piso> yes, abcl also provides backtrace-as-list
-  abcl: ext:backtrace-as-list
   
 For encoding/decoding:
   sb-ext:octets-to-string byte-vector &key :external-format :start :end

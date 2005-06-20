@@ -131,7 +131,7 @@
                                           (setf new-result nil)
                                           (collect-streams)
                                           (push (make-problem-answer condition) new-answers)
-                                          #+sbcl (setf backtrace (sb-debug:backtrace-as-list)) ; XXX platform
+                                          (setf backtrace (e.util:backtrace-value))
                                           (return-from attempt)))
                                (warning #'muffle-warning)
                                #+sbcl (sb-ext:compiler-note #'muffle-warning))
