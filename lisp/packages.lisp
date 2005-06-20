@@ -78,7 +78,6 @@
     :with-result-promise
     
     :def-vtable
-    :e-named-lambda
     :e-lambda :efun
     :miranda
     :message-pairs-to-map-including-miranda-messages

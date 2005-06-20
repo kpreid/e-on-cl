@@ -643,82 +643,95 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (defun nl-miranda-case-maybe (verb entries &rest body)
     (unless (find verb entries :key #'car)
       `(((,verb) ,@body))))
-  )
 
-(defun gen-fqn ()
-  (format nil "~A$_" (namestring (or *compile-file-truename* *load-truename* #p"<cl-eval>"))))
+  (defun gen-fqn ()
+    (format nil "~A$_" (namestring (or *compile-file-truename* *load-truename* #p"<cl-eval>"))))
+    
+  (defun e-lambda-expansion (method-entries fqn documentation stamp-forms opt-otherwise-body
+      &aux (self-func (make-symbol fqn))
+           (self-expr `#',self-func)
+           (stamps-sym (gensym "STAMPS"))
+           (mverb-sym  (gensym "MVERB"))
+           (args-sym   (gensym "ARGS")))
+    (declare (string fqn documentation))
+    `(let ((,stamps-sym (vector ,@stamp-forms)))
+        (labels ((,self-func (,mverb-sym &rest ,args-sym)
+          (case ,mverb-sym
+            ,@(loop for desc in method-entries
+                    collect (vtable-case-entry desc args-sym '() :type-name fqn))
+            ,@(nl-miranda-case-maybe :|__printOn/1| method-entries `(destructuring-bind (tw) ,args-sym
+              (e-coercef tw +the-text-writer-guard+)
+              (e. tw |print| ',(format nil "<~A>" (simplify-fq-name fqn)))
+              nil))
+            ,@(nl-miranda-case-maybe :|__getAllegedType/0| method-entries `(destructuring-bind () ,args-sym
+              (make-instance 'type-desc
+                :doc-comment ',documentation
+                :fq-name ',fqn
+                :supers #()
+                :auditors #()
+                :message-types-v
+                  (or-miranda-message-descs
+                    ',(mapcar #'vtable-entry-message-desc method-entries)))))
+            
+            ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
+              (as-e-boolean (or
+                (member (e-util:mangle-verb verb arity) 
+                        ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
+                                  method-entries))
+                (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
+            ((elib:audited-by-magic-verb) (destructuring-bind (auditor) ,args-sym
+              (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
+            (otherwise 
+              (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
+                ,(let ((fallthrough
+                        `(error "no such method: ~A#~A" 
+                                ',fqn ,mverb-sym)))
+                  (if opt-otherwise-body
+                    (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
+                    fallthrough))))))))
+          ,self-expr)))
+          
+  ) ; end eval-when
+  
 
 (defmacro efun (method-first &body method-rest)
-  `(e-named-lambda ,(gen-fqn) (:|run| ,method-first ,@method-rest)))
+  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (gen-fqn) "" '() nil))
 
-; to be reclaimed
-; (defmacro e-lambda (&body entries)
-;     `(e-named-lambda ,(gen-fqn) ,@entries))
 
-(defmacro e-named-lambda (type-designator &body entries)
-  (let* ((type-name (string type-designator))
-         (self-func (make-symbol type-name))
-         (self-expr `#',self-func)
-         (stamps-sym (gensym "STAMPS"))
-         (mverb-sym (gensym "MVERB"))
-         (args-sym (gensym "ARGS"))
-         ; accumulators
-         (documentation "")
-         (stamp-forms '())
-         (method-entries ())
-         (opt-otherwise-body nil))
-    (loop for x = (first entries) while x do
-      (pop entries)
-      (cond
-        ((eql x ':stamped)
-          (push (pop entries) stamp-forms))
-        ((stringp x)
-          (setf documentation x))
-        ((and (listp x) (eql (first x) 'otherwise))
-          (assert (null opt-otherwise-body))
-          (setf opt-otherwise-body (rest x)))
-        ((listp x)
-          (push x method-entries))
-        (t
-          (error "Unrecognized non-vtable-entry value ~S in e-lambda body" x))))
-    (setf method-entries (nreverse method-entries)
-          stamp-forms    (nreverse stamp-forms))
-    `(let ((,stamps-sym (vector ,@stamp-forms)))
-      (labels ((,self-func (,mverb-sym &rest ,args-sym)
-        (case ,mverb-sym
-          ,@(loop for desc in method-entries
-                  collect (vtable-case-entry desc args-sym '() :type-name type-name))
-          ,@(nl-miranda-case-maybe :|__printOn/1| method-entries `(destructuring-bind (tw) ,args-sym
-            (e-coercef tw +the-text-writer-guard+)
-            (e. tw |print| ',(format nil "<~A>" (simplify-fq-name type-name)))
-            nil))
-          ,@(nl-miranda-case-maybe :|__getAllegedType/0| method-entries `(destructuring-bind () ,args-sym
-            (make-instance 'type-desc
-              :doc-comment ',documentation
-              :fq-name ',type-name
-              :supers #()
-              :auditors #()
-              :message-types-v
-                (or-miranda-message-descs
-                  ',(mapcar #'vtable-entry-message-desc method-entries)))))
-          
-          ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
-            (as-e-boolean (or
-              (member (e-util:mangle-verb verb arity) 
-                      ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
-                                method-entries))
-              (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
-          ((elib:audited-by-magic-verb) (destructuring-bind (auditor) ,args-sym
-            (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
-          (otherwise 
-            (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
-              ,(let ((fallthrough
-                      `(error "no such method: ~A#~A" 
-                              ',type-name ,mverb-sym)))
-                (if opt-otherwise-body
-                  (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name type-name)
-                  fallthrough))))))))
-        ,self-expr))))
+(defmacro e-lambda (fqn (&rest options) &body entries)
+  "XXX document this
+
+fqn may be NIL or a string."
+  (let ((stamp-forms '())
+        (opt-otherwise-body nil)
+        (documentation ""))
+    ;; Normalize/check simple options
+    (if fqn
+      (check-type fqn string)
+      (setf fqn (gen-fqn)))
+    ;; Parse options
+    (loop for (key value) on options by #'cddr do
+      (case key
+        (:stamped
+          (push value stamp-forms))
+        (:doc
+          (assert (string= documentation "") (documentation) "duplicate :doc option")
+          (setf documentation value))
+        (otherwise
+          (error "Unrecognized option ~S ~S in e-lambda ~S."
+                 key value fqn))))
+    (check-type documentation string)
+    ;; Extract 'otherwise' method
+    (setf entries
+      (remove-if
+        (lambda (entry)
+          (when (and (listp entry) (eql (first entry) 'otherwise))
+            (assert (null opt-otherwise-body))
+            (setf opt-otherwise-body (rest entry))
+            t))
+        entries))
+    ;; Expansion
+    (e-lambda-expansion entries fqn documentation stamp-forms opt-otherwise-body)))
   
 ; --- Miranda methods ---
 
@@ -798,8 +811,8 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
              (set-name (concatenate 'string "set" cap-name))
              (get-verb (e-util:mangle-verb (concatenate 'string "get" cap-name) 0))
              (set-verb (e-util:mangle-verb (concatenate 'string "set" cap-name) 1)))
-      (e-named-lambda "org.cubik.cle.prim.DefaultPropertySlot"
-        "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object."
+      (e-lambda "org.cubik.cle.prim.DefaultPropertySlot"
+          (:doc "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object.")
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. e.syntax:+e-printer+ |printPropertySlot| tw prop-name))
@@ -937,23 +950,23 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
 
 ; These must? be defined early, since any (defvar +the-whatever+ (e-lambda :stamped +deep-frozen-stamp+ ...)) will cause evaluation of +deep-frozen-stamp+ at the time of execution of the defvar.
 
-(defvar +deep-frozen-stamp+ (e-named-lambda
-  "org.erights.e.elib.serial.DeepFrozenStamp"
-  "The primitive rubber-stamping auditor for DeepFrozen-by-fiat objects.
+(defvar +deep-frozen-stamp+ (e-lambda 
+    "org.erights.e.elib.serial.DeepFrozenStamp"
+    (:doc "The primitive rubber-stamping auditor for DeepFrozen-by-fiat objects.
   
-While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it."
+While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   ; NOTE: Eventually, deep-frozen-stamp & thread-and-process-wide-semantics-safe-stamp => directly sharable across threads, like Java-E does with all Java-PassByCopy.
   (:|audit| (object-expr witness)
     ; XXX audit/2 is an E-language-dependent interface, but we must implement it to allow E code to employ these stamps. Should we then define a more general interface? 'audit(language, expr, witness)'? Same questions apply to other primitive stamps.
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defvar +selfless-stamp+ (e-named-lambda
-  "org.erights.e.elib.serial.SelflessStamp"
-  "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
+(defvar +selfless-stamp+ (e-lambda
+    "org.erights.e.elib.serial.SelflessStamp"
+    (:doc "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it."
-  :stamped +deep-frozen-stamp+
+     :stamped +deep-frozen-stamp+)
   (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
@@ -1016,8 +1029,8 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 ; --- slots ---
 
-(defvar +the-make-simple-slot+ (e-named-lambda "org.erights.e.elib.slot.makeFinalSlot"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
@@ -1131,19 +1144,19 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (multiple-value-bind (vars vals store-vars writer-form reader-form)
       (get-setf-expansion place environment)
     `(let* (,@(mapcar #'list vars vals))
-      (e-named-lambda "org.cubik.cle.prim.PlaceSlot"
+      (e-lambda "org.cubik.cle.prim.PlaceSlot" ()
         (:|getValue| ()             ,reader-form)
         (:|setValue| (,@store-vars) ,writer-form nil)
         (:|readOnly| ()
-          (e-named-lambda "org.cubik.cle.prim.ReadOnlyPlaceSlot"
+          (e-lambda "org.cubik.cle.prim.ReadOnlyPlaceSlot" ()
             (:|getValue| ()         ,reader-form)))))))
 
 ; --- guards ---
 
 (locally
   (declare (optimize (speed 3) (space 3)))
-  (defvar +the-void-guard+ (e-named-lambda "org.erights.e.elib.slot.VoidGuard"
-    :stamped +deep-frozen-stamp+
+  (defvar +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
+      (:stamped +deep-frozen-stamp+)
     (:|__printOn| (tw) ; XXX move to e.syntax?
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "void"))

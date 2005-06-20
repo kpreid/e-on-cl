@@ -171,7 +171,7 @@
            (scope-slot (make-instance 'elib:e-var-slot :value nil))
            (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain"))
            (stepper (make-stepper file scope-slot wait-hook-slot eval-out-stream eval-err-stream))
-           (runner (e-named-lambda "org.cubik.cle.updoc.Runner"
+           (runner (e-lambda "org.cubik.cle.updoc.Runner" ()
               (:|__printOn| (tw)
                 (e-coercef tw +the-text-writer-guard+)
                 ; XXX we should eventually be using an e.extern file-cap for this, at which point we shouldn't be printing <file: ourselves
@@ -183,7 +183,7 @@
                             (map 'list #'(lambda (x) (coerce x 'list))
                                  answers-vector)) script)
                 nil)))
-           (interp (e-named-lambda "org.cubik.cle.updocInterp"
+           (interp (e-lambda "org.cubik.cle.updocInterp" ()
              ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
              (:|gc| () (e. e.extern:+gc+ |run|))
              (:|getProps| ()

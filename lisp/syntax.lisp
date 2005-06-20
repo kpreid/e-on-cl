@@ -62,9 +62,9 @@
 
 
 ; xxx stomping on erights.org namespace
-(defvar +e-printer+ (e-named-lambda "org.erights.e.elang.syntax.ePrinter"
-  "Centralized object for generating E source and E-like text."
-  :stamped +deep-frozen-stamp+
+(defvar +e-printer+ (e-lambda "org.erights.e.elang.syntax.ePrinter"
+    (:doc "Centralized object for generating E source and E-like text."
+     :stamped +deep-frozen-stamp+)
   
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -231,7 +231,7 @@ XXX make precedence values available as constants"
                     (declare (ignore opt-original))
                     (e-coercef index 'integer)
                     (e. tw |print| tag "{" index "}"))))
-        (e-named-lambda "org.erights.e.elang.syntax.ePrinter$printVisitor"
+        (e-lambda "org.erights.e.elang.syntax.ePrinter$printVisitor" ()
           (:|__printOn| (ptw)
             (e-coercef ptw +the-text-writer-guard+)
             (e. ptw |print| "<E-syntax node visitor printing to " tw ">")
@@ -393,12 +393,12 @@ XXX make precedence values available as constants"
               verb
               (map 'vector
                 (lambda (pattern)
-                  (e-named-lambda "syntax-printer" (:|__printOn| (tw)
+                  (e-lambda "syntax-printer" () (:|__printOn| (tw)
                     (e-coercef tw +the-text-writer-guard+)
                     (subprint pattern +precedence-outer+ :tw tw))))
                 patterns) 
               (when opt-result-guard
-                (e-named-lambda "syntax-printer" (:|__printOn| (tw)
+                (e-lambda "syntax-printer" () (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
                   (subprint opt-result-guard +precedence-in-guard+ :tw tw)))))
             (e. tw |print| " ")
@@ -594,9 +594,8 @@ XXX make precedence values available as constants"
     (error-from-e-error-string syntax-ejector (second tree-expr))
     (build-nodes tree-expr)))
 
-(defvar +prim-parser+ (e-named-lambda
-  "org.cubik.cle.prim.parser"
-  :stamped +deep-frozen-stamp+
+(defvar +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (source syntax-ejector)
     (e-source-to-tree source :syntax-ejector syntax-ejector))
   (:|run| (source)

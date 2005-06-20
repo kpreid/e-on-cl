@@ -101,8 +101,8 @@
 (defmethod e-audit-check-dispatch ((auditor t) (specimen t))
   nil)
 
-(defvar +the-audit-checker+ (e-named-lambda "org.erights.e.elib.slot.auditChecker"
-  :stamped +deep-frozen-stamp+
+(defvar +the-audit-checker+ (e-lambda "org.erights.e.elib.slot.auditChecker"
+    (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "__auditedBy")) ; XXX move to e.syntax?
@@ -454,8 +454,8 @@
                         (as-e-boolean (eeq-same-dispatch left right))))))))
       
       (with-result-promise (equalizer)
-        (e-named-lambda "org.erights.e.elib.tables.makeEqualizer$equalizer"
-          :stamped +deep-frozen-stamp+
+        (e-lambda "org.erights.e.elib.tables.makeEqualizer$equalizer"
+            (:stamped +deep-frozen-stamp+)
           (:|sameEver| (left right)
             (let ((result (e. equalizer |optSame| left right)))
               (if result
@@ -614,14 +614,14 @@
   (values 'eventual nil))
 
 
-(defvar +the-make-proxy-resolver+ (e-named-lambda "org.erights.e.elib.ref.makeProxyResolver"
+(defvar +the-make-proxy-resolver+ (e-lambda "org.erights.e.elib.ref.makeProxyResolver" ()
   (:|run| (opt-handler opt-identity &aux ref-slot)
     ; XXX ref-slot will eventually be a weak reference
     (unless opt-handler
       (error "null is not allowed as the handler"))
     (unless (eeq-is-settled opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
-    (e-named-lambda "org.erights.e.elib.ref.makeProxyResolver$proxyResolver"
+    (e-lambda "org.erights.e.elib.ref.makeProxyResolver$proxyResolver" ()
       (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<Proxy Resolver>"))
@@ -689,7 +689,7 @@
             finally (error "fell off end of queue")))
     nil))
 
-(defvar +the-make-sorted-queue+ (e-named-lambda "org.cubik.cle.prim.makeSortedQueue"
+(defvar +the-make-sorted-queue+ (e-lambda "org.cubik.cle.prim.makeSortedQueue" ()
   (:|run| ()
     (make-instance 'sorted-queue))))
 

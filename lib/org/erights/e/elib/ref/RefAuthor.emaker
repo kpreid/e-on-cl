@@ -63,8 +63,8 @@ def RefAuthor {
 
 # This is the Lisp code which this file replaced, preserved in case we have some need to switch back.
 # 
-# (defvar +ref-kit+ (e-named-lambda "org.cubik.cle.prim.Ref"
-#   :stamped +deep-frozen-stamp+
+# (defvar +ref-kit+ (e-lambda "org.cubik.cle.prim.Ref"
+#     (:stamped +deep-frozen-stamp+)
 #   (:|promise/0| ()
 #     (multiple-value-call #'vector (make-promise)))
 #   (:|isBroken/1| (ref)
@@ -99,8 +99,9 @@ def RefAuthor {
 #                     (setf done t)
 #                     (e. result-resolver |resolve|
 #                       (e. reactor |run| (ref-shorten ref))))
-#                   (e<- now-ref |__whenMoreResolved| (e-named-lambda 
-#                     "org.cubik.cle.prim.SafeWhenResolvedReactor"
+#                   (e<- now-ref |__whenMoreResolved| (e-lambda 
+#                       "org.cubik.cle.prim.SafeWhenResolvedReactor"
+#                       ()
 #                     (:|run/1| (response)
 #                       (resolve-loop response)))))))
 #         (resolve-loop ref)

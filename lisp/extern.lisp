@@ -46,7 +46,7 @@
              ; XXX this is probably not a very reliable way of translating to CL pathnames
              (make-pathname :directory (cons :absolute (coerce (subseq path-components 0 (1- (length path-components))) 'list))
                             :name      (aref path-components (1- (length path-components))))))
-    (e-named-lambda "FileGetter"
+    (e-lambda "FileGetter" ()
       (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<file://")
@@ -78,9 +78,8 @@
         (read-entire-file (get-cl-pathname)))
       (:|textReader| (&aux (file (open (get-cl-pathname) :if-does-not-exist :error)))
         ; XXX external format, etc.
-        (e-named-lambda "textReader"
+        (e-lambda "textReader" (:doc "Java-E compatibility")
           ; XXX there'll probably be other situations where we want Readers so we should have a common implementation. we could even write it in E code?
-          "Java-E compatibility"
           (:|readText| ()
             "Return the entire remaining contents of the file."
             (read-entire-stream file))))
@@ -90,7 +89,7 @@
 
 ; --- GC ---
 
-(defvar +gc+ (e-named-lambda "org.cubik.cle.prim.gc"
+(defvar +gc+ (e-lambda "org.cubik.cle.prim.gc" ()
   ; xxx extension: reliability/0 => "NONE", "FULL", "PARTIAL", "UNKNOWN"
   ; appropriately exposed, this would allow our test suite to test weak pointers if the GC is sufficiently reliable to not cause false failures
   (:|run| ()
@@ -117,7 +116,7 @@
 (defun java-to-cl-time (jt)
   (+ (/ jt 1000) +java-epoch-delta+))
 
-(defvar +the-timer+ (e-named-lambda "Timer"
+(defvar +the-timer+ (e-lambda "Timer" ()
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<a Timer>")
@@ -146,17 +145,17 @@
 ; XXX instead replace this with the new +lisp+ facilities?
 
 ; compatibility with Java-E's use of org.apache.oro.text.regex.*
-(defvar +rx-perl5-compiler+ (e-named-lambda "org.apache.oro.text.regex.makePerl5Compiler"
+(defvar +rx-perl5-compiler+ (e-lambda "org.apache.oro.text.regex.makePerl5Compiler" ()
   (:|run| ()
-    (e-named-lambda "org.apache.oro.text.regex.perl5Compiler"
+    (e-lambda "org.apache.oro.text.regex.perl5Compiler" ()
       (:|compile(String)| (s)
         (e-coercef s 'string)
         ;(print (list 'oro-compiling s))
         (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s)))))))
   
-(defvar +rx-perl5-matcher+ (e-named-lambda "org.apache.oro.text.regex.makePerl5Matcher"
+(defvar +rx-perl5-matcher+ (e-lambda "org.apache.oro.text.regex.makePerl5Matcher" ()
   (:|run| (&aux result-obj)
-    (e-named-lambda "org.apache.oro.text.regex.perl5Matcher"
+    (e-lambda "org.apache.oro.text.regex.perl5Matcher" ()
       (:|matches(PatternMatcherInput, Pattern)| (input pattern)
         (e-coercef input 'string)
         (e-coercef pattern 'ppcre-scanner-box)
@@ -164,7 +163,7 @@
             (cl-ppcre:scan (slot-value pattern 'scanner) input)
           ;(print (list 'oro-results match-start match-end reg-starts reg-ends))
           (setf result-obj (if match-start
-            (e-named-lambda "org.apache.oro.text.regex.perl5Matcher$matchResult"
+            (e-lambda "org.apache.oro.text.regex.perl5Matcher$matchResult" ()
               (:|groups| () 
                 (1+ (length reg-starts)))
               (:|group| (index) 

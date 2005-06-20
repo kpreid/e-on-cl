@@ -45,7 +45,7 @@
 
 ; XXX this should not be in sockets but in something more general
 (defun make-fd-ref (fd)
-  (e-named-lambda "org.cubik.cle.io.FDRef"
+  (e-lambda "org.cubik.cle.io.FDRef" ()
     (:|read| (max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
       ; XXX be able to avoid allocating the buffer

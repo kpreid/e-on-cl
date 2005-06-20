@@ -73,8 +73,8 @@
                   (make-instance 'elib:e-simple-slot :value value))))
         table)))
 
-(defvar +the-make-scope+ (e-named-lambda "org.erights.e.elang.scope.makeScope"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-scope+ (e-lambda "org.erights.e.elang.scope.makeScope"
+    (:stamped +deep-frozen-stamp+)
   (:|asType| ()
     (make-instance 'cl-type-guard :type-specifier 'scope))
   (:|fromState| (state fqn-prefix)
@@ -213,8 +213,8 @@
 
 ; --- standard scope definitions ---
 
-(defvar +the-looper+ (e-named-lambda "org.erights.e.elang.interp.loop"
-  :stamped +deep-frozen-stamp+
+(defvar +the-looper+ (e-lambda "org.erights.e.elang.interp.loop" 
+    (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<__loop>")
@@ -223,8 +223,8 @@
     "Call body.run(), which must return a boolean, until it returns false."
     (loop while (e-is-true (e. body |run|))))))
 
-(defvar +the-thrower+ (e-named-lambda "org.erights.e.elib.prim.throw"
-  :stamped +deep-frozen-stamp+
+(defvar +the-thrower+ (e-lambda "org.erights.e.elib.prim.throw"
+    (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "throw")
@@ -250,11 +250,11 @@
         (assert (string= fqn ""))
         nil))))
 
-(defvar +make-first-char-splitter+ (e-named-lambda "org.quasiliteral.text.makeFirstCharSplitter"
+(defvar +make-first-char-splitter+ (e-lambda "org.quasiliteral.text.makeFirstCharSplitter" ()
   (:|run| (specials)
     (e-coercef specials 'string)
     (flet ((match (ch) (position ch specials)))
-      (e-named-lambda "org.quasiliteral.text.FirstCharSplitter"
+      (e-lambda "org.quasiliteral.text.FirstCharSplitter" ()
         (:|findIn| (str)
           "Equivalent to .findInFrom(str, 0)."
           (e-coercef str 'string)
@@ -321,7 +321,7 @@
 
 (defun make-symbol-accessor (symbol)
   "Return an E object providing access to the mutable properties of 'symbol'."
-  (e-named-lambda "org.cubik.cle.prim.lisp$symbolAccessor"
+  (e-lambda "org.cubik.cle.prim.lisp$symbolAccessor" ()
     (:|__printOn| (tw)
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<" symbol ">")
@@ -337,8 +337,8 @@
       (setf (symbol-value symbol) new)
       nil)))
 
-(defvar +lisp+ (e-named-lambda "org.cubik.cle.prim.lisp"
-  "This object is the maximum possible authority that an E program may hold, offering near-complete access to the underlying Lisp system. Handle with care."
+(defvar +lisp+ (e-lambda "org.cubik.cle.prim.lisp"
+    (:doc "This object is the maximum possible authority that an E program may hold, offering near-complete access to the underlying Lisp system. Handle with care.")
   (:|get| (package-name symbol-name)
     ; xxx should allow ejectors/absent-thunks for missing package and symbol
     "Returns the named symbol in the named package. This is CL:FIND-SYMBOL, except that it throws an exception instead of returning nil, and takes the package argument first."
@@ -360,14 +360,14 @@
 
 ; XXX #+eventually-frozen-path-loader is not expected to be in *features* - because this code isn't working yet - it's just a descriptive commenting-out 
 
-(defvar +the-make-path-loader+ (e-named-lambda "org.cubik.cle.prim.makePathLoader"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-path-loader+ (e-lambda "org.cubik.cle.prim.makePathLoader"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (name fetchpath
       &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |eventually|)))
     (e-coercef name 'string)
     (e-coercef fetchpath 'vector)
     (with-result-promise (loader)
-      (elib:e-named-lambda "org.cubik.cle.prim.makePathLoader$loader"
+      (e-lambda "org.cubik.cle.prim.makePathLoader$loader" ()
         ; :stamped (deep-frozen-if-every fetchpath)
         #+eventually-frozen-path-loader :stamped
         #+eventually-frozen-path-loader eventually-deep-frozen
@@ -387,11 +387,11 @@
           (if (string= ".*" fqn :start2 (- (length fqn) 2))
             (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
             (loop for sub across fetchpath
-                  do (block continue (return (e. sub |fetch| fqn (e-named-lambda "org.cubik.cle.prim.makePathLoader$loader$continueSearchThunk" (:|run| () (return-from continue))))))
+                  do (block continue (return (e. sub |fetch| fqn (e-lambda "org.cubik.cle.prim.makePathLoader$loader$continueSearchThunk" () (:|run| () (return-from continue))))))
                   finally (e. absent-thunk |run|))))
         (:|get| (fqn) 
           (e. loader |fetch| fqn 
-            (e-named-lambda "org.cubik.cle.prim.makePathLoader$loader$getFailureThunk" (:|run| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
+            (e-lambda "org.cubik.cle.prim.makePathLoader$loader$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
         (:|optUncall| (specimen)
           (loop for sub across fetchpath thereis
             (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))
@@ -479,7 +479,7 @@
     (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
-      (e. (load-emaker-without-cache "org.erights.e.elib.serial.DeepFrozenAuthor" (e-named-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" (:|run| () (error "DeepFrozenAuthor missing")))) 
+      (e. (load-emaker-without-cache "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
           |run| 
           elib:+deep-frozen-stamp+
           elib:+the-make-traversal-key+))
@@ -494,8 +494,8 @@
 
 (defvar +vm-node-maker-importer+
   (let* ((prefix "org.erights.e.elang.evm."))
-    (e-named-lambda "vm-node-maker-importer"
-      :stamped +deep-frozen-stamp+
+    (e-lambda "vm-node-maker-importer"
+        (:stamped +deep-frozen-stamp+)
       (:|fetch| (fqn absent-thunk
           &aux (local-name (e.util:without-prefix fqn prefix)))
         (if local-name
@@ -513,8 +513,8 @@
           nil)))))
 
 ; XXX optUnget?
-(defvar +vm-node-type-importer+ (e-named-lambda "vm-node-type-importer"
-  :stamped +deep-frozen-stamp+
+(defvar +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
+    (:stamped +deep-frozen-stamp+)
   (:|fetch| (fqn absent-thunk
       &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
     (if local-name
@@ -532,11 +532,11 @@
                #-(and) (e-is-true (e. deep-frozen-guard |isDeepFrozen| x))
                (e-is-true (e. +the-audit-checker+ |run| +deep-frozen-stamp+ x))) subs)
     +deep-frozen-stamp+
-    (e-named-lambda "org.cubik.cle.prim.deepFrozenIfEveryStubAuditor" (:|audit/2| (constantly +e-false+)))))
+    (e-lambda "org.cubik.cle.prim.deepFrozenIfEveryStubAuditor" () (:|audit/2| (constantly +e-false+)))))
 
 ; this could be less primitive, but then it would have more dependencies
-(defvar +traceln+ (elib:e-named-lambda "org.cubik.cle.prim.traceln"
-  :stamped +deep-frozen-stamp+
+(defvar +traceln+ (e-lambda "org.cubik.cle.prim.traceln"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (message)
     ; xxx use stream writer on *trace-output*?
     ; xxx Should we tag traceln according to the FQN-prefix of the safe scope, or in nested scopes such as emakers' FQN-prefix-scopes?
@@ -547,8 +547,8 @@
         (e. tw |println|))))))
 
 ; XXX merge with traceln? (I imagine this becoming something with many little useful methods)
-(defvar +trace+ (e-named-lambda "org.cubik.cle.prim.trace"
-  :stamped +deep-frozen-stamp+
+(defvar +trace+ (e-lambda "org.cubik.cle.prim.trace"
+    (:stamped +deep-frozen-stamp+)
   (:|runAsTurn| (thunk context-thunk)
     "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
 
@@ -562,8 +562,8 @@ If a log message is produced, context-thunk is run to produce a string describin
 ; XXX merge these two: make lazy-apply robust in the presence of failure, and make lazy-eval use lazy-apply with a particular thunk
 
 (defun make-lazy-eval-slot (scope source &aux value this)
-  (setf this (e-named-lambda "LazyEvalSlot"
-    :stamped +deep-frozen-stamp+ ; XXX this stamp is only appropriate when the resulting value is also DeepFrozen
+  (setf this (e-lambda "LazyEvalSlot"
+      (:stamped +deep-frozen-stamp+) ; XXX this stamp is only appropriate when the resulting value is also DeepFrozen, so this maker is not safe
     (:|getValue| ()
       (when source
         (let ((source-here source))
@@ -583,8 +583,8 @@ If a log message is produced, context-thunk is run to produce a string describin
     (:|isFinal| () elib:+e-true+))))
 
 (defun make-lazy-apply-slot (maker &aux value-box)
-  (e-named-lambda "lazyApplySlot"
-    :stamped +deep-frozen-stamp+
+  (e-lambda "lazyApplySlot"
+      (:stamped +deep-frozen-stamp+)
     (:|getValue| ()
       (unless value-box
         (multiple-value-bind (promise resolver) (make-promise)
@@ -603,8 +603,8 @@ If a log message is produced, context-thunk is run to produce a string describin
     ("org.cubik.cle.prim.makeFirstCharSplitter" +make-first-char-splitter+)
     ("org.cubik.cle.prim.makePathLoader"       +the-make-path-loader+)
     ("org.cubik.cle.prim.simplifyFQName" 
-      (e-named-lambda "org.cubik.cle.prim.simplifyFQName" 
-        :stamped +deep-frozen-stamp+
+      (e-lambda "org.cubik.cle.prim.simplifyFQName" 
+          (:stamped +deep-frozen-stamp+)
         (:|run| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
     ))
 
@@ -616,7 +616,7 @@ If a log message is produced, context-thunk is run to produce a string describin
 (defvar +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
   (e. (load-emaker-without-cache
         "org.erights.e.elib.ref.RefAuthor" 
-        (e-named-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" (:|run| () (error "RefAuthor missing")))) 
+        (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
       |run|
       (wrap-function (f+ #'vector #'make-promise)
                      :stamps (list +deep-frozen-stamp+))
@@ -648,8 +648,8 @@ If a log message is produced, context-thunk is run to produce a string describin
 (defun default-safe-scope-roots ()
   (let* ((emaker-importer
            (let ((deep-frozen-cache (make-hash-table :test #'equal)))
-             (e-named-lambda "org.cubik.cle.internal.emakerImporter"
-               :stamped +deep-frozen-stamp+
+             (e-lambda "org.cubik.cle.internal.emakerImporter"
+                 (:stamped +deep-frozen-stamp+)
                (:|fetch| (fqn absent-thunk)
                  (e-coercef fqn 'string)
                  (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
@@ -669,8 +669,8 @@ If a log message is produced, context-thunk is run to produce a string describin
                     emaker-importer
                     +vm-node-type-importer+
                     +vm-node-maker-importer+))))
-            (e-named-lambda "org.cubik.cle.prim.ImportLoaderMagic"
-              :stamped +deep-frozen-stamp+
+            (e-lambda "org.cubik.cle.prim.ImportLoaderMagic"
+                (:stamped +deep-frozen-stamp+)
               (:|__printOn| (tw) (e. real-loader |__printOn| tw))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
@@ -784,7 +784,8 @@ If a log message is produced, context-thunk is run to produce a string describin
           ; --- utility: miscellaneous ---
           ("&__comparer"        ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
-          ("__MatchContext"     ,(e-named-lambda "org.erights.e.elib.slot.MatchContext"
+          ("__MatchContext"     ,(e-lambda "org.erights.e.elib.slot.MatchContext" () 
+            ; XXX deep frozen
             (:|coerce| (specimen opt-ejector)
               (vector specimen opt-ejector))))
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
@@ -818,7 +819,7 @@ If a log message is produced, context-thunk is run to produce a string describin
             ("file__uriGetter" ,(e.extern:make-file-getter '#()))
             ("gc"              ,e.extern:+gc+)
             ("makeWeakRef"     ,+the-make-weak-ref+)
-            ("stdin"      ,(e-named-lambda "fake-stdin"))
+            ("stdin"      ,(e-lambda "fake-stdin" ()))
             ("stdout"     ,(make-text-writer-to-cl-stream
                             out-cl-stream
                             :autoflush t

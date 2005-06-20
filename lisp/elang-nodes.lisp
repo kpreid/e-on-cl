@@ -76,7 +76,10 @@
   `(setf 
     (get ',class-sym 'static-maker)
     ; XXX don't ignore span-sym
-    (e-named-lambda ,(concatenate 'string "org.erights.e.elang.evm.make" (symbol-name class-sym))
+    (e-lambda 
+        ,(concatenate 'string "org.erights.e.elang.evm.make"
+                              (symbol-name class-sym))
+        ()
       (:|asType| () 
         (make-instance 'cl-type-guard :type-specifier ',class-sym))
       (:|getParameterSubnodeFlags| ()
@@ -457,9 +460,9 @@
 (defun opt-guard-expr-to-safe-opt-guard (opt-guard-expr
     &aux (opt-guard-string (if opt-guard-expr (e-print opt-guard-expr))))
   (if opt-guard-string
-    (e-named-lambda "org.erights.e.elang.FalseGuard"
-      :stamped +deep-frozen-stamp+
-      "This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object."
+    (e-lambda "org.erights.e.elang.FalseGuard"
+        (:stamped +deep-frozen-stamp+
+         :doc"This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object.")
       (:|__printOn| (tw) 
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| opt-guard-string)))))
@@ -473,7 +476,7 @@
     (read-names (e. #() |asMap|))
     (set-names  (e. #() |asMap|)))
   (with-result-promise (self)
-    (e-named-lambda "org.erights.e.elang.evm.StaticScope"
+    (e-lambda "org.erights.e.elang.evm.StaticScope" ()
       (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<" (e. set-names  |getKeys|) " := "
@@ -518,7 +521,7 @@
         (make-static-scope kind
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
-  (defvar +the-make-static-scope+ (e-named-lambda "org.erights.e.evm.makeStaticScope"
+  (defvar +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
     (:|scopeAssign| (node)
       (e-coercef node '|NounExpr|)
       (make node :set-names (e. node |name|)))

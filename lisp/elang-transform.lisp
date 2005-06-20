@@ -233,7 +233,7 @@
 
 (def-expr-transformation |MetaContextExpr| (onm
     &aux (prefix (inner-scope-fqn-prefix onm)))
-  (values () onm `',(e-named-lambda "org.erights.e.elang.scope.StaticContext"
+  (values () onm `',(e-lambda "org.erights.e.elang.scope.StaticContext" ()
     (:|__printOn| (tw)
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<static context>"))
@@ -386,9 +386,9 @@
                 ,@(when has-auditors
                   `((,witness-sym nil)
                     (,witness-ok-sym t))))
-          ; XXX gack. less setf: the witness is self-referential, so it'll need to be either e-named-lambda-in-LABELS somehow, or a promise
+          ; XXX gack. less setf: the witness is self-referential, so it'll need to be either e-lambda-in-LABELS somehow, or a promise
           ,@(when has-auditors
-            `((setf ,witness-sym (e-named-lambda "org.erights.e.elang.evm.AuditWitness"
+            `((setf ,witness-sym (e-lambda "org.erights.e.elang.evm.AuditWitness" ()
                 (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
                   (e. tw |print| 

@@ -265,7 +265,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Return a ConstMap mapping the elements of this list to null."
     ; XXX preserve internal-element-type if possible
     (e. +the-make-const-map+ |fromIteratable|
-      (e-named-lambda "org.cubik.cle.prim.listAsKeysIterator" (:|iterate| (f)
+      (e-lambda "org.cubik.cle.prim.listAsKeysIterator" () (:|iterate| (f)
         (loop for key across vector do
           (e. f |run| key nil))))
       +e-false+))
@@ -349,7 +349,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
          (e. tw |quote| elem))
     (e. tw |print| right)))
 
-; XXX make this an e-named-lambda
+; XXX make this an e-lambda
 (defclass make-e-list () ())
 (defvar +the-make-list+ (make-instance 'make-e-list))
 
@@ -497,7 +497,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "-Infinity")))
 
-(defvar +the-make-int+ (e-named-lambda "org.cubik.cle.prim.makeInt"
+(defvar +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" ()
   (:|run| (value)
     (e-coercef value 'string)
     (handler-case
@@ -581,7 +581,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :fringe fringe
       :snap-hash (eeq-same-yet-hash wrapped fringe))))
 
-(defvar +the-make-traversal-key+ (e-named-lambda "makeTraversalKey"
+(defvar +the-make-traversal-key+ (e-lambda "makeTraversalKey" ()
   (:|run/1| #'make-traversal-key)))
 
 (defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
@@ -646,9 +646,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (e-util:mangle-verb (message-desc-verb md) (length (message-desc-params md))))
 
 
-(defvar +the-make-type-desc+ (e-named-lambda
-  "org.erights.e.elib.base.makeTypeDesc"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-type-desc+ (e-lambda
+    "org.erights.e.elib.base.makeTypeDesc"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (doc-comment fq-name supers auditors mtypes)
     (e-coercef doc-comment 'string)
     (e-coercef fq-name     '(or null string))
@@ -667,9 +667,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :auditors auditors 
       :message-types-v mtypes))))
 
-(defvar +the-make-message-desc+ (e-named-lambda
-  "org.erights.e.elib.base.makeMessageDesc"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-message-desc+ (e-lambda
+    "org.erights.e.elib.base.makeMessageDesc"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (doc-comment verb params opt-result-guard)
     (e-coercef doc-comment 'string)
     (e-coercef verb        'string)
@@ -685,9 +685,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :params params
       :opt-result-guard opt-result-guard))))
 
-(defvar +the-make-param-desc+ (e-named-lambda
-  "org.erights.e.elib.base.makeParamDesc"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-param-desc+ (e-lambda
+    "org.erights.e.elib.base.makeParamDesc"
+    (:stamped +deep-frozen-stamp+)
   (:|run| (opt-name opt-guard)
     (e-coercef opt-name '(or null string))
     (e-coercef opt-guard 't)
@@ -762,7 +762,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (#+ccl (table :initarg :table)
    #+clisp (weak-pointer :initarg :weak-pointer)))
 
-(defvar +the-make-weak-ref+ (e-named-lambda "org.erights.e.elib.vat.makeWeakRef"
+(defvar +the-make-weak-ref+ (e-lambda "org.erights.e.elib.vat.makeWeakRef" ()
   ; XXX run/4
   (:|run| (referent reactor)
     "Make a weak reference to the given ref. If 'reactor' is not null, invoke its run/0 method when the referent is GCed."
@@ -811,16 +811,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; --- TextWriter ---
 
-(defvar +text-writer-stamp+ (e-named-lambda
-  "org.erights.e.elib.print.TextWriterStamp"
-  :stamped +deep-frozen-stamp+
+(defvar +text-writer-stamp+ (e-lambda
+    "org.erights.e.elib.print.TextWriterStamp"
+    (:stamped +deep-frozen-stamp+)
   (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defvar +the-text-writer-guard+ (e-named-lambda
-  "org.erights.e.elib.print.TextWriterGuard"
-  :stamped +deep-frozen-stamp+
+(defvar +the-text-writer-guard+ (e-lambda
+    "org.erights.e.elib.print.TextWriterGuard"
+    (:stamped +deep-frozen-stamp+)
   (:|coerce/2| (standard-coerce (lambda (specimen) (e-audit-check-dispatch +text-writer-stamp+ specimen))
                               (lambda () +the-text-writer-guard+)
                               (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
@@ -828,7 +828,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defun hide-text-writer (tw)
   (with-result-promise (wrapped-tw)
-    (e-named-lambda "org.cubik.cle.prim.TextWriterHint"
+    (e-lambda "org.cubik.cle.prim.TextWriterHint" ()
       (:|__conformTo| (guard)
         (if (eeq-is-same-ever guard +the-text-writer-guard+)
           tw
@@ -838,12 +838,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (error 'unguarded-text-writer-error)))))
 
 (defvar +standard-syntax+ 
-  (e-named-lambda "org.erights.e.elib.print.baseSyntax"
-    :stamped +deep-frozen-stamp+
+  (e-lambda "org.erights.e.elib.print.baseSyntax"
+      (:stamped +deep-frozen-stamp+)
     (:|run| (writer)
       (labels ((spawn (is-quoting line-separator)
                 (with-result-promise (instance)
-                  (e-named-lambda "org.erights.e.elib.print.baseSyntax$instance"
+                  (e-lambda 
+                      "org.erights.e.elib.print.baseSyntax$instance"
+                      ()
                     (:|enterReference| ()
                       instance)
                     (:|exitReference| () 
@@ -922,8 +924,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                :open-flags open-flags))
                        (assert-open ()
                          (assert (every #'(lambda (s) (e. s |getValue|)) open-flags) () "closed TextWriter")))
-                (e-named-lambda "org.erights.e.elib.print.TextWriter"
-                  :stamped +text-writer-stamp+
+                (e-lambda "org.erights.e.elib.print.TextWriter"
+                    (:stamped +text-writer-stamp+)
                   (:|__printOn| (ptw)
                     (e-coercef ptw +the-text-writer-guard+)
                     (e. ptw |print| "<textWriter>"))
@@ -1030,7 +1032,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     :syntax +standard-syntax+
     :is-quoting quote
     :autoflush autoflush
-    :delegate (e-named-lambda "org.cubik.cle.internal.StreamTWDelegate"
+    :delegate (e-lambda "org.cubik.cle.internal.StreamTWDelegate" ()
       (:|write| (text)
         (princ text stream)
         nil)
@@ -1059,8 +1061,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (copy-seq (slot-value this 'buffer))))
 
 
-(defvar +the-make-text-writer+ (e-named-lambda "org.erights.e.elib.oldeio.makeTextWriter"
-  :stamped +deep-frozen-stamp+
+(defvar +the-make-text-writer+ (e-lambda "org.erights.e.elib.oldeio.makeTextWriter"
+    (:stamped +deep-frozen-stamp+)
   (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
   (:|makeBufferingPair| (options)
     "Return a tuple of a TextWriter and a StringBuffer from which the output of the TextWriter is readable."
@@ -1072,7 +1074,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                               :fill-pointer 0)))
       (vector (make-text-writer
                 :syntax (e. options |fetch| "syntax" (efun () +standard-syntax+))
-                :delegate (e-named-lambda "org.cubik.cle.internal.StringTWDelegate"
+                :delegate (e-lambda "org.cubik.cle.internal.StringTWDelegate" ()
                   (:|write| (piece
                       &aux (old-size (length buffer))
                            (new-size (+ (length piece) old-size)))
@@ -1094,8 +1096,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX 'E' should probably be in knot.lisp
 
-(defvar +the-e+ (e-named-lambda "org.erights.e.elib.prim.E"
-  :stamped +deep-frozen-stamp+
+(defvar +the-e+ (e-lambda "org.erights.e.elib.prim.E"
+    (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw) ; XXX this can be deleted, I think - try later
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<E>"))
