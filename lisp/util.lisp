@@ -273,7 +273,7 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
   "Returns a value describing the stack in unspecified detail, suitable for printing."
   (or
     #+sbcl 
-      (sb-ext:backtrace-as-list)
+      (sb-debug:backtrace-as-list)
     #+abcl ; xxx untested
       (ext:backtrace-as-list)
     #+cmu ; xxx untested
