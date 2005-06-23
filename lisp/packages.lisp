@@ -63,6 +63,7 @@
     :vat-safe-scope
     :vat-privileged-scope
     :vat-checking
+    :vat-enqueue-turn
     :vat-enqueue-timed
   
     :e-call :e-call-dispatch :e.

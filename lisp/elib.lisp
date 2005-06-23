@@ -411,10 +411,14 @@ If there is no current vat at initialization time, captures the current vat at t
    (safe-scope :initform (e.knot:make-safe-scope)
                :accessor vat-safe-scope)))
 
+(defun vat-enqueue-turn (vat fun)
+  ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
+  (enqueue (slot-value vat 'sends) fun))
+
 (defmethod e-send-dispatch (rec mverb &rest args)
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
   (multiple-value-bind (promise resolver) (make-promise)
-    (enqueue (slot-value *vat* 'sends) (lambda ()
+    (vat-enqueue-turn *vat* (lambda ()
       ; XXX direct this into a configurable tracing system once we have one
       ;(format *trace-output* "~&; running ~A ~A <- ~A ~A~%" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)))
       (e. resolver |resolve| 
@@ -427,6 +431,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defun run-vats ()
   "Should not exist. Currently used by the repl in rune.lisp. XXX make the repl use proper async IO."
+  ; XXX missing a with-turn, but hasn't been proven so
   (with-slots (sends) *vat*
     (loop until (queue-null sends)
           do    (funcall (dequeue sends)))))
