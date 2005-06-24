@@ -377,12 +377,6 @@ If there is no current vat at initialization time, captures the current vat at t
 
 ; - vat -
 
-(defmacro with-vat (&body forms)
-  `(progn
-    (assert (null *vat*))
-    (let ((*vat* (make-instance 'vat)))
-      ,@forms)))
-
 (defun %with-turn (body vat)
   "Execute the 'body' thunk, as a turn in the given vat."
   (assert (and (not (vat-in-turn vat))
@@ -1140,22 +1134,6 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (print-unreadable-object (slot stream :type nil :identity nil)
     (format stream "var & ~W :~W" (slot-value slot 'value) (slot-value slot 'guard))))
 
-; XXX not fully tested
-; get-setf-expansion usage provided by Robert J. Macomber ("Thas") on <irc://irc.freenode.net/%23lisp> 2005-03-25; used with permission
-
-(defmacro place-slot (place &environment environment)
-  "Return an E Slot accessing the given place. The place's subforms will be evaluated immediately once."
-  
-  (multiple-value-bind (vars vals store-vars writer-form reader-form)
-      (get-setf-expansion place environment)
-    `(let* (,@(mapcar #'list vars vals))
-      (e-lambda "org.cubik.cle.prim.PlaceSlot" ()
-        (:|getValue| ()             ,reader-form)
-        (:|setValue| (,@store-vars) ,writer-form nil)
-        (:|readOnly| ()
-          (e-lambda "org.cubik.cle.prim.ReadOnlyPlaceSlot" ()
-            (:|getValue| ()         ,reader-form)))))))
-
 ; --- guards ---
 
 (locally
@@ -1282,14 +1260,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
               :type (or null string))))
 
 ; eject-or-ethrow found above
-
-; I wrote this and found I didn't need it, but here it is in case it's useful later. Untested.
-;(defmacro escape ((ejector-var) &body forms
-;    &aux (tag-var (gensym)))
-;  `(let ((,tag-var (gensym)))
-;    (catch ,tag-var
-;      (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
-;        ,@forms))))
 
 ; --- Equalizer ---
 

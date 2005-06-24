@@ -14,7 +14,11 @@
             :depends-on ("util" "packages"))
      (:file "elib"
             :depends-on ("compile-options" "util" "base" "packages"))
-     (:file "elib-guts" ; the non-load-order-depended-on portion of elib
+     (:file "sugar" 
+            ; convenience macros for E semantics
+            :depends-on ("elib"))
+     (:file "elib-guts" 
+            ; the non-load-order-depended-on portion of elib
             :depends-on ("elib"))
      (:file "elib-values"
             :depends-on ("elib"))

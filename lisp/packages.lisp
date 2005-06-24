@@ -57,7 +57,7 @@
     :vat
     :*vat*
     :vat-loop
-    :with-vat :with-turn
+    :with-turn
     :establish-vat
     :run-vats  ; deprecated
     :vat-safe-scope
@@ -170,7 +170,11 @@
     
     :+the-make-weak-ref+
     
-    :+the-make-proxy-resolver+))
+    :+the-make-proxy-resolver+
+    
+    :e-slot-value :place-slot
+    :def-shorten-methods
+    :with-vat))
 
 (defvar elib:+the-unset-slot+)
 

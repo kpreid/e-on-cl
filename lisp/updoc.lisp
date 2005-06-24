@@ -85,12 +85,6 @@
       (list (subseq s 0 colon) (subseq s (+ 2 colon) (length s)))
       (list "problem" s))))
 
-(defun slot-place (slot) ; XXX should be an elib macro util
-  (e. slot |getValue|))
-
-(defun (setf slot-place) (new slot)
-  (e. slot |setValue| new))
-
 (defun chain (combiner accumulator test getter finalizer
     &aux (ref-kit (e. (vat-safe-scope *vat*) |get| "Ref")))
   "Accumulate the eventual results of calling 'getter' into 'accumulator' using 'combiner' until 'test' returns false, then call 'finalizer' with the final value and return it."
@@ -131,33 +125,13 @@
     :failures (+ (result-failure-count a) (result-failure-count b))
     :steps    (+ (result-step-count a)    (result-step-count b))))
 
-;;; XXX another one for the elib macro collection
-(defmacro define-shorten-methods (gf-name arity)
-  "Define methods on the generic function 'gf-name' such that if any of its arguments is an E ref, it will be re-callled with the ref shortened. If the ref is  not NEAR, an error will be signaled."
-  `(progn ,@
-    (loop for i below arity collect
-      (loop
-        for j below arity
-        for shortening = (= i j)
-        for sym = (gensym)
-        collect `(,sym ,(if shortening 'e.elib::ref 't)) into params
-        collect (if shortening 
-                  `(let ((v (ref-shorten ,sym)))
-                    (assert (typep v '(not e.elib::ref)) (v)
-                            "Argument ~A to ~S must be near." ',j ',gf-name)
-                    v)
-                  sym) into args
-        finally (return
-          `(defmethod ,gf-name ,params
-            (funcall ',gf-name ,@args)))))))
-
-(define-shorten-methods result+ 2)
+(def-shorten-methods result+ 2)
 
 ; --- Script running ---
 
 (defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream)
-  (symbol-macrolet ((scope (slot-place scope-slot))
-                    (wait-hook (slot-place wait-hook-slot)))
+  (symbol-macrolet ((scope (e-slot-value scope-slot))
+                    (wait-hook (e-slot-value wait-hook-slot)))
     (lambda (step
         &aux new-answers new-result backtrace)
       (destructuring-bind (expr answers) step
