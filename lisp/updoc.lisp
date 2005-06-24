@@ -5,7 +5,10 @@
   (:nicknames)
   (:use :cl :e.knot :e.elib)
   (:export
-    :updoc))
+    :updoc-rune-entry
+    :updoc-start
+    :result :result+
+    :result-failure-count :result-step-count))
 (cl:in-package :e.updoc)
 
 ; --- Updoc parsing ---
@@ -88,6 +91,27 @@
 (defun (setf slot-place) (new slot)
   (e. slot |setValue| new))
 
+(defun chain (combiner accumulator test getter finalizer
+    &aux (ref-kit (e. (vat-safe-scope *vat*) |get| "Ref")))
+  "Accumulate the eventual results of calling 'getter' into 'accumulator' using 'combiner' until 'test' returns false, then call 'finalizer' with the final value and return it."
+  (multiple-value-bind (result-promise result-resolver) (make-promise)
+    (labels ((proceed ()
+              (handler-case
+                (if (funcall test)
+                  (let ((element-vow (funcall getter)))
+                    (e. ref-kit |whenResolved| element-vow (efun (x)
+                      (declare (ignore x))
+                      (setf accumulator (funcall combiner accumulator element-vow))
+                      (proceed))))
+                  (progn
+                    (e. result-resolver |resolve| accumulator)
+                    (funcall finalizer accumulator)))
+                (error (condition)
+                  (format *trace-output* "~&; caught problem in updoc chaining: ~A~%~S" (e-print condition) (e.util:backtrace-value))
+                  (e. result-resolver |smash| (transform-condition-for-e-catch condition))))))
+      (proceed))
+    result-promise))
+
 ; --- XXX think of a name for this section ---
 
 (defclass result ()
@@ -107,6 +131,28 @@
     :failures (+ (result-failure-count a) (result-failure-count b))
     :steps    (+ (result-step-count a)    (result-step-count b))))
 
+;;; XXX another one for the elib macro collection
+(defmacro define-shorten-methods (gf-name arity)
+  "Define methods on the generic function 'gf-name' such that if any of its arguments is an E ref, it will be re-callled with the ref shortened. If the ref is  not NEAR, an error will be signaled."
+  `(progn ,@
+    (loop for i below arity collect
+      (loop
+        for j below arity
+        for shortening = (= i j)
+        for sym = (gensym)
+        collect `(,sym ,(if shortening 'e.elib::ref 't)) into params
+        collect (if shortening 
+                  `(let ((v (ref-shorten ,sym)))
+                    (assert (typep v '(not e.elib::ref)) (v)
+                            "Argument ~A to ~S must be near." ',j ',gf-name)
+                    v)
+                  sym) into args
+        finally (return
+          `(defmethod ,gf-name ,params
+            (funcall ',gf-name ,@args)))))))
+
+(define-shorten-methods result+ 2)
+
 ; --- Script running ---
 
 (defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream)
@@ -115,17 +161,32 @@
     (lambda (step
         &aux new-answers new-result backtrace)
       (destructuring-bind (expr answers) step
-        (princ ".")
-        (force-output)
-        (setf new-answers nil)
-        ; --- The ordering of these steps significantly affects the output ordering of updoc scripts. ---
-        (labels ((collect-streams ()
-            (let ((s (get-output-stream-string eval-out-stream)))
-              (unless (string= s "") (push (list "stdout" s) new-answers)))
-            (let ((s (get-output-stream-string eval-err-stream)))
-              (unless (string= s "") (push (list "stderr" s) new-answers)))))
-          (block step-user-region
-            (with-turn (*vat*)
+        (multiple-value-bind (result-promise result-resolver) (make-promise)
+          (princ ".")
+          (force-output)
+          (setf new-answers nil)
+          (labels ((collect-streams ()
+                    (let ((s (get-output-stream-string eval-out-stream)))
+                      (unless (string= s "") (push (list "stdout" s) new-answers)))
+                    (let ((s (get-output-stream-string eval-err-stream)))
+                      (unless (string= s "") (push (list "stderr" s) new-answers))))
+                   (finish-step ()
+                    (setf new-answers (nreverse new-answers))
+                    (if (not (tree-equal answers new-answers :test #'equal))
+                      (let ((*print-pretty* t)
+                            (*package* #.*package*)
+                            (*print-case* :downcase)
+                            (*print-level* 6)
+                            (*print-length* 20))
+                        (print `(mismatch (file ,file)
+                                          (source ,expr)
+                                          (expects ,@answers)
+                                          (instead ,@new-answers)
+                                          (opt-backtrace ,backtrace)))
+                        (fresh-line)
+                        (make-instance 'result :failures 1 :steps 1))
+                      (make-instance 'result :failures 0 :steps 1))))
+            ((lambda (f) (e<- f |run|)) (efun ()
               (block attempt
                 (handler-bind ((error #'(lambda (condition) 
                                           (setf new-result nil)
@@ -136,31 +197,16 @@
                                (warning #'muffle-warning)
                                #+sbcl (sb-ext:compiler-note #'muffle-warning))
                   (setf (values new-result scope)
-                          (elang:eval-e (e.syntax:e-source-to-tree expr) scope)))))
-            (collect-streams)
-            (if new-result
-              (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))
-            (e. (e. scope |get| "Ref") |whenResolved| wait-hook (efun (x)
-              (declare (ignore x))
-              (return-from step-user-region)))
-            (vat-loop))
-          (collect-streams))
-        ; --- end ---
-        (setf new-answers (nreverse new-answers))
-        (if (not (tree-equal answers new-answers :test #'equal))
-          (let ((*print-pretty* t)
-                (*package* #.*package*)
-                (*print-case* :downcase)
-                (*print-level* 6)
-                (*print-length* 20))
-            (print `(mismatch (file ,file)
-                              (source ,expr)
-                              (expects ,@answers)
-                              (instead ,@new-answers)
-                              (opt-backtrace ,backtrace)))
-            (fresh-line)
-            (make-instance 'result :failures 1 :steps 1))
-          (make-instance 'result :failures 0 :steps 1))))))
+                          (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
+              (collect-streams)
+              (if new-result
+                (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))
+              (e. (e. scope |get| "Ref") |whenResolved| wait-hook (efun (x)
+                ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
+                (declare (ignore x))
+                (collect-streams)
+                (e. result-resolver |resolve| (finish-step)))))))
+          result-promise)))))
 
 (defun updoc-file (file)
   (with-open-file (s file
@@ -202,15 +248,14 @@
                           |withPrefix| "__main$")
                       |with| "updoc" runner))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope
-          (result (make-instance 'result)))
+           )
       (e. scope-slot |setValue| scope)
       (format t "~&~A" (enough-namestring file))
-      (loop while script do
-        (setf result (result+ result
-          (funcall stepper
-            (pop script)))))
-      (format t " ~A~%" (result-step-count result))
-      result)))
+      (chain #'result+
+             (make-instance 'result)
+             (lambda () script)
+             (lambda () (funcall stepper (pop script)))
+             (lambda (result) (format t " ~A~%" (result-step-count result)))))))
 
 ; --- Entry points, etc. ---
 
@@ -238,39 +283,47 @@
   #+sbcl (when *use-sprof* (sb-sprof:stop-profiling) (sb-sprof:report))
   #+sbcl (when *use-profile* (sb-profile:report)))
 
-(defun updoc-rune-entry (&rest paths
-    &aux (result (make-instance 'result)))
+(defun updoc-start (paths 
+  &aux file-paths)
+  
+  (flet ((collect (pathname)
+          (push pathname file-paths)
+          (values)))
 
-  ;(when (equal (first paths) "--confine") ...) ; XXX implement this - if nothing else to avoid the expense of making an io-scope
-
-  (flet ((handle-file (pathname)
-          (setf result (result+ result (updoc-file pathname)))
-          nil))
-
-    (profile-start)
-    
     ; XXX use e.extern routines for file access  
     (loop for path in paths do
       (if #-clisp (cl-fad:directory-exists-p path)
           ; otherwise "UNIX error 20 (ENOTDIR): Not a directory"
           #+clisp (ignore-errors (cl-fad:directory-exists-p path))
-        (cl-fad:walk-directory path #'handle-file
+        (cl-fad:walk-directory path #'collect
           :test (lambda (path)
                   (member (pathname-type path)
                     '("updoc" "emaker" "e" "e-awt" "e-swt" "caplet" "txt")
                     :test #'string-equal)))
-        (handle-file path)))
-      
-    (profile-finish)
-    (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
-      (result-failure-count result) 
-      (result-step-count result))
-    (force-output)))
+        (collect path)))
+    
+    (setf file-paths (nreverse file-paths))
+    
+    (profile-start)    
+    (chain
+      #'result+
+      (make-instance 'result)
+      (lambda () file-paths)
+      (lambda () (updoc-file (pop file-paths)))
+      (lambda (result)
+        (profile-finish)
+        (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
+          (result-failure-count result) 
+          (result-step-count result))
+        (values)))))
 
-; XXX delete this code unless it's missed
-;(defun updoc (parse-cache-file &rest args)
-;  (with-vat
-;    (assert (string/= parse-cache-file ".updoc" :start1 (- (length parse-cache-file) 6)))
-;    (e.syntax:load-parse-cache-file parse-cache-file)
-;    (updoc-rune-entry args)
-;    (e.syntax:save-parse-cache-file parse-cache-file)))
+(defun updoc-rune-entry (&rest paths)
+
+  ;(when (equal (first paths) "--confine") ...) ; XXX implement this - if nothing else to avoid the expense of making an io-scope
+
+  (block vat-loop-exit
+    (e. (e. (vat-safe-scope *vat*) |get| "Ref") |whenResolved| (updoc-start paths) (efun (x)
+      (declare (ignore x))
+      (return-from vat-loop-exit)))
+    (vat-loop))
+  (force-output))

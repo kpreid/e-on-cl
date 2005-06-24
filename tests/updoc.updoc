@@ -35,9 +35,9 @@ waitAtTop / timing tests:
   # value: <Promise>
     
   ? 1
-  # value: 1
-  
   # stdout: world
+  
+  # value: 1
   
   ? interp.waitAtTop(thunk { print <- ("now") } <- ()); 2
   # value: 2

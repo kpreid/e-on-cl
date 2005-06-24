@@ -12,7 +12,7 @@
   
   ? def r1 := timer.whenPast(def expected := timer.now() + 1000, thunk {
   >   def delta := timer.now() - expected
-  >   println(`thunk 1 (${delta < 500})`)
+  >   println(`thunk 1 (${if (delta > 500) {delta}})`)
   >   11
   > })
   # value: <Promise>
@@ -20,7 +20,7 @@
   ? interp.waitAtTop(r1); r1
   # value: <Promise>
   
-  # stdout: thunk 1 (true)
+  # stdout: thunk 1 (null)
   #
 
   ? timer.now() > (t + 1000)
@@ -29,10 +29,10 @@
   ? r1
   # value: 11
 
-  ? def r2 := timer.whenPast(timer.now() + 2000, thunk {println("timing test 1")})
+  ? def r2 := timer.whenPast((def base := timer.now()) + 2000, thunk {println("timing test 1")})
   # value: <Promise>
     
-  ? def r3 := timer.whenPast(timer.now() + 1000, thunk {println("timing test 2")})
+  ? def r3 := timer.whenPast(base + 1000, thunk {println("timing test 2")})
   # value: <Promise>
   
   ? interp.waitAtTop(r2)
