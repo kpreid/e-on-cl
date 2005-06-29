@@ -7,6 +7,8 @@
   (:export
     :updoc-rune-entry
     :updoc-start
+    :system-test
+    
     :result :result+
     :result-failure-count :result-step-count))
 (cl:in-package :e.updoc)
@@ -126,6 +128,8 @@
     :steps    (+ (result-step-count a)    (result-step-count b))))
 
 (def-shorten-methods result+ 2)
+(def-shorten-methods result-failure-count 1)
+(def-shorten-methods result-step-count 1)
 
 ; --- Script running ---
 
@@ -301,3 +305,25 @@
       (return-from vat-loop-exit)))
     (vat-loop))
   (force-output))
+
+(defun system-test (op system)
+  "Invoked by the implementation of asdf:test-op."
+  (declare (ignore op))
+  (e.syntax:with-parse-cache-file
+      ((merge-pathnames
+        (make-pathname :name (format nil "test-parse-cache-~A" (lisp-implementation-type)) :type "sexp")
+        (asdf:component-pathname system)))
+    (let ((result
+            (block test
+              (with-vat ()
+                (when-resolved (result)
+                    (updoc-start
+                      (list (merge-pathnames
+                              (make-pathname :directory '(:relative "tests"))
+                              (asdf:component-pathname system))))
+                  (return-from test result))))))
+      (when (eql (ref-state result) 'broken)
+        (cerror "Ignore failures." "Tests for ~A did not execute properly: ~A" system (ref-opt-problem result)))
+      (when (> (result-failure-count result) 0)
+        (cerror "Ignore failures." "Tests for ~A failed." system)))))
+  

@@ -70,3 +70,9 @@
   (eval `(defmethod asdf:perform :around ((op asdf:load-op) (c (eql ',component)))
           (handler-bind ((style-warning #'muffle-warning))
             (call-next-method op c)))))
+
+
+(defmethod perform ((op test-op) (system (eql (find-system :cl-e))))
+  (operate 'load-op :cl-e.updoc)
+  (funcall (intern "SYSTEM-TEST" "E.UPDOC") op system))
+

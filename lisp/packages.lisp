@@ -174,7 +174,7 @@
     
     :e-slot-value :place-slot
     :def-shorten-methods
-    :with-vat))
+    :with-vat :when-resolved))
 
 (defvar elib:+the-unset-slot+)
 

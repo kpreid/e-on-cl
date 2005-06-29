@@ -54,10 +54,22 @@
 ;      (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
 ;        ,@forms))))
 
+(defun call-with-vat (function)
+  (assert (null *vat*))
+  ; xxx eventually we will need a shutdown operation on the vat to break inter-vat refs, do some sort of shutdown on registered input streams, etc.
+  (let ((*vat* (make-instance 'vat)))
+    (funcall function)
+    (vat-loop)))
 
-(defmacro with-vat (&body forms)
-  `(progn
-    (assert (null *vat*))
-    (let ((*vat* (make-instance 'vat)))
-      ,@forms)))
+(defmacro with-vat (() &body start-forms)
+  `(call-with-vat (lambda () ,@start-forms)))
+
+(defmacro when-resolved ((result-var) ref-form &body forms)
+  "Execute the body forms when the value of ref-form becomes resolved. Returns a promise for the value of the last form.
+
+The syntax is imitative of cl:multiple-value-bind - suggestions for better syntax welcome."
+  `(e. (e. (vat-safe-scope *vat*) |get| "Ref") 
+       |whenResolved| ,ref-form 
+       (efun (,result-var)
+         ,@forms)))
 
