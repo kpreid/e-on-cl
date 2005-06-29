@@ -450,7 +450,7 @@
 
 (defmethod pattern-to-param-desc ((pattern |NounPattern|))
   (make-instance 'param-desc
-    :opt-name (e-print (e. pattern |getNoun|))
+    :opt-name (e. (e. pattern |getNoun|) |getName|)
     ; XXX make this a formal NotAGuard
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
 
@@ -458,14 +458,19 @@
   (pattern-to-param-desc (first (node-elements patt))))
 
 (defun opt-guard-expr-to-safe-opt-guard (opt-guard-expr
-    &aux (opt-guard-string (if opt-guard-expr (e-print opt-guard-expr))))
+    &aux (opt-guard-string
+           (if opt-guard-expr 
+             (if (typep (ref-shorten opt-guard-expr) '|NounExpr|)
+               ;; optimization
+               (e. opt-guard-expr |getName|)
+               (e-print opt-guard-expr)))))
   (if opt-guard-string
     (e-lambda "org.erights.e.elang.FalseGuard"
         (:stamped +deep-frozen-stamp+
-         :doc"This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object.")
+         :doc "This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object.")
       (:|__printOn| (tw) 
         (e-coercef tw +the-text-writer-guard+)
-        (e. tw |print| opt-guard-string)))))
+        (e. tw |write| opt-guard-string)))))
 
 ; --- static scopes ---
 
