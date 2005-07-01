@@ -3,7 +3,7 @@
 
 (cl:defpackage :e.updoc
   (:nicknames)
-  (:use :cl :e.knot :e.elib)
+  (:use :cl :e.util :e.knot :e.elib)
   (:export
     :updoc-rune-entry
     :updoc-start
@@ -235,33 +235,57 @@
              (lambda () (funcall stepper (pop script)))
              (lambda (result) (format t " ~A~%" (result-step-count result)))))))
 
+; --- Profiling ---
+
+(defgeneric profile-start (profiler)
+  (:method ((profiler null))))
+(defgeneric profile-finish (profiler)
+  (:method ((profiler null))))
+
+(defparameter *profilers*
+  '(nil
+    #+sbcl :sb-profile
+    #+sbcl :sb-sprof))
+
+(defparameter *profile-package-names* 
+  '("E.UTIL"
+    "E.ELIB"
+    "E.KNOT"
+    "E.ELANG"
+    "E.ELANG.SYNTAX"
+    "E.EXTERN"
+    "E.ELANG.VM-NODE"
+    "E.RUNE"
+    "E.UPDOC"))
+
+#+sbcl 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :sb-sprof))
+
+#+sbcl
+(defmethod profile-start ((profiler (eql :sb-profile)))
+  ; profile is a macro, so I can't use mapcar
+  (loop for x in *profile-package-names* do (sb-profile:profile x))
+  (sb-profile:reset))
+
+#+sbcl
+(defmethod profile-finish ((profiler (eql :sb-profile)))
+  (sb-profile:unprofile)
+  (sb-profile:report))
+
+#+sbcl
+(defmethod profile-start ((profiler (eql :sb-sprof)))
+  (sb-sprof:start-profiling))
+
+#+sbcl
+(defmethod profile-finish ((profiler (eql :sb-sprof)))
+  (sb-sprof:stop-profiling) 
+  (sb-sprof:report))
+
+
 ; --- Entry points, etc. ---
 
-; XXX clean up the profile setup code; add command line options for profiling
-#+sbcl (defvar *use-sprof* nil)
-#+sbcl (defvar *use-profile* nil)
-#+sbcl (eval-when (:compile-toplevel :load-toplevel :execute)
-         (require :sb-sprof))
-
-(defun profile-start ()
-  #+sbcl (when *use-sprof* (sb-sprof:start-profiling))
-  #+sbcl (when *use-profile* 
-    (sb-profile:profile "E.UTIL")
-    (sb-profile:profile "E.ELIB")
-    (sb-profile:profile "E.KNOT")
-    (sb-profile:profile "E.ELANG")
-    (sb-profile:profile "E.ELANG.SYNTAX")
-    (sb-profile:profile "E.EXTERN")
-    (sb-profile:profile "E.ELANG.VM-NODE")
-    (sb-profile:profile "E.RUNE")
-    (sb-profile:profile "E.UPDOC")
-    ))
-
-(defun profile-finish ()
-  #+sbcl (when *use-sprof* (sb-sprof:stop-profiling) (sb-sprof:report))
-  #+sbcl (when *use-profile* (sb-profile:report)))
-
-(defun updoc-start (paths 
+(defun updoc-start (paths &key profiler
   &aux file-paths)
   
   (flet ((collect (pathname)
@@ -282,29 +306,37 @@
     
     (setf file-paths (nreverse file-paths))
     
-    (profile-start)    
+    (profile-start profiler)    
     (chain
       #'result+
       (make-instance 'result)
       (lambda () file-paths)
       (lambda () (updoc-file (pop file-paths)))
       (lambda (result)
-        (profile-finish)
+        (profile-finish profiler)
         (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
           (result-failure-count result) 
           (result-step-count result))
         (values)))))
 
-(defun updoc-rune-entry (&rest paths)
-
-  ;(when (equal (first paths) "--confine") ...) ; XXX implement this - if nothing else to avoid the expense of making an io-scope
-
-  (block vat-loop-exit
-    (e. (e. (vat-safe-scope *vat*) |get| "Ref") |whenResolved| (updoc-start paths) (efun (x)
-      (declare (ignore x))
-      (return-from vat-loop-exit)))
-    (vat-loop))
-  (force-output))
+(defun updoc-rune-entry (&rest args
+    &aux profiler)
+  (popping-equal-case args
+    (("--profile")
+      (assert args (args) "--profile requires an argument")
+      (setf profiler
+        (let ((*package* (find-package :keyword)))
+          (read-from-string (pop args))))
+      (assert (member profiler *profilers*) (profiler) "~S is not a known profiler." profiler))
+    (("--confine")
+      ; XXX implement this - if nothing else to avoid the expense of making an io-scope when it's unnecessary
+      (error "--confine not yet implemented")))
+  
+  (when-resolved (result)
+      (updoc-start (mapcar #'pathname args) :profiler profiler) 
+    (declare (ignore result))
+    (force-output)
+    (return-from updoc-rune-entry)))
 
 (defun system-test (op system)
   "Invoked by the implementation of asdf:test-op."

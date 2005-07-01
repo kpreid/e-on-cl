@@ -23,10 +23,14 @@
     :run-program
     :external-process-input-stream
     :external-process-output-stream
+    
     :mangle-verb
     :unmangle-verb
+    
     :without-suffix
     :without-prefix
+    :popping-equal-case
+    
     :serve-event
     :class-precedence-list
     :with-appropriate-floating-point-rules
@@ -354,7 +358,7 @@
   e.extern:read-entire-file))
 
 (cl:defpackage :e.rune
-  (:use :cl :elib :e.knot)
+  (:use :cl :e.util :e.elib :e.knot)
   (:documentation "Bootstrapping: setting up the E runtime environment after clrune starts the Lisp process.")
   (:export
     :rune))

@@ -87,17 +87,6 @@
   (force-output)
   (global-exit 0))
 
-(defmacro popping-equal-case (list-sym &rest cases &aux (arg-sym (gensym)))
-  `(let ((,arg-sym (first ,list-sym)))
-    (cond
-      ,@(loop for (keys . body) in cases collect
-        (if (eql keys 'otherwise)
-          `(t 
-            ,@body)
-          `((member ,arg-sym ',(if (atom keys) (list keys) keys) :test #'equal)
-            (pop ,list-sym)
-            ,@body))))))
-
 (defun rune (&rest args
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)

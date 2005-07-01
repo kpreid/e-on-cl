@@ -162,6 +162,18 @@
            (string= prefix string :end2 split-index))
     (subseq string split-index)))
 
+(defmacro popping-equal-case (list-sym &rest cases &aux (arg-sym (gensym)))
+  "for use in implementing command-line parsing"
+  `(let ((,arg-sym (first ,list-sym)))
+    (cond
+      ,@(loop for (keys . body) in cases collect
+        (if (eql keys 'otherwise)
+          `(t 
+            ,@body)
+          `((member ,arg-sym ',(if (atom keys) (list keys) keys) :test #'equal)
+            (pop ,list-sym)
+            ,@body))))))
+
 ; --- floating-point rules ---
 
 ; I was going to use this to get NaN/Infinity for OpenMCL, but when I tried:
