@@ -3,6 +3,7 @@ Major bugs:
   - An <import>.optUnget test gets null unexpectedly under CLISP and OpenMCL
     - try writing independent tests for path-loader to see if the problem is there
   - The standard rune-in-E code doesn't work (at last try it runs the script then goes off into an infinite loop with something counting up)
+  - if the mismatch printing in updoc fails, it won't be caught by the chainer, leaving us with Lost Signal
 
 Minor bugs:
   
