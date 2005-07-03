@@ -336,7 +336,8 @@
       (updoc-start (mapcar #'pathname args) :profiler profiler) 
     (declare (ignore result))
     (force-output)
-    (return-from updoc-rune-entry)))
+    (return-from updoc-rune-entry))
+  (vat-loop))
 
 (defun system-test (op system)
   "Invoked by the implementation of asdf:test-op."
