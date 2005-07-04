@@ -72,9 +72,10 @@
 
 ; Wrapper so that in profiling, time spent executing E code is separated from the time to compile it into CL
 (defun eval-e (tree scope)
-  (funcall (cl-to-lambda (e-to-cl tree scope)
-                         ; using KEYWORD package because using something else might? trigger the sbcl leak
-                         :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD"))))
+  (let ((elib::*allow-unexternalizable-optimization* t))
+    (funcall (cl-to-lambda (e-to-cl tree scope)
+                           ; using KEYWORD package because using something else might? trigger the sbcl leak
+                           :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD")))))
 
 (defun get-translation (tree)
   ; XXX not deterministic - uses *gensym-counter*

@@ -711,3 +711,20 @@
     (map 'vector 
          #'(lambda (c) (vector (car c) (cdr c)))
          (sorted-queue-snapshot this))))
+
+; --- !!! SBCL-guts-specific optimization gimmicks ---
+
+;;; If this code causes trouble in future SBCL versions, commenting it out should result in a working but possibly slower system.
+
+#+sbcl (sb-c:defknown e-call-dispatch (t t &rest t) t)
+
+#+sbcl (sb-c:deftransform e-call-dispatch
+    ((target mverb &rest args)
+     (function t &rest t))
+  "optimize e-call to function call"
+  (let ((arg-names (mapcar (lambda (x)
+                             (declare (ignore x))
+                             (gensym "E-CALL-ARG"))
+                           args)))
+    `(lambda (target mverb ,@arg-names)
+      (funcall target mverb ,@arg-names))))

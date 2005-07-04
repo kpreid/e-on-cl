@@ -28,6 +28,8 @@ This variable is deprecated and will be replaced by more fine-grained and well-d
 (defvar *break-on-ejections* nil
   "Equivalent to CL:*BREAK-ON-SIGNALS*, but applies to ejection. When an ejector is invoked with a value whose type is a subtype of the type specified by this variable's value, (break) will be called.")
 
+(defvar *allow-unexternalizable-optimization* nil)
+
 ; xxx Assuming things about the implementation. Perhaps we should produce a warning if we don't know that the implementation uses these sizes.
 (deftype float64 () 'double-float) 
 (deftype float32 () 'single-float)

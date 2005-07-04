@@ -590,11 +590,20 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
     (assert (not (eq (first desc) 'otherwise)))
     `((,mverb) 
       ,(vtable-method-body (rest desc) args-sym prefix-args :type-name type-name :verb-name mverb)))
+  
+  (defun vtable-function-case-entry (desc prefix-arity &key type-name
+      &aux (mverb (vtable-entry-mverb desc prefix-arity)))
+    (assert (not (eq (first desc) 'otherwise)))
+    `((,mverb)
+      ,(vtable-method-function-form (rest desc) :type-name type-name :verb-name mverb)))
 
   (defun vtable-method-body (body args-sym prefix-args &key type-name verb-name)
+    `(apply ,(vtable-method-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args ,args-sym))
+  
+  (defun vtable-method-function-form (body &key type-name verb-name)
     "XXX transfer the relevant portions of vtable-case-entry's documentation here"
     (if (= 1 (length body))
-      `(apply ,(first body) ,@prefix-args ,args-sym)
+      (first body)
       (let* ((name (format nil "~A#~A" type-name verb-name))
              (name-sym
                ; These are feature conditionals to remind me that they must be set at compile time anyway.
@@ -606,7 +615,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                    for free = name then (format nil "~A-dup-~A" name i)
                    while (find-symbol name :e.elib.vtable-methods) 
                    finally (intern free :e.elib.vtable-methods))))
-        `(apply (named-lambda ,name-sym ,@body) ,@prefix-args ,args-sym))))
+        `(named-lambda ,name-sym ,@body))))
 
   (defun lambda-list-to-param-desc-vector (list arity prefix-arity)
     ; XXX doesn't handle &rest, &optional or inappropriate lambda lists - particularly, it may return a too-short vector
@@ -831,6 +840,22 @@ fqn may be NIL or a string."
 
 ; --- Native object cross-calling support ---
 
+(defgeneric opt-local-method-function-for-class (class mverb)
+  (:method ((class t) (mverb t)) nil))
+
+(defvar *non-vtable-leaf-classes* (make-hash-table)
+  "This hash table contains a true value for every class for which knowing that a value is an instance of that class is not sufficient to choose method implementations - that is, all classes which are superclasses of classes that have vtables defined, or classes of instances that have vtables defined via eql specializers.")
+
+(defun opt-method-function-for-class (class mverb)
+  "Given a class and an mverb, return a function which implements this method for instances of that class, or nil if either no such function is available or the type is not sufficiently specific to determine the exact method."
+  (let ((function
+         (loop for superclass in (e-util:class-precedence-list class)
+            while (not (gethash superclass *non-vtable-leaf-classes*))
+            thereis (opt-local-method-function-for-class superclass mverb))))
+    (lambda (&rest args)
+      (assert (not (gethash class *non-vtable-leaf-classes*)) (class))
+      (apply function args))))
+
 #+(or e.vtable-collect.use-example e.vtable-collect.use-mop)
 (progn
   (defgeneric vtable-local-message-types (specializer)
@@ -886,8 +911,18 @@ fqn may be NIL or a string."
       (vtable-collect-message-types instance type))))
 
 
-(defmacro def-vtable (type-spec &body entries)
-  `(progn
+(defmacro def-vtable (type-spec &body entries
+    &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))
+         (vtable-class-var (gensym "VTABLE-CLASS"))
+         (eql-instance-var (gensym "EQL-INSTANCE"))
+         (evaluated-specializer
+           (if is-eql
+             `(eql ,eql-instance-var)
+             type-spec)))
+  `(let (,@(when is-eql
+             `((,eql-instance-var ,(second type-spec))))
+         (,vtable-class-var ,(unless is-eql `(find-class ',type-spec))))
+             
     #+(or e.vtable-collect.use-example e.vtable-collect.use-typelist)
     (assert (not (gethash ',type-spec *vtable-message-types-cache*)))
     #+e.vtable-collect.use-typelist 
@@ -899,14 +934,28 @@ fqn may be NIL or a string."
         (vtable-entry-message-desc-pair entry :prefix-arity 1))))
     
     #+e.vtable-collect.use-example
-    (defmethod vtable-collect-message-types ((specimen ,type-spec) narrowest-type)
-      (if (subtypep ',type-spec narrowest-type)
+    (defmethod vtable-collect-message-types ((specimen ,evaluated-specializer) narrowest-type)
+      (if (subtypep ',evaluated-specializer narrowest-type)
         (list* ,@(mapcar #'(lambda (entry) (vtable-entry-message-desc-pair entry :prefix-arity 1)) entries)
           (call-next-method))
         (call-next-method)))
     
+    (loop 
+      for superclass in 
+        ,(if is-eql
+          `(e-util:class-precedence-list (class-of ,eql-instance-var))
+          `(rest (e-util:class-precedence-list ,vtable-class-var)))
+      do (setf (gethash superclass *non-vtable-leaf-classes*) t))
+    
+    (when ,vtable-class-var
+      (defmethod opt-local-method-function-for-class ((class (eql ,vtable-class-var)) mverb)
+        (case mverb
+          ,@(loop for desc in entries collect
+              (vtable-function-case-entry desc 0 :type-name (prin1-to-string type-spec)))
+          (otherwise nil))))
+    
     ; XXX gensymify 'args
-    (defmethod e-call-dispatch ((rec ,type-spec) (mverb symbol) &rest args)
+    (defmethod e-call-dispatch ((rec ,evaluated-specializer) (mverb symbol) &rest args)
       (case mverb
         ,@(loop for desc in entries collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
