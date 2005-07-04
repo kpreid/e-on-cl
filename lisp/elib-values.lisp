@@ -811,6 +811,17 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; --- TextWriter ---
 
+(define-condition unguarded-text-writer-error (program-error)
+  ((object  :initarg :object  :reader unguarded-text-writer-error-object)
+   (message :initarg :message :reader unguarded-text-writer-error-message))
+  (:report (lambda (error stream)
+             (format stream 
+               "~A#__printOn/1 should have coerced its argument by TextWriter, but instead called it: ~A"
+               (e. (e. (unguarded-text-writer-error-object error) 
+                       |__getAllegedType|) 
+                   |getFQName|)
+               (e-quote (unguarded-text-writer-error-message error))))))
+
 (defvar +text-writer-stamp+ (e-lambda
     "org.erights.e.elib.print.TextWriterStamp"
     (:stamped +deep-frozen-stamp+)
@@ -826,7 +837,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                               (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
                               :test-shortened nil))))
 
-(defun hide-text-writer (tw)
+(defun hide-text-writer (tw thing)
   (with-result-promise (wrapped-tw)
     (e-lambda "org.cubik.cle.prim.TextWriterHint" ()
       (:|__conformTo| (guard)
@@ -834,8 +845,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
           tw
           wrapped-tw))
       (otherwise (mverb &rest args)
-        (declare (ignore mverb args))
-        (error 'unguarded-text-writer-error)))))
+        (error 'unguarded-text-writer-error :object thing :message (vector (unmangle-verb mverb) (coerce args 'vector)))))))
 
 (defvar +standard-syntax+ 
   (e-lambda "org.erights.e.elib.print.baseSyntax"
@@ -881,7 +891,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (spawn nil #.(string #\Newline))))))
 
 (defun do-print-syntax (tw thing syntax in-error-printing nest
-    &aux (wrapped-tw (hide-text-writer tw)))
+    &aux (wrapped-tw (hide-text-writer tw thing)))
   (ecase (ref-state thing)
     (eventual (e. syntax |eventual| (as-e-boolean (ref-is-resolved thing))))
     (broken   (e. syntax |broken| tw (ref-opt-problem thing))) ; XXX wart: tw argument

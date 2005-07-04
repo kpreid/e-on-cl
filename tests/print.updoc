@@ -146,6 +146,25 @@ Nested TextWriters are closed if their parents are closed
   ? sub.print("gone again")
   # problem: closed TextWriter
 
+
+The "you should use a guard" hint
+
+  ? def unguarded {
+  >   to __printOn(out) :void {
+  >     out.print("EHLO WORLD")
+  >   }
+  > }
+  # value: <***an org.cubik.cle.prim.any threw <sealed problem> when printed***>
+  
+  ? escape gimmick {
+  >   E.toString(def unguarded2 {
+  >     to __printOn(out) :void {
+  >       try { out.print("EHLO WORLD") } catch p { gimmick(p) }
+  >     }
+  >   })
+  > } catch p { throw(p) }
+  # problem: <unguarded-text-writer-error: __main$unguarded2__C#__printOn/1 should have coerced its argument by TextWriter, but instead called it: ["print", ["EHLO WORLD"]]>
+
 Custom syntax (experimental)
 
   ? makeTextWriter.makeBufferingPair(["syntax" => def badSyntax {}])
