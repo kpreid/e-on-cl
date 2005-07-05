@@ -174,7 +174,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defun char-nearby (char delta)
   "Return the next or previous character after 'char', if possible."
   (declare (character char)
-           (type (member +1 -1) delta))
+           (type (member +1 -1) delta)
+           ;; Expecting code deletion: this is inlined and used with
+           ;; constant deltas.
+           #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
   (loop with code = (char-code char)
         initially (assert (char= char (code-char code)) 
                           (char)

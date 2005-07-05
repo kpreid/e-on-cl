@@ -86,7 +86,10 @@
         "Return a list of booleans which indicate whether the corresponding parameter (as used in makers and visitors) is a 'subnode' of the node (e.g. HideExpr's sole parameter) or not (e.g. LiteralExpr's sole parameter). XXX clarify"
         ; XXX make this constant - note that e-booleans currently aren't compilable
         (map 'vector #'as-e-boolean ',subnode-flags))
-      (,(e-util:mangle-verb "run" (+ 2 (length args))) (,span-sym ,@bare-args ,layout-sym)
+      (,(locally
+          (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+          (e-util:mangle-verb "run" (+ 2 (length args))))
+        (,span-sym ,@bare-args ,layout-sym)
         (declare (ignore ,span-sym))
         (assert (null ,layout-sym))
         ,@(loop for (arg type) in args
@@ -523,6 +526,8 @@
                                 :has-meta-state-expr has-meta-state-expr)))))
 
 (flet ((make (node kind label)
+        ;; muffle non-constant keyword argument warning
+        (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
         (make-static-scope kind
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
