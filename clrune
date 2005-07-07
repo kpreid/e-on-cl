@@ -12,7 +12,7 @@ LISPS="sbcl openmcl lisp cmucl clisp gcl"
 # --- State ---
 
 # The executable for the implementation we will use.
-LISP=`which $LISPS | grep '^/' | head -1`
+LISP=`which $LISPS 2>/dev/null | grep '^/' | head -1`
 
 # Command uses to start the Lisp process. --show replaces it with 'echo'.
 EXEC=exec
@@ -177,7 +177,7 @@ case "$LISPTYPE" in
     "$EXEC" "$LISP" -q -ansi \
       -interactive-debug \
       <(echo \
-        '(load "~/.clisprc")' \
+        '(let ((p "~/.clisprc")) (when (probe-file p) (load p)))' \
         "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
         "$COMMON_INIT1" "$COMMON_INIT2" \
         "(apply (function e.rune:rune) (cdr ext:*args*))") \
