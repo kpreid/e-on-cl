@@ -140,8 +140,8 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (e. this |printOn| "[" " => " ", " "]" tw)))
   (:|keyType| (this) (declare (ignore this)) +the-any-guard+)
   (:|valueType| (this) (declare (ignore this)) +the-any-guard+)
-  (:|snapshot/0| #'identity)
-  (:|readOnly/0| #'identity)
+  (:|snapshot/0| 'identity)
+  (:|readOnly/0| 'identity)
   
   ; The folowing are methods equally applicable to non-const maps, but all of them are currently implemented in E.
   
@@ -325,7 +325,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (:|getPair| (this)
     (with-slots (keys values) this
       (vector keys values)))
-  (:|snapshot/0| #'identity)
+  (:|snapshot/0| 'identity)
   (:|fetch| (this key absent-thunk)
     (with-slots (table keys values) this
       (let ((index (hashref key table)))

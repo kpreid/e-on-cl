@@ -278,7 +278,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                 |get| "import__uriGetter")
             |get| "org.cubik.cle.prim.makeConstSet") 
         |make| (e. vector |asKeys|)))
-  (:|size/0| #'length)
+  (:|size/0| 'length)
   (:|get| (this index)
     "Return the 'index'th element of this list."
     (aref this (e-coerce index 'integer)))
@@ -323,11 +323,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                                         (array-element-type vector))
                               :from-end t)
         -1))
-  (:|run/2| #'subseq)
-  (:|run/1| #'subseq)
+  (:|run/2| 'subseq)
+  (:|run/1| 'subseq)
   (:|with| (vector elem)
     (concatenate 'vector vector (list elem)))
-  (:|snapshot/0| #'identity)
+  (:|snapshot/0| 'identity)
   (:|diverge| (this)
     (e. this |diverge| +the-any-guard+))
   (:|diverge| (this value-guard)
@@ -391,7 +391,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|subtract| (a b)
     (e-coercef b 'number)
     (- a b))
-  (:|negate/0|   #'-)
+  (:|negate/0|   '-)
   (:|multiply| (a b)
     (e-coercef b 'number)
     (* a b))
@@ -459,8 +459,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                        (cl-type-specifier guard)))
       (coerce this 'float64)
       this))
-  (:|previous/0| #'1-)
-  (:|next/0| #'1+)
+  (:|previous/0| '1-)
+  (:|next/0| '1+)
   (:|isNaN| (this)
     (declare (ignore this))
     +e-false+))
@@ -585,7 +585,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :snap-hash (eeq-same-yet-hash wrapped fringe))))
 
 (defvar +the-make-traversal-key+ (e-lambda "makeTraversalKey" ()
-  (:|run/1| #'make-traversal-key)))
+  (:|run/1| 'make-traversal-key)))
 
 (defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
   ;(format t "eeq-same-dispatch traversal-keys ~A ~A" (tk-wrapped a) (tk-wrapped b))
@@ -711,13 +711,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|__optUncall| (this)
     (with-slots (doc-comment opt-fq-name supers auditors message-types-v) this
       `#(,+the-make-type-desc+ "run" #(,doc-comment ,opt-fq-name ,supers ,auditors ,message-types-v))))
-  (:|getOptFQName/0| #'type-desc-opt-fq-name)
+  (:|getOptFQName/0| 'type-desc-opt-fq-name)
   (:|getFQName| (td)
     (or (type-desc-opt-fq-name td) "_"))
-  (:|getDocComment/0| #'type-desc-doc-comment)
-  (:|getSupers/0| #'type-desc-supers)
-  (:|getAuditors/0| #'type-desc-auditors)
-  (:|getMessageTypes/0| #'type-desc-message-types))
+  (:|getDocComment/0| 'type-desc-doc-comment)
+  (:|getSupers/0| 'type-desc-supers)
+  (:|getAuditors/0| 'type-desc-auditors)
+  (:|getMessageTypes/0| 'type-desc-message-types))
 
 (def-vtable message-desc
   (:|__printOn| (this tw)
@@ -727,10 +727,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|__optUncall| (this)
     (with-slots (doc-comment verb params opt-result-guard) this
       `#(,+the-make-message-desc+ "run" #(,doc-comment ,verb ,params ,opt-result-guard))))
-  (:|getVerb/0|           #'message-desc-verb)
-  (:|getDocComment/0|     #'message-desc-doc-comment)
-  (:|getParams/0|         #'message-desc-params)
-  (:|getOptResultGuard/0| #'message-desc-opt-result-guard))
+  (:|getVerb/0|           'message-desc-verb)
+  (:|getDocComment/0|     'message-desc-doc-comment)
+  (:|getParams/0|         'message-desc-params)
+  (:|getOptResultGuard/0| 'message-desc-opt-result-guard))
 
 (def-vtable param-desc
   (:|__printOn| (this tw)
@@ -740,8 +740,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|__optUncall| (this)
     (with-slots (opt-name opt-guard) this
       `#(,+the-make-param-desc+ "run" #(,opt-name ,opt-guard))))
-  (:|getOptName/0|  #'param-desc-opt-name)
-  (:|getOptGuard/0| #'param-desc-opt-guard)
+  (:|getOptName/0|  'param-desc-opt-name)
+  (:|getOptGuard/0| 'param-desc-opt-guard)
   (:|getName| (this)
     "Returns _ if this ParamDesc has no name."
     (or (param-desc-opt-name this) "_")))
@@ -1130,6 +1130,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef v 'string)
     (e-coercef a 'vector)
     (e-send r v a))
-  (:|toQuote/1| #'e-quote)
-  (:|toString/1| #'e-print)))
+  (:|toQuote/1| 'e-quote)
+  (:|toString/1| 'e-print)))
 

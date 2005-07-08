@@ -145,7 +145,7 @@
                      "<Resolver>"
                      "<Closed Resolver>")))
   ; XXX resolve/2
-  (:|resolveRace/1| #'resolve-race)
+  (:|resolveRace/1| 'resolve-race)
   (:|resolve| (this target)
     (unless (e-is-true (resolve-race this target))
       (error "already resolved")))
@@ -190,22 +190,22 @@
 
 ; --- Ejector ---
 
-(flet ((ejector-throw (this &optional value)
-         (ejector-prethrow (list 'ejector this) value)
-         (handler-case (throw (slot-value this 'catch-tag) value)
-           ; xxx should define vtable for cant-throw-error instead of making a new condition?
-           ;     (of course, we must make a new condition if the implementation doesn't have such a distinct condition type)
-           (#+ccl ccl::cant-throw-error #-ccl t
-             ()
-             (error "ejector ~S no longer in scope" (slot-value this 'label))))))
-             
-  (def-vtable ejector
-    (:|__printOn| (this tw) 
-      (e-coercef tw +the-text-writer-guard+)
-      (with-slots (label) this
-        (e. tw |print| "<" label " ejector>")))
-    (:|run/0| #'ejector-throw)
-    (:|run/1| #'ejector-throw)))
+(defun %ejector-throw (this &optional value)
+  (ejector-prethrow (list 'ejector this) value)
+  (handler-case (throw (slot-value this 'catch-tag) value)
+    ; xxx should define vtable for cant-throw-error instead of making a new condition?
+    ;     (of course, we must make a new condition if the implementation doesn't have such a distinct condition type)
+    (#+ccl ccl::cant-throw-error #-ccl t
+      ()
+      (error "ejector ~S no longer in scope" (slot-value this 'label)))))
+           
+(def-vtable ejector
+  (:|__printOn| (this tw) 
+    (e-coercef tw +the-text-writer-guard+)
+    (with-slots (label) this
+      (e. tw |print| "<" label " ejector>")))
+  (:|run/0| '%ejector-throw)
+  (:|run/1| '%ejector-throw))
 
 ; --- Equalizer ---
 

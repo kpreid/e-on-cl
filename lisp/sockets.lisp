@@ -32,9 +32,9 @@
   (:|getNonBlocking| (this) (as-e-boolean (non-blocking-mode this)))
   (:|setNonBlocking| (this new) (setf (non-blocking-mode this) (e-is-true new)))
   
-  (:|getSockoptSendBuffer/0| #'sockopt-send-buffer)
+  (:|getSockoptSendBuffer/0| 'sockopt-send-buffer)
   (:|setSockoptSendBuffer| (this new) (setf (sockopt-send-buffer this) new))
-  (:|getSockoptReceiveBuffer/0| #'sockopt-receive-buffer)
+  (:|getSockoptReceiveBuffer/0| 'sockopt-receive-buffer)
   (:|setSockoptReceiveBuffer| (this new) (setf (sockopt-receive-buffer this) new))
   
   (:|read| (this max-octets error-ejector eof-ejector)

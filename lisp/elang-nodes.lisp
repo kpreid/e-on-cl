@@ -369,7 +369,7 @@
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "e")
-  (:|eval/1| #'eval-e)
+  (:|eval/1| 'eval-e)
   (:|evalToPair| (this scope)
     "Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings."
     (multiple-value-call #'vector (eval-e this scope))))
