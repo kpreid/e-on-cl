@@ -61,7 +61,8 @@
     (funcall function)
     (vat-loop)))
 
-(defmacro with-vat (() &body start-forms)
+(defmacro with-vat ((&optional) &body start-forms)
+  ;; the &optional is for a clisp (2.33.2) bug: it interprets () as a variable instead of a destructuring list
   `(call-with-vat (lambda () ,@start-forms)))
 
 (defmacro when-resolved ((result-var) ref-form &body forms)

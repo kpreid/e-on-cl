@@ -177,7 +177,9 @@ case "$LISPTYPE" in
     "$EXEC" "$LISP" -q -ansi \
       -interactive-debug \
       <(echo \
-        '(let ((p "~/.clisprc")) (when (probe-file p) (load p)))' \
+        '(let ((p (or (probe-file (merge-pathnames ".clisprc.lisp" (user-homedir-pathname))) 
+                      (probe-file (merge-pathnames ".clisprc" (user-homedir-pathname)))))) 
+           (when p (load p)))' \
         "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
         "$COMMON_INIT1" "$COMMON_INIT2" \
         "(apply (function e.rune:rune) (cdr ext:*args*))") \

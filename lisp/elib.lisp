@@ -653,7 +653,9 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       `(((,verb) ,@body))))
 
   (defun gen-fqn ()
-    (format nil "~A$_" (namestring (or *compile-file-truename* *load-truename* #p"<cl-eval>"))))
+    (format nil "~A$_" (or *compile-file-truename* 
+                           *load-truename* 
+                           "<cl-eval>")))
     
   (defun e-lambda-expansion (method-entries fqn documentation stamp-forms opt-otherwise-body
       &aux (self-func (make-symbol fqn))
