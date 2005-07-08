@@ -53,15 +53,15 @@ XXX __reactToLostClient on breakable refs (which we don't have yet) '
 
 whenMoreResolved
 
-  ? var gotWMR := "foo"
-  # value: "foo"
+  ? var gotWMR := 0
+  # value: 0
   
-  ? [specimen.__whenMoreResolved(def wmrReactor(arg) :void {gotWMR := arg}), gotWMR]
-  # value: [null, "foo"]
+  ? [specimen.__whenMoreResolved(def wmrReactor() :void {gotWMR += 1}), gotWMR]
+  # value: [null, 0]
   
   XXX we should waitAtTop on something resolved by the reactor here, to make the updoc script reliable
   ? gotWMR
-  # value: 44
+  # value: 1
   
 whenBroken
   

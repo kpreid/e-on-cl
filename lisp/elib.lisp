@@ -298,17 +298,17 @@ If there is no current vat at initialization time, captures the current vat at t
   (values 'broken (slot-value x 'problem)))
 
 (declaim (inline broken-ref-magic))
-(defun broken-ref-magic (ref mverb args)
+(defun broken-ref-magic (mverb args)
   (when (member mverb '(:|__whenMoreResolved/1| :|__whenBroken/1|))
-    (e<- (first args) |run| ref))
+    (e<- (first args) |run|))
   nil)
 
 (defmethod e-call-dispatch ((ref broken-ref) mverb &rest args)
-  (broken-ref-magic ref mverb args)
+  (broken-ref-magic mverb args)
   (error (ref-opt-problem ref)))
 
 (defmethod e-send-dispatch ((ref broken-ref) mverb &rest args)
-  (broken-ref-magic ref mverb args)
+  (broken-ref-magic mverb args)
   ref)
 
 ; - identified ref -
@@ -798,7 +798,7 @@ fqn may be NIL or a string."
     (:|__optUncall| () nil)
 
     (:|__whenMoreResolved| (reactor)
-      (e<- reactor |run| self)
+      (e<- reactor |run|)
       nil)
 
     (:|__whenBroken| (reactor)

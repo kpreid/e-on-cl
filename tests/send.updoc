@@ -55,8 +55,8 @@ Ref#whenResolved/2
   
   ? def doubleBouncer { 
   >   to __whenMoreResolved(r) :void { 
-  >     r <- (doubleBouncer)
-  >     r <- (doubleBouncer)
+  >     r <- ()
+  >     r <- ()
   >   }
   > }
   # value: <doubleBouncer>
@@ -66,28 +66,28 @@ Ref#whenResolved/2
   ? report()
   # stdout:  2. <doubleBouncer> -> <doubleBouncer>
   
-  ? def redirector {
-  >   to __whenMoreResolved(r) :void {
-  >     r <- (43)
-  >   }
-  > }
-  # value: <redirector>
-  
- ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (redirector), def _(vv) :void { out += ` 3. $redirector -> $vv` }))
- 
- ? report()
- # stdout:  3. <redirector> -> <redirector>
-  
-  ? def doubleRedirector {
-  >   to __whenMoreResolved(r) :void {
-  >     r <- (redirector)
-  >   }
-  > }
-  # value: <doubleRedirector>
-  
- ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (doubleRedirector), def _(vv) :void { out += ` 4. $doubleRedirector -> $vv` }))
- 
- ? report()
- # stdout:  4. <doubleRedirector> -> <doubleRedirector>
-  
-  
+  x This old test code is from when __whenMoreResolved reactors got the reference as an argument. As they no longer do, the misbehavior this is testing can no longer be expressed. xxx delete? -- kpreid 2004-07-07
+  x 
+  x ? def redirector {
+  x >   to __whenMoreResolved(r) :void {
+  x >     r <- (43)
+  x >   }
+  x > }
+  x # value: <redirector>
+  x 
+  x ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (redirector), def _(vv) :void { out += ` 3. $redirector -> $vv` }))
+  x 
+  x ? report()
+  x # stdout:  3. <redirector> -> <redirector>
+  x 
+  x ? def doubleRedirector {
+  x >   to __whenMoreResolved(r) :void {
+  x >     r <- (redirector)
+  x >   }
+  x > }
+  x # value: <doubleRedirector>
+  x 
+  x ? interp.waitAtTop(Ref.whenResolved(__identityFunc <- (doubleRedirector), def _(vv) :void { out += ` 4. $doubleRedirector -> $vv` }))
+  x 
+  x ? report()
+  x # stdout:  4. <doubleRedirector> -> <doubleRedirector>

@@ -198,25 +198,25 @@ Broken reference details
 
   XXX this updoc script is ordering-fragile
 
-  ? Ref.broken("biff").__whenMoreResolved(print) 
+  ? Ref.broken("biff").__whenMoreResolved(thunk{ print("gotA") }) 
   # problem: biff
   
-  # stdout: <ref broken by problem: biff>
+  # stdout: gotA
 
-  ? Ref.broken("biff").__whenBroken(print) 
+  ? Ref.broken("biff").__whenBroken(thunk{ print("gotB") }) 
   # problem: biff
   
-  # stdout: <ref broken by problem: biff>
+  # stdout: gotB
 
   XXX these reveal that <BROKEN> <- anything *immediately* produces a broken reference, rather than a promise. This matches Java-E, but is it *right*?
 
-  ? Ref.broken("biff") <- __whenMoreResolved(print) 
+  ? Ref.broken("biff") <- __whenMoreResolved(thunk{ print("gotC") }) 
   # value: <ref broken by problem: biff>
   
-  # stdout: <ref broken by problem: biff>
+  # stdout: gotC
 
-  ? Ref.broken("biff") <- __whenBroken(print) 
+  ? Ref.broken("biff") <- __whenBroken(thunk{ print("gotD") }) 
   # value: <ref broken by problem: biff>
   
-  # stdout: <ref broken by problem: biff>
+  # stdout: gotD
 
