@@ -234,6 +234,8 @@
     :scope
     :make-safe-scope
     :make-io-scope
+    
+    :found-e-on-java-home
     :*emaker-search-list*))
   
 (cl:defvar e.knot:*emaker-search-list*)

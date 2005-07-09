@@ -43,6 +43,14 @@
      (:file "rune"
             :depends-on ("elib" "compiler-entry" "knot"))))))
 
+;;; --- Auxiliary systems ---
+
+(defsystem cl-e.jar
+  :name "cl-e.jar"
+  :depends-on (:zip)
+  :components ((:module "lisp" :components
+    ((:file "jar")))))
+
 (defsystem cl-e.updoc
   :name "cl-e.updoc"
   :depends-on (:cl-e)
@@ -62,6 +70,8 @@
   :components ((:module "lisp" :components
     ((:file "sockets")))))
 
+;;; --- Gimmicks ---
+
 ; cl-ppcre, as of 1.0.0 to 1.2.1, causes SBCL to produce style-warnings while loading it. This muffles them.
 ; XXX consider whether this should still exist in production
 ; contributed by antifuchs of irc://irc.freenode.net/lisp -- http://paste.lisp.org/display/4831
@@ -71,6 +81,7 @@
           (handler-bind ((style-warning #'muffle-warning))
             (call-next-method op c)))))
 
+;;; --- Testing ---
 
 (defmethod perform ((op test-op) (system (eql (find-system :cl-e))))
   (operate 'load-op :cl-e.updoc)

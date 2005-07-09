@@ -407,7 +407,20 @@
     (make-pathname :directory '(:relative "lib"))
     (asdf:component-pathname (asdf:find-system :cl-e))))
   ; XXX we could test for this failure mode, or we could make load-emaker-without-cache always cache filesystem state (i.e. source code or not-found) to ensure a consistent view. (The "without-cache" part of the name refers to result-of-evaluation cache, which requires such things as DeepFrozen auditing.)
-  "This variable is expected to be modified by startup code such as clrune, but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
+  "This variable is expected to be modified by startup code (such as via found-e-on-java-home), but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
+
+(defun found-e-on-java-home (dir-pathname)
+  "Called (usually by clrune) to report the location of an E-on-Java installation."
+  (setf *emaker-search-list* 
+    (append *emaker-search-list*
+      (handler-case
+          (progn
+            (asdf:operate 'asdf:load-op :cl-e.jar)
+            (list (funcall (intern "OPEN-JAR" :e.jar)
+              (merge-pathnames #p"e.jar" dir-pathname))))
+        (error (c)
+          (warn "Could not use e.jar because: ~A" c)
+          (list (merge-pathnames #p"src/esrc/" dir-pathname)))))))
 
 (defun fqn-to-relative-pathname (fqn)
   (let* ((pos (or (position #\. fqn :from-end t) -1))
@@ -419,22 +432,30 @@
 ; XXX threading: global state
 (defvar *emaker-load-counts* (make-hash-table :test #'equal))
 
+(defun %try-root (root subpath)
+  (typecase root
+    (pathname
+      (let ((file (probe-file (merge-pathnames subpath root))))
+        (when file (e.extern:read-entire-file file))))
+    (t
+      (let ((file (e. root |getOpt| (namestring subpath))))
+        (when file (e. file |getText|))))))
+
 (defun load-emaker-without-cache (fqn absent-thunk)
-  (let* ((subpath (fqn-to-relative-pathname fqn)))
-    (loop for root in *emaker-search-list*
-          for path = (merge-pathnames subpath root)
-          when (probe-file path)
-            return (progn
-              ;(when *trace-emaker-loading*
-              ;  (format *trace-output* "~&; loading emaker ~A~%" fqn))
-              (incf (gethash fqn *emaker-load-counts* 0))
-               ;XXX replace read-entire-file with file-getter access
-              (elang:eval-e 
-                (e.syntax:e-source-to-tree
-                  (e.extern:read-entire-file path))
-                (e. (vat-safe-scope *vat*) 
-                    |withPrefix| (concatenate 'string fqn "$"))))
-          finally (e. absent-thunk |run|))))
+  (let* ((source
+           (loop with subpath = (fqn-to-relative-pathname fqn)
+                 for root in *emaker-search-list*
+                 thereis (%try-root root subpath)
+                 finally 
+                   (return-from load-emaker-without-cache
+                     (e. absent-thunk |run|)))))
+    
+    ;; If there is no emaker file, then we will not reach this point,
+    ;; due to either return-from or the absent-thunk.
+    (incf (gethash fqn *emaker-load-counts* 0))
+    (elang:eval-e (e.syntax:e-source-to-tree source)
+                  (e. (vat-safe-scope *vat*) |withPrefix|
+                      (concatenate 'string fqn "$")))))
 
 ; XXX move this macro elsewhere
 (defmacro lazy-value-scope ((fqn-form prefix) &body entries)

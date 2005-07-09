@@ -114,9 +114,9 @@ QUOTED_HERE=`dirname $0 | perl -pe 's&(["\\\\])&\\$1&g'`
 QUOTED_ARGS=`perl -e 'print map {(my $x=$_) =~ s&(["\\\\])&\\$1&g; qq& "$x" &} @ARGV' -- "$@"`
 
 JHOME=`rune -show | grep -- '^-De.home=' | cut -c 10-`
-QUOTED_JLIB=`echo "$JHOME/src/esrc/" | perl -pe 's&(["\\\\])&\\$1&g'`
+QUOTED_JHOME=`echo "$JHOME/" | perl -pe 's&(["\\\\])&\\$1&g'`
 
-# COMMON_INIT1/2 are separated since INIT2 needs to be read after INIT1 is evaluated, as the ELANG package will not exist until then.
+# COMMON_INIT1/2 are separated since INIT2 needs to be read after INIT1 is evaluated, as the E.KNOT package will not exist until then.
 
 COMMON_INIT1='(progn
   (setf *compile-print* nil)
@@ -127,11 +127,8 @@ COMMON_INIT1='(progn
   (asdf:operate (quote asdf:load-op) :cl-e :verbose (not '"$LOADQUIET"'))
   (values))'
 
-# XXX system-specific paths - should be a config file + command-line options
 COMMON_INIT2='(progn
-  (setf e.knot:*emaker-search-list* 
-    (append e.knot:*emaker-search-list*
-            (quote ("'$QUOTED_JLIB'"))))
+  (e.knot:found-e-on-java-home #p"'$QUOTED_JHOME'")
   (values))'
 
 
