@@ -3,155 +3,153 @@
 
 (in-package :e.elang)
 
-; --- inner scopes ---
+; --- Scope layouts ---
 
-; XXX the name 'inner scope' should be replaced. it's confusing if actually used in the compiler code (which uses the old no-longer-accurate name 'name-map')
-
-; Currently, an inner scope may be:
+; Currently, a scope layout may be:
 ;   null - the empty lexical scope
 ;   cons - (cons [one noun/binding association] [another scope])
 ;   (eql *) - the wildcard for GET-TRANSLATION
-;   prefix-inner-scope - defining the FQN prefix
-;   scope-box-inner-scope - indicating that nouns outside it may be rebound
-;   object-inner-scope - providing the innermost enclosing ObjectExpr's static scope, for inner-scope-meta-state-bindings
+;   prefix-scope-layout - defining the FQN prefix
+;   scope-box-scope-layout - indicating that nouns outside it may be rebound
+;   object-scope-layout - providing the innermost enclosing ObjectExpr's static scope, for scope-layout-meta-state-bindings
 
-(defgeneric inner-scope-noun-binding (scope noun-string)
+(defgeneric scope-layout-noun-binding (scope noun-string)
   (:documentation "Return the binding object for a given noun in this scope. Signals UNBOUND-VARIBLE if there is no binding."))
 
-(defgeneric inner-scope-fqn-prefix (scope)
+(defgeneric scope-layout-fqn-prefix (scope)
   (:documentation "Return the FQN prefix for objects defined in this scope."))
 
 ; XXX this appears to be a completely unreferenced and unimplemented function - remove
-(defgeneric inner-scope-to-outer-scope (inner-scope))
+(defgeneric scope-layout-to-outer-scope (scope-layout))
 
-(defgeneric inner-scope-bindings (inner-scope)
+(defgeneric scope-layout-bindings (scope-layout)
   (:documentation "Return an alist of the nouns defined in this scope and their binding objects."))
 
-(defgeneric inner-scope-noun-is-local (scope noun-string)
+(defgeneric scope-layout-noun-is-local (scope noun-string)
   (:documentation "Returns whether the given noun is bound inside of a scope box, and therefore should not be allowed to be rebound."))
 
-(defgeneric inner-scope-meta-state-bindings (inner-scope)
+(defgeneric scope-layout-meta-state-bindings (scope-layout)
   (:documentation "Returns a list of '(vector # #) forms suitable for constructing the return value of MetaStateExpr."))
 
 
-(defmethod inner-scope-noun-binding ((inner-scope (eql '*)) noun-string)
+(defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
   (outer-slot-binding noun-string))
 
-(defmethod inner-scope-bindings ((inner-scope (eql '*)))
+(defmethod scope-layout-bindings ((scope-layout (eql '*)))
   nil)
 
-(defmethod inner-scope-fqn-prefix ((inner-scope (eql '*)))
+(defmethod scope-layout-fqn-prefix ((scope-layout (eql '*)))
   "*")
 
-(defmethod inner-scope-noun-is-local ((inner-scope (eql '*)) noun-string)
+(defmethod scope-layout-noun-is-local ((scope-layout (eql '*)) noun-string)
   (declare (ignore noun-string))
   nil)
   
-(defmethod inner-scope-meta-state-bindings ((inner-scope (eql '*)))
+(defmethod scope-layout-meta-state-bindings ((scope-layout (eql '*)))
   nil)
 
 
-(defmethod inner-scope-noun-binding ((inner-scope null) noun-string)
+(defmethod scope-layout-noun-binding ((scope-layout null) noun-string)
   (error 'unbound-variable :name (simple-slot-symbol noun-string)))
 
-(defmethod inner-scope-bindings ((inner-scope null))
+(defmethod scope-layout-bindings ((scope-layout null))
   nil)
 
-(defmethod inner-scope-fqn-prefix ((inner-scope null))
+(defmethod scope-layout-fqn-prefix ((scope-layout null))
   "__unknown")
 
-(defmethod inner-scope-noun-is-local ((inner-scope null) noun-string)
+(defmethod scope-layout-noun-is-local ((scope-layout null) noun-string)
   (declare (ignore noun-string))
   nil)
   
-(defmethod inner-scope-meta-state-bindings ((inner-scope null))
+(defmethod scope-layout-meta-state-bindings ((scope-layout null))
   nil)
   
   
-(defmethod inner-scope-noun-binding ((inner-scope cons) noun-string
-    &aux (entry (first inner-scope)))
+(defmethod scope-layout-noun-binding ((scope-layout cons) noun-string
+    &aux (entry (first scope-layout)))
   (if (string= (car entry) noun-string)
     (cdr entry)
-    (inner-scope-noun-binding (rest inner-scope) noun-string)))
+    (scope-layout-noun-binding (rest scope-layout) noun-string)))
 
-(defmethod inner-scope-bindings ((inner-scope cons))
-  (cons (first inner-scope)
-        (inner-scope-bindings (rest inner-scope))))
+(defmethod scope-layout-bindings ((scope-layout cons))
+  (cons (first scope-layout)
+        (scope-layout-bindings (rest scope-layout))))
 
-(defmethod inner-scope-fqn-prefix ((inner-scope cons))
-  (inner-scope-fqn-prefix (rest inner-scope)))
+(defmethod scope-layout-fqn-prefix ((scope-layout cons))
+  (scope-layout-fqn-prefix (rest scope-layout)))
 
-(defmethod inner-scope-noun-is-local ((inner-scope cons) noun-string
-    &aux (entry (first inner-scope)))
+(defmethod scope-layout-noun-is-local ((scope-layout cons) noun-string
+    &aux (entry (first scope-layout)))
   (or (string= (car entry) noun-string)
-      (inner-scope-noun-is-local (rest inner-scope) noun-string)))
+      (scope-layout-noun-is-local (rest scope-layout) noun-string)))
 
-(defmethod inner-scope-meta-state-bindings ((inner-scope cons))
-  (cons `(vector ,(concatenate 'string "&" (caar inner-scope))
-                 ,(binding-get-slot-code (cdar inner-scope)))
-        (inner-scope-meta-state-bindings (rest inner-scope))))
+(defmethod scope-layout-meta-state-bindings ((scope-layout cons))
+  (cons `(vector ,(concatenate 'string "&" (caar scope-layout))
+                 ,(binding-get-slot-code (cdar scope-layout)))
+        (scope-layout-meta-state-bindings (rest scope-layout))))
   
 
-(defclass inner-scope () 
+(defclass scope-layout () 
   ((rest :initarg :rest))
   (:documentation "Base class for simple 'inheriting' scopes. Forwards all operations to its 'rest' slot."))
 
-(defmethod print-object ((obj inner-scope) stream)
+(defmethod print-object ((obj scope-layout) stream)
   (print-unreadable-object (obj stream :type t :identity nil)
     (format stream ". ~W" (slot-value obj 'rest))))
 
-(defmethod inner-scope-noun-binding ((inner-scope inner-scope) noun-string)
-  (inner-scope-noun-binding (slot-value inner-scope 'rest) noun-string))
+(defmethod scope-layout-noun-binding ((scope-layout scope-layout) noun-string)
+  (scope-layout-noun-binding (slot-value scope-layout 'rest) noun-string))
 
-(defmethod inner-scope-fqn-prefix ((inner-scope inner-scope))
-  (inner-scope-fqn-prefix (slot-value inner-scope 'rest)))
+(defmethod scope-layout-fqn-prefix ((scope-layout scope-layout))
+  (scope-layout-fqn-prefix (slot-value scope-layout 'rest)))
 
-(defmethod inner-scope-bindings ((inner-scope inner-scope))
-  (inner-scope-bindings (slot-value inner-scope 'rest)))
+(defmethod scope-layout-bindings ((scope-layout scope-layout))
+  (scope-layout-bindings (slot-value scope-layout 'rest)))
 
-(defmethod inner-scope-noun-is-local ((inner-scope inner-scope) noun-string)
-  (inner-scope-noun-is-local (slot-value inner-scope 'rest) noun-string))
+(defmethod scope-layout-noun-is-local ((scope-layout scope-layout) noun-string)
+  (scope-layout-noun-is-local (slot-value scope-layout 'rest) noun-string))
 
-(defmethod inner-scope-meta-state-bindings ((inner-scope inner-scope))
-  (inner-scope-meta-state-bindings (slot-value inner-scope 'rest)))
+(defmethod scope-layout-meta-state-bindings ((scope-layout scope-layout))
+  (scope-layout-meta-state-bindings (slot-value scope-layout 'rest)))
 
 
-(defclass prefix-inner-scope (inner-scope)
-  ((fqn-prefix :initarg :fqn-prefix :reader inner-scope-fqn-prefix))
+(defclass prefix-scope-layout (scope-layout)
+  ((fqn-prefix :initarg :fqn-prefix :reader scope-layout-fqn-prefix))
   (:documentation "Establishes a new FQN prefix."))
 
 
-(defclass scope-box-inner-scope (inner-scope) ()
+(defclass scope-box-scope-layout (scope-layout) ()
   (:documentation "Represents a scope box. Enables rebinding of bindings established outside the scope box."))
 
-(defmethod inner-scope-noun-is-local ((inner-scope scope-box-inner-scope) noun-string)
+(defmethod scope-layout-noun-is-local ((scope-layout scope-box-scope-layout) noun-string)
   (declare (ignore noun-string))
   nil)
 
 
-(defclass object-inner-scope (inner-scope)
+(defclass object-scope-layout (scope-layout)
   ((nouns :initarg :nouns
           :type list))
-  (:documentation "Marks the boundary of an object definition, the scope which meta.getState() (implemented via inner-scope-meta-state-bindings) operates on."))
+  (:documentation "Marks the boundary of an object definition, the scope which meta.getState() (implemented via scope-layout-meta-state-bindings) operates on."))
 
-(defmethod inner-scope-meta-state-bindings ((inner-scope object-inner-scope))
+(defmethod scope-layout-meta-state-bindings ((scope-layout object-scope-layout))
   "Return a list of forms which evaluate to vector pairs for constructing the map which meta.getState returns."
-  (loop for noun in (slot-value inner-scope 'nouns) collect
+  (loop for noun in (slot-value scope-layout 'nouns) collect
     `(vector ,(concatenate 'string "&" noun)
-             ,(binding-get-slot-code (inner-scope-noun-binding inner-scope noun)))))
+             ,(binding-get-slot-code (scope-layout-noun-binding scope-layout noun)))))
 
 
-(defun inner-scope-bind (inner-scope noun-string binding)
-  "Return an inner scope with a binding added; fail if it is already defined locally."
-  (if (inner-scope-noun-is-local inner-scope noun-string)
+(defun scope-layout-bind (scope-layout noun-string binding)
+  "Return a scope layout with a binding added; fail if it is already defined locally."
+  (if (scope-layout-noun-is-local scope-layout noun-string)
     (error "~S already in scope" noun-string)
-    (cons (cons noun-string binding) inner-scope)))
+    (cons (cons noun-string binding) scope-layout)))
 
-(defun inner-scope-nest (inner-scope)
-  "Return an inner scope which contains the same bindings as the argument, but allows rebinding of them."
-  (make-instance 'scope-box-inner-scope :rest inner-scope))
+(defun scope-layout-nest (scope-layout)
+  "Return a scope layout which contains the same bindings as the argument, but allows rebinding of them."
+  (make-instance 'scope-box-scope-layout :rest scope-layout))
 
-; --- inner scope noun bindings ---
+; --- Scope layout noun bindings ---
 
 (defgeneric binding-get-code      (binding)
   (:documentation "Return a form which evaluates to the value of the binding."))
@@ -268,10 +266,10 @@
   "The symbol used for a variable when there are no scope conflicts requiring another name to be used."
   (intern (concatenate 'string "&" var-name)))
 
-; XXX this should be either fixed or scrapped. It was stubbed out when inner scope objects were introduced.
-(defun unmapped-symbol-such-as (symbol name-map)
+; XXX this should be either fixed or scrapped. It was stubbed out when scope layout objects (then 'inner scopes', and 'name maps' before that) were introduced.
+(defun unmapped-symbol-such-as (symbol layout)
   "Given a symbol and a name map, returns a symbol not present in the name map, which may be the input symbol or a similarly- or identically-named (possibly uninterned) symbol."
-  (declare (ignore name-map))
+  (declare (ignore layout))
   (make-symbol (symbol-name symbol)))
 
 ; (defun unmapped-symbol-such-as (symbol name-map)
@@ -282,18 +280,18 @@
 ;     ((eql (cdar name-map) symbol) (make-symbol (symbol-name symbol)))
 ;     (t                            (unmapped-symbol-such-as symbol (cdr name-map)))))
 
-(defun pick-slot-symbol (varName outer-name-map)
+(defun pick-slot-symbol (varName outer-layout)
   ; XXX documentation is variously stale
-  "Returns an unused symbol for the given variable name, and a new name-map with an entry for it."
-  (let ((sym (unmapped-symbol-such-as (simple-slot-symbol varName) outer-name-map)))
-    (values sym (inner-scope-bind outer-name-map varName sym))))
+  "Returns an unused symbol for the given variable name, and a new layout with an entry for it."
+  (let ((sym (unmapped-symbol-such-as (simple-slot-symbol varName) outer-layout)))
+    (values sym (scope-layout-bind outer-layout varName sym))))
 
-(defun pick-binding-symbol (varName outer-name-map)
+(defun pick-binding-symbol (varName outer-layout)
   ; XXX documentation is variously stale
-  "Returns a new direct-def binding object for the given variable name, and a new name-map with an entry for it."
-  (let* ((sym (unmapped-symbol-such-as (intern varName) outer-name-map))
+  "Returns a new direct-def binding object for the given variable name, and a new layout with an entry for it."
+  (let* ((sym (unmapped-symbol-such-as (intern varName) outer-layout))
          (binding (make-instance 'direct-def-binding :symbol sym)))
-    (values binding (inner-scope-bind outer-name-map varName binding))))
+    (values binding (scope-layout-bind outer-layout varName binding))))
 
 (defun slot-symbol-var-name (sym)
   "Return the Kernel-E variable name corresponding to the given symbol's name, or nil if it is not in the expected format."
@@ -309,28 +307,28 @@
       ,inner-form)
     inner-form))
 
-(defgeneric transform (expr outer-name-map))
-(defgeneric transform-pattern (patt specimen-form ejector-spec outer-name-map)
+(defgeneric transform (expr outer-layout))
+(defgeneric transform-pattern (patt specimen-form ejector-spec outer-layout)
   (:documentation "note that the transform function MUST generate code which evaluates specimen-form exactly once"))
 
-(defmacro updating-transform (expr-var name-map-var vars-var)
-  `(multiple-value-bind (new-vars new-name-map result) (transform ,expr-var ,name-map-var)
-    (setf ,name-map-var new-name-map)
+(defmacro updating-transform (expr-var layout-var vars-var)
+  `(multiple-value-bind (new-vars new-layout result) (transform ,expr-var ,layout-var)
+    (setf ,layout-var new-layout)
     (setf ,vars-var (append new-vars ,vars-var))
     result))
 
-(defmacro updating-transform-pattern (expr-var specimen-form-var ejector-spec-var name-map-var vars-var)
-  `(multiple-value-bind (new-vars new-name-map result) (transform-pattern ,expr-var ,specimen-form-var ,ejector-spec-var ,name-map-var)
-    (setf ,name-map-var new-name-map)
+(defmacro updating-transform-pattern (expr-var specimen-form-var ejector-spec-var layout-var vars-var)
+  `(multiple-value-bind (new-vars new-layout result) (transform-pattern ,expr-var ,specimen-form-var ,ejector-spec-var ,layout-var)
+    (setf ,layout-var new-layout)
     (setf ,vars-var (append new-vars ,vars-var))
     result))
 
-(defun scope-box (vars outer-name-map sub-form)
-  (values () outer-name-map (make-lets vars sub-form)))
+(defun scope-box (vars outer-layout sub-form)
+  (values () outer-layout (make-lets vars sub-form)))
 
-(defun scope-box-transform (outer-name-map sub)
-  (values () outer-name-map
+(defun scope-box-transform (outer-layout sub)
+  (values () outer-layout
           (tail-transform-exprs
             (list sub)
-            (inner-scope-nest outer-name-map))))
+            (scope-layout-nest outer-layout))))
 

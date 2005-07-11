@@ -71,7 +71,7 @@
 
 (defmacro def-node-maker (class-sym subnode-flags args &optional elements-form
     &aux (span-sym (gensym "SPAN"))
-         (layout-sym (gensym "SCOPE-LAYOUT"))
+         (jlayout-sym (gensym "SCOPE-JLAYOUT"))
          (bare-args (mapcar #'car args)))
   `(setf 
     (get ',class-sym 'static-maker)
@@ -89,9 +89,9 @@
       (,(locally
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
           (e-util:mangle-verb "run" (+ 2 (length args))))
-        (,span-sym ,@bare-args ,layout-sym)
+        (,span-sym ,@bare-args ,jlayout-sym)
         (declare (ignore ,span-sym))
-        (assert (null ,layout-sym))
+        (assert (null ,jlayout-sym))
         ,@(loop for (arg type) in args
                 collect `(e-coercef ,arg ',type))
         (make-instance ',class-sym :elements ,(or elements-form `(list ,@bare-args)))))))
