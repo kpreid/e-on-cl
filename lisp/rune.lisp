@@ -11,7 +11,7 @@
 
   (maphash #'(lambda (fqn times)
              (when (> times 1)
-               (format *trace-output* "~&; note: ~A loaded ~A times ~%" fqn times)))
+               (warn "note: ~A loaded ~A times" fqn times)))
            e.knot::*emaker-load-counts*)
   
   #+e.instrument.ref-shorten-uses
@@ -87,6 +87,10 @@
   (force-output)
   (global-exit 0))
 
+(defun nothing-toplevel (args)
+  (declare (ignore args))
+  (values))
+
 (defun rune (&rest args
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)
@@ -114,6 +118,8 @@
         (setf toplevel #'repl-toplevel))
       (("--irc")
         (setf toplevel #'irc-repl-toplevel))
+      (("--nothing")
+        (setf toplevel #'nothing-toplevel))
       (otherwise 
         (loop-finish)))))
   
@@ -143,6 +149,10 @@ Lisp-level options:
   --irc
       Action-selecting option:
       Start an IRC bot. The arguments are: <nick> <server> <channel>*
+  --nothing
+      Action-selecting option:
+      Do nothing. In particular, do not exit, and do not run the vat.
+      This usually results in a Lisp REPL.
   
   If no action-selecting option is given, the E rune() function is
   called with the remaining arguments.
