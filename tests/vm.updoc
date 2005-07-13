@@ -539,6 +539,10 @@ SlotExpr, SlotPattern, AssignExpr
   
   ? slottest_a
   # value: 3.14159
+  
+  uncall
+  ? slottest_slot.__optUncall()
+  # value: [<makeVarSlot>, "run", [3.14159]]
  
  guarded SlotPattern, failure thereof
  

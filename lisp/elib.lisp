@@ -1084,6 +1084,11 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
+(defvar +the-make-var-slot+ (e-lambda "org.erights.e.elib.slot.makeVarSlot"
+    (:stamped +deep-frozen-stamp+)
+  (:|run| (value)
+    (make-instance 'e-var-slot :value value))))
+
 (defclass e-simple-slot () 
   ((value :initarg :value))
   (:documentation "A normal immutable slot."))
@@ -1140,6 +1145,8 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
     (e. tw |print| "<var ")
     (e. tw |quote| (slot-value this 'value))
     (e. tw |print| ">"))
+  (:|__optUncall| (this)
+    `#(,+the-make-var-slot+ "run" #(,(slot-value this 'value))))
   (:|getValue| (this)
     (slot-value this 'value))
   (:|setValue| (this new-value)
