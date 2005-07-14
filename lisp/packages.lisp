@@ -97,6 +97,7 @@
     :native-e-slot
     :+the-unset-slot+
     :+the-make-simple-slot+
+    :+the-make-var-slot+
     :place-slot
     
     :cl-type-fq-name
@@ -181,6 +182,8 @@
     :with-vat :when-resolved))
 
 (defvar elib:+the-unset-slot+)
+(defvar elib:+the-make-simple-slot+)
+(defvar elib:+the-make-var-slot+)
 
 (defvar elib:+the-any-map-guard+)
 (defvar elib:+the-flex-list-guard+)

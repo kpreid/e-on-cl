@@ -834,6 +834,7 @@ fqn may be NIL or a string."
           (e-call-dispatch self set-verb new)
           nil)
         (:|isFinal| ()
+          ; XXX this is wrong - lack of setter does not mean claimed immutability.
           (e. (e-coerce (e. self |__respondsTo| set-name 1) 'e-boolean) |not|)))))
 
     (otherwise (mverb args)
@@ -1079,13 +1080,20 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 ; --- slots ---
 
+(defun import-uncall (fqn)
+  `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
+
 (defvar +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
     (:stamped +deep-frozen-stamp+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
   (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
 (defvar +the-make-var-slot+ (e-lambda "org.erights.e.elib.slot.makeVarSlot"
     (:stamped +deep-frozen-stamp+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeVarSlot"))
   (:|run| (value)
     (make-instance 'e-var-slot :value value))))
 

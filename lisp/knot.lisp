@@ -471,6 +471,9 @@
     (:|loop|             +the-looper+)
     (:|throw|            +the-thrower+)
   
+    (:|makeFinalSlot|    +the-make-simple-slot+)
+    (:|makeVarSlot|      +the-make-var-slot+)
+    
     (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
     (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
     (:|char|             (make-instance 'cl-type-guard :type-specifier 'character))
