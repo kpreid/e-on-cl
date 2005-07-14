@@ -1,0 +1,47 @@
+Check for type optUncall, which is wanted by the default uncaller list
+
+  As E-on-CL has no special concept of type importing, all of the objects that <type> can uncall in Java E are instead accessible via <import>. <type> could act as a PackageLoader on <import>, but there is nothing that needs it.
+
+  ? [<type>.optUncall([])]
+  # value: [null]
+  
+  ? [<type>.optUncall(String)]
+  # value: [null]
+
+Coarse check
+
+  ? def deSubgraphKit := <elib:serial.deSubgraphKit>
+  # value: <deSubgraphKit>
+  
+  ? def recognizer := deSubgraphKit.getDefaultRecognizer()
+  # value: <unevaler>
+  
+  ? def deepCopy(o) :any { 
+  >   return recognizer.recognize(o, deSubgraphKit.makeBuilder())
+  > }
+  # value: <deepCopy>
+  
+  ? var a := 0
+  # value: 0
+  
+  ? def &b := deepCopy(&a)
+  # value: <var 0>
+  
+  ? &a == &b
+  # value: false
+  
+  ? a == b
+  # value: true
+  
+  ? a := 1
+  # value: 1
+  
+  ? [a, b]
+  # value: [1, 0]
+
+  ? b := 2
+  # value: 2
+  
+  ? [a, b]
+  # value: [1, 2]
+

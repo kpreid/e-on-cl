@@ -6,6 +6,7 @@ pragma.disable("explicit-result-guard")
 
 def typeTag := "type."
 
+/** Compatibility. <type:a.b.c> => <import:a.b.type.c> */
 def typeLoader { # XXX implements DeepFrozen once import__uriGetter is DeepFrozen
   to __printOn(out :TextWriter) {
     out.print("<type:*>")
@@ -20,4 +21,9 @@ def typeLoader { # XXX implements DeepFrozen once import__uriGetter is DeepFroze
         fqn(0, lastDotPos + 1) + typeTag + fqn(lastDotPos + 1)
       }]
   }
+  
+  /** Always returns null. 
+  
+      Use <import>.optUncall instead. */
+  to optUncall(specimen) {}
 }
