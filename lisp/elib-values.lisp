@@ -133,7 +133,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                        (setf start (+ pos (length old)))
                        t)))))
         (loop while (pick))
-        result))))
+        result)))
+  
+  (:|isBare| (this)
+    "Return true, because this is an ordinary String."
+    (declare (ignore this))
+    +e-true+))
 
 (def-atomic-sameness string string= sxhash)
 

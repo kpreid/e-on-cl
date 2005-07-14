@@ -133,6 +133,13 @@ rjoin/1
   ? ".".rjoin([""])
   # value: ""
 
+isBare
+
+  ? "".isBare()
+  # value: true
+  
+  ? "a".isBare()
+  # value: true
 
 ? E.toString('a')
 # value: "a"
