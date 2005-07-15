@@ -9,7 +9,7 @@
     ((:file "packages")
      (:file "compile-options")
      (:file "util"
-            :depends-on ("packages"))
+            :depends-on ("compile-options" "packages"))
      (:file "base"
             :depends-on ("util" "packages"))
      (:file "elib"

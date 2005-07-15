@@ -359,7 +359,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX make this an e-lambda
 (defclass make-e-list () ())
-(defvar +the-make-list+ (make-instance 'make-e-list))
+(defglobal +the-make-list+ (make-instance 'make-e-list))
 
 (def-vtable make-e-list
   ; XXX write tests for this
@@ -505,7 +505,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "-Infinity")))
 
-(defvar +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" ()
+(defglobal +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" ()
   (:|run| (value)
     (e-coercef value 'string)
     (handler-case
@@ -589,7 +589,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :fringe fringe
       :snap-hash (eeq-same-yet-hash wrapped fringe))))
 
-(defvar +the-make-traversal-key+ (e-lambda "makeTraversalKey" ()
+(defglobal +the-make-traversal-key+ (e-lambda "makeTraversalKey" ()
   (:|run/1| 'make-traversal-key)))
 
 (defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
@@ -654,7 +654,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (e-util:mangle-verb (message-desc-verb md) (length (message-desc-params md))))
 
 
-(defvar +the-make-type-desc+ (e-lambda
+(defglobal +the-make-type-desc+ (e-lambda
     "org.erights.e.elib.base.makeTypeDesc"
     (:stamped +deep-frozen-stamp+)
   (:|run| (doc-comment fq-name supers auditors mtypes)
@@ -675,7 +675,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :auditors auditors 
       :message-types-v mtypes))))
 
-(defvar +the-make-message-desc+ (e-lambda
+(defglobal +the-make-message-desc+ (e-lambda
     "org.erights.e.elib.base.makeMessageDesc"
     (:stamped +deep-frozen-stamp+)
   (:|run| (doc-comment verb params opt-result-guard)
@@ -693,7 +693,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :params params
       :opt-result-guard opt-result-guard))))
 
-(defvar +the-make-param-desc+ (e-lambda
+(defglobal +the-make-param-desc+ (e-lambda
     "org.erights.e.elib.base.makeParamDesc"
     (:stamped +deep-frozen-stamp+)
   (:|run| (opt-name opt-guard)
@@ -770,7 +770,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (#+ccl (table :initarg :table)
    #+clisp (weak-pointer :initarg :weak-pointer)))
 
-(defvar +the-make-weak-ref+ (e-lambda "org.erights.e.elib.vat.makeWeakRef" ()
+(defglobal +the-make-weak-ref+ (e-lambda "org.erights.e.elib.vat.makeWeakRef" ()
   ; XXX run/4
   (:|run| (referent reactor)
     "Make a weak reference to the given ref. If 'reactor' is not null, invoke its run/0 method when the referent is GCed."
@@ -830,14 +830,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                    |getFQName|)
                (e-quote (unguarded-text-writer-error-message error))))))
 
-(defvar +text-writer-stamp+ (e-lambda
+(defglobal +text-writer-stamp+ (e-lambda
     "org.erights.e.elib.print.TextWriterStamp"
     (:stamped +deep-frozen-stamp+)
   (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defvar +the-text-writer-guard+ (e-lambda
+(defglobal +the-text-writer-guard+ (e-lambda
     "org.erights.e.elib.print.TextWriterGuard"
     (:stamped +deep-frozen-stamp+)
   (:|coerce/2| (standard-coerce (lambda (specimen) (e-audit-check-dispatch +text-writer-stamp+ specimen))
@@ -855,7 +855,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (otherwise (mverb &rest args)
         (error 'unguarded-text-writer-error :object thing :message (vector (unmangle-verb mverb) (coerce args 'vector)))))))
 
-(defvar +standard-syntax+ 
+(defglobal +standard-syntax+ 
   (e-lambda "org.erights.e.elib.print.baseSyntax"
       (:stamped +deep-frozen-stamp+)
     (:|run| (writer)
@@ -1079,7 +1079,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (copy-seq (slot-value this 'buffer))))
 
 
-(defvar +the-make-text-writer+ (e-lambda "org.erights.e.elib.oldeio.makeTextWriter"
+(defglobal +the-make-text-writer+ (e-lambda "org.erights.e.elib.oldeio.makeTextWriter"
     (:stamped +deep-frozen-stamp+)
   (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
   (:|makeBufferingPair| (options)
@@ -1114,7 +1114,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX 'E' should probably be in knot.lisp
 
-(defvar +the-e+ (e-lambda "org.erights.e.elib.prim.E"
+(defglobal +the-e+ (e-lambda "org.erights.e.elib.prim.E"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw) ; XXX this can be deleted, I think - try later
     (e-coercef tw +the-text-writer-guard+)

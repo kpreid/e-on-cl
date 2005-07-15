@@ -36,7 +36,7 @@
     (t
       (error "unsupported result type ~S in map-from-hash" result-type))))
 
-(defvar +e-ref-kit-slot+)
+(defglobals +e-ref-kit-slot+)
 
 ; --- Scope objects ---
 
@@ -73,7 +73,7 @@
                   (make-instance 'elib:e-simple-slot :value value))))
         table)))
 
-(defvar +the-make-scope+ (e-lambda "org.erights.e.elang.scope.makeScope"
+(defglobal +the-make-scope+ (e-lambda "org.erights.e.elang.scope.makeScope"
     (:stamped +deep-frozen-stamp+)
   (:|asType| ()
     (make-instance 'cl-type-guard :type-specifier 'scope))
@@ -213,7 +213,7 @@
 
 ; --- standard scope definitions ---
 
-(defvar +the-looper+ (e-lambda "org.erights.e.elang.interp.loop" 
+(defglobal +the-looper+ (e-lambda "org.erights.e.elang.interp.loop" 
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -223,7 +223,7 @@
     "Call body.run(), which must return a boolean, until it returns false."
     (loop while (e-is-true (e. body |run|))))))
 
-(defvar +the-thrower+ (e-lambda "org.erights.e.elib.prim.throw"
+(defglobal +the-thrower+ (e-lambda "org.erights.e.elib.prim.throw"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -250,7 +250,7 @@
         (assert (string= fqn ""))
         nil))))
 
-(defvar +make-first-char-splitter+ (e-lambda "org.quasiliteral.text.makeFirstCharSplitter" ()
+(defglobal +make-first-char-splitter+ (e-lambda "org.quasiliteral.text.makeFirstCharSplitter" ()
   (:|run| (specials)
     (e-coercef specials 'string)
     (flet ((match (ch) (position ch specials)))
@@ -337,7 +337,7 @@
       (setf (symbol-value symbol) new)
       nil)))
 
-(defvar +lisp+ (e-lambda "org.cubik.cle.prim.lisp"
+(defglobal +lisp+ (e-lambda "org.cubik.cle.prim.lisp"
     (:doc "This object is the maximum possible authority that an E program may hold, offering near-complete access to the underlying Lisp system. Handle with care.")
   (:|get| (package-name symbol-name)
     ; xxx should allow ejectors/absent-thunks for missing package and symbol
@@ -360,7 +360,7 @@
 
 ; XXX #+eventually-frozen-path-loader is not expected to be in *features* - because this code isn't working yet - it's just a descriptive commenting-out 
 
-(defvar +the-make-path-loader+ (e-lambda "org.cubik.cle.prim.makePathLoader"
+(defglobal +the-make-path-loader+ (e-lambda "org.cubik.cle.prim.makePathLoader"
     (:stamped +deep-frozen-stamp+)
   (:|run| (name fetchpath
       &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |eventually|)))
@@ -516,7 +516,7 @@
       (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elib.slot.makeBaseGuardAuthor") 
           |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))))
 
-(defvar +vm-node-maker-importer+
+(defglobal +vm-node-maker-importer+
   (let* ((prefix "org.erights.e.elang.evm."))
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
@@ -537,7 +537,7 @@
           nil)))))
 
 ; XXX optUnget?
-(defvar +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
+(defglobal +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
     (:stamped +deep-frozen-stamp+)
   (:|fetch| (fqn absent-thunk
       &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
@@ -559,7 +559,7 @@
     (e-lambda "org.cubik.cle.prim.deepFrozenIfEveryStubAuditor" () (:|audit/2| (constantly +e-false+)))))
 
 ; this could be less primitive, but then it would have more dependencies
-(defvar +traceln+ (e-lambda "org.cubik.cle.prim.traceln"
+(defglobal +traceln+ (e-lambda "org.cubik.cle.prim.traceln"
     (:stamped +deep-frozen-stamp+)
   (:|run| (message)
     ; xxx use stream writer on *trace-output*?
@@ -571,7 +571,7 @@
         (e. tw |println|))))))
 
 ; XXX merge with traceln? (I imagine this becoming something with many little useful methods)
-(defvar +trace+ (e-lambda "org.cubik.cle.prim.trace"
+(defglobal +trace+ (e-lambda "org.cubik.cle.prim.trace"
     (:stamped +deep-frozen-stamp+)
   (:|runAsTurn| (thunk context-thunk)
     "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
@@ -637,7 +637,7 @@ If a log message is produced, context-thunk is run to produce a string describin
     (multiple-value-call f1 (apply f2 args))))
 
 ; XXX simplify the amount of wrapping this requires / make those of these primitives which are safe (all of them?) importable
-(defvar +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
+(defglobal +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
   (e. (load-emaker-without-cache
         "org.erights.e.elib.ref.RefAuthor" 
         (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
@@ -818,7 +818,7 @@ If a log message is produced, context-thunk is run to produce a string describin
           ; --- user/REPL ---
           ("&help"              ,(lazy-import "org.erights.e.elang.interp.help")))))))
 
-(defvar +eprops+
+(defglobal +eprops+
   (e. +the-make-const-map+ |fromPairs| 
     `#(#("e.home" ,(namestring (asdf:component-pathname 
                                  (asdf:find-system :cl-e)))))))

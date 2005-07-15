@@ -531,7 +531,7 @@
         (make-static-scope kind
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
-  (defvar +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
+  (defglobal +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
     (:|scopeAssign| (node)
       (e-coercef node '|NounExpr|)
       (make node :set-names (e. node |name|)))

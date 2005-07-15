@@ -527,7 +527,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (defmethod make-load-form ((a param-desc) &optional environment)
     (make-load-form-saving-slots a :environment environment))
   
-  (defvar +miranda-message-descs+)
+  (defglobals +miranda-message-descs+)
   
   (defun message-pairs-to-map-including-miranda-messages (pairs)
     (e. (e. +the-make-const-map+ |fromPairs| 
@@ -999,9 +999,9 @@ fqn may be NIL or a string."
 
 ; --- Primitive stamps ---
 
-; These must? be defined early, since any (defvar +the-whatever+ (e-lambda :stamped +deep-frozen-stamp+ ...)) will cause evaluation of +deep-frozen-stamp+ at the time of execution of the defvar.
+; These must? be defined early, since any (defglobal +the-whatever+ (e-lambda :stamped +deep-frozen-stamp+ ...)) will cause evaluation of +deep-frozen-stamp+ at the time of execution of the defglobal.
 
-(defvar +deep-frozen-stamp+ (e-lambda 
+(defglobal +deep-frozen-stamp+ (e-lambda 
     "org.erights.e.elib.serial.DeepFrozenStamp"
     (:doc "The primitive rubber-stamping auditor for DeepFrozen-by-fiat objects.
   
@@ -1012,7 +1012,7 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defvar +selfless-stamp+ (e-lambda
+(defglobal +selfless-stamp+ (e-lambda
     "org.erights.e.elib.serial.SelflessStamp"
     (:doc "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
   
@@ -1083,14 +1083,14 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 (defun import-uncall (fqn)
   `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
 
-(defvar +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
+(defglobal +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
     (:stamped +deep-frozen-stamp+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
   (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
-(defvar +the-make-var-slot+ (e-lambda "org.erights.e.elib.slot.makeVarSlot"
+(defglobal +the-make-var-slot+ (e-lambda "org.erights.e.elib.slot.makeVarSlot"
     (:stamped +deep-frozen-stamp+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeVarSlot"))
@@ -1141,7 +1141,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
     (declare (ignore this new-value))
     (error "internal error: slot variable never assigned")))
 
-(defvar +the-unset-slot+ (make-instance 'e-unset-slot))
+(defglobal +the-unset-slot+ (make-instance 'e-unset-slot))
 
 
 (defclass e-var-slot (vat-checking) 
@@ -1204,7 +1204,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 (locally
   (declare (optimize (speed 3) (space 3)))
-  (defvar +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
+  (defglobal +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
       (:stamped +deep-frozen-stamp+)
     (:|__printOn| (tw) ; XXX move to e.syntax?
       (e-coercef tw +the-text-writer-guard+)
@@ -1273,9 +1273,9 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (def-class-opaque character)
 
 ; XXX thread-safety: make these all vat-local or remove super arg
-(defvar +the-any-guard+    (make-instance 'cl-type-guard :type-specifier 't))
-(defvar +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
-(defvar +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
+(defglobal +the-any-guard+    (make-instance 'cl-type-guard :type-specifier 't))
+(defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
+(defglobal +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
 ; --- Boolean ---
 
@@ -1285,8 +1285,8 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   ((value :initarg :value
           :type boolean)))
           
-(defvar +e-false+ (make-instance 'e-boolean :value nil))
-(defvar +e-true+  (make-instance 'e-boolean :value t))
+(defconstantonce +e-false+ (make-instance 'e-boolean :value nil))
+(defconstantonce +e-true+  (make-instance 'e-boolean :value t))
 
 (declaim (ftype (function (t) (member t nil)) e-is-true)
          (inline e-is-true))

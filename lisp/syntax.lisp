@@ -62,7 +62,7 @@
 
 
 ; xxx stomping on erights.org namespace
-(defvar +e-printer+ (e-lambda "org.erights.e.elang.syntax.ePrinter"
+(defglobal +e-printer+ (e-lambda "org.erights.e.elang.syntax.ePrinter"
     (:doc "Centralized object for generating E source and E-like text."
      :stamped +deep-frozen-stamp+)
   
@@ -594,7 +594,7 @@ XXX make precedence values available as constants"
     (error-from-e-error-string syntax-ejector (second tree-expr))
     (build-nodes tree-expr)))
 
-(defvar +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
+(defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
   (:|run| (source syntax-ejector)
     (e-source-to-tree source :syntax-ejector syntax-ejector))

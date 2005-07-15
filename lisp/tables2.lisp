@@ -19,7 +19,7 @@
   
 (def-fqn twine "org.erights.e.elib.tables.Twine")
 
-(defvar +the-make-twine+ (e-lambda "org.erights.e.elib.tables.makeTwine"
+(defglobal +the-make-twine+ (e-lambda "org.erights.e.elib.tables.makeTwine"
     (:stamped +deep-frozen-stamp+)
   (:|fromSequence| (iteratable) 
     "Return a Twine composed of the characters in the given sequence (object that implements iterate/1).
@@ -35,7 +35,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 ; --- Primitive safe mutable array access ---
 
-(defvar +the-flex-array-array-brand+ (e-lambda "org.cubik.cle.prim.flexArrayArrayBrand" ()))
+(defglobal +the-flex-array-array-brand+ (e-lambda "org.cubik.cle.prim.flexArrayArrayBrand" ()))
 (defclass flex-array-array-sealed-box ()
   ((array :initarg :array
          :accessor unseal-flex-array-array-sealed-box)))
@@ -118,7 +118,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           new-dimensions
           :initial-element initial-element)))))
 
-(defvar +the-make-array+ (e-lambda "org.cubik.cle.prim.makeArray" 
+(defglobal +the-make-array+ (e-lambda "org.cubik.cle.prim.makeArray" 
     (:stamped +deep-frozen-stamp+)
   (:|fromSequence| (seq)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
@@ -298,9 +298,9 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 (def-class-opaque const-map)
 
 
-(defvar e.elib:+the-map-guard+ (make-instance 'cl-type-guard :type-specifier 'const-map))
+(defglobal +the-map-guard+ (make-instance 'cl-type-guard :type-specifier 'const-map))
 
-(defvar e.elib:+the-any-map-guard+ e.elib:+the-map-guard+) ; XXX what this *should* be is a stamp-checking guard to allow standard FlexMaps and ROMaps (which are currently implemented in E)
+(defglobal +the-any-map-guard+ +the-map-guard+) ; XXX what this *should* be is a stamp-checking guard to allow standard FlexMaps and ROMaps (which are currently implemented in E)
 
 ; --- genhash ConstMap ---
 
@@ -472,7 +472,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 ; --- ConstMap maker ---
 
-(defvar +the-make-const-map+ (e-lambda "org.erights.e.elib.tables.makeConstMap"
+(defglobal +the-make-const-map+ (e-lambda "org.erights.e.elib.tables.makeConstMap"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -536,7 +536,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (make-instance 'genhash-flex-map-impl))
 
 ; XXX support fromTypes/3 then make and/1 use the capacity arg
-(defvar +the-make-flex-map+ (e-lambda "org.erights.e.elib.tables.makeFlexMap"
+(defglobal +the-make-flex-map+ (e-lambda "org.erights.e.elib.tables.makeFlexMap"
     (:stamped +deep-frozen-stamp+)
   (:|fromTypes| (key-guard value-guard)
     ; XXX try coerce to primitive and make use of that

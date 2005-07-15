@@ -3,6 +3,30 @@
 
 (cl:in-package :e.util)
 
+; --- Globals ---
+
+;; The definition of DEFGLOBALS is in packages.lisp.
+
+(defmacro defglobal (&rest args)
+  #+e.immutable 
+    `(defconstantonce ,@args)
+  #-e.immutable
+    `(defparameter ,@args))
+
+(defmacro defconstantonce (name value-form &optional documentation)
+  `(progn
+    (eval-when (:compile-toplevel)
+      (declaim (special ,name)))
+    (eval-when (:load-toplevel :execute)
+      (eval 
+        `(defconstant ,',name
+          ,(if (boundp ',name)
+            (symbol-value ',name)
+            ,value-form)
+          ,@',(when documentation (list documentation)))))))
+
+; --- misc ---
+
 (defun aan (s)
   (cond
     ((string= s "") "")

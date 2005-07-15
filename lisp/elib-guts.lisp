@@ -101,7 +101,7 @@
 (defmethod e-audit-check-dispatch ((auditor t) (specimen t))
   nil)
 
-(defvar +the-audit-checker+ (e-lambda "org.erights.e.elib.slot.auditChecker"
+(defglobal +the-audit-checker+ (e-lambda "org.erights.e.elib.slot.auditChecker"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -614,7 +614,7 @@
   (values 'eventual nil))
 
 
-(defvar +the-make-proxy-resolver+ (e-lambda "org.erights.e.elib.ref.makeProxyResolver" ()
+(defglobal +the-make-proxy-resolver+ (e-lambda "org.erights.e.elib.ref.makeProxyResolver" ()
   (:|run| (opt-handler opt-identity &aux ref-slot)
     ; XXX ref-slot will eventually be a weak reference
     (unless opt-handler
@@ -689,7 +689,7 @@
             finally (error "fell off end of queue")))
     nil))
 
-(defvar +the-make-sorted-queue+ (e-lambda "org.cubik.cle.prim.makeSortedQueue" ()
+(defglobal +the-make-sorted-queue+ (e-lambda "org.cubik.cle.prim.makeSortedQueue" ()
   (:|run| ()
     (make-instance 'sorted-queue))))
 

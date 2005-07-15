@@ -3,6 +3,9 @@
 
 (in-package :cl-user)
 
+;(pushnew :e.mutable *features*)
+;(pushnew :e.immutable *features*)
+
 ; The non-MOP modes are buggy and/or unfinished. I'm leaving them in for fixing up in case we need to support an implementation not having MOP.
 (pushnew :e.vtable-collect.use-mop *features*)
 ;(pushnew :e.vtable-collect.use-example *features*)

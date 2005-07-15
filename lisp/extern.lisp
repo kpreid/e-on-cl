@@ -5,7 +5,7 @@
 
 ; --- File access ---
 
-(defvar +standard-external-format+ 
+(defglobal +standard-external-format+ 
   (labels ((f (k) (member k *features*)))
     (cond
       ((and (f :clisp) (f :unicode))
@@ -16,7 +16,7 @@
         :default)))
   "The :external-format OPEN keyword argument to use for text file access.")
 
-(defvar +standard-external-format-common-name+ "utf-8"
+(defglobal +standard-external-format-common-name+ "utf-8"
   "The name of the +standard-external-format+ that will be be recognized by other systems.")
 
 (defun read-entire-stream (s
@@ -89,7 +89,7 @@
 
 ; --- GC ---
 
-(defvar +gc+ (e-lambda "org.cubik.cle.prim.gc" ()
+(defglobal +gc+ (e-lambda "org.cubik.cle.prim.gc" ()
   ; xxx extension: reliability/0 => "NONE", "FULL", "PARTIAL", "UNKNOWN"
   ; appropriately exposed, this would allow our test suite to test weak pointers if the GC is sufficiently reliable to not cause false failures
   (:|run| ()
@@ -116,7 +116,7 @@
 (defun java-to-cl-time (jt)
   (+ (/ jt 1000) +java-epoch-delta+))
 
-(defvar +the-timer+ (e-lambda "Timer" ()
+(defglobal +the-timer+ (e-lambda "Timer" ()
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<a Timer>")
@@ -145,7 +145,7 @@
 ; XXX instead replace this with the new +lisp+ facilities?
 
 ; compatibility with Java-E's use of org.apache.oro.text.regex.*
-(defvar +rx-perl5-compiler+ (e-lambda "org.apache.oro.text.regex.makePerl5Compiler" ()
+(defglobal +rx-perl5-compiler+ (e-lambda "org.apache.oro.text.regex.makePerl5Compiler" ()
   (:|run| ()
     (e-lambda "org.apache.oro.text.regex.perl5Compiler" ()
       (:|compile(String)| (s)
@@ -153,7 +153,7 @@
         ;(print (list 'oro-compiling s))
         (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s)))))))
   
-(defvar +rx-perl5-matcher+ (e-lambda "org.apache.oro.text.regex.makePerl5Matcher" ()
+(defglobal +rx-perl5-matcher+ (e-lambda "org.apache.oro.text.regex.makePerl5Matcher" ()
   (:|run| (&aux result-obj)
     (e-lambda "org.apache.oro.text.regex.perl5Matcher" ()
       (:|matches(PatternMatcherInput, Pattern)| (input pattern)

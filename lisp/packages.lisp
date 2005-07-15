@@ -18,6 +18,10 @@
     :class-precedence-list)
   
   (:export
+    :defglobals
+    :defglobal
+    :defconstantonce
+  
     :aan
     :named-lambda
     :run-program
@@ -42,6 +46,10 @@
     :function-responds-to
     
     :backtrace-value))
+
+;;; 'early util' interlude
+(defmacro e.util:defglobals (&rest names)
+  `(declaim (special ,@names)))
 
 (cl:defpackage :e.elib
   (:nicknames :elib)
@@ -181,39 +189,40 @@
     :def-shorten-methods
     :with-vat :when-resolved))
 
-(defvar elib:+the-unset-slot+)
-(defvar elib:+the-make-simple-slot+)
-(defvar elib:+the-make-var-slot+)
+(e.util:defglobals
+  elib:+the-unset-slot+
+  elib:+the-make-simple-slot+
+  elib:+the-make-var-slot+
 
-(defvar elib:+the-any-map-guard+)
-(defvar elib:+the-flex-list-guard+)
-(defvar elib:+the-make-const-map+)
-(defvar elib:+the-make-twine+)
-(defvar elib:+the-text-writer-guard+)
+  elib:+the-any-map-guard+
+  elib:+the-flex-list-guard+
+  elib:+the-make-const-map+
+  elib:+the-make-twine+
+  elib:+the-text-writer-guard+
 
-(defvar elib:+the-make-type-desc+)
-(defvar elib:+the-make-param-desc+)
-(defvar elib:+the-make-message-desc+)
+  elib:+the-make-type-desc+
+  elib:+the-make-param-desc+
+  elib:+the-make-message-desc+
 
-(defvar elib:+e-false+)
-(defvar elib:+e-true+)
-(defvar elib:+the-exception-guard+)
-(defvar elib:+the-map-guard+)
+  elib:+e-false+
+  elib:+e-true+
+  elib:+the-exception-guard+
+  elib:+the-map-guard+
 
-(defvar elib:+the-make-flex-map+)
-(defvar elib:+the-make-text-writer+)
-(defvar elib:+the-make-list+)
-(defvar elib:+the-make-int+)
-(defvar elib:+the-make-sorted-queue+)
+  elib:+the-make-flex-map+
+  elib:+the-make-text-writer+
+  elib:+the-make-list+
+  elib:+the-make-int+
+  elib:+the-make-sorted-queue+
 
-(defvar elib:+the-e+)
+  elib:+the-e+
 
-(defvar elib:+the-audit-checker+)
-(defvar elib:+deep-frozen-stamp+)
+  elib:+the-audit-checker+
+  elib:+deep-frozen-stamp+
 
-(defvar elib:+the-make-weak-ref+)
-(defvar elib:+the-make-traversal-key+)
-(defvar elib:+the-make-proxy-resolver+)
+  elib:+the-make-weak-ref+
+  elib:+the-make-traversal-key+
+  elib:+the-make-proxy-resolver+)
 
 (declaim (ftype function
   e.elib:make-equalizer
@@ -223,16 +232,17 @@
 
 (cl:defpackage :e.elib.tables
   (:nicknames :e.tables)
-  (:use :cl :elib :net.hexapodia.hashtables)
+  (:use :cl :e.util :elib :net.hexapodia.hashtables)
   (:documentation "Collection implementations.")
   (:export
     :const-map ; type
     :+the-make-array+))
 
-(defvar e.elib.tables:+the-make-array+)
+(e.util:defglobals
+  e.elib.tables:+the-make-array+)
 
 (cl:defpackage :e.knot
-  (:use :cl :elib)
+  (:use :cl :e.util :elib)
   (:export
     :scope
     :make-safe-scope
@@ -298,14 +308,15 @@
 
 (cl:defpackage :e.elang
   (:nicknames :elang)
-  (:use :cl :elib :e.elang.vm-node)
+  (:use :cl :e.util :elib :e.elang.vm-node)
   (:export
     :eval-e
     :get-translation
     
     :+the-make-static-scope+))
 
-(cl:defvar elang:+the-make-static-scope+)
+(e.util:defglobals
+  elang:+the-make-static-scope+)
 
 (declaim (ftype function
   e.elang:eval-e
@@ -313,7 +324,7 @@
 
 (cl:defpackage :e.elang.syntax
   (:nicknames :e.syntax)
-  (:use :cl :e.elib :e.elang :e.elang.vm-node)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node)
   (:export
     +e-printer+
     
@@ -328,8 +339,9 @@
     :+prim-parser+
   ))
 
-(cl:defvar e.elang.syntax:+prim-parser+)
-(cl:defvar e.elang.syntax:+e-printer+)
+(e.util:defglobals
+  e.elang.syntax:+prim-parser+
+  e.elang.syntax:+e-printer+)
 
 (declaim (ftype function 
   e.elang.syntax:e-source-to-tree
@@ -339,7 +351,7 @@
   e.elang.syntax:save-parse-cache-file))
 
 (cl:defpackage :e.extern
-  (:use :common-lisp :elib :elang)
+  (:use :common-lisp :e.util :elib :elang)
   (:documentation "Capability-structured IO, and interfaces to libraries.")
   (:export
     :+standard-external-format+
@@ -351,12 +363,13 @@
     :+rx-perl5-compiler+
     :+rx-perl5-matcher+))
 
-(defvar e.extern:+standard-external-format+)
-(defvar e.extern:+standard-external-format-common-name+)
-(defvar e.extern:+gc+)
-(defvar e.extern:+the-timer+)
-(defvar e.extern:+rx-perl5-compiler+)
-(defvar e.extern:+rx-perl5-matcher+)
+(e.util:defglobals
+  e.extern:+standard-external-format+
+  e.extern:+standard-external-format-common-name+
+  e.extern:+gc+
+  e.extern:+the-timer+
+  e.extern:+rx-perl5-compiler+
+  e.extern:+rx-perl5-matcher+)
 
 (declaim (ftype function
   e.extern:make-file-getter
