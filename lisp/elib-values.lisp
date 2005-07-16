@@ -898,6 +898,18 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                       (as-e-boolean is-quoting))))))
         (spawn nil #.(string #\Newline))))))
 
+(defun trace-error-print-handler (thing)
+  ; XXX printing the backtrace is too noisy for running the tests - we need a 'store-but-don't-print' trace facility, or a tracelog like E-on-Java.
+  (lambda (raw-condition)
+    (e. 
+      (e. (vat-safe-scope *vat*) |get| "traceln") 
+      |run|
+      (format nil "problem while printing ~S: ~A (~S)~%~:W" 
+        thing 
+        (e-quote raw-condition) 
+        raw-condition 
+        (or #+(or) (e.util:backtrace-value))))))
+
 (defun do-print-syntax (tw thing syntax in-error-printing nest
     &aux (wrapped-tw (hide-text-writer tw thing)))
   (ecase (ref-state thing)
@@ -910,10 +922,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                 (e. thing |__printOn| wrapped-tw)
                 (handler-case
                   (handler-bind 
-                      ; XXX this tracing is too noisy for running the tests - we need a 'store-but-don't-print' trace, or a tracelog like Java-E.
-                      ((e-catchable-condition (lambda (condition)
-                        #-(or) (declare (ignore condition))
-                        #+(or) (e. (e. (vat-safe-scope *vat*) |get| "traceln") |run| (format nil "problem while printing ~S: ~A (~S)~%~:W" thing (e-quote condition) condition (e.util:backtrace-value))))))
+                      ((e-catchable-condition (trace-error-print-handler thing)))
                     (e. thing |__printOn| wrapped-tw))
                   (e-catchable-condition (condition)
                     (e. syntax |problem| (funcall nest :in-error-printing t)
