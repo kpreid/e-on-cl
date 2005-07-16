@@ -24,6 +24,9 @@
             :depends-on ("elib"))
      (:file "tables2"
             :depends-on ("elib-guts")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
+     (:file "print"
+            ; TextWriter
+            :depends-on ("elib"))
      (:file "extern"
             :depends-on ("elib"))
      (:file "knot"
