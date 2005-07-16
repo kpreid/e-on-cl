@@ -7,12 +7,39 @@ pragma.enable("dot-props")
 pragma.enable("verb-curry")
 pragma.enable("accumulator")
 
+def makeInStreamShell := <elib:eio.makeInStreamShell>
+
+def Range := EIO::Range
+def ALL := EIO::ALL
+
+def Element := int # XXX should be int8 (0..255)
+
 def makeFDInStreamAuthor {
   to run(lisp) {
 
     def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
 
     def makeFDInStream implements DeepFrozenStamp {
+      to run(nameObj, inBuffer) {
+        def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
+          to __printOn(out :TextWriter) {
+            out.printSame(nameObj)
+          }
+          
+          to semiObtain(atLeast :int, atMost :Range, proceed, report) {
+            # XXX use constants from InStream-somehow
+            def n := if (atMost == ALL) { inBuffer.size() } else { inBuffer.size().min(atMost) }
+            return if (proceed == "ADVANCE") {
+              inBuffer.removeRun(0, n)
+            } else if (report == "ELEMENTS") {
+              inBuffer.run(0, n)
+            }
+          }
+          
+        })
+        
+        return [inStream, inBackend]
+      }
     }
     return makeFDInStream
   }

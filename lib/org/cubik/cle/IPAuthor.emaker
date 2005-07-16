@@ -148,23 +148,8 @@ def IPAuthor implements DeepFrozen {
               }
               
             })
-            
-            def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
-              to __printOn(out :TextWriter) {
-                out.printSame(nameObj)
-              }
-              
-              to semiObtain(atLeast :int, atMost :Range, proceed, report) {
-                # XXX use constants from InStream-somehow
-                def n := if (atMost == ALL) { inBuffer.size() } else { inBuffer.size().min(atMost) }
-                return if (proceed == "ADVANCE") {
-                  inBuffer.removeRun(0, n)
-                } else if (report == "ELEMENTS") {
-                  inBuffer.run(0, n)
-                }
-              }
-              
-            })
+
+            def [inStream, inBackend] := makeFDInStream(nameObj, inBuffer)
             
             outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
             
