@@ -153,3 +153,68 @@ This variable is deprecated and will be replaced by more fine-grained and well-d
   "Return a real-number time value with the same epoch as universal time, but with potentially higher resolution."
   (+ *apparent-internal-time-base* (/ (get-internal-real-time) internal-time-units-per-second)))
 
+; --- E booleans ---
+
+;; E booleans are represented as a separate type because 'false' must be distinct from 'null'.
+
+;; This code is placed early in order to get the compilation advantages of constants and inlining.
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass e-boolean () ())
+
+  (defvar *%e-true* nil)
+  (defvar *%e-false* nil)
+  
+  (defun intern-boolean (value)
+    (declare (boolean value))
+    (if value
+      (or *%e-true*  (setf *%e-true*  (make-instance 'e-boolean)))
+      (or *%e-false* (setf *%e-false* (make-instance 'e-boolean)))))
+
+  (defmethod make-load-form ((b e-boolean) &optional environment)
+    (declare (ignore environment))
+    (cond
+      ((eq b *%e-false*)
+        '(intern-boolean nil))
+      ((eq b *%e-true*)
+        '(intern-boolean t))
+      (t 
+        (call-next-method)))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +e-false+ (intern-boolean nil))
+  (defconstant +e-true+  (intern-boolean t)))
+
+(declaim (ftype (function (t) (member t nil)) e-is-true)
+         (inline e-is-true))
+(defun e-is-true (bool)
+  "Convert an E boolean to a CL boolean."
+  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
+  (case bool
+    (#.+e-false+ nil)
+    (#.+e-true+  t)
+    (otherwise 
+      (eq (e-coerce bool 'e-boolean) +e-true+))))
+
+(declaim (ftype (function (t) e-boolean) as-e-boolean)
+         (inline as-e-boolean))
+(defun as-e-boolean (x) 
+  "Convert a CL generalized boolean to an E boolean."
+  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
+  (if x
+    +e-true+
+    +e-false+))
+
+;; note: this *could* be placed later
+(defmethod print-object ((bool e-boolean) stream)
+  (flet ((var (name)
+          (if (or *read-eval* (not *print-readably*))
+            (format stream "#.+e-~A+" name)
+            (error 'print-not-readable :object bool))))
+  (case bool
+    (#.+e-true+  (var "true"))
+    (#.+e-false+ (var "false"))
+    (otherwise
+      (print-unreadable-object (bool stream :type t :identity t)
+        (format stream "!!!BOGUS!!!"))))))
+

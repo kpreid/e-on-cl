@@ -204,8 +204,8 @@
   elib:+the-make-param-desc+
   elib:+the-make-message-desc+
 
-  elib:+e-false+
-  elib:+e-true+
+  #-sbcl elib:+e-false+
+  #-sbcl elib:+e-true+
   elib:+the-exception-guard+
   elib:+the-map-guard+
 

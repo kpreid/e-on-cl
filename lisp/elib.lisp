@@ -1277,39 +1277,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
 (defglobal +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
-; --- Boolean ---
-
-; xxx should e-boolean be made of two e-lambdas or symbols instead?
-
-(defclass e-boolean ()
-  ((value :initarg :value
-          :type boolean)))
-          
-(defconstantonce +e-false+ (make-instance 'e-boolean :value nil))
-(defconstantonce +e-true+  (make-instance 'e-boolean :value t))
-
-(declaim (ftype (function (t) (member t nil)) e-is-true)
-         (inline e-is-true))
-(defun e-is-true (bool)
-  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-  ; this cond can't be a case because the e-booleans aren't constants at compile time
-  (cond
-    ((eq bool +e-false+) nil)
-    ((eq bool +e-true+)  t)
-    (t 
-      (eq (e-coerce bool 'e-boolean) +e-true+))))
-
-(declaim (ftype (function (t) e-boolean) as-e-boolean)
-         (inline as-e-boolean))
-(defun as-e-boolean (x) 
-  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-  (if x
-    +e-true+
-    +e-false+))
-
-(defmethod print-object ((bool e-boolean) stream)
-  (format stream "#.+e-~A+" (if (slot-value bool 'value) "true" "false")))
-
 ; --- Ejector ---
 
 (defun ejector-prethrow (ejector-spec value)
