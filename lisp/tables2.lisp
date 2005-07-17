@@ -5,7 +5,8 @@
 
 ; --- Setting up genhash ---
 
-(register-hash-function 'eeq-is-same-ever #'eeq-same-yet-hash #'eeq-is-same-ever)
+(with-simple-restart (continue "Skip hash function registration.")
+  (register-hash-function 'eeq-is-same-ever #'eeq-same-yet-hash #'eeq-is-same-ever))
 
 ; --- ... ---
 
