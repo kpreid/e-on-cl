@@ -15,7 +15,6 @@ def map implements DeepFrozen { # XXX eutil
 }    
 
 def makeOutStreamShell := <elib:eio.makeOutStreamShell>
-def makeInStreamShell := <elib:eio.makeInStreamShell>
 
 def Range := EIO::Range
 def ALL := EIO::ALL
@@ -117,8 +116,6 @@ def IPAuthor implements DeepFrozen {
 
             def inBuffer := [].diverge(Element)
             
-            var eof := false
-            
             def outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
               to __printOn(out :TextWriter) {
                 out.printSame(nameObj)
@@ -149,42 +146,9 @@ def IPAuthor implements DeepFrozen {
               
             })
 
-            def [inStream, inBackend] := makeFDInStream(nameObj, inBuffer)
+            def [inStream, inBackend] := makeFDInStream(nameObj, inBuffer, socket, socketFD, fdRef)
             
             outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
-            
-            def inFDHandler
-            def removeHandler() {
-              (lisp["SB-SYS", "REMOVE-FD-HANDLER"]::"function")((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
-            }
-            
-            def vat := lisp["E.ELIB", "*VAT*"]::value
-            
-            bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(socketFD, l`:input`, lispFunction(def fdHandlerFunc(_) {
-              
-              withTurn(lispFunction(thunk {
-              
-                escape error {
-                  escape eofExit {
-                    def elements := fdRef.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eofExit)
-                    #traceln(`$inStream: read $elements from socket`)
-                    inBuffer.append(elements)
-                  } catch _ {
-                    traceln(`$inStream: eof`)
-                    removeHandler()
-                    eof := true
-                  }
-                } catch p {
-                  traceln(`$inStream: error $p`)
-                  removeHandler()
-                  inStream.fail(p)
-                }
-                
-                inBackend.setAvailable(inBuffer.size())
-                
-              }), vat)
-              
-            }))
             
             return [inStream, outStream]
           }

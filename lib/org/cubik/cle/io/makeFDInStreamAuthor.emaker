@@ -18,9 +18,19 @@ def makeFDInStreamAuthor {
   to run(lisp) {
 
     def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
+    def read := lisp["CL", "READ-FROM-STRING"]::"function"
+    def l__quasiParser {
+      to valueMaker(t) {
+        return def vm {
+          to substitute(values) { return read(simple__quasiParser.valueMaker(t).substitute(values)) }
+        } 
+      }
+    }
+    def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
+    def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
 
     def makeFDInStream implements DeepFrozenStamp {
-      to run(nameObj, inBuffer) {
+      to run(nameObj, inBuffer, socket, socketFD, fdRef) {
         def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
           to __printOn(out :TextWriter) {
             out.printSame(nameObj)
@@ -37,6 +47,41 @@ def makeFDInStreamAuthor {
           }
           
         })
+    
+        var eof := false
+    
+        def inFDHandler
+        def removeHandler() {
+          (lisp["SB-SYS", "REMOVE-FD-HANDLER"]::"function")((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
+        }
+        
+        def vat := lisp["E.ELIB", "*VAT*"]::value
+        
+        bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(socketFD, l`:input`, lispFunction(def fdHandlerFunc(_) {
+          
+          withTurn(lispFunction(thunk {
+          
+            escape error {
+              escape eofExit {
+                def elements := fdRef.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eofExit)
+                #traceln(`$inStream: read $elements from socket`)
+                inBuffer.append(elements)
+              } catch _ {
+                traceln(`$inStream: eof`)
+                removeHandler()
+                eof := true
+              }
+            } catch p {
+              traceln(`$inStream: error $p`)
+              removeHandler()
+              inStream.fail(p)
+            }
+            
+            inBackend.setAvailable(inBuffer.size())
+            
+          }), vat)
+          
+        }))
         
         return [inStream, inBackend]
       }
