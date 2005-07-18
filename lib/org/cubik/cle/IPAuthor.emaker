@@ -146,7 +146,7 @@ def IPAuthor implements DeepFrozen {
               
             })
 
-            def [inStream, inBackend] := makeFDInStream(nameObj, inBuffer, socket, socketFD, fdRef)
+            def inStream := makeFDInStream(nameObj, inBuffer, socket::sockoptReceiveBuffer, socket)
             
             outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
             

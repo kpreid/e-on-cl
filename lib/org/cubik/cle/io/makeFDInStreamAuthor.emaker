@@ -30,7 +30,7 @@ def makeFDInStreamAuthor {
     def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
 
     def makeFDInStream implements DeepFrozenStamp {
-      to run(nameObj, inBuffer, socket, socketFD, fdRef) {
+      to run(nameObj, inBuffer, bufferLimit, fdRef) {
         def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
           to __printOn(out :TextWriter) {
             out.printSame(nameObj)
@@ -57,14 +57,14 @@ def makeFDInStreamAuthor {
         
         def vat := lisp["E.ELIB", "*VAT*"]::value
         
-        bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(socketFD, l`:input`, lispFunction(def fdHandlerFunc(_) {
+        bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(fdRef.getFD(), l`:input`, lispFunction(def fdHandlerFunc(_) {
           
           withTurn(lispFunction(thunk {
           
             escape error {
               escape eofExit {
-                def elements := fdRef.read(socket::sockoptReceiveBuffer - inBuffer.size(), error, eofExit)
-                #traceln(`$inStream: read $elements from socket`)
+                def elements := fdRef.read(bufferLimit - inBuffer.size(), error, eofExit)
+                #traceln(`$inStream: read $elements from fd $fdRef`)
                 inBuffer.append(elements)
               } catch _ {
                 traceln(`$inStream: eof`)
@@ -83,7 +83,7 @@ def makeFDInStreamAuthor {
           
         }))
         
-        return [inStream, inBackend]
+        return inStream
       }
     }
     return makeFDInStream

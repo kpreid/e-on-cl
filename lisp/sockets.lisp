@@ -20,6 +20,8 @@
 
 #+sbcl
 (def-vtable sb-bsd-sockets:socket
+  ;; This vtable imitates a fd-ref as well as being a socket, because a SOCKET handles closing upon GC and so we need to keep it around.
+
   (:|connect| (this host port opt-ejector)
     (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
     (e-coercef port '(unsigned-byte 16))
@@ -40,12 +42,15 @@
   (:|read| (this max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the socket, and return them as a ConstList."
     (e. (make-fd-ref (socket-file-descriptor this)) |read| max-octets error-ejector eof-ejector))
+  
+  (:|getFD| (this) (socket-file-descriptor this))
   )
   
 
 ; XXX this should not be in sockets but in something more general
 (defun make-fd-ref (fd)
   (e-lambda "org.cubik.cle.io.FDRef" ()
+    (:|getFD| () fd)
     (:|read| (max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
       ; XXX be able to avoid allocating the buffer
