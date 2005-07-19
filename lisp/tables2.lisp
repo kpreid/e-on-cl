@@ -65,6 +65,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (e-coercef new 'integer)
       (setf (fill-pointer array) new))
 
+    (:|getAdjustable| () (as-e-boolean (adjustable-array-p array)))
     (:|getDimension| (i) 
       (e-coercef i 'integer)
       (array-dimension array i))
@@ -121,9 +122,12 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defglobal +the-make-array+ (e-lambda "org.cubik.cle.prim.makeArray" 
     (:stamped +deep-frozen-stamp+)
-  (:|fromSequence| (seq)
+  (:|fromSequence| (seq adjustable)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
-    (make-flex-array (make-array (length seq) :initial-contents seq :fill-pointer t)))))
+    (make-flex-array (make-array (length seq) 
+                                 :initial-contents seq
+                                 :adjustable (e-is-true adjustable)
+                                 :fill-pointer t)))))
 
 ; --- ConstMap ---
 
