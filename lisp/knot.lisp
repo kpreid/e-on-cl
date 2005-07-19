@@ -271,12 +271,12 @@
   (e-coercef portrayal '(or null vector))
   ; xxx I do not understand the justification in the doc-comment of Java-E baseLoader#optUnget.
   "Converts an optional uncall value into an optional unget value. That is, returns 'name' if 'portrayal' matches [==loader, ==\"get\", [name]]; otherwise null."
-  (if (and portrayal 
-           (=   (length portrayal) 3)
-           (eql (aref portrayal 0) loader)
-           (eql (aref portrayal 1) "get"))
+  (when (and portrayal 
+             (=               (length portrayal) 3)
+             (eeq-is-same-yet (aref portrayal 0) loader)
+             (eeq-is-same-yet (aref portrayal 1) "get"))
     (let ((args (e-coerce (aref portrayal 2) 'vector)))
-      (if (= (length args) 1)
+      (when (= (length args) 1)
         (aref args 0)))))
 
 (defun unget-to-uncall (loader name)
