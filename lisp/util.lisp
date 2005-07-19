@@ -73,29 +73,50 @@
     args))
 
 #+clisp
-  (defun run-program (program arguments &rest key-args &key input output &allow-other-keys)
-    (multiple-value-bind (v1 v2 v3)
-        (apply #'ext:run-program
-          program 
-          :arguments arguments
-          (let ((key-args (copy-seq key-args)))
-            (remf key-args :error)
-            key-args))
-      (cond
-        ((and (eql input :stream)
-              (eql output :stream))
-          ; (close v1) ; bidirectional stream
-          (make-instance 'external-process
-            :input-stream v3
-            :output-stream v2))
-        ((eql input :stream)
-          (make-instance 'external-process
-            :input-stream v1))
-        ((eql output :stream)
-          (make-instance 'external-process
-            :output-stream v1))
-        (t
-          (make-instance 'external-process)))))
+  (defun squote (string)
+    (format nil "'~A'"
+      (elib:e-call-dispatch "'\\''" :|rjoin/1|
+        (elib:e-call-dispatch string :|split/1| "'"))))
+
+#+clisp
+  (defun run-program (program arguments &rest key-args &key input output wait &allow-other-keys)
+    
+    ;; clisp's RUN-PROGRAM appears to be broken for this use, but MAKE-PIPE-IO-STREAM not. kpreid 2005-07-18
+    (if (and (eql input :stream)
+             (eql output :stream)
+             (eql wait nil))
+      (multiple-value-bind (io i o)
+          (ext:make-pipe-io-stream
+            (elib:e-call-dispatch " " :|rjoin/1| (map 'vector #'squote (cons program arguments)))
+            :element-type 'character
+            :external-format e.extern:+standard-external-format-common-name+
+            :buffered nil)
+        (make-instance 'external-process
+          :input-stream o
+          :output-stream i))
+      
+      (multiple-value-bind (v1 v2 v3)
+          (apply #'ext:run-program
+            program 
+            :arguments arguments
+            (let ((key-args (copy-seq key-args)))
+              (remf key-args :error)
+              key-args))
+        (cond
+          ((and (eql input :stream)
+                (eql output :stream))
+            ; (close v1) ; bidirectional stream
+            (make-instance 'external-process
+              :input-stream v3
+              :output-stream v2))
+          ((eql input :stream)
+            (make-instance 'external-process
+              :input-stream v1))
+          ((eql output :stream)
+            (make-instance 'external-process
+              :output-stream v1))
+          (t
+            (make-instance 'external-process))))))
 
 #+lispworks (progn
   ; xxx not the full set of args, but enough for our purposes
