@@ -179,7 +179,7 @@ case "$LISPTYPE" in
            (when p (load p)))' \
         "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
         "$COMMON_INIT1" "$COMMON_INIT2" \
-        "(apply (function e.rune:rune) (cdr ext:*args*))") \
+        "(apply (function e.rune:rune) ext:*args*)") \
       "$@"                    
   ;;
   gcl)
