@@ -1,0 +1,64 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(cl:in-package :e.lisp-test)
+
+;; NOTE: this file is hardly complete - it was just written to test the test framework
+
+(deftest defglobal.simple
+  (let ((s (gensym)))
+    (values (eval `(ignore-errors ,s))
+            (eval `(eql (e.util:defglobal ,s 44) ',s))
+            (eval `,s)))
+  nil
+  t
+  44)
+
+(deftest without-suffix.empty-string
+  (e.util:without-suffix "" "a")
+  nil)
+
+(deftest without-suffix.empty-both
+  (e.util:without-suffix "" "")
+  "")
+
+(deftest without-suffix.empty-fix
+  (e.util:without-suffix "quux" "")
+  "quux")
+
+(deftest without-suffix.suffix
+  (e.util:without-suffix "adfbce" "ce")
+  "adfb")
+
+(deftest without-suffix.infix
+  (e.util:without-suffix "adfbceg" "ce")
+  nil)
+
+(deftest without-suffix.prefix
+  (e.util:without-suffix "ceadfb" "ce")
+  nil)
+
+(deftest without-prefix.empty-string
+  (e.util:without-prefix "" "a")
+  nil)
+
+(deftest without-prefix.empty-both
+  (e.util:without-prefix "" "")
+  "")
+
+(deftest without-prefix.empty-fix
+  (e.util:without-prefix "quux" "")
+  "quux")
+
+(deftest without-prefix.suffix
+  (e.util:without-prefix "adfbce" "ce")
+  nil)
+
+(deftest without-prefix.infix
+  (e.util:without-prefix "adfbceg" "ce")
+  nil)
+
+(deftest without-prefix.prefix
+  (e.util:without-prefix "ceadfb" "ce")
+  "adfb")
+

@@ -87,6 +87,13 @@
 ;;; --- Testing ---
 
 (defmethod perform ((op test-op) (system (eql (find-system :cl-e))))
+  (operate 'load-op :e-on-cl.lisp-test)
   (operate 'load-op :cl-e.updoc)
-  (funcall (intern "SYSTEM-TEST" "E.UPDOC") op system))
+  (funcall (intern "SYSTEM-TEST" "E.LISP-TEST") op system)
+  (funcall (intern "SYSTEM-TEST" "E.UPDOC")     op system))
 
+(defsystem e-on-cl.lisp-test
+  :depends-on (:cl-e #+sbcl :sb-rt
+                     #-sbcl :rt)
+  :components ((:module "lisp" :components
+                ((:file "lisp-test")))))

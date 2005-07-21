@@ -187,7 +187,6 @@
       (subseq mv-string 0 slash)
       (parse-integer mv-string :start (1+ slash)))))
     
-; XXX not tested 
 (declaim (inline without-suffix)
          (ftype (function (string string) (or null string)) without-suffix))
 (defun without-suffix (string suffix
@@ -197,8 +196,7 @@
            (string= suffix string :start2 without-len))
     (subseq string 0 without-len)))
   
-; XXX not tested 
-(declaim (inline without-prefix)
+s(declaim (inline without-prefix)
          (ftype (function (string string) (or null string)) without-prefix))
 (defun without-prefix (string prefix 
     &aux (split-index (length prefix)))

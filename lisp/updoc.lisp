@@ -340,7 +340,7 @@
   (vat-loop))
 
 (defun system-test (op system)
-  "Invoked by the implementation of asdf:test-op."
+  "Invoked by an implementation of asdf:test-op."
   (declare (ignore op))
   (e.syntax:with-parse-cache-file
       ((merge-pathnames

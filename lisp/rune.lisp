@@ -37,6 +37,7 @@
   (error "Don't know how to global-exit"))
 
 (defun script-toplevel (args)
+  (establish-vat)
   (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
          (Ref (e. scope |get| "Ref"))
          (outcome-vow (e. (e. scope |get| "rune") |run| (coerce args 'vector))))
@@ -52,6 +53,7 @@
     (vat-loop)))
 
 (defun repl-toplevel (args)
+  (establish-vat)
   (assert (null args))
   (let ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*)))
     (loop (with-simple-restart (abort "Return to E REPL.")
@@ -69,19 +71,28 @@
           (elib:run-vats)
           (setf scope new-scope)))))))
 
+(defun selftest-toplevel (args)
+  (assert (= 0 (length args)))
+  (asdf:operate 'asdf:test-op :cl-e)
+  (force-output)
+  (global-exit 0))
+
 (defun updoc-toplevel (args)
+  (establish-vat)
   (asdf:operate 'asdf:load-op :cl-e.updoc)
   (apply (intern "UPDOC-RUNE-ENTRY" "E.UPDOC") args)
   (force-output)
   (global-exit 0))
 
 (defun irc-repl-toplevel (args)
+  (establish-vat)
   (asdf:operate 'asdf:load-op :cl-e.irc-repl)
   (apply (intern "START-IRC-REPL" :e.irc-repl) args)
   (vat-loop))
 
 (defun translate-toplevel (args)
   (assert (= 1 (length args)))
+  (establish-vat)
   (print (e.elang:get-translation (e.syntax:e-source-to-tree (first args))))
   (fresh-line)
   (force-output)
@@ -110,6 +121,8 @@
         (setf *break-on-signals* (read-from-string (pop args))))
       (("--boe" "--break-on-ejections")
         (setf *break-on-ejections* (read-from-string (pop args))))
+      (("--selftest")
+        (setf toplevel #'selftest-toplevel))
       (("--updoc")
         (setf toplevel #'updoc-toplevel))
       (("--translate")
@@ -135,6 +148,9 @@ Lisp-level options:
       Bind common-lisp:*break-on-signals* to the given value.
   --break-on-ejections|--boe <type>
       Bind e.elib:*break-on-ejections* to the given value.
+  --selftest
+      Action-selecting option:
+      Run the tests for E-on-CL.
   --updoc
       Action-selecting option:
       Invoke the Lisp-implemented Updoc implementation, interpreting the
@@ -167,5 +183,4 @@ Lisp-level options:
     (e.syntax:load-parse-cache-file parse-cache-name)
     (setf *parse-cache-name* parse-cache-name))
 
-  (establish-vat)
   (funcall toplevel args))
