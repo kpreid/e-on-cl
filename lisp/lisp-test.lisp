@@ -22,5 +22,9 @@
                           :type "tlisp" 
                           :directory '(:relative "ltests"))
            (asdf:component-pathname system)))))
-  (assert (do-tests))
+  (with-simple-restart (continue "Proceed as if the lisp-side tests passed.")
+    (loop
+      (with-simple-restart (:retry "Retry the lisp-side tests.")
+        (unless (do-tests)
+          (error "Some tests failed.")))))
   (rem-all-tests))
