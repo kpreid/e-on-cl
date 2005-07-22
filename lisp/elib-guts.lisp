@@ -621,7 +621,7 @@
       (error "null is not allowed as the handler"))
     (unless (eeq-is-settled opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
-    (e-lambda "org.erights.e.elib.ref.makeProxyResolver$proxyResolver" ()
+    (e-lambda "$proxyResolver" ()
       (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<Proxy Resolver>"))

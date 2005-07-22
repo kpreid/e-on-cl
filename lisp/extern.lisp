@@ -163,7 +163,7 @@
             (cl-ppcre:scan (slot-value pattern 'scanner) input)
           ;(print (list 'oro-results match-start match-end reg-starts reg-ends))
           (setf result-obj (if match-start
-            (e-lambda "org.apache.oro.text.regex.perl5Matcher$matchResult" ()
+            (e-lambda "$matchResult" ()
               (:|groups| () 
                 (1+ (length reg-starts)))
               (:|group| (index) 

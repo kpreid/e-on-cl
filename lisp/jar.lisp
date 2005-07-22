@@ -17,7 +17,7 @@
         (e-coercef subpath 'string)
         (let ((entry (get-zipfile-entry subpath zipfile)))
           (when entry
-            (e-lambda "org.cubik.cle.prim.open-jar$jar$entry" ()
+            (e-lambda "$entry" ()
               (:|getText| ()
                 ;; XXX merge this with whatever our overall encoding strategy turns out to be
                 (let ((data (zipfile-entry-contents entry)))

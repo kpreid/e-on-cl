@@ -1,0 +1,31 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.fqn
+  (:use :cl :e.lisp-test))
+(cl:in-package :e.lisp-test)
+
+(defmacro with-path (path-form &body body &aux (path-var (gensym)))
+  `(let* ((,path-var ,path-form)
+          (*compile-file-truename* ,path-var)
+          (*load-truename* ,path-var))
+    ,@body))
+
+(defun fqn-of (x) (e. (e. x |__getAllegedType|) |getFQName|))
+
+(deftest fqn.default
+  (fqn-of (with-path nil 
+            (eval `(e-lambda "$hello" ()))))
+  "<unknown-lisp>$hello")
+  
+(deftest fqn.path
+  (fqn-of (with-path (make-pathname :name "world") 
+            (eval `(e-lambda "$hello" ()))))
+  "world$hello")
+
+(deftest fqn.nest
+  (fqn-of (e. 
+            (with-path (make-pathname :name "world") 
+              (eval `(e-lambda "$hello" () (:|run| () (e-lambda "$sub" ())))))
+            |run|))
+  "world$hello$sub")

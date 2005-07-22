@@ -35,7 +35,17 @@
                              result)
         (if (string= result "") ; sanity check
           fq-name
-          result)))))
+          result))))
+  
+  (defun join-fq-name (prefix qname)
+    "Return 'qname' if it has the format of a fully-qualified name, or 'qname' joined with 'prefix' otherwise."
+    (cond
+      ((and (string/= qname "") (string= qname "$" :end1 1))
+        (concatenate 'string prefix (subseq qname 1)))
+      (t
+        ; XXX the error case comes from Java-E structure (separated isFQName). we should find out why Java-E bothers separating it, and decide whether to use the same structure here
+        qname
+        #-(and) (error "Unrecognized qualified name: ~A (being qualified with prefix ~A)" (e-quote qname) (e-quote prefix))))))
 
 ; --- Macros ---
 
@@ -652,10 +662,19 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
     (unless (find verb entries :key #'car)
       `(((,verb) ,@body))))
 
-  (defun gen-fqn ()
-    (format nil "~A$_" (or *compile-file-truename* 
-                           *load-truename* 
-                           "<cl-eval>")))
+  (defmacro %fqn-prefix ()
+    (format nil "~A$" (or *compile-file-truename* 
+                          *load-truename* 
+                          "<unknown-lisp>")))
+  
+  (defmacro nest-fq-name ((qname) &body body &environment env)
+    `(macrolet ((%fqn-prefix () 
+                 ,(join-fq-name (environment-fqn-prefix env)
+                                (concatenate 'string qname "$"))))
+      ,@body))
+  
+  (defun environment-fqn-prefix (env)
+    (macroexpand '(%fqn-prefix) env))
     
   (defun e-lambda-expansion (method-entries fqn documentation stamp-forms opt-otherwise-body
       &aux (self-func (make-symbol fqn))
@@ -665,6 +684,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
            (args-sym   (gensym "ARGS")))
     (declare (string fqn documentation))
     `(let ((,stamps-sym (vector ,@stamp-forms)))
+      (nest-fq-name (,fqn)
         (labels ((,self-func (,mverb-sym &rest ,args-sym)
           (case ,mverb-sym
             ,@(loop for desc in method-entries
@@ -699,16 +719,16 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (if opt-otherwise-body
                     (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
                     fallthrough))))))))
-          ,self-expr)))
+          ,self-expr))))
           
   ) ; end eval-when
   
 
-(defmacro efun (method-first &body method-rest)
-  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (gen-fqn) "" '() nil))
+(defmacro efun (method-first &body method-rest &environment env)
+  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "_") "" '() nil))
 
 
-(defmacro e-lambda (fqn (&rest options) &body entries)
+(defmacro e-lambda (fqn (&rest options) &body entries &environment env)
   "XXX document this
 
 fqn may be NIL or a string."
@@ -716,9 +736,8 @@ fqn may be NIL or a string."
         (opt-otherwise-body nil)
         (documentation ""))
     ;; Normalize/check simple options
-    (if fqn
-      (check-type fqn string)
-      (setf fqn (gen-fqn)))
+    (check-type fqn (or null string))
+    (setf fqn (join-fq-name (environment-fqn-prefix env) (or fqn "_")))
     ;; Parse options
     (loop for (key value) on options by #'cddr do
       (case key

@@ -165,7 +165,9 @@
     :+the-make-type-desc+
     :+the-make-message-desc+
     :+the-make-param-desc+
+    
     :simplify-fq-name
+    :join-fq-name
     
     :make-equalizer
     :eeq-is-settled
@@ -225,6 +227,8 @@
   elib:+the-make-proxy-resolver+)
 
 (declaim (ftype function
+  e.elib:simplify-fq-name
+  e.elib:join-fq-name
   e.elib:make-equalizer
   e.elib:cl-type-simple-expr
   e.elib:eeq-same-yet-hash

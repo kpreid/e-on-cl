@@ -367,7 +367,7 @@
     (e-coercef name 'string)
     (e-coercef fetchpath 'vector)
     (with-result-promise (loader)
-      (e-lambda "org.cubik.cle.prim.makePathLoader$loader" ()
+      (e-lambda "$loader" ()
         ; :stamped (deep-frozen-if-every fetchpath)
         #+eventually-frozen-path-loader :stamped
         #+eventually-frozen-path-loader eventually-deep-frozen
@@ -387,11 +387,11 @@
           (if (string= ".*" fqn :start2 (- (length fqn) 2))
             (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
             (loop for sub across fetchpath
-                  do (block continue (return (e. sub |fetch| fqn (e-lambda "org.cubik.cle.prim.makePathLoader$loader$continueSearchThunk" () (:|run| () (return-from continue))))))
+                  do (block continue (return (e. sub |fetch| fqn (e-lambda "$continueSearchThunk" () (:|run| () (return-from continue))))))
                   finally (e. absent-thunk |run|))))
         (:|get| (fqn) 
           (e. loader |fetch| fqn 
-            (e-lambda "org.cubik.cle.prim.makePathLoader$loader$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
+            (e-lambda "$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
         (:|optUncall| (specimen)
           (loop for sub across fetchpath thereis
             (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))

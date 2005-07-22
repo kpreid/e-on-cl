@@ -42,7 +42,7 @@
          (Ref (e. scope |get| "Ref"))
          (outcome-vow (e. (e. scope |get| "rune") |run| (coerce args 'vector))))
     (e. Ref |whenResolved| outcome-vow
-      (e-lambda "org.erights.e.elang.interp.rune$terminator" ()
+      (e-lambda "org.erights.e.elang.interp.RuneTerminator" ()
         (:|run| (outcome 
             &aux (opt-problem (e. Ref |optProblem| outcome)))
           (if opt-problem

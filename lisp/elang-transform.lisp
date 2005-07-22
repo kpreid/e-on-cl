@@ -344,19 +344,16 @@
         `(error "Plumbing match failure: ~W#~A" ',qualified-name mverb)))))
 
 (defmacro updating-fully-qualify-name (scope-layout-place qn-form
-    &aux (qn-var (gensym)) (scope-var (gensym)))
+    &aux (qn-var (gensym)) (prefix-var (gensym)))
   ; This is a macro because it will need to update the scope layout once scope layouts have 'anonymous object serial number' information
   `(let ((,qn-var ,qn-form)
-         (,scope-var ,scope-layout-place))
+         (,prefix-var (scope-layout-fqn-prefix ,scope-layout-place)))
     (cond
-      ((string= ,qn-var "_") ; XXX numeric tag
-        (concatenate 'string (scope-layout-fqn-prefix ,scope-var) "_"))
-      ((and (string/= ,qn-var "") (string= ,qn-var "$" :end1 1))
-        (concatenate 'string (scope-layout-fqn-prefix ,scope-var) (subseq ,qn-var 1)))
+      ((string= ,qn-var "_") 
+        ;; XXX should generate a serial number instead
+        (concatenate 'string ,prefix-var "_"))
       (t
-        ; XXX the error case comes from Java-E structure (separated isFQName). we should find out why Java-E bothers separating it, and decide whether to use the same structure here
-        ,qn-var
-        #-(and) (error "Unrecognized qualified name: ~A (being qualified with prefix ~A)" (e-quote ,qn-var) (e-quote (scope-layout-fqn-prefix ,scope-var)))))))
+        (join-fq-name ,prefix-var ,qn-var)))))
 
 (def-expr-transformation |ObjectExpr| (layout doc-comment qualified-name auditor-exprs eScript
     &aux vars

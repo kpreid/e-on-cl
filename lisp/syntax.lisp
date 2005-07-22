@@ -231,7 +231,7 @@ XXX make precedence values available as constants"
                     (declare (ignore opt-original))
                     (e-coercef index 'integer)
                     (e. tw |print| tag "{" index "}"))))
-        (e-lambda "org.erights.e.elang.syntax.ePrinter$printVisitor" ()
+        (e-lambda "$printVisitor" ()
           (:|__printOn| (ptw)
             (e-coercef ptw +the-text-writer-guard+)
             (e. ptw |print| "<E-syntax node visitor printing to " tw ">")
