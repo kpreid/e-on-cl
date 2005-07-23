@@ -196,7 +196,7 @@
            (string= suffix string :start2 without-len))
     (subseq string 0 without-len)))
   
-s(declaim (inline without-prefix)
+(declaim (inline without-prefix)
          (ftype (function (string string) (or null string)) without-prefix))
 (defun without-prefix (string prefix 
     &aux (split-index (length prefix)))
