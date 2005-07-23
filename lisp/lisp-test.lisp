@@ -25,6 +25,8 @@
   (with-simple-restart (continue "Proceed as if the lisp-side tests passed.")
     (loop
       (with-simple-restart (:retry "Retry the lisp-side tests.")
-        (unless (do-tests)
+        (if (do-tests)
+          (return)
           (error "Some tests failed.")))))
+  (fresh-line)
   (rem-all-tests))
