@@ -97,10 +97,10 @@
     #+sbcl  (sb-ext:gc :full t)
     #+cmu   (extensions:gc) ; other documentation claimed SYSTEM:GC
     #+ccl   (ccl:gc)
-    #+clisp (ext:gc)        ; XXX untested
+    #+clisp (ext:gc)
     #+allegro (excl:gc t nil) ; XXX untested
     #+abcl  (ext:gc)        ; XXX untested
-    )))
+    (values))))
 
 ; --- Timer ---
 
