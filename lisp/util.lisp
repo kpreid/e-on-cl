@@ -346,3 +346,11 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 ;;   <kpreid> Are there any semi-portable interfaces to capture a stack trace, as a debugger might do interactively?
 ;;   <tbmoore> kpreid: The swank support, perhaps.
 ;; So we could perhaps avoid reinventing some platform layering by using SWANK - but it'd be another dependency, and a rather odd one. Hm. -- kpreid 2005-06-19
+
+; --- MOP ---
+
+#+#.(cl:if (cl:eql (cl:symbol-package 'e.util:class-precedence-list) 
+                   (cl:find-package :e.util)) :t :nil)
+  (defun class-precedence-list (&rest args)
+    (error "No MOP package known for this implementation, to retrieve class-precedence-list from."))
+
