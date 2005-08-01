@@ -24,6 +24,8 @@
   
     :aan
     :named-lambda
+    :map-from-hash
+    
     :run-program
     :external-process-input-stream
     :external-process-output-stream

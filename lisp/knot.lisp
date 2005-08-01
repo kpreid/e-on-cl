@@ -3,39 +3,6 @@
 
 (in-package :e.knot)
 
-(declaim (inline map-from-hash)
-         (ftype (function (t function hash-table) (or null vector list)) map-from-hash))
-; XXX this should be in some other file - it's here because it was first written for use in the scope code
-(defun map-from-hash (result-type function hash-table)
-  "Like cl:map, but iterating over hash tables."
-  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-  (cond
-    ((subtypep result-type 'nil)
-      (maphash function hash-table))
-    ((subtypep result-type 'list)
-      (loop for key being each hash-key of hash-table using (hash-value value)
-            collect (funcall function key value)))
-    ((subtypep result-type 'vector)
-      (loop with v = (make-array (hash-table-count hash-table)
-                       :element-type
-                         (cond
-                           ((or (eql result-type 'vector)
-                                (and (consp result-type)
-                                     (eql (first result-type) 'vector)
-                                     (eql (second result-type) '*)))
-                             't)
-                           ((and (consp result-type)
-                                 (eql (first result-type) 'vector))
-                             (second result-type))
-                           (t
-                             (error "unsupported vector result type ~S in map-from-hash" result-type))))
-            for key being each hash-key of hash-table using (hash-value value)
-            for i from 0
-            do (setf (aref v i) (funcall function key value))
-            finally (return v)))
-    (t
-      (error "unsupported result type ~S in map-from-hash" result-type))))
-
 (defglobals +e-ref-kit-slot+)
 
 ; --- Scope objects ---

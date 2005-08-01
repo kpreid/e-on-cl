@@ -10,6 +10,8 @@
      (:file "compile-options")
      (:file "util"
             :depends-on ("compile-options" "packages"))
+     (:file "util-guts"
+            :depends-on ("util"))
      (:file "base"
             :depends-on ("util" "packages"))
      (:file "elib"
