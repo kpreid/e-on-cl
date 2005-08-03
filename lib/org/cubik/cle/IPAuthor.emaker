@@ -46,8 +46,6 @@ def IPAuthor implements DeepFrozen {
     
     def clCoerce := lisp["CL", "COERCE"]::"function"
     def makeInstance := lisp["CL", "MAKE-INSTANCE"]::"function"
-    def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
-    def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
 
     def fooWrite := lisp["E.SOCKETS", "FOO-WRITE"]::"function"
     def fooConnectTcp := lisp["E.SOCKETS", "FOO-CONNECT-TCP"]::"function"
@@ -100,7 +98,6 @@ def IPAuthor implements DeepFrozen {
             # The buffer for the output side; there is no portable way to ask a socket how much local buffer is available, so we must maintain our own.
             def outBuffer := [].diverge(Element)
 
-            def inBuffer := [].diverge(Element)
             
             def outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
               to __printOn(out :TextWriter) {
@@ -128,8 +125,8 @@ def IPAuthor implements DeepFrozen {
               }
               
             })
-
-            def inStream := makeFDInStream(nameObj, inBuffer, socket::sockoptReceiveBuffer, socket)
+            
+            def inStream := makeFDInStream(nameObj, socket, socket::sockoptReceiveBuffer)
             
             outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
             

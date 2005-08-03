@@ -16,6 +16,7 @@ def Element := int # XXX should be int8 (0..255)
 
 def makeFDInStreamAuthor {
   to run(lisp) {
+    # XXX reduce the amount of lisp stuff this emaker uses
 
     def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
     def read := lisp["CL", "READ-FROM-STRING"]::"function"
@@ -33,13 +34,17 @@ def makeFDInStreamAuthor {
         } 
       }
     }
-    def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
-    def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
+
     def fooAddReceiveHandler := lisp["E.SOCKETS", "FOO-ADD-RECEIVE-HANDLER"]::"function"
     def fooRemoveReceiveHandler := lisp["E.SOCKETS", "FOO-REMOVE-RECEIVE-HANDLER"]::"function"
 
+    /** Make an InStream that reads from a non-blocking-POSIX-read()-style data source. */
     def makeFDInStream implements DeepFrozenStamp {
-      to run(nameObj, inBuffer, bufferLimit, fdRef) {
+      /** 'nameObj' is used for printing the stream. */
+      to run(nameObj :any, fdRef, bufferLimit :(int >= 1)) {
+
+        def inBuffer := [].diverge(Element)
+
         def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
           to __printOn(out :TextWriter) {
             out.printSame(nameObj)
@@ -56,9 +61,9 @@ def makeFDInStreamAuthor {
           }
           
         })
-    
+        
         var eof := false
-    
+        
         def inFDHandler
         def removeHandler() {
           fooRemoveReceiveHandler((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
