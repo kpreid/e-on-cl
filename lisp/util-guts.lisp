@@ -5,8 +5,73 @@
 
 ;;; --- serve-event ---
 
-#+sbcl (setf (fdefinition 'serve-event) #'sb-sys:serve-event)
-#+cmu  (setf (fdefinition 'serve-event) #'system:serve-event)
+;; Simple passthrough
+
+#+sbcl 
+(progn
+  (setf (fdefinition 'serve-event)       #'sb-sys:serve-event)
+  (setf (fdefinition 'add-io-handler)    #'sb-sys:add-fd-handler)
+  (setf (fdefinition 'remove-io-handler) #'sb-sys:remove-fd-handler))
+#+cmu
+(progn
+  (setf (fdefinition 'serve-event)       #'system:serve-event)
+  (setf (fdefinition 'add-io-handler)    #'system:add-fd-handler)
+  (setf (fdefinition 'remove-io-handler) #'system:remove-fd-handler))
+
+;; Implement our own
+
+#+(or clisp) (progn
+  ;; XXX threading: for our purposes, this would better be represented as a vat/runner slot
+  (defvar *serve-event-handlers* (make-hash-table))
+  
+  (defclass handler ()
+    ((direction :initarg :direction
+                :type '(member :input :output)
+                :accessor handler-direction)
+     (function  :initarg :function
+                :accessor handler-function)))
+
+  (defclass zombie-handler () ())
+  
+  
+  (defun add-io-handler (target direction function)
+    (let ((handler (make-instance 'handler :direction direction :function function)))
+      (setf (gethash handler *serve-event-handlers*) target)
+      handler))
+  
+  (defun remove-io-handler (handler)
+    (coerce handler 'handler)
+    (remhash handler *serve-event-handlers*)
+    (change-class handler 'zombie-handler)
+    (values))
+  
+  (defun serve-event (&optional timeout)
+    #+e.serve-event-trace (format *trace-output* "~&; entering e serve-event ~A with ~A handlers~%" timeout (hash-table-count *serve-event-handlers*))
+    (let* ((status-input
+             (map-from-hash
+               'list
+               (lambda (handler stream)
+                 `(,stream ,(handler-direction handler) . ,handler))
+               *serve-event-handlers*))
+           (statuses
+            (if status-input
+              (progn
+                #+e.serve-event-trace (format *trace-output* "~&; entering socket-status")
+                (socket:socket-status
+                  (copy-tree status-input)
+                  timeout))
+              (if timeout
+                (progn
+                  #+e.serve-event-trace (format *trace-output* "~&; sleeping (no handlers)~%")
+                  (sleep timeout))
+                (break "Sleeping indefinitely: serve-event with no handlers and no timeout")))))
+      (loop for (stream nil . handler) in status-input
+            for (nil    nil . status)  in statuses
+            do #+e.serve-event-trace (format *trace-output* "~&; serve-event: calling handler ~S function ~S for ~S~%" handler (handler-function handler) stream)
+               (funcall (handler-function handler) stream)))
+  #+e.serve-event-trace (format *trace-output* "~&; exiting e serve-event~%")))
+
+;; Stub
 
 (unless (fboundp 'serve-event)
   (defun serve-event (&optional timeout)

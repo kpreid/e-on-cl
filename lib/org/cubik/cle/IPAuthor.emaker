@@ -48,11 +48,9 @@ def IPAuthor implements DeepFrozen {
     def makeInstance := lisp["CL", "MAKE-INSTANCE"]::"function"
     def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
     def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
-    def makeFDRef := lisp["E.SOCKETS", "MAKE-FD-REF"]::"function"
 
-    # XXX SBCL internal function
-    def _write := lisp["SB-UNIX", "UNIX-WRITE"]::"function"
-    def _strerror := lisp["SB-IMPL", "STRERROR"]::"function"
+    def fooWrite := lisp["E.SOCKETS", "FOO-WRITE"]::"function"
+    def fooConnectTcp := lisp["E.SOCKETS", "FOO-CONNECT-TCP"]::"function"
   
     def IP0 {
       to __printOn(out :TextWriter) {
@@ -94,19 +92,7 @@ def IPAuthor implements DeepFrozen {
                 [int, read("(cl:unsigned-byte 8)"), read(":default")] # XXX should be int8
               } 
             
-            # working now, portable later
-            def socket := makeInstance(
-              l`sb-bsd-sockets:inet-socket`, 
-              l`:type`, l`:stream`,
-              l`:protocol`, l`:tcp`)
-            
-            def socketFD := (lisp["SB-BSD-SOCKETS", "SOCKET-FILE-DESCRIPTOR"]::"function")(socket)
-            def fdRef := makeFDRef(socketFD)
-              
-            socket.setNonBlocking(true)
-            escape err {
-              socket.connect(clCoerce(hostSpec, read("(cl:vector (cl:unsigned-byte 8) 4)")), portSpec, err)
-            } catch p {} # XXX ignore only EINPROGRESS
+            def socket := fooConnectTcp(hostSpec, portSpec, null)
             
             # this value is semantically arbitrary, but matching the socket's default send buffer is, I hope, good for efficiency
             def maxOutAvailable := socket::sockoptSendBuffer
@@ -129,18 +115,15 @@ def IPAuthor implements DeepFrozen {
               to flush() {
                 def v := clCoerce(outBuffer.snapshot(), read("(cl:vector (cl:unsigned-byte 8))"))
                 
-                def [elementsWritten, errno] := _write.tuple(socketFD, v, 0, v.size())
-                
-                if (errno != 0) { 
-                  # XXX library function for errno processing - merge with read/3 in sockets.lisp
-                  # XXX typed exception; javaism
-                  def p := `file descriptor write error for $outStream: $errno (${_strerror(errno)})` :<type:java.lang.Exception>
-                  traceln(p)
-                  outStream.fail(p)
-                } else {
-
+                escape writeError {
+                  def elementsWritten := fooWrite(socket, v, writeError)
                   outBuffer.setRun(0, elementsWritten, [])
                   outBackend.setAvailable(maxOutAvailable - outBuffer.size())
+                } catch error {
+                  # XXX typed exception; javaism
+                  def p := `file descriptor write error for $outStream: $error` :<type:java.lang.Exception>
+                  traceln(p)
+                  outStream.fail(p)
                 }
               }
               

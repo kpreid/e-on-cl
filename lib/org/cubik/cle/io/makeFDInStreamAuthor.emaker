@@ -19,6 +19,13 @@ def makeFDInStreamAuthor {
 
     def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
     def read := lisp["CL", "READ-FROM-STRING"]::"function"
+    def intern := lisp["CL", "INTERN"]::"function"
+    { def asdfOperate := lisp["ASDF", "OPERATE"]::"function"
+      def load_op := intern("LOAD-OP", "ASDF")
+      
+      # XXX :verbose nil for asdf loads
+      asdfOperate(load_op, intern("CL-E.SOCKETS", "KEYWORD"))
+    }
     def l__quasiParser {
       to valueMaker(t) {
         return def vm {
@@ -28,6 +35,8 @@ def makeFDInStreamAuthor {
     }
     def lispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
     def withTurn := lisp["E.ELIB", "%WITH-TURN"]::"function"
+    def fooAddReceiveHandler := lisp["E.SOCKETS", "FOO-ADD-RECEIVE-HANDLER"]::"function"
+    def fooRemoveReceiveHandler := lisp["E.SOCKETS", "FOO-REMOVE-RECEIVE-HANDLER"]::"function"
 
     def makeFDInStream implements DeepFrozenStamp {
       to run(nameObj, inBuffer, bufferLimit, fdRef) {
@@ -52,36 +61,32 @@ def makeFDInStreamAuthor {
     
         def inFDHandler
         def removeHandler() {
-          (lisp["SB-SYS", "REMOVE-FD-HANDLER"]::"function")((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
+          fooRemoveReceiveHandler((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
         }
         
         def vat := lisp["E.ELIB", "*VAT*"]::value
         
-        bind inFDHandler := (lisp["SB-SYS", "ADD-FD-HANDLER"]::"function")(fdRef.getFD(), l`:input`, lispFunction(def fdHandlerFunc(_) {
+        bind inFDHandler := fooAddReceiveHandler(fdRef, def fdHandler() {
           
-          withTurn(lispFunction(thunk {
-          
-            escape error {
-              escape eofExit {
-                def elements := fdRef.read(bufferLimit - inBuffer.size(), error, eofExit)
-                #traceln(`$inStream: read $elements from fd $fdRef`)
-                inBuffer.append(elements)
-              } catch _ {
-                traceln(`$inStream: eof`)
-                removeHandler()
-                eof := true
-              }
-            } catch p {
-              traceln(`$inStream: error $p`)
+          escape error {
+            escape eofExit {
+              def elements := fdRef.read(bufferLimit - inBuffer.size(), error, eofExit)
+              #traceln(`$inStream: read $elements from fd $fdRef`)
+              inBuffer.append(elements)
+            } catch _ {
+              traceln(`$inStream: eof`)
               removeHandler()
-              inStream.fail(p)
+              eof := true
             }
-            
-            inBackend.setAvailable(inBuffer.size())
-            
-          }), vat)
+          } catch p {
+            traceln(`$inStream: error $p`)
+            removeHandler()
+            inStream.fail(p)
+          }
           
-        }))
+          inBackend.setAvailable(inBuffer.size())
+          
+        })
         
         return inStream
       }

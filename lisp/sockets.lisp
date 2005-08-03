@@ -2,7 +2,9 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defpackage :e.sockets
-  (:use :cl :elib #+sbcl :sb-bsd-sockets)
+  (:use :cl :e.util :elib 
+        #+sbcl :sb-bsd-sockets
+        #+clisp :socket)
   (:documentation "Taming the Lisp's socket interface, if it has one.")
   (:export))
 
@@ -45,12 +47,116 @@
   
   (:|getFD| (this) (socket-file-descriptor this))
   )
-  
+
+#+sbcl
+(defun errno-to-condition (errno)
+  (make-instance 'simple-error
+    :format-control "error ~A (~A)"
+    :format-arguments (list errno (sb-impl::strerror errno))))
+
+#+sbcl
+(defun foo-write (target vector error-ejector)
+  "half-baked function used from IPAuthor"
+  (setf target (ref-shorten target))
+  (e-coercef vector '(vector (unsigned-byte 8)))
+  (multiple-value-bind (n errno)
+      (sb-unix::unix-write (socket-file-descriptor target) vector 0 (length vector))
+    (if (= 0 errno)
+      n
+      (eject-or-ethrow error-ejector (errno-to-condition errno)))))
+
+#+clisp
+(defun foo-write (target vector error-ejector)
+  (e-coercef vector '(vector (unsigned-byte 8)))
+  (multiple-value-bind (x n)
+      (ext:write-byte-sequence vector target :no-hang t)
+    (declare (ignore x))
+    n))
+
+#-(or sbcl clisp)
+(defun foo-write (target vector error-ejector)
+  (error "foo-write not implemented"))
+
+#+sbcl
+(defun in-progress-socket-error-p (error)
+  "xxx:sb-bsd-sockets fails to provide a condition class for EINPROGRESS, so we implement it ourselves using internal stuff"
+  (and (typep error 'socket-error)
+       (eql (sb-bsd-sockets::socket-error-errno error) 
+            #.sb-posix:einprogress)))
+
+#+sbcl
+(defun foo-connect-tcp (host port opt-ejector)
+  (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
+  (e-coercef port '(unsigned-byte 16))
+  (let ((socket (make-instance 'inet-socket 
+                  :type :stream
+                  :protocol :tcp)))
+    (setf (non-blocking-mode socket) t)
+    (handler-case
+        (socket-connect socket host port)
+      ((satisfies in-progress-socket-error-p) (condition)
+        (declare (ignore condition)))
+      (socket-error (condition)
+        (eject-or-ethrow opt-ejector condition)))
+    socket))
+
+#+clisp
+(defun foo-connect-tcp (host port opt-ejector)
+  (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
+  (e-coercef port '(unsigned-byte 16))
+  (socket:socket-connect port (e. "." |rjoin| (map 'vector #'prin1-to-string host)) :element-type '(unsigned-byte 8) :buffered nil :timeout 0))
+
+; --- ---
+
+#+sbcl (defun %convert-handler-target (target)
+         (socket-file-descriptor target))
+#+clisp (defun %convert-handler-target (target)
+          target)
+
+(defun foo-add-receive-handler (target e-function
+    &aux (vat *vat*))
+  (e.util:add-io-handler
+    (%convert-handler-target target)
+    :input
+    (named-lambda e-receive-handler (x)
+      (declare (ignore x)) 
+      (e.elib::%with-turn 
+        (e.knot::e-to-lisp-function 
+          e-function)
+        vat))))
+
+(defun foo-remove-receive-handler (handler)
+  (e.util:remove-io-handler handler))
+
+; --- ---
+
+; XXX this vtable should be in the main system: streams might be used for non-sockets purposes.
+(def-vtable stream
+  #+clisp
+  (:|read/3| (stream max-elements error-ejector eof-ejector)
+    "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
+    (let ((buf (make-array max-elements :element-type '(unsigned-byte 8) :fill-pointer t)))
+      (setf (fill-pointer buf)
+        (ext:read-byte-sequence buf stream :no-hang t))
+      (if (and (= 0 (fill-pointer buf))
+               (eq (socket-status (cons stream :input) 0) :eof))
+        (eject-or-ethrow eof-ejector "stream EOF")
+        buf)))
+  #+clisp
+  (:|getSockoptSendBuffer/0| (stream)
+    (socket-options stream :so-sndbuf))
+  #+clisp
+  (:|getSockoptReceiveBuffer/0| (stream)
+    (socket-options stream :so-rcvbuf)))
+
+; --- ---
 
 ; XXX this should not be in sockets but in something more general
 (defun make-fd-ref (fd)
   (e-lambda "org.cubik.cle.io.FDRef" ()
     (:|getFD| () fd)
+
+    #+sbcl
     (:|read| (max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
       ; XXX be able to avoid allocating the buffer
@@ -68,7 +174,7 @@
           (case n-read
             ((nil)
               (case errno
-                ((#.sb-unix:ewouldblock)
+                ((#.sb-posix:ewouldblock)
                   buf)
                 (otherwise
                   ; XXX typed error with errno slot

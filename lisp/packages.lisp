@@ -25,6 +25,10 @@
     :aan
     :named-lambda
     :map-from-hash
+
+    :serve-event
+    :add-io-handler
+    :remove-io-handler
     
     :run-program
     :external-process-input-stream
@@ -37,7 +41,6 @@
     :without-prefix
     :popping-equal-case
     
-    :serve-event
     :class-precedence-list
     :with-appropriate-floating-point-rules
     

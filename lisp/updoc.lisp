@@ -133,6 +133,9 @@
 
 ; --- Script running ---
 
+(defvar *print-steps* nil
+  "incomplete tracing of step execution, for debugging if updoc just hangs")
+
 (defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream)
   (symbol-macrolet ((scope (e-slot-value scope-slot))
                     (wait-hook (e-slot-value wait-hook-slot)))
@@ -140,7 +143,9 @@
         &aux new-answers new-result backtrace)
       (destructuring-bind (expr answers) step
         (multiple-value-bind (result-promise result-resolver) (make-promise)
-          (princ ".")
+          (if *print-steps*
+            (format t "~&? ~A~%" expr)
+            (princ "."))
           (force-output)
           (setf new-answers nil)
           (labels ((collect-streams ()
@@ -177,8 +182,10 @@
                   (setf (values new-result scope)
                           (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
               (collect-streams)
-              (if new-result
-                (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers))
+              (when new-result
+                (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers)
+                (when *print-steps*
+                  (format t "~&# ~A: ~A~%" (caar new-answers) (cadar new-answers))))
               (e. (e. scope |get| "Ref") |whenResolved| wait-hook (efun (x)
                 ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
                 (declare (ignore x))
