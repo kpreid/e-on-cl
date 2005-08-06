@@ -6,7 +6,10 @@
         #+sbcl :sb-bsd-sockets
         #+clisp :socket)
   (:documentation "Taming the Lisp's socket interface, if it has one.")
-  (:export))
+  (:export
+    :foo-write
+    :foo-connect-tcp
+    :get-addr-info))
 
 (in-package :e.sockets)
 
@@ -85,15 +88,16 @@
             #.sb-posix:einprogress)))
 
 #+sbcl
-(defun foo-connect-tcp (host port opt-ejector)
-  (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
-  (e-coercef port '(unsigned-byte 16))
+(defun foo-connect-tcp (addr-info opt-ejector)
+  (e-coercef addr-info 'pseudo-addr-info)
   (let ((socket (make-instance 'inet-socket 
                   :type :stream
                   :protocol :tcp)))
     (setf (non-blocking-mode socket) t)
     (handler-case
-        (socket-connect socket host port)
+        (socket-connect socket
+                        (host-ent-address (addr-info-host-ent addr-info)) 
+                        (addr-info-port addr-info))
       ((satisfies in-progress-socket-error-p) (condition)
         (declare (ignore condition)))
       (socket-error (condition)
@@ -101,10 +105,13 @@
     socket))
 
 #+clisp
-(defun foo-connect-tcp (host port opt-ejector)
-  (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
-  (e-coercef port '(unsigned-byte 16))
-  (socket:socket-connect port (e. "." |rjoin| (map 'vector #'prin1-to-string host)) :element-type '(unsigned-byte 8) :buffered nil :timeout 0))
+(defun foo-connect-tcp (addr-info opt-ejector)
+  (e-coercef addr-info 'pseudo-addr-info)
+  (socket-connect (addr-info-port addr-info)
+                  (addr-info-unresolved-name addr-info)
+                  :element-type '(unsigned-byte 8) 
+                  :buffered nil 
+                  :timeout 0))
 
 ; --- ---
 
@@ -127,6 +134,53 @@
 
 (defun foo-remove-receive-handler (handler)
   (e.util:remove-io-handler handler))
+
+; --- ---
+
+#+(or sbcl clisp)
+(defclass pseudo-addr-info ()
+  (#+sbcl
+   (host-ent :initarg :host-ent :accessor addr-info-host-ent :type host-ent)
+   #+clisp
+   (unresolved-name :initarg :unresolved-name :accessor addr-info-unresolved-name :type string)
+   (port :initarg :port :accessor addr-info-port :type (unsigned-byte 16))))
+
+(defun get-addr-info (host service hints)
+  (e-coercef host '(or null string))
+  (e-coercef service '(or null string))
+  (e-coercef hints 'null)
+  (e<- (efun () 
+	 (or 
+	  #+sbcl (make-instance 'pseudo-addr-info
+				:host-ent (get-host-by-name host)
+				:port (if service (parse-integer service) 0))
+                 
+	  #+clisp (make-instance 'pseudo-addr-info
+				 :unresolved-name host
+				 :port (if service (parse-integer service) 0))
+	  (error "~A not implemented for this Lisp" 'get-addr-info)))
+       |run|))
+
+(def-vtable pseudo-addr-info
+  (:|__printOn| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    #+sbcl
+    (with-slots (host-ent port) this
+      (e. tw |write| "<network address ")
+      (e. tw |quote| (host-ent-name host-ent))
+      (loop for address in (host-ent-addresses host-ent) do
+        (e. tw |write| " ")
+        (e. tw |print| (e. "." |rjoin| (map 'vector #'princ-to-string address))))
+      (e. tw |write| ":")
+      (e. tw |print| port)
+      (e. tw |write| ">"))
+    #+clisp
+    (with-slots (unresolved-name port) this
+      (e. tw |write| "<network address ")
+      (e. tw |print| unresolved-name)
+      (e. tw |write| ":")
+      (e. tw |print| port)
+      (e. tw |write| ">"))))
 
 ; --- ---
 

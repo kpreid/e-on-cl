@@ -1,15 +1,36 @@
 # Copyright 2005 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+Basic
+
   ? IP
   # value: <IP network access>
-  
+
+Host names
+
+  Not sure yet what the right name service interface is. For now I'm using:
+    http://www.opengroup.org/onlinepubs/009695399/functions/getaddrinfo.html
+  as a guide - if you're reading this and have an opinion, please let me know. 
+
+  ? interp.waitAtTop(def i := 
+  >   IP.getAddrInfo("localhost", null, null)); i
+  # value: <Promise>
+
+  ? i
+  # value: <network address "localhost" 127.0.0.1:0>
+
+Trivial streams
+
   ? def ALL := EIO.getALL(); null
   
-  ? def e := IP.getRemoteTCPEndpoint([127, 0, 0, 1], 80)
+  ? def e := IP.getRemoteTCPEndpoint("127.0.0.1", "80")
   # value: <remote TCP endpoint 127.0.0.1:80>
  
   ? def [ins, outs] := e.connect([].asMap())
+  > interp.waitAtTop(ins)
+  > interp.waitAtTop(outs)
+  
+  ? [ins, outs]
   # value: [<-127.0.0.1:80, ->127.0.0.1:80]
   
   ? ins.available()
@@ -31,4 +52,21 @@
 
   # stdout: [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10]
   
-  ? # dummy updoc step
+  ? [ins.close(), outs.close()]
+  # value: [true, true]
+
+Endpoint with hostname
+
+  ? def e2 := IP.getRemoteTCPEndpoint("localhost", "80")
+  # value: <remote TCP endpoint localhost:80>
+
+  ? def [ins2, outs2] := e.connect([].asMap())
+  > interp.waitAtTop(ins2)
+  > interp.waitAtTop(outs2)
+ 
+  ? [ins2, outs2]
+  # value: [<-127.0.0.1:80, ->127.0.0.1:80]
+  
+  ? [ins2.close(), outs2.close()]
+  # value: [true, true]
+

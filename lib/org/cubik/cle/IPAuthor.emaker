@@ -45,91 +45,94 @@ def IPAuthor implements DeepFrozen {
     }
     
     def clCoerce := lisp["CL", "COERCE"]::"function"
-    def makeInstance := lisp["CL", "MAKE-INSTANCE"]::"function"
 
     def fooWrite := lisp["E.SOCKETS", "FOO-WRITE"]::"function"
     def fooConnectTcp := lisp["E.SOCKETS", "FOO-CONNECT-TCP"]::"function"
-  
-    def IP0 {
+    def _getAddrInfo := lisp["E.SOCKETS", "GET-ADDR-INFO"]::"function"
+    
+    def Element := int # XXX int8
+    
+    def IP {
       to __printOn(out :TextWriter) {
         out.write("<IP network access>")
       }
+
+      to getAddrInfo(host, service, hints) {
+        # _getAddrInfo handles coercion
+        return _getAddrInfo(host, service, hints)
+      }
     
       /** XXX copy documentation from keio implementation */
-      to getRemoteTCPEndpoint(hostSpec :Tuple[0..255, 0..255, 0..255, 0..255], portSpec :0..65535) {
-        # XXX hostSpec should allow host names
-        # XXX portSpec should allow service names
-        # XXX IPv6 support, or generalized interface
+      to getRemoteTCPEndpoint(hostSpec :String, 
+                              serviceSpec :String) {
         # XXX should we separate out the TCP part?
         
         def remoteTCPEndpoint {
           to __printOn(out :TextWriter) {
             out.write("<remote TCP endpoint ")
-            out.print(".".rjoin(map.v(E.toString, hostSpec)))
+            out.print(hostSpec)
             out.write(":")
-            out.print(portSpec)
+            out.print(serviceSpec)
             out.write(">")
           }
         
-          to connect(=> textStreams :nullOk[String] := null) {
+          to connect(==([].asMap())) {
           
             def nameObj {
               to __printOn(out :TextWriter) {
-                out.print(".".rjoin(map.v(E.toString, hostSpec)))
+                out.print(hostSpec)
                 out.write(":")
-                out.print(portSpec)
+                out.print(serviceSpec)
               }
             }
           
-            def [Element, clElementType, clExternalFormat] :=
-              if (textStreams =~ encoding :notNull) {
-                # XXX use a common charset-name-to-external-format routine (see extern.lisp)
-                #[char, read("cl:character"), intern(encoding, "KEYWORD")]
-                [char, read("cl:character"), read(":default")]
-              } else {
-                [int, read("(cl:unsigned-byte 8)"), read(":default")] # XXX should be int8
-              } 
+            def inStream
+            def outStream
             
-            def socket := fooConnectTcp(hostSpec, portSpec, null)
-            
-            # this value is semantically arbitrary, but matching the socket's default send buffer is, I hope, good for efficiency
-            def maxOutAvailable := socket::sockoptSendBuffer
-            
-            # The buffer for the output side; there is no portable way to ask a socket how much local buffer is available, so we must maintain our own.
-            def outBuffer := [].diverge(Element)
-
-            
-            def outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
-              to __printOn(out :TextWriter) {
-                out.printSame(nameObj)
-              }
+            when (IP.getAddrInfo(hostSpec, serviceSpec, null)) -> done(address) {
+              def socket := fooConnectTcp(address, null)
               
-              to write(elements :List) {
-                require(elements.size() <= maxOutAvailable - outBuffer.size())
-                outBuffer.append(elements)
-              }
+              # this value is semantically arbitrary, but matching the socket's default send buffer is, I hope, good for efficiency
+              def maxOutAvailable := socket::sockoptSendBuffer
               
-              to flush() {
-                def v := clCoerce(outBuffer.snapshot(), read("(cl:vector (cl:unsigned-byte 8))"))
-                
-                escape writeError {
-                  def elementsWritten := fooWrite(socket, v, writeError)
-                  outBuffer.setRun(0, elementsWritten, [])
-                  outBackend.setAvailable(maxOutAvailable - outBuffer.size())
-                } catch error {
-                  # XXX typed exception; javaism
-                  def p := `file descriptor write error for $outStream: $error` :<type:java.lang.Exception>
-                  traceln(p)
-                  outStream.fail(p)
+              # The buffer for the output side; there is no portable way to ask a socket how much local buffer is available, so we must maintain our own.
+              def outBuffer := [].diverge(Element)
+  
+              
+              bind outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
+                to __printOn(out :TextWriter) {
+                  out.printSame(nameObj)
                 }
-              }
+                
+                to write(elements :List) {
+                  require(elements.size() <= maxOutAvailable - outBuffer.size())
+                  outBuffer.append(elements)
+                }
+                
+                to flush() {
+                  def v := clCoerce(outBuffer.snapshot(), l`(cl:vector (cl:unsigned-byte 8))`)
+                  
+                  escape writeError {
+                    def elementsWritten := fooWrite(socket, v, writeError)
+                    outBuffer.setRun(0, elementsWritten, [])
+                    outBackend.setAvailable(maxOutAvailable - outBuffer.size())
+                  } catch error {
+                    # XXX typed exception; javaism
+                    def p := `file descriptor write error for $outStream: $error` :<type:java.lang.Exception>
+                    traceln(p)
+                    outStream.fail(p)
+                  }
+                }
+                
+              })
               
-            })
-            
-            def inStream := makeFDInStream(nameObj, socket, socket::sockoptReceiveBuffer)
-            
-            outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
-            
+              bind inStream := makeFDInStream(nameObj, socket, socket::sockoptReceiveBuffer)
+              
+              outBackend.setAvailable(maxOutAvailable) # no arbitrary side effects as available reactors can't have been registered yet
+            } catch p {
+              inStream__Resolver.smash(p)
+              outStream__Resolver.smash(p)
+            }
             return [inStream, outStream]
           }
         }
@@ -138,6 +141,6 @@ def IPAuthor implements DeepFrozen {
       }
     }
   
-    return IP0
+    return IP
   }
 }
