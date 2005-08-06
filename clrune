@@ -23,6 +23,13 @@ LOADQUIET=nil
 # Print usage help
 DO_USAGE=
 
+# Extra arguments for the Lisp executable
+# code copied from E rune; I don't know how bash arrays work -- kpreid 2005-08-06
+declare -a LISP_EXTRA
+function lisp_extra_push {
+  LISP_EXTRA[${#LISP_EXTRA[@]}]=$1
+}
+
 # --- Option parsing ---
 
 OPTION_PARSING_ENDED=
@@ -33,8 +40,18 @@ while [ $(($# >= 1)) = 1 ]; do
     case $1 in
         --lisp | -l)  shift
                       if [ $(($# < 1)) = 1 ]; then usage; fi
-                      LISP=$1
+                      LISP="$1"
                       shift;;
+
+        -l*)          LISP="${1#-l}"; shift;;
+                      
+        --lisp-option | -L)
+                      shift
+                      if [ $(($# < 1)) = 1 ]; then usage; fi
+                      lisp_extra_push "$1"
+                      shift;;
+
+        -L*)          lisp_extra_push "${1#-L}"; shift;;
         
         --help)       DO_USAGE=t; shift;;
         
@@ -69,13 +86,18 @@ $0:
   Command line options:
     --lisp|-l <path> Specifies the path to the Common Lisp 
                      implementation.
+    --lisp-option|-L <arg>
+                     Pass an extra argument to the command specified by
+                     --lisp.
     --help           Print this help.
     --show           Print the command line which would be used to start
                      the Lisp instead of executing it.
-    --quiet|-q       Do not 
+    --quiet|-q       Avoid printing messages about startup progress.
+    --end-clrune-options
+                     Pass all further options to the Lisp level.
 
-  An unrecognized option or non-option terminates clrune option parsing;
-  all further arguments are passed to the Lisp level.
+  An unrecognized argument or "--" terminates clrune option parsing;
+  that and all further arguments are passed to the Lisp level.
 
   clrune supports starting SBCL, OpenMCL, CLISP, GCL, and ABCL; however,
   ABCL will not be searched for (use the --lisp option to give the path
@@ -140,6 +162,7 @@ case "$LISPTYPE" in
   sbcl)
     "$EXEC" "$LISP" \
       --noinform \
+      "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
       --eval "$COMMON_INIT2" \
@@ -150,6 +173,7 @@ case "$LISPTYPE" in
   cmucl)
     "$EXEC" "$LISP" \
       -quiet \
+      "${LISP_EXTRA[@]}" \
       -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
       -eval "$COMMON_INIT2" \
@@ -157,6 +181,7 @@ case "$LISPTYPE" in
   ;;
   openmcl)
     "$EXEC" "$LISP" \
+      "${LISP_EXTRA[@]}" \
       -e '(require :asdf)' \
       -e "$COMMON_INIT1" \
       -e "$COMMON_INIT2" \
@@ -171,7 +196,7 @@ case "$LISPTYPE" in
     #     "$COMMON_INIT2" \
     #     "(e.rune:rune $QUOTED_ARGS)"
     # xxx Ick! We load .clisprc because using this form of clisp startup unconditionally disables the load file, and we want the rc so that the user's ASDF configuration is available.
-    "$EXEC" "$LISP" -q -ansi \
+    "$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
       -interactive-debug \
       <(echo \
         '(let ((p (or (probe-file (merge-pathnames ".clisprc.lisp" (user-homedir-pathname))) 
@@ -187,12 +212,14 @@ case "$LISPTYPE" in
       echo "; $0: GNU Common Lisp was not sufficiently ANSI-compliant to run CL-E as of 2005-02-18. We'll try anyway:" >&2
     fi
     "$EXEC" "$LISP" -batch \
+      "${LISP_EXTRA[@]}" \
        -eval "(require :asdf \"$QUOTED_HERE/asdf.lisp\")" \
        -eval "$COMMON_INIT1" "$COMMON_INIT2" \
        -eval "(e.rune:rune $QUOTED_ARGS)"
   ;;
   abcl)
     "$EXEC" java -cp "$LISP" org.armedbear.lisp.Main \
+      "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
       --eval "$COMMON_INIT2" \
