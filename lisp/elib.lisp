@@ -659,7 +659,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                     (make-instance 'param-desc))))))
                             
   (defun nl-miranda-case-maybe (verb entries &rest body)
-    (unless (find verb entries :key #'car)
+    (unless (find verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
       `(((,verb) ,@body))))
 
   (defmacro %fqn-prefix ()

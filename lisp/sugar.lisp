@@ -74,3 +74,34 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
        (efun (,result-var)
          ,@forms)))
 
+(defmacro mapping-bind (map-form (&body entries) &body body
+    &aux (map-var (gensym "MAP")))
+  "Equivalent of an E map pattern, vaguely like DESTRUCTURING-BIND and LET*. Defaults are evaluated in LET* style."
+  `(let* ((,map-var ,map-form)
+          ,@(loop
+              for (var key-form . default-cell) in entries
+              for pair-var   = (gensym "EXTRACTION")
+              for cookie-var = (gensym "COOKIE")
+              for key-var    = (gensym "KEY")
+              append 
+              `(,@(when default-cell
+                  `((,cookie-var (make-symbol "COOKIE"))))
+                (,key-var  ,key-form)
+                (,pair-var ,(if default-cell
+                              `(e. ,map-var |extract| ,key-var ,cookie-var)
+                              `(e. ,map-var |optExtract| ,key-var)))
+                (,var      (progn
+                             (unless (ref-shorten ,pair-var)
+                               (error "needs a mapping for ~A, got ~A"
+                                 (e-quote ,key-var)
+                                 (e-quote ,map-var)))
+                             (e. ,pair-var |get| 0)))
+                ,@(when default-cell
+                  `((,var (if (eq (ref-shorten ,var) ,cookie-var) 
+                            ,(first default-cell) 
+                            ,var))))
+                (,map-var  (e. ,pair-var |get| 1)))))
+    (unless (= 0 (e-coerce (e. ,map-var |size|) '(integer 0)))
+      (error "unexpected map entries ~A" (e-quote ,map-var)))
+    ,@body))
+

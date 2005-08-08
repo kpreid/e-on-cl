@@ -23,7 +23,7 @@
             ; the non-load-order-depended-on portion of elib
             :depends-on ("elib"))
      (:file "elib-values"
-            :depends-on ("elib"))
+            :depends-on ("elib" "sugar"))
      (:file "tables2"
             :depends-on ("elib-guts")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
      (:file "print"

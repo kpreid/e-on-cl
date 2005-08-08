@@ -448,7 +448,21 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       ((< this other) -1.0)
       ((> this other) 1.0)
       ((= this other) 0.0)
-      (t              |NaN|))))
+      (t              |NaN|)))
+  
+  (:|toString| (this)
+    "this.toString([].asMap())"
+    (e. this |toString| (e. #() |asMap|)))
+  (:|toString| (this options)
+    "General number printing. The only option currently defined is \"base\", which must be an integer from 2 to 36, and defaults to 10."
+    ; XXX won't work with non-integers
+    (mapping-bind options
+                  ((base "base" 10))
+      (e-coercef base '(integer 2 36) (efun (c) (declare (ignore c))
+                                        (error "base must be in 2..36, not ~A" base)))
+      (string-downcase
+        (with-standard-io-syntax
+          (format nil "~VR" base this))))))
 
 (defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen number))
   ; xxx is the specimen type too broad?

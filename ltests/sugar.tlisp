@@ -1,0 +1,47 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.sugar
+  (:use :cl :e.lisp-test :e.elib))
+(cl:in-package :e.lisp-test.sugar)
+
+(deftest mapping-bind.trivial
+  (mapping-bind (e. #() |asMap|)
+                ()
+    "ok")
+  "ok")
+
+(deftest mapping-bind.notype
+  (mapcar #'e-print (multiple-value-list (ignore-errors
+    (mapping-bind nil
+                  ()
+      "nok"))))
+  ; XXX we really need better e-print syntax for cons cells
+  ("null" "problem: no such method: Null#size/0"))
+
+(deftest mapping-bind.various
+  (let ((x 0))
+    (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
+                    #(#("a" "alpha") #(#\c "gamma")))
+                  ((a "a")
+                   (b :b (incf x))
+                   (c #\c "oops")
+                   (d "d" b))
+      (list a b c d)))
+  ("alpha" 1 "gamma" 1))
+
+(deftest mapping-bind.missing
+  (mapcar #'e-print (multiple-value-list (ignore-errors
+    (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
+                    #(#(1 2)))
+                  ((a 3))
+      a))))
+  ("null" "problem: needs a mapping for 3, got [1 => 2]"))
+
+(deftest mapping-bind.too-many
+  (mapcar #'e-print (multiple-value-list (ignore-errors
+    (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
+                    #(#(1 2)))
+                  ()
+      "nok"))))
+  ("null" "problem: unexpected map entries [1 => 2]"))
