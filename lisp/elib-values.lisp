@@ -208,6 +208,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       ((char> this other) 1.0)
       ((char= this other) 0.0)
       (t                 |NaN|)))
+  (:|getCodepoint| (this)
+    "Return the Unicode codepoint of this character."
+    ; XXX assuming char-codes == Unicode without verifying
+    (char-code this))
   (:|next| (this)
     "Return the next character in the total ordering of characters. Throws an exception if this is the last character."
     (char-nearby this +1))

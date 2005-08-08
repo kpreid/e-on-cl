@@ -28,4 +28,10 @@ Using Unicode letters in nouns
   ? e`def π2 := π * 2`
   # value: e`def π2 := π.multiply(2)`
 
-XXX more unicode tests as I think of them
+Codepoints
+
+  ? for c in " !Az~ ¡þÿ" { print(" ", c.getCodepoint().toString("base" => 16)) }
+  # stdout:  20 21 41 7a 7e a0 a1 fe ff
+
+XXX more general unicode tests as I think of them
+XXX support Unicode normalization as guards, then ensure that it's used for nouns, to avoid surprises
