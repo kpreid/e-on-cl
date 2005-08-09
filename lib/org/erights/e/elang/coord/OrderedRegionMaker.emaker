@@ -196,6 +196,15 @@ def OrderedRegionMaker implements EventuallyDeepFrozen {
                     throw.eject(optEjector, "not in region")
                 }
             }
+            
+            /** Return the type's trivial value if it is in the region, otherwise fail. */
+            to getTheTrivialValue() :any {
+              return self.coerce(
+                       def t := myType.getTheTrivialValue(),
+                       def cantTrivialize(_) :void {
+                         throw(`trivial value $t is not available in region $self`)
+                       })
+            }
 
             /**
              * Note that the empty region is bounded left, but it doesn't
