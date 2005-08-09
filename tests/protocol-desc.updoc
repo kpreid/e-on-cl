@@ -3,8 +3,18 @@ XXX not complete
   ? interface Foo guards FooStamp {}
   # value: Foo
   
+  ? interface Bar {}
+  # value: <Bar advisory guard/stamp>
+  
   ? Foo :DeepFrozen
   # value: Foo
   
   ? FooStamp :DeepFrozen
   # value: <Foo stamp>
+  
+  ? Foo.getDocComment()
+  # value: ""
+
+  ? Bar.getDocComment()
+  # value: ""
+  

@@ -6,6 +6,7 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+def makeTypeDesc := <import:org.erights.e.elib.base.makeTypeDesc>
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
@@ -34,7 +35,7 @@ def makeProtocolDesc implements DeepFrozen {
     def fqName := if (optFQName == null) { "_" } else { optFQName }
                   
 
-    def protocolDesc implements EventuallyDeepFrozen { # extends makeTypeDesc(docComment, optFQName, supers, auditors, mTypes)
+    def protocolDesc extends makeTypeDesc(docComment, optFQName, supers, auditors, mTypes) implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -79,7 +80,7 @@ def makeProtocolDesc implements DeepFrozen {
   to makePair(docComment :String, optFQName :nullOk[String], supers :List, auditors :List, mTypes :List) {
     # XXX methods
     def stamp
-    def guard implements EventuallyDeepFrozen {
+    def guard extends makeTypeDesc(docComment, optFQName, supers, auditors, mTypes) implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
