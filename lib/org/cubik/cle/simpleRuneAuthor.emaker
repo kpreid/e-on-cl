@@ -28,7 +28,7 @@ def simpleRuneAuthor {
           def interp extends privilegedScope["interp"] {
             to getArgs() { return scriptArgs }})
         
-        return e__quasiParser(<file: scriptName>.getTwine()) <- eval(scope)
+        return e__quasiParser(<file>[scriptName].getTwine()) <- eval(scope)
       }
     }
     return simpleRune

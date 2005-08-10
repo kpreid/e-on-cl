@@ -88,7 +88,7 @@ rune
   
  a directory
   
-  ? def home := <file: interp.getProps()["e.home"]>; null
+  ? def home := <file>[interp.getProps()["e.home"]]; null
 
  a file in the directory
   
