@@ -443,6 +443,77 @@ CatchExpr
   > } catch p { print("catch ") }
   # stdout: body finally catch 
 
+Trinary DefineExpr
+
+ Equivalent to binary define
+  ? pragma.enable("trinary-define")
+  > def x :int := (9, null)
+  # value: 9
+  
+  ? x
+  # value: 9
+  
+  ? pragma.enable("trinary-define")
+  > def x :String := (9, null)
+  # problem: the int 9 doesn't coerce to a String
+  
+ With non-null ejector
+  ? pragma.enable("trinary-define")
+  > def x :int := (9, def _(e) :void { print(e); throw("biff") })
+  # value: 9
+
+  ? pragma.enable("trinary-define")
+  > def x :String := (9, def _(e) :void { print(e); throw("biff") })
+  # stdout: problem: the int 9 doesn't coerce to a String
+  
+  # problem: biff
+  
+ Evaluation order
+ 
+  ? pragma.enable("trinary-define")
+  > def x ? (println("patt"); false) := ((println("specimen"); 8), (println("ejector"); null))
+  # stdout: specimen
+  #         ejector
+  #         patt
+  #         
+  
+  # problem: such-that expression was false
+  
+ Returning "ejector"
+  XXX in Java-E this creates a note in the trace that the ejector returned and proceeds as if the ejector was null
+  ? pragma.enable("trinary-define")
+  > def x :String := (9, def _(_) :void {})
+  # problem: optEjector <_> returned: null
+  
+ Scoping
+  ? pragma.enable("trinary-define")
+  > {def y := "NOT-AN-EJECTOR"; {def x ? false := (def y := null, y)}}
+  # problem: such-that expression was false
+
+  Java-E would reject parsing and expanding the following code, so we have to test it by constructing nodes. (Note that this test does not yet care whether the failure is at node construction time or eval time.)
+
+  {def y := false; def x ? y := (9, def y := true)}
+  ? def <evm> := <elang:evm.*>
+  > <evm:DefineExpr>(null, 
+  >   <evm:SuchThatPattern>(null, 
+  >     <evm:FinalPattern>(null, 
+  >       <evm:NounExpr>(null, "x", null),
+  >       null,
+  >       null), 
+  >     <evm:NounExpr>(null, "y", null),
+  >     null),
+  >   <evm:LiteralExpr>(null, 9, null), 
+  >   <evm:DefineExpr>(null, 
+  >     <evm:FinalPattern>(null, 
+  >       <evm:NounExpr>(null, "y", null), 
+  >       null,
+  >       null), 
+  >     <evm:NounExpr>(null, "true", null), 
+  >     null,
+  >     null), 
+  >   null).eval(safeScope.with("y" => "false").nestOuter())
+  # problem: define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
+
 SlotExpr, SlotPattern, AssignExpr
 
  final slot

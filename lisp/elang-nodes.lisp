@@ -114,8 +114,8 @@
   ((attempt |EExpr|) (catch-pattern |Pattern|) (catcher |EExpr|)))
 
 (def-node-maker |DefineExpr|
-  (t t)
-  ((pattern |Pattern|) (rvalue |EExpr|)))
+  (t t t)
+  ((pattern |Pattern|) (rvalue |EExpr|) (opt-ejector (or null |EExpr|))))
 
 (def-node-maker |FinalPattern|
   (t t)
@@ -174,12 +174,12 @@
 
 (def-node-maker |EScript|
   (t t)
-  ((methods (or null vector)) (matcher (or null |EMatcher|)))
+  ((methods (or null vector)) (matchers vector))
   (progn
-    (unless (or methods matcher)
-      (error "EScript must have methods or matcher"))
+    (unless (or methods (> (length matchers) 0))
+      (error "EScript must have methods or at least one matcher"))
     (list (and methods (map 'vector (lambda (sub) (e-coerce sub '|EMethod|)) methods))
-          matcher)))
+          (map 'vector (lambda (sub) (e-coerce sub '|EMatcher|)) matchers))))
         
 (def-node-maker |ObjectExpr|
   (nil nil t t)
@@ -233,6 +233,26 @@
 (def-node-maker |QuasiPatternExpr| (nil) ((index integer)))
 (def-node-maker |QuasiLiteralPatt| (nil) ((index integer)))
 (def-node-maker |QuasiPatternPatt| (nil) ((index integer)))
+
+; --- constraints on nodes ---
+
+(defun usesp (defining using)
+  "Return whether 'using' uses nouns defined by 'defining'."
+  (> (e. (e. (e. (e. defining |staticScope|) |outNames|)
+             |and|
+             (e. (e. using |staticScope|) |namesUsed|))
+         |size|)
+     0))
+
+(defmethod shared-initialize :after ((node |DefineExpr|) slot-names &key &allow-other-keys
+    &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
+         (r-value (funcall (opt-node-property-getter node :|pattern|)))
+         (opt-ejector-expr (funcall (opt-node-property-getter node :|optEjectorExpr|))))
+  (when (usesp r-value pattern)
+    (error "define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
+  (when (and opt-ejector-expr
+             (usesp opt-ejector-expr pattern))
+    (error "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
 
 ; --- E-level methods, and printing ---
 
@@ -345,7 +365,7 @@
 (def-indexed-node-properties |AssignExpr| ("noun" "rValue"))
 (def-indexed-node-properties |CallExpr| ("recipient" "verb" &rest "args"))
 (def-indexed-node-properties |CatchExpr| ("attempt" "pattern" "catcher"))
-(def-indexed-node-properties |DefineExpr| ("pattern" "rValue"))
+(def-indexed-node-properties |DefineExpr| ("pattern" "rValue" "optEjectorExpr"))
 (def-indexed-node-properties |EscapeExpr| ("exitPattern" "body" "optArgPattern" "optCatcher"))
 (def-indexed-node-properties |FinallyExpr| ("attempt" "unwinder"))
 (def-indexed-node-properties |HideExpr| ("block"))
@@ -356,7 +376,7 @@
 (def-indexed-node-properties |SeqExpr| (&rest "subs"))
 (def-indexed-node-properties |SlotExpr| ("noun"))
 
-(def-indexed-node-properties |EScript| ("optMethods" "optMatcher"))
+(def-indexed-node-properties |EScript| ("optMethods" "matchers"))
 (def-indexed-node-properties |EMatcher| ("pattern" "body"))
 (def-indexed-node-properties |EMethod| ("docComment" "verb" "patterns" "optResultGuard" "body"))
 
@@ -609,7 +629,12 @@
              :|catcher|)))
 
 (def-scope-rule |DefineExpr|
-  (seq :|pattern| :|rValue|))
+  (seq :|pattern|
+       :|rValue| 
+       (! (let ((ex (:get :|optEjectorExpr|)))
+            (if ex
+              (e. ex |staticScope|)
+              (e. +the-make-static-scope+ |getEmptyScope|))))))
 
 (def-scope-rule |EscapeExpr|
   (hide (seq (hide (seq :|exitPattern| :|body|))
@@ -692,9 +717,7 @@
   (seq (! (if (:get :|optMethods|)
             (sum-node-scopes (:get :|optMethods|))
             (e. +the-make-static-scope+ |getEmptyScope|)))
-       (! (if (:get :|optMatcher|)
-            (e. (:get :|optMatcher|) |staticScope|)
-            (e. +the-make-static-scope+ |getEmptyScope|)))))
+       (! (sum-node-scopes (:get :|matchers|)))))
 
 ; --- visitors ---
 
@@ -712,3 +735,4 @@
 
 (defmethod node-visitor-arguments ((node |ListPattern|))
   `(,(coerce (node-elements node) 'vector)))
+

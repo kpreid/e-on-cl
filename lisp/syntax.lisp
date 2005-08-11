@@ -201,6 +201,7 @@ XXX make precedence values available as constants"
     ; XXX have an in-quasi argument - print the LiteralExpr "$" as "$$", and the ${n} as ${n}
     ; XXX have a self argument for implementation inheritance
     ; strictness controls?
+    ; XXX tests for the visitor's Ref-transparency
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef precedence '(or null integer))
     (macrolet ((precedential ((this-min) &body body)
@@ -266,13 +267,20 @@ XXX make precedence values available as constants"
             (e. tw |print| " ")
             (subprint-block catch-body))
           
-          (:|visitDefineExpr| (opt-original pattern specimen)
+          (:|visitDefineExpr| (opt-original pattern specimen opt-ejector)
             (declare (ignore opt-original))
             (precedential (+precedence-define+)
               (e. tw |print| "def ")
               (subprint pattern nil)
               (e. tw |print| " := ")
-              (subprint specimen +precedence-define-right+)))
+              (if opt-ejector
+                (progn
+                  (e. tw |print| "(")
+                  (subprint specimen +precedence-outer+)
+                  (e. tw |print| ", ")
+                  (subprint specimen +precedence-outer+)
+                  (e. tw |print| ")"))
+                (subprint specimen +precedence-define-right+))))
           
           (:|visitEscapeExpr| (opt-original ejector-patt body catch-patt catch-body)
             (declare (ignore opt-original))
@@ -367,8 +375,10 @@ XXX make precedence values available as constants"
               (e. tw |print| "&")
               (subprint noun +precedence-in-slot-expr+)))
           
-          (:|visitEScript| (opt-original opt-methods opt-matcher)
+          (:|visitEScript| (opt-original opt-methods matchers)
             (declare (ignore opt-original))
+            (e-coercef opt-methods '(or null vector))
+            (e-coercef matchers 'vector)
             ; XXX print patterns and opt-result-guard directly
             (if opt-methods
               (progn
@@ -377,13 +387,14 @@ XXX make precedence values available as constants"
                   (loop for method across opt-methods do
                     (e. indented |println|)
                     (subprint method nil :tw indented))
-                (when opt-matcher
+                (loop for matcher across matchers do
                   (e. indented |println|)
-                  (subprint opt-matcher nil :tw indented)))
+                  (subprint matcher nil :tw indented)))
                 (e. tw |lnPrint| #|{|# "}"))
               (progn
+                (assert (= (length matchers) 1) () "XXX Don't know what to do here")
                 (e. tw |print| " ")
-                (subprint opt-matcher nil))))
+                (subprint (aref matchers 0) nil))))
             
           (:|visitEMethod| (opt-original doc-comment verb patterns opt-result-guard body)
             (declare (ignore opt-original))

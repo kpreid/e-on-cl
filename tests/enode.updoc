@@ -68,7 +68,7 @@ AssignExpr
 
 DefineExpr
 
-  ? def expr := makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null)
+  ? def expr := makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null, null)
   # value: e`def a := 1`
   
   ? expr.getRValue()
@@ -77,11 +77,13 @@ DefineExpr
   ? expr.getPattern()
   # value: epatt`a`
   
-  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null).staticScope()
+  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null, null).staticScope()
   # value: <[] := [] =~ ["a"] + var []>
   
-  ? makeDefineExpr(null, 1, 2, null)
+  ? makeDefineExpr(null, 1, 2, 3, null)
   # problem: the int 1 doesn't coerce to a Pattern
+
+  XXX trinary-define scope
 
 FinalPattern
 
@@ -247,7 +249,7 @@ ObjectExpr, EScript
   ? def makeEMatcher := <import:org.erights.e.elang.evm.EMatcher>
   # value: <makeEMatcher>
 
-  ? def emptyObject := makeObjectExpr(null, "foo", "bar", [], def emptyScript := makeEScript(null, [], null, null), null)
+  ? def emptyObject := makeObjectExpr(null, "foo", "bar", [], def emptyScript := makeEScript(null, [], [], null), null)
   # value: e`/** foo */
   #        def "bar" {
   #        }`
@@ -268,7 +270,7 @@ ObjectExpr, EScript
   ? emptyObject.staticScope()
   # value: <[] := [] =~ [] + var []>
   
-  ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], null, null)
+  ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
   # value: e??` {
   #            
   #            method run() {
@@ -303,10 +305,10 @@ ObjectExpr, EScript
  
   XXX standalone IgnorePattern tests
   
-  ? makeEScript(null, null, null, null)
-  # problem: EScript must have methods or matcher
+  ? makeEScript(null, null, [], null)
+  # problem: EScript must have methods or at least one matcher
   
-  ? def bothScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null), null)
+  ? def bothScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
   # value: e??` {
   #            
   #            method run() {
@@ -323,16 +325,17 @@ ObjectExpr, EScript
   #            foo
   #        }`]
   
-  ? bothScript.getOptMatcher()
-  # value: e??`match _ {
+  ? bothScript.getMatchers()
+  # value: [e??`match _ {
   #            1
-  #        }`
+  #        }`]
   
-  ? makeEScript(null, null, makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null), null)
+  ? makeEScript(null, null, [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
   # value: e??` match _ {
   #            1
   #        }`
   
+  XXX multiple-matcher printing tests
 
 SeqExpr
 
@@ -708,6 +711,7 @@ evalToPair
   #             null
   #           NounExpr e`b`...
   #             b
+  #           null
   #         
   
   ? e`escape patt { body } catch cpatt { catcher }`.welcome(makeVisitor(0))
@@ -802,13 +806,14 @@ evalToPair
   #                   resultGuard
   #                 NounExpr e`methodBody`...
   #                   methodBody
-  #             EMatcher e??`match matcherPatt {...
-  #               FinalPattern epatt`matcherPatt`...
-  #                 NounExpr e`matcherPatt`...
-  #                   matcherPatt
-  #                 null
-  #               NounExpr e`matcherBody`...
-  #                 matcherBody
+  #             _list null...
+  #               EMatcher e??`match matcherPatt {...
+  #                 FinalPattern epatt`matcherPatt`...
+  #                   NounExpr e`matcherPatt`...
+  #                     matcherPatt
+  #                   null
+  #                 NounExpr e`matcherBody`...
+  #                   matcherBody
   #         
   
   ? e`def "obj2" match plumbingPatt { plumbingBody }`.welcome(makeVisitor(0))
@@ -818,13 +823,14 @@ evalToPair
   #           _list null...
   #           EScript e??` match plumbingPatt {...
   #             null
-  #             EMatcher e??`match plumbingPatt {...
-  #               FinalPattern epatt`plumbingPatt`...
-  #                 NounExpr e`plumbingPatt`...
-  #                   plumbingPatt
-  #                 null
-  #               NounExpr e`plumbingBody`...
-  #                 plumbingBody
+  #             _list null...
+  #               EMatcher e??`match plumbingPatt {...
+  #                 FinalPattern epatt`plumbingPatt`...
+  #                   NounExpr e`plumbingPatt`...
+  #                     plumbingPatt
+  #                   null
+  #                 NounExpr e`plumbingBody`...
+  #                   plumbingBody
   #         
   
   ? e`first; second`.welcome(makeVisitor(0))

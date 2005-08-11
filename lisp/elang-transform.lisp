@@ -121,16 +121,35 @@
 ;                  (return-from ,attempt-block-sym ,catcher-code)))))))
 ;          ,(make-lets attempt-vars attempt-code))))))
 
-(def-expr-transformation |DefineExpr| (layout patt rValue &aux (vars ()))
-  (let ((rvalue-code (updating-transform rValue layout vars))
-        (patt-code (updating-transform-pattern patt 'define-specimen 'nil layout vars)))
-    (values vars layout `(let ((define-specimen ,rvalue-code)) ,patt-code define-specimen))))
+(def-expr-transformation |DefineExpr| (layout patt rValue opt-ejector-expr &aux (vars ()))
+  ; XXX statically reject references to pattern vars in rvalue/ejector
+  (let* ((rvalue-code (updating-transform rValue layout vars))
+         (ejector-sym (gensym "DEFEJ"))
+         (ejector-form (when opt-ejector-expr (updating-transform opt-ejector-expr layout vars)))
+         (patt-code (updating-transform-pattern patt 'define-specimen (list 'ejector ejector-sym) layout vars)))
+    (values vars layout 
+      `(let ((define-specimen ,rvalue-code)
+             (,ejector-sym ,ejector-form))
+        (declare (ignorable ,ejector-sym))
+        ,patt-code 
+        define-specimen))))
 
 (defmethod tail-transform-expr ((expr |DefineExpr|) tail-exprs layout &aux vars)
-  (destructuring-bind (patt rValue) (node-elements expr)
+  (destructuring-bind (patt rValue opt-ejector-expr) (node-elements expr)
     (let* ((rvalue-code (updating-transform rValue layout vars))
-           (patt-code (tail-transform-patterns (list patt) tail-exprs rvalue-code 'nil layout)))
-      (make-lets vars patt-code))))
+           (ejector-sym (gensym "DEFEJ"))
+           (ejector-form (when opt-ejector-expr (updating-transform opt-ejector-expr layout vars)))
+           (patt-code (tail-transform-patterns
+                        (list patt)
+                        tail-exprs
+                        `(progn
+                          (setf ,ejector-sym ,ejector-form)
+                          ,rvalue-code)
+                        (list 'ejector ejector-sym)
+                        layout)))
+      `(let ((,ejector-sym #:missing-ejector))
+        (declare (ignorable ,ejector-sym))
+        ,(make-lets vars patt-code)))))
 
 (def-expr-transformation |EscapeExpr| (outer-layout hatch body opt-arg-pattern opt-catcher)
   (assert (eql (null opt-arg-pattern) (null opt-catcher)))
@@ -270,28 +289,35 @@
                    methods)
     `(((,mverb) ,@body))))
 
-(defun opt-matcher-body (layout matcher remaining-code
+(defun matcher-body (layout matcher remaining-code
     &aux vars)
-  (if (null matcher)
-    remaining-code
-    (destructuring-bind (pattern body) (node-elements matcher)
-      (setf layout (scope-layout-nest layout))
-      (let* ((tag-sym (gensym "E-MATCH-TAG-VAR-"))
-             (patt-code (updating-transform-pattern pattern `(vector (e-util:unmangle-verb mverb) (coerce args 'vector)) `(catch-tag ,tag-sym) layout vars))
-             (body-code (updating-transform body layout vars)))
-        `(block method-matcher
-          (let ((,tag-sym (gensym "E-MATCH-TAG-"))) 
-            ,(make-lets vars
-              `(catch ,tag-sym
-                ,patt-code
-                ; if we reach here, the pattern matched
-                (return-from 
-                  method-matcher
-                  ,body-code)))
-            ; if we reach here, the ejector was used
-            ,remaining-code))))))
+  (destructuring-bind (pattern body) (node-elements matcher)
+    (setf layout (scope-layout-nest layout))
+    (let* ((tag-sym (gensym "E-MATCH-TAG-VAR-"))
+           (patt-code (updating-transform-pattern pattern `(vector (e-util:unmangle-verb mverb) (coerce args 'vector)) `(catch-tag ,tag-sym) layout vars))
+           (body-code (updating-transform body layout vars)))
+      `(block method-matcher
+        (let ((,tag-sym (gensym "E-MATCH-TAG-"))) 
+          ,(make-lets vars
+            `(catch ,tag-sym
+              ,patt-code
+              ; if we reach here, the pattern matched
+              (return-from 
+                method-matcher
+                ,body-code)))
+          ; if we reach here, the ejector was used
+          ,remaining-code)))))
 
-(defun methodical-object-body (self-fsym layout methods matcher qualified-name approvers-sym doc-comment
+(defun matchers-body (layout matchers remaining-code)
+  (labels ((m-b-list (matchers)
+             (if matchers
+               (matcher-body layout 
+                             (first matchers) 
+                             (m-b-list (rest matchers)))
+               remaining-code)))
+    (m-b-list (coerce matchers 'list))))
+
+(defun methodical-object-body (self-fsym layout methods matchers qualified-name approvers-sym doc-comment
     &aux (simple-name (simplify-fq-name qualified-name))
          (type-desc
            (e. +the-make-type-desc+ |run|
@@ -329,10 +355,10 @@
       (if (position auditor ,approvers-sym :test #'elib:eeq-is-same-ever) t)))
     (otherwise 
       (elib:miranda #',self-fsym mverb args (lambda ()
-        ,(opt-matcher-body layout matcher
+        ,(matchers-body layout matchers
           `(error "no such method: ~A#~A" ',qualified-name mverb)))))))
 
-(defun plumbing-object-body (self-fsym layout methods matcher qualified-name approvers-sym doc-comment)
+(defun plumbing-object-body (self-fsym layout methods matchers qualified-name approvers-sym doc-comment)
   (declare (ignore self-fsym methods doc-comment))
   `(case mverb
     ; XXX remove duplication of audited-by-magic-verb implementation
@@ -340,7 +366,7 @@
       (if (position auditor ,approvers-sym :test #'elib:eeq-is-same-ever) t)))
     ; XXX should propagate match failure exception instead
     (otherwise 
-      ,(opt-matcher-body layout matcher
+      ,(matchers-body layout matchers
         `(error "Plumbing match failure: ~W#~A" ',qualified-name mverb)))))
 
 (defmacro updating-fully-qualify-name (scope-layout-place qn-form
@@ -358,7 +384,7 @@
 (def-expr-transformation |ObjectExpr| (layout doc-comment qualified-name auditor-exprs eScript
     &aux vars
          (this-expr (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs eScript)))) ; XXX need a this argument
-  (destructuring-bind (methods matcher) (node-elements eScript)
+  (destructuring-bind (opt-methods matchers) (node-elements eScript)
     (let* ((approvers-sym (make-symbol "APPROVERS"))
            (witness-sym (make-symbol "WITNESS"))
            (witness-ok-sym (make-symbol "WITNESS-OK"))
@@ -417,10 +443,10 @@ XXX This is an excessively large authority and will probably be replaced."
               ,@auditor-forms))
           (labels ((,self-fsym (mverb &rest args)
                       ,(funcall
-                        (if methods
+                        (if opt-methods
                           #'methodical-object-body
                           #'plumbing-object-body)
-                        self-fsym inner-layout methods matcher fqn approvers-sym doc-comment)))
+                        self-fsym inner-layout opt-methods matchers fqn approvers-sym doc-comment)))
             ,@(when has-auditors `((setf ,witness-ok-sym nil)))
             #',self-fsym))))))
 
