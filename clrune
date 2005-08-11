@@ -188,6 +188,10 @@ case "$LISPTYPE" in
       -e "(e.rune:rune $QUOTED_ARGS)"
   ;;
   clisp)
+    if [ "`uname`" = "Darwin" -a \! \( "$LANG" -o "$LC_ALL" -o "$LC_CTYPE" \) ]; then
+      lisp_extra_push "-E"
+      lisp_extra_push "utf-8"
+    fi
     # XXX config option for whether we use -interactive-debug, and similar for other lisps - check if we can control such from Lisp code
     #"$EXEC" "$LISP" -q -ansi \
     #  -interactive-debug \
