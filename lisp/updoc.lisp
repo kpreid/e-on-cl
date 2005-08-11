@@ -78,6 +78,17 @@
 
 ; --- Utilities ---
 
+(defmacro handler-case-with-backtrace (form &rest clauses
+    &aux (backtrace-var (gensym)))
+  `(let (,backtrace-var)
+    (handler-case
+      (handler-bind (((or ,@(mapcar #'first clauses)) 
+                      #'(lambda (c) (declare (ignore c)) (setf ,backtrace-var (e.util:backtrace-value)))))
+        ,form)
+      ,@(loop for (type . lambda) in clauses collect
+         `(,type (,(caar lambda)) 
+            ((lambda ,@lambda) ,(caar lambda) ,backtrace-var))))))
+
 (defun make-problem-answer (condition)
   ; xxx sloppy
   "problem: foo -> (list \"problem\" \"foo\")"
@@ -92,7 +103,7 @@
   "Accumulate the eventual results of calling 'getter' into 'accumulator' using 'combiner' until 'test' returns false, then call 'finalizer' with the final value and return it."
   (multiple-value-bind (result-promise result-resolver) (make-promise)
     (labels ((proceed ()
-              (handler-case
+              (handler-case-with-backtrace
                 (if (funcall test)
                   (let ((element-vow (funcall getter)))
                     (e. ref-kit |whenResolved| element-vow (efun (x)
@@ -102,8 +113,9 @@
                   (progn
                     (e. result-resolver |resolve| accumulator)
                     (funcall finalizer accumulator)))
-                (error (condition)
-                  (format *trace-output* "~&; caught problem in updoc chaining: ~A~%~S" (e-print condition) (e.util:backtrace-value))
+                (error (condition backtrace)
+                  (let ((*print-level* 5))
+                    (format *trace-output* "~&; caught problem in updoc chaining: ~A~%~S" (e-print condition) backtrace))
                   (e. result-resolver |smash| (transform-condition-for-e-catch condition))))))
       (proceed))
     result-promise))

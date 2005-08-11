@@ -229,3 +229,9 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 ; [11:04] piso: kpreid: allegro and abcl have ARGLIST
 ; [11:05] rtoy_: function-lambda-expression might work, but it's not required to return anything useful.
 
+; --- function declarations ---
+
+(declaim (ftype function
+  run-program
+  external-process-input-stream
+  external-process-output-stream))
