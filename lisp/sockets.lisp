@@ -120,17 +120,15 @@
 #+clisp (defun %convert-handler-target (target)
           target)
 
-(defun foo-add-receive-handler (target e-function
-    &aux (vat *vat*))
-  (e.util:add-io-handler
+(defun foo-add-receive-handler (target e-function)
+  ;; vat-add-io-handler takes care of establishing the turn
+  (vat-add-io-handler
+    *vat*
     (%convert-handler-target target)
     :input
     (named-lambda e-receive-handler (x)
       (declare (ignore x)) 
-      (e.elib::%with-turn 
-        (e.knot::e-to-lisp-function 
-          e-function)
-        vat))))
+      (e. e-function |run|))))
 
 (defun foo-remove-receive-handler (handler)
   (e.util:remove-io-handler handler))

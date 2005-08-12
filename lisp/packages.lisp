@@ -29,6 +29,8 @@
     :serve-event
     :add-io-handler
     :remove-io-handler
+    :add-exclusive-io-handler
+    :io-handler-exclusion-group
     
     :run-program
     :external-process-input-stream
@@ -82,6 +84,7 @@
     :vat-checking
     :vat-enqueue-turn
     :vat-enqueue-timed
+    :vat-add-io-handler
   
     :e-call :e-call-dispatch :e.
     :e-send :e-send-dispatch :e<-

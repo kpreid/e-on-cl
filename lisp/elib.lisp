@@ -413,11 +413,22 @@ If there is no current vat at initialization time, captures the current vat at t
    (time-queue :type sorted-queue
                :initform (make-instance 'sorted-queue))
    (safe-scope :initform (e.knot:make-safe-scope)
-               :accessor vat-safe-scope)))
+               :accessor vat-safe-scope)
+   (handler-group :type io-handler-exclusion-group
+                  :initform (make-instance 'io-handler-exclusion-group)
+                  :reader vat-handler-group)))
 
 (defun vat-enqueue-turn (vat fun)
   ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
   (enqueue (slot-value vat 'sends) fun))
+
+(defun vat-add-io-handler (vat target direction function)
+  (add-exclusive-io-handler (vat-handler-group vat)
+                            target
+                            direction
+                            (lambda (target)
+                              (with-turn (vat)
+                                (funcall function target)))))
 
 (defmethod e-send-dispatch (rec mverb &rest args)
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")

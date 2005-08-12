@@ -232,6 +232,8 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 ; --- function declarations ---
 
 (declaim (ftype function
+  add-exclusive-io-handler
+
   run-program
   external-process-input-stream
   external-process-output-stream))

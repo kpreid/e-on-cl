@@ -79,6 +79,33 @@
     (when timeout (sleep timeout))
     nil))
 
+;;; --- non-reentrant serve-event handler layer ---
+
+(defclass io-handler-exclusion-group () 
+  ((active   :initform nil :accessor  exclusion-group-active)
+   (excluded :initform '() :accessor exclusion-group-excluded)))
+
+(defun add-exclusive-io-handler (group target direction function)
+  "Add a SERVE-EVENT handler which will not be invoked by recursive serve-event in the dynamic scope of another handler in its \"exclusion group\"."
+  (labels ((install (&aux handler) 
+             (setf handler
+               (add-io-handler target 
+                 direction
+                 (lambda (target)
+                   (if (exclusion-group-active group)
+                     (progn
+                       (push #'install (exclusion-group-excluded group))
+                       (remove-io-handler (the (not null) handler)))
+                     (unwind-protect
+                       (progn
+                         (setf (exclusion-group-active group) handler)
+                         (funcall function target))
+                       (setf (exclusion-group-active group) nil)
+                       (loop for reinstaller = (pop (exclusion-group-excluded group))
+                             while reinstaller
+                             do (funcall reinstaller)))))))))
+    (install)))
+
 ;;; --- run-program ---
 
 ; Our run-program was originally just SBCL's run-program, so we imitate its interface on implementations that don't have a sufficiently similar function.

@@ -1,0 +1,43 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.turn
+  (:use :cl :e.lisp-test :elib :e.util))
+(cl:in-package :e.lisp-test.turn)
+
+(defun stream-handler-target (stream)
+  ;; XXX this belongs in e.util
+  #+sbcl (sb-sys:fd-stream-fd stream)
+  #+clisp stream)
+
+(deftest exclusive-io-handler-pound
+  (let* ((vat (make-instance 'vat))
+         (*vat* vat)
+         (group (make-instance 'io-handler-exclusion-group))
+         (seen 0)
+         (streams 
+           (loop for i below 20 collect
+             (external-process-output-stream (run-program "/bin/sh" (list "-c" (format nil "sleep 1; echo ~S" i)) :output :stream :wait nil))))
+         (handlers (mapcar
+                     (lambda (s &aux handler)
+                       (setf handler
+                         (add-exclusive-io-handler
+                           group
+                           (stream-handler-target s)
+                           :input
+                           (lambda (target)
+                             (with-turn (vat)
+                               (read s)
+                               ;(warn "got ~S" ...)
+                               (incf seen)
+                               (remove-io-handler handler))))))
+                     streams)))
+    (block pound
+      (labels ((task1 (i)
+                 ;(warn "task1 ~A" i)
+                 (when (>= seen (length streams))
+                   (return-from pound))
+                 (e<- (e.knot::wrap-function #'task1) |run| (1+ i))))
+        (task1 0)
+        (vat-loop)))
+    (values)))
