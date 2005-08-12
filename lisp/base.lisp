@@ -1,22 +1,7 @@
 ; Copyright 2005 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-
-; --- fixing SBCL leak problem - code from jsnell - XXX REMOVE THIS CODE because mucking with sbcl internals just isn't right for distributed code - and it's been fixed equivalently, anyway ---
-
-#+sbcl
-(cl:in-package "SB-IMPL")
-
-#+sbcl
-(defun %eval (expr lexenv)
-  (let ((fun (sb-c:compile-in-lexenv nil
-                                     `(lambda () ,expr)
-                                     lexenv)))
-    (funcall fun)))
-
-; --- ---
-
-(cl:in-package "ELIB")
+(cl:in-package :e.elib)
 
 (defvar *java-e-compatible* t
   "Deprecated. If true, changes minor behaviors (such as some print representations) to match the Java implementation.
