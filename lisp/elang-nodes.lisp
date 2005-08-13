@@ -3,71 +3,21 @@
 
 (in-package :elang)
 
-; --- nodes ---
+; --- base ---
+
+;; XXX this should go elsewhere
+(deftype e-list (element-type &aux (sym (gensym (princ-to-string element-type))))
+  (setf (symbol-function sym) 
+        (lambda (specimen)
+          (every (lambda (element) (typep element element-type)) specimen)))
+  `(and vector (satisfies ,sym)))
+
+;; XXX this should go elsewhere
+(define-modify-macro nreverse-here ()
+  nreverse)
 
 (defgeneric node-elements (node))
 (defgeneric node-static-scope (node))
-
-#+sbcl (sb-ext:unlock-package :e.elang.vm-node)
-
-(defclass |ENode| () ((elements :initarg :elements :accessor node-elements)))
-
-(defclass |EExpr|   (|ENode|) ())
-(defclass |Pattern| (|ENode|) ())
-
-(defclass |AssignExpr|      (|EExpr|) ())
-(defclass |CallExpr|        (|EExpr|) ())
-(defclass |CatchExpr|       (|EExpr|) ())
-(defclass |DefineExpr|      (|EExpr|) ())
-(defclass |EscapeExpr|      (|EExpr|) ())
-(defclass |FinallyExpr|     (|EExpr|) ())
-(defclass |HideExpr|        (|EExpr|) ())
-(defclass |IfExpr|          (|EExpr|) ())
-(defclass |LiteralExpr|     (|EExpr|) ())
-(defclass |MetaContextExpr| (|EExpr|) ())
-(defclass |MetaStateExpr|   (|EExpr|) ())
-(defclass |MatchBindExpr|   (|EExpr|) ())
-(defclass |NounExpr|        (|EExpr|) ())
-(defclass |ObjectExpr|      (|EExpr|) ())
-(defclass |SeqExpr|         (|EExpr|) ())
-(defclass |SlotExpr|        (|EExpr|) ())
-
-(defclass |EMethod|         (|ENode|) ())
-(defclass |EMatcher|        (|ENode|) ())
-(defclass |EScript|         (|ENode|) ())
-                               
-(defclass |CdrPattern|      (|Pattern|) ())
-(defclass |IgnorePattern|   (|Pattern|) ())
-(defclass |ListPattern|     (|Pattern|) ())
-(defclass |SuchThatPattern| (|Pattern|) ())
-(defclass |NounPattern|     (|Pattern|) ())
-
-(defclass |FinalPattern|    (|NounPattern|) ())
-(defclass |SlotPattern|     (|NounPattern|) ())
-(defclass |VarPattern|      (|NounPattern|) ())
-
-(defclass |QuasiNode| (|ENode|) ())
-
-(defclass |QuasiLiteralNode| (|QuasiNode|) ())
-(defclass |QuasiPatternNode| (|QuasiNode|) ())
-
-(defclass |QuasiLiteralExpr| (|QuasiLiteralNode| |EExpr|) ())
-(defclass |QuasiPatternExpr| (|QuasiPatternNode| |EExpr|) ())
-(defclass |QuasiLiteralPatt| (|QuasiLiteralNode| |Pattern|) ())
-(defclass |QuasiPatternPatt| (|QuasiPatternNode| |Pattern|) ())
-
-#+sbcl (sb-ext:lock-package :e.elang.vm-node)
-
-(do-symbols (node-type (find-package :e.elang.vm-node))
-  (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
-    (defmethod elib:cl-type-fq-name ((type (eql node-type)))
-      fqn)))
-
-(defmethod print-object ((node |ENode|) stream)
-  (print-unreadable-object (node stream :type nil :identity nil)
-    (format stream "~A ~W" (type-of node) (node-elements node))))
-
-; --- makers ---
 
 (defmacro def-node-maker (class-sym subnode-flags args &optional elements-form
     &aux (span-sym (gensym "SPAN"))
@@ -96,10 +46,170 @@
                 collect `(e-coercef ,arg ',type))
         (make-instance ',class-sym :elements ,(or elements-form `(list ,@bare-args)))))))
 
-(def-node-maker |AssignExpr|
-  (t t)
-  ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun |EExpr|) (rvalue |EExpr|)))
+(defun %setup-node-class (node-type)
+  (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
+    (defmethod elib:cl-type-fq-name ((type (eql node-type)))
+      fqn)))
+
+(defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key no-dnm)
+  (let (subnode-flags dnm-args)
+    (loop for pd in property-defs do
+      (destructuring-bind (property-name subnode-flag type &key) pd
+        (push subnode-flag subnode-flags)
+        (push `(,(intern (string property-name) :e.elang) ,type) dnm-args)))
+    (nreverse-here subnode-flags)
+    (nreverse-here dnm-args)
+    `(progn
+      (defclass ,class-name ,superclasses ())
+      (%setup-node-class ',class-name)
+      ,(unless no-dnm
+        `(def-node-maker ,class-name
+          ,subnode-flags
+          ,dnm-args)))))
+
+;;; --- Node definitions ---
+
+#+sbcl (sb-ext:unlock-package :e.elang.vm-node)
+
+(defclass |ENode| () ((elements :initarg :elements :accessor node-elements)))
+
+(define-node-class |EExpr|   (|ENode|)
+  ()
+  :no-dnm t)
+(define-node-class |Pattern| (|ENode|)
+  ()
+  :no-dnm t)
+
+(define-node-class |AssignExpr|      (|EExpr|)
+  ((:|noun|   t (or |NounExpr| |QuasiExpr|))
+   (:|rValue| t |EExpr|)))
+(define-node-class |CallExpr|        (|EExpr|)
+  ((:|target| t |EExpr|)
+   (:|verb| nil string) 
+   (:|args| t (e-list |EExpr|)))
+  ;; :rest-slot t
+  :no-dnm t)
+(define-node-class |CatchExpr|       (|EExpr|)
+  ((:|attempt| t |EExpr|)
+   (:|pattern| t |Pattern|)
+   (:|catcher| t |EExpr|)))
+(define-node-class |DefineExpr|      (|EExpr|)
+  ((:|pattern| t |Pattern|)
+   (:|rValue| t |EExpr|)
+   (:|optEjectorExpr| t (or null |EExpr|))))
+(define-node-class |EscapeExpr|      (|EExpr|)
+  ((:|ejectorPattern| t |Pattern|)
+   (:|body| t |EExpr|) 
+   (:|optCatchPattern| t (or null |Pattern|)) 
+   (:|optCatchBody| t (or null |EExpr|))))
+(define-node-class |FinallyExpr|     (|EExpr|)
+  ((:|attempt| t |EExpr|)
+   (:|unwinder| t |EExpr|)))
+(define-node-class |HideExpr|        (|EExpr|)
+  ((:|body| t |EExpr|)))
+(define-node-class |IfExpr|          (|EExpr|)
+  ((:|test| t |EExpr|) 
+   (:|then| t |EExpr|) 
+   (:|else| t |EExpr|)))
+(define-node-class |LiteralExpr|     (|EExpr|)
+  ;; XXX loosen restriction to DeepPassByCopy? different set of literals? include other CL float types?
+  ((:|value| nil (or string character rational float64))))
+(define-node-class |MetaContextExpr| (|EExpr|)
+  ())
+(define-node-class |MetaStateExpr|   (|EExpr|)
+  ())
+(define-node-class |MatchBindExpr|   (|EExpr|)
+  ((:|specimen| t |EExpr|) 
+   (:|pattern| t |Pattern|)))
+(define-node-class |NounExpr|        (|EExpr|)
+  ((:|name| nil string)))
+(define-node-class |ObjectExpr|      (|EExpr|)
+  ((:|docComment| nil string)
+   (:|qualifiedName| nil string) 
+   (:|auditorExprs| t (e-list |EExpr|)) 
+   (:|script| t |EScript|)))
+(define-node-class |SeqExpr|         (|EExpr|)
+  ((:|subs| t (e-list |EExpr|)))
+  ;; :rest-slot t
+  :no-dnm t)
+(define-node-class |SlotExpr|        (|EExpr|)
+  ((:|noun| t (or |NounExpr| |QuasiExpr|))))
+
+(define-node-class |EMethod|         (|ENode|)
+  ((:|docComment| nil string)
+   (:|verb| nil string)
+   (:|patterns| t (e-list |Pattern|))
+   (:|optResultGuard| t (or null |EExpr|))
+   (:|body| t |EExpr|)))
+(define-node-class |EMatcher|        (|ENode|)
+  ((:|pattern| t |Pattern|) 
+   (:|body| t |EExpr|)))
+(define-node-class |EScript|         (|ENode|)
+  ((:|optMethods| t (or null (e-list |EMethod|)))
+   (:|matchers| t (e-list |EMatcher|))))
+                               
+(define-node-class |CdrPattern|      (|Pattern|)
+  ((:|listPatt| t |ListPattern|) 
+   (:|restPatt| t |Pattern|)))
+(define-node-class |IgnorePattern|   (|Pattern|)
+  ())
+(define-node-class |ListPattern|     (|Pattern|)
+  ((:|subs| t (e-list |Pattern|)))
+  :no-dnm t)
+(define-node-class |SuchThatPattern| (|Pattern|)
+  ((:|pattern| t |Pattern|) 
+   (:|test| t |EExpr|)))
+
+(define-node-class |NounPattern|     (|Pattern|)
+  ()
+  :no-dnm t)
+
+(define-node-class |FinalPattern|    (|NounPattern|)
+  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+   (:|optGuardExpr| t (or null |EExpr|))))
+(define-node-class |SlotPattern|     (|NounPattern|)
+  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+   (:|optGuardExpr| t (or null |EExpr|))))
+(define-node-class |VarPattern|      (|NounPattern|)
+  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+   (:|optGuardExpr| t (or null |EExpr|))))
+
+(define-node-class |QuasiNode| (|ENode|)
+  ; XXX allow inheritance of slot layouts and thus make all quasi-nodes share one definition
+  ())
+
+(define-node-class |QuasiLiteralNode| (|QuasiNode|)
+  ((:|index| nil (integer 0))))
+(define-node-class |QuasiPatternNode| (|QuasiNode|)
+  ((:|index| nil (integer 0))))
+
+(define-node-class |QuasiExpr| (|EExpr| |QuasiNode|)
+  ()
+  :no-dnm t)
+(define-node-class |QuasiPatt| (|Pattern| |QuasiNode|)
+  ()
+  :no-dnm t)
+
+(define-node-class |QuasiLiteralExpr| (|QuasiLiteralNode| |QuasiExpr|)
+  ((:|index| nil (integer 0))))
+(define-node-class |QuasiPatternExpr| (|QuasiPatternNode| |QuasiExpr|)
+  ((:|index| nil (integer 0))))
+(define-node-class |QuasiLiteralPatt| (|QuasiLiteralNode| |QuasiPatt|)
+  ((:|index| nil (integer 0))))
+(define-node-class |QuasiPatternPatt| (|QuasiPatternNode| |QuasiPatt|)
+  ((:|index| nil (integer 0))))
+
+#+sbcl (sb-ext:lock-package :e.elang.vm-node)
+
+; --- general definitions for nodes ---
+
+(defmethod print-object ((node |ENode|) stream)
+  (print-unreadable-object (node stream :type nil :identity nil)
+    (format stream "~A ~W" (type-of node) (node-elements node))))
+
+; --- makers ---
+
+;;; XXX to be moved into define-node-class and shared-initialize :after
 
 (def-node-maker |CallExpr|
   (t nil t)
@@ -109,57 +219,6 @@
   ((recipient |EExpr|) (verb string) (args vector))
   (list* recipient verb (loop for arg across args collect (e-coerce arg '|EExpr|))))
 
-(def-node-maker |CatchExpr|
-  (t t t)
-  ((attempt |EExpr|) (catch-pattern |Pattern|) (catcher |EExpr|)))
-
-(def-node-maker |DefineExpr|
-  (t t t)
-  ((pattern |Pattern|) (rvalue |EExpr|) (opt-ejector (or null |EExpr|))))
-
-(def-node-maker |FinalPattern|
-  (t t)
-  ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun |EExpr|) (opt-guard (or null |EExpr|))))
-
-(def-node-maker |FinallyExpr|
-  (t t)
-  ((attempt |EExpr|) (unwinder |EExpr|)))
-  
-(def-node-maker |HideExpr|
-  (t)
-  ((body |EExpr|)))
-  
-(def-node-maker |IfExpr|
-  (t t t)
-  ((condition |EExpr|) (true-block |EExpr|) (false-block |EExpr|)))
-
-(def-node-maker |ListPattern|
-  (t)
-  ((patterns t))
-  (loop for pattern in patterns collect (e-coerce pattern '|Pattern|)))
-
-(def-node-maker |LiteralExpr|
-  (nil)
-  ; XXX require value be DeepPassByCopy? be string/int/char/float64?
-  ((value t)))
-
-(def-node-maker |MatchBindExpr|
-  (t t)
-  ((specimen |EExpr|) (pattern |Pattern|)))
-
-(def-node-maker |MetaContextExpr|
-  ()
-  ())
-
-(def-node-maker |MetaStateExpr|
-  ()
-  ())
-
-(def-node-maker |NounExpr|
-  (nil)
-  ((name string)))
-
 (def-node-maker |SeqExpr|
   (t)
   ((subs t))
@@ -167,10 +226,6 @@
     (unless (> (length subs) 0)
       (error "SeqExpr must have at least one subexpression"))
     (loop for sub across subs collect (e-coerce sub '|EExpr|))))
-
-(def-node-maker |SlotExpr|
-  (nil)
-  ((noun |NounExpr|)))
 
 (def-node-maker |EScript|
   (t t)
@@ -180,59 +235,12 @@
       (error "EScript must have methods or at least one matcher"))
     (list (and methods (map 'vector (lambda (sub) (e-coerce sub '|EMethod|)) methods))
           (map 'vector (lambda (sub) (e-coerce sub '|EMatcher|)) matchers))))
-        
-(def-node-maker |ObjectExpr|
-  (nil nil t t)
-  ((doc-comment string) (qualified-name string) (auditor-exprs vector) (script |EScript|))
-  (list doc-comment qualified-name (map 'vector (lambda (sub) (e-coerce sub '|EExpr|)) auditor-exprs) script))
-
-(def-node-maker |EMethod|
-  (nil nil t t t)
-  ; XXX constrain patterns to vector of Pattern (write tests)
-  ((doc-comment string) (verb string) (patterns vector) (opt-result-guard (or null |EExpr|)) (body |EExpr|))
-  (list doc-comment verb patterns opt-result-guard body))
-
-(def-node-maker |EMatcher|
-  (t t)
-  ((pattern |Pattern|) (body |EExpr|))
-  (list pattern body))
-
-(def-node-maker |EscapeExpr|
-  (t t t t)
-  ((ejector-pattern |Pattern|) (body |EExpr|) (opt-catch-pattern (or null |Pattern|)) (opt-catcher (or null |EExpr|))))
-
-(def-node-maker |CdrPattern|
-  (t t)
-  ((list-patt |ListPattern|) (rest-patt |Pattern|)))
 
 (def-node-maker |ListPattern|
   (t)
   ((subs t))
   (progn
     (loop for sub across subs collect (e-coerce sub '|Pattern|))))
-
-(def-node-maker |VarPattern|
-  (t t)
-  ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun |EExpr|) (opt-guard (or null |EExpr|))))
-
-(def-node-maker |SlotPattern|
-  (t t)
-  ; XXX tighten noun to NounExpr or quasi-hole
-  ((noun |EExpr|) (opt-guard (or null |EExpr|))))
-
-(def-node-maker |SuchThatPattern|
-  (t t)
-  ((subpattern |Pattern|) (condition |EExpr|)))
-  
-(def-node-maker |IgnorePattern| () ())
-
-(def-node-maker |QuasiLiteralNode| (nil) ((index integer)))
-(def-node-maker |QuasiPatternNode| (nil) ((index integer)))
-(def-node-maker |QuasiLiteralExpr| (nil) ((index integer)))
-(def-node-maker |QuasiPatternExpr| (nil) ((index integer)))
-(def-node-maker |QuasiLiteralPatt| (nil) ((index integer)))
-(def-node-maker |QuasiPatternPatt| (nil) ((index integer)))
 
 ; --- constraints on nodes ---
 
@@ -243,6 +251,14 @@
              (e. (e. using |staticScope|) |namesUsed|))
          |size|)
      0))
+
+(defmethod change-class ((node |ENode|) new-class &key &allow-other-keys)
+  (error "change-class is not a good idea for ENodes"))
+
+;; (defmethod shared-initialize :before ((node |QuasiNode|) slot-names &key &allow-other-keys)
+;;   (unless (typep node '(or |QuasiLiteralExpr| |QuasiLiteralPatt|
+;;                            |QuasiPatternExpr| |QuasiPatternPatt|))
+;;     (error "Attempt to construct a quasi-node of unspecific class ~S." (class-of node))))
 
 (defmethod shared-initialize :after ((node |DefineExpr|) slot-names &key &allow-other-keys
     &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
