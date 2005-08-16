@@ -170,3 +170,34 @@ without needing this kind of operation on floating-point numbers.
                       Bruno
 
 -------- End Forwarded Message --------
+
+---
+
+Notes on crypto required for upcoming inter-vat protocol:
+
+http://www.eros-os.org/pipermail/e-lang/2005-June/010762.html
+http://www.eros-os.org/pipermail/e-lang/2005-June/010764.html
+http://www.eros-os.org/pipermail/e-lang/2005-June/010765.html
+  
+  > Tyler, what cyphersuite does VatTP-on-TLS use?
+  
+  The acceptable cyphersuites are determined by the Keyspace
+  implementation. Right now, there's just one implementation of the
+  Keyspace interface: org.waterken.url.tls.sha1withrsa.Keyspace. For
+  this Keyspace, the acceptable ciphersuites are, in order of
+  preference:
+  
+      /**
+       * The acceptable ciphersuites.
+       */
+      private static final String[] ACCEPTABLE = new String[] {
+          "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+          "SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
+          "TLS_RSA_WITH_AES_128_CBC_SHA",
+          "SSL_RSA_WITH_RC4_128_SHA",
+          "SSL_RSA_WITH_3DES_EDE_CBC_SHA"
+      };
+  
+  Tyler
+
+http://www.eros-os.org/pipermail/e-lang/2005-July/010880.html
