@@ -1,0 +1,35 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def ALL := EIO.getALL(); null
+
+  XXX replace with decent enums
+  ? def NOW := "NOW"; null
+  ? def LATER := "LATER"; null
+  ? def WAIT := "WAIT"; null
+  ? def ADVANCE := "ADVANCE"; null
+  ? def QUERY := "QUERY"; null
+  ? def ELEMENTS := "ELEMENTS"; null
+  ? def STATUS := "STATUS"; null
+
+  ? def t := "Teh quike bruin fax jimp't ovah thy lizy dugz."
+  # value: "Teh quike bruin fax jimp't ovah thy lizy dugz."
+  
+  ? def s := t.asStream()
+  # value: "Teh quike bruin fax \...".asStream()
+  
+  ? s.available()
+  # value: 46
+  
+  ? s.obtain(0, 10, NOW, ADVANCE, ELEMENTS)
+  # value: "Teh quike "
+  
+  ? s
+  # value: "bruin fax jimp't ova\...".asStream()
+
+  ? s.obtain(0, ALL, NOW, ADVANCE, ELEMENTS)
+  # value: "bruin fax jimp't ovah thy lizy dugz."
+  
+  ? s.terminates()
+  # value: true
+  

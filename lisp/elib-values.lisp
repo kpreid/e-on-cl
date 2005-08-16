@@ -259,7 +259,15 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ;   ((fast-sameness-test 'character '(member #\a)) #'eql)
 ;   ((fast-sameness-test 'bit 'integer) #'eql)))
 
-        
+(defun reprint (obj fqn printer)
+  (declare (ignore fqn)) ; XXX should be put into the getAllegedType
+  (e-lambda nil ()
+    ;; XXX pass optSealedDispatch, etc.
+    (:|__printOn| (tw)
+      (funcall printer (e-coerce tw +the-text-writer-guard+)))
+    (otherwise (mverb &rest args)
+      (apply #'e-call-dispatch obj mverb args))))
+
 ; XXX documentation
 (def-vtable vector
   (:|__printOn| (this tw)
@@ -287,6 +295,56 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                 |get| "import__uriGetter")
             |get| "org.cubik.cle.prim.makeConstSet") 
         |make| (e. vector |asKeys|)))
+  (:|asStream| (vector
+      &aux (position 0))
+    "Return a stream providing the elements of this list."
+    ;; XXX this is a mess. Revisit this once we have multiple uses of InStreamShell and figure out how the interface should be fixed to make common uses simple.
+    (multiple-value-bind (backend backend-resolver) (make-promise)
+      (with-result-promise (stream)
+        (flet ((update-available (&aux (a (- (length vector) position)))
+                (e. backend |setAvailable| a)
+                (if (= a 0)
+                  (e. stream |close|))))
+          (prog1
+            (reprint
+              (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elib.eio.makeInStreamShell")
+                |run|
+                +the-any-guard+ ; XXX should be (e. vector |valueType|)
+                backend-resolver
+                (e-lambda "org.cubik.cle.prim.listStreamImpl" ()
+                  (:|semiObtain| (at-least at-most proceed report)
+                    (e-coercef at-least 'integer)
+                    (e-coercef at-most '(or integer null)) ; XXX ALL
+                    (e-coercef proceed 'string) ; XXX enums
+                    (e-coercef report 'string) ; XXX enums
+                    (let* ((end (if at-most
+                                  (min (length vector)
+                                       (+ position at-most))
+                                  (length vector)))
+                           (chunk (- end position)))
+                      (assert (>= chunk at-least)) ;; sanity check - the shell should take care of this for us
+                      (prog1
+                        (subseq vector position end)
+                        (when (equal proceed "ADVANCE")
+                          (setf position end)
+                          (update-available)))))
+                  (:|tryAvailable| (minimum)
+                    "no-op"
+                    (declare (ignore minimum))
+                    nil)))
+                "org.cubik.cle.prim.listStream"
+                (lambda (tw)
+                  (if (stringp vector)
+                    (progn
+                      (e. tw |write| "\"")
+                      (e. tw |print| (subseq vector position (min (length vector) (+ position 20))))
+                      (e. tw |write| "\\...\".asStream()"))
+                    (progn
+                      ;; XXX broken
+                      (e. tw |write| "[" #|]|#)
+                      (e. tw |print| (subseq vector position (min (length vector) (+ position 20))))
+                      (e. tw |write| #|[|# ", ...].asStream()")))))
+            (update-available))))))
   (:|size/0| 'length)
   (:|get| (this index)
     "Return the 'index'th element of this list."
