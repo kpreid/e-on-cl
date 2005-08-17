@@ -38,12 +38,15 @@
     (with-slots (ts trivial-box) this
       (car (or trivial-box
            (setf trivial-box (list (e-coerce
-             (cond ; should we defmacro subtypecase?
+             ;; XXX more correct would be to return the first of our 
+             ;; list of trivial values which is a subtype of our type
+             (cond
                ((subtypep 'null ts) nil)
                ((subtypep ts 'integer) 0)
                ((subtypep ts 'float64) 0d0)
                ((subtypep ts 'float32) 0.0)
                ((subtypep ts 'e-boolean) +e-false+)
+               ((subtypep ts 'character) (code-char 0))
                ; should there be an ejector?
                (t (error "No trivial value available")))
              this)))))))

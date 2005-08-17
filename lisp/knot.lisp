@@ -234,6 +234,12 @@
           (or (position-if #'match str :start start)
               -1)))))))
 
+(defglobal +the-get-character+ (e-lambda "org.cubik.cle.prim.getCharacter" ()
+  (:|run| (codepoint)
+    ;; XXX Unicode assumption
+    (or (code-char codepoint)
+        (error "character U+~16,4,'0R not supported")))))
+
 (defun uncall-to-unget (loader portrayal)
   (e-coercef portrayal '(or null vector))
   ; xxx I do not understand the justification in the doc-comment of Java-E baseLoader#optUnget.
@@ -440,6 +446,8 @@
   
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeVarSlot|      +the-make-var-slot+)
+
+    (:|getCharacter|     +the-get-character+)
     
     (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
     (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
