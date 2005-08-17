@@ -308,6 +308,8 @@ Termination
   ? [pwA, poAE, poAS]
   # value: [0, <ref broken by problem: boo>, <ref broken by problem: boo>]
 
+XXX write tests that STATUS is correct: according to http://www.erights.org/elib/concurrency/eio/obtaining.html the return value of STATUS is "the termination status of the stream *after* these elements have been obtained" (emphasis mine)
+
 XXX for both directions of streams: notify impl synchronously upon termination? (terminator provides eventual-or-poll notification)
 XXX notification by impl of closure -- needed? convenient?
   possibly in the form "no more elements will become available than currently"

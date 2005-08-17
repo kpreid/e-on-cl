@@ -340,9 +340,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                       (e. tw |print| (subseq vector position (min (length vector) (+ position 20))))
                       (e. tw |write| "\\...\".asStream()"))
                     (progn
-                      ;; XXX broken
                       (e. tw |write| "[" #|]|#)
-                      (e. tw |print| (subseq vector position (min (length vector) (+ position 20))))
+                      (e. (subseq vector position (min (length vector) (+ position 5))) |printOn| "" ", " "" tw)
                       (e. tw |write| #|[|# ", ...].asStream()")))))
             (update-available))))))
   (:|size/0| 'length)

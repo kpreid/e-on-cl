@@ -1,0 +1,63 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("dot-props")
+
+def makeInStreamShell := <elib:eio.makeInStreamShell>
+def NOW := "NOW"
+
+def mapStream implements DeepFrozen {
+  /** Return an InStream which takes elements from the given InStream and provides the result of the given function applied to lists of elements. */
+  to chunked(outType :Guard, sourceStream, func) :any {
+    def update
+    
+    Ref.whenResolved(sourceStream.terminates(), def _() {
+      update()
+    })
+  
+    def ourStream := makeInStreamShell(outType, def backend, def mapStreamImpl {
+      to __printOn(tw :TextWriter) {
+        tw.print(func)
+        tw.write("-")
+        tw.quote(sourceStream)
+      }
+      
+      to semiObtain(atLeast :EIO::Range, atMost :EIO::Range, proceed, report) {
+        def original := sourceStream.obtain(atLeast, atMost, NOW, proceed, report)
+        update() # XXX side effects?
+        return if (report == "ELEMENTS") {
+                 try {
+                   func(original)
+                 } catch p {
+                   # XXX this catching should be handled by the stream shell, but isn't
+                   ourStream.fail(p)
+                   throw(p)
+                 }
+               } else {
+                 original
+               }
+      }
+      
+      # to tryAvailable... -- XXX this seems to have been intended to exist but isn't actually used. figure out what was intended.
+    })
+
+    bind update() {
+      backend.setAvailable(sourceStream.available())
+      if (Ref.isResolved(def t := sourceStream.terminates())) {
+        switch (Ref.optProblem(t)) {
+          match p :notNull { ourStream.fail(p) }
+          match ==null     { ourStream.close() }
+          match _          { throw("reality failure") }
+        }
+      }
+    }
+    
+    return ourStream 
+  }
+  
+}
+
+
+# XXX this file has no tests except in that it is currently used by charsets.emaker
