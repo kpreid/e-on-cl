@@ -26,6 +26,13 @@
 
 ; --- native-type guards ---
 
+(defglobal +trivial-value-lists+
+  (mapcar #'list
+          (list nil 
+                +e-false+ 
+                0 0d0 0.0 
+                (code-char 0))))
+
 (def-vtable cl-type-guard
   (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (cl-type-specifier guard) opt-ejector guard))
@@ -36,20 +43,12 @@
     (cl-type-fq-name (cl-type-specifier this)))
   (:|getTheTrivialValue| (this)
     (with-slots (ts trivial-box) this
-      (car (or trivial-box
-           (setf trivial-box (list (e-coerce
-             ;; XXX more correct would be to return the first of our 
-             ;; list of trivial values which is a subtype of our type
-             (cond
-               ((subtypep 'null ts) nil)
-               ((subtypep ts 'integer) 0)
-               ((subtypep ts 'float64) 0d0)
-               ((subtypep ts 'float32) 0.0)
-               ((subtypep ts 'e-boolean) +e-false+)
-               ((subtypep ts 'character) (code-char 0))
-               ; should there be an ejector?
-               (t (error "No trivial value available")))
-             this)))))))
+      (first (or trivial-box
+                 (setf trivial-box
+                   (find-if (lambda (v) (typep (first v) ts))
+                            +trivial-value-lists+))
+                 ;; xxx should there be an ejector?
+                 (error "No trivial value available")))))
   (:|getDocComment| (this)
     (with-slots (ts) this
       (let ((documentation (documentation ts 'type)))
