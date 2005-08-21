@@ -13,7 +13,7 @@ def mapStream implements DeepFrozen {
   to chunked(outType :Guard, sourceStream, func) :any {
     def update
     
-    Ref.whenResolved(sourceStream.terminates(), def _() {
+    Ref.whenResolved(sourceStream.terminates(), def updateOnTerminate(_) {
       update()
     })
   
