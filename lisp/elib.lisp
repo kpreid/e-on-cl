@@ -594,6 +594,7 @@ If there is no current vat at initialization time, captures the current vat at t
             (progn
               (assert (cddr desc) () "Inferring arity for function vtable entry not supported: ~S" desc)
               (e.util:lambda-list-arguments-range (second desc)))
+          (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-or-mverb-string min prefix-arity)
           (assert (= min max) () "Variable arguments not yet supported for vtable-case-entry arity inference")
           (- min prefix-arity)))))
 
