@@ -7,16 +7,17 @@
 
 ;; Simple passthrough
 
-#+sbcl 
-(progn
-  (setf (fdefinition 'serve-event)       #'sb-sys:serve-event)
-  (setf (fdefinition 'add-io-handler)    #'sb-sys:add-fd-handler)
-  (setf (fdefinition 'remove-io-handler) #'sb-sys:remove-fd-handler))
-#+cmu
-(progn
-  (setf (fdefinition 'serve-event)       #'system:serve-event)
-  (setf (fdefinition 'add-io-handler)    #'system:add-fd-handler)
-  (setf (fdefinition 'remove-io-handler) #'system:remove-fd-handler))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  #+sbcl 
+  (progn
+    (setf (fdefinition 'serve-event)       #'sb-sys:serve-event)
+    (setf (fdefinition 'add-io-handler)    #'sb-sys:add-fd-handler)
+    (setf (fdefinition 'remove-io-handler) #'sb-sys:remove-fd-handler))
+  #+cmu
+  (progn
+    (setf (fdefinition 'serve-event)       #'system:serve-event)
+    (setf (fdefinition 'add-io-handler)    #'system:add-fd-handler)
+    (setf (fdefinition 'remove-io-handler) #'system:remove-fd-handler)))
 
 ;; Implement our own
 
