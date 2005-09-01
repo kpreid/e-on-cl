@@ -358,7 +358,7 @@
                     `#(#("&fetchpath" ,(make-instance 'e-simple-slot :value fetchpath))))))))
         (:|fetch| (fqn absent-thunk)
           (if (string= ".*" fqn :start2 (- (length fqn) 2))
-            (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
+            (e. (e-import "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
             (loop for sub across fetchpath
                   do (block continue (return (e. sub |fetch| fqn (e-lambda "$continueSearchThunk" () (:|run| () (return-from continue))))))
                   finally (e. absent-thunk |run|))))
@@ -484,11 +484,11 @@
           elib:+the-make-traversal-key+))
     
     (:|makeConstSet|
-      (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elib.tables.makeConstSetAuthor") 
+      (e. (e-import "org.erights.e.elib.tables.makeConstSetAuthor") 
           |run| elib:+selfless-stamp+))
     
     (:|makeBaseGuard|
-      (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elib.slot.makeBaseGuardAuthor") 
+      (e. (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
           |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))))
 
 (defglobal +vm-node-maker-importer+
@@ -807,9 +807,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                   ("SelflessStamp"     ,elib:+selfless-stamp+)
                   ("makeProxyResolver" ,elib:+the-make-proxy-resolver+)))
             |or| (vat-safe-scope *vat*))))
-    (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") 
-            |get|
-            "org.cubik.cle.makeIOScope")
+    (e. (e-import "org.cubik.cle.makeIOScope")
         |run| 
         "__privileged$"
         vat-priv-scope
@@ -833,9 +831,7 @@ If a log message is produced, context-thunk is run to produce a string describin
             ,@(when interp-supplied
               `(("interp" ,interp)))
             ("&IP"        ,(make-lazy-apply-slot (lambda ()
-                             (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") 
-                                     |get|
-                                     "org.cubik.cle.IPAuthor")
+                             (e. (e-import "org.cubik.cle.IPAuthor")
                                  |run|
                                  +lisp+))))
             #||#)))))

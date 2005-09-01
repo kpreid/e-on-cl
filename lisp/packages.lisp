@@ -198,7 +198,8 @@
     :e-slot-value :place-slot
     :def-shorten-methods
     :with-vat :when-resolved
-    :mapping-bind))
+    :mapping-bind
+    :e-import))
 
 (e.util:defglobals
   elib:+the-unset-slot+

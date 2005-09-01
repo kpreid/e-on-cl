@@ -25,14 +25,14 @@
      (:file "elib-values"
             :depends-on ("elib" "sugar"))
      (:file "tables2"
-            :depends-on ("elib-guts")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
+            :depends-on ("sugar" "elib-guts")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
      (:file "print"
             ; TextWriter
             :depends-on ("elib"))
      (:file "extern"
             :depends-on ("elib"))
      (:file "knot"
-            :depends-on ("elib"))
+            :depends-on ("elib" "sugar"))
      (:file "elang"
             :depends-on ("tables2" "elib-values" "elib" "util" "packages"))
      (:file "elang-nodes"

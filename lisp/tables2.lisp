@@ -554,9 +554,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                 :key-guard key-guard
                 :value-guard value-guard))
              (map-shell
-              (e. (e. (e. (vat-safe-scope *vat*) 
-                          |get| "import__uriGetter")
-                      |get| "org.erights.e.elib.tables.makeFlexMapShell")
+              (e. (e-import "org.erights.e.elib.tables.makeFlexMapShell")
                 |run|
                 map
                 impl)))

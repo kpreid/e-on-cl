@@ -291,9 +291,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       +e-false+))
   (:|asSet| (vector)
     "Return a ConstSet with the elements of this list, omitting duplicates."
-    (e. (e. (e. (vat-safe-scope *vat*) 
-                |get| "import__uriGetter")
-            |get| "org.cubik.cle.prim.makeConstSet") 
+    (e. (e-import "org.cubik.cle.prim.makeConstSet") 
         |make| (e. vector |asKeys|)))
   (:|asStream| (vector
       &aux (position 0))
@@ -307,7 +305,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                   (e. stream |close|))))
           (prog1
             (reprint
-              (e. (e. (e. (vat-safe-scope *vat*) |get| "import__uriGetter") |get| "org.erights.e.elib.eio.makeInStreamShell")
+              (e. (e-import "org.erights.e.elib.eio.makeInStreamShell")
                 |run|
                 +the-any-guard+ ; XXX should be (e. vector |valueType|)
                 backend-resolver
@@ -398,9 +396,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e. this |diverge| +the-any-guard+))
   (:|diverge| (this value-guard)
     "Returns a FlexList with the same initial contents as this, with the specified element guard."
-    (e. (e. (e. (vat-safe-scope *vat*) 
-                |get| "import__uriGetter")
-            |get| "org.erights.e.elib.tables.makeFlexList")
+    (e. (e-import "org.erights.e.elib.tables.makeFlexList")
       |diverge|
       this
       value-guard))

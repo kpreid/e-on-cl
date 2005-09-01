@@ -105,3 +105,12 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
       (error "unexpected map entries ~A" (e-quote ,map-var)))
     ,@body))
 
+(defun e-import (fqn)
+  "Retrieve an object for the given FQN in the current vat's importer; in E notation, <import>[fqn]."
+  (e-coercef fqn 'string)
+  (e. (e. (vat-safe-scope *vat*) 
+          |get| 
+          "import__uriGetter")
+      |get|
+      fqn))
+

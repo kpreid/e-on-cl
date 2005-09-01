@@ -308,10 +308,7 @@
     ; XXX vat-locally cache makeQuasiSubstituteVisitor until we have it properly deep-frozen so <import> can do so
     (if (/= (length args) 0)
       (e. this |welcome|
-          (e. (e. (e. (vat-safe-scope *vat*) |get|
-                      "import__uriGetter") 
-                  |get|
-                  "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
+          (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
               |run| args))
       this))
   (:|welcome| (this visitor)
