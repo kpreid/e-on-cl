@@ -585,6 +585,52 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (declare (ignore e))
         (error "not recognized as an integer: ~A" (e-quote value)))))))
 
+; --- Type error pieces - to be moved ---
+
+(defun print-object-with-type (tw specimen)
+  "Print an object with information about its alleged type. Originally written for type-errors."
+  ;; XXX this should be exported
+  (let* ((observed-type (observable-type-of specimen))) 
+    (e. tw |write| "the ")
+    (if (eql observed-type 't)
+      (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
+      (e. tw |print| (cl-type-simple-expr observed-type)))
+    (e. tw |write| " ")
+    (e. tw |quote| specimen)))
+
+(defgeneric guard-to-type-specifier (guard))
+
+(def-shorten-methods guard-to-type-specifier 1)
+
+(defmethod guard-to-type-specifier ((guard cl-type-guard))
+  (cl-type-specifier guard))
+
+(defmethod guard-to-type-specifier (guard)
+  (let ((sym (gensym (e-quote guard)))) 
+    (setf (symbol-function sym) 
+      (lambda (specimen) 
+        (block nil
+          (eql specimen 
+               (e. guard |coerce| specimen
+                                  (efun (c) 
+                                    (declare (ignore c)) 
+                                    (return nil)))))))
+    (setf (get sym 'type-specifier-guard) guard)
+    `(satisfies ,sym)))
+
+(defgeneric type-specifier-to-guard (type-specifier))
+
+(defun type-specifier-to-guard (ts)
+  (or
+    (and (symbolp ts) (get ts 'type-specifier-guard))
+    (make-instance 'cl-type-guard :type-specifier ts)))
+
+(defun make-e-type-error (specimen guard)
+  (make-instance 'type-error
+    :datum specimen
+    :expected-type (guard-to-type-specifier guard)))
+
+
 ; --- Condition ---
 
 ; XXX the <typename: desc> is inherited from Java-E: consider whether it's the Right Thing
@@ -610,17 +656,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable type-error
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (let* ((specimen (type-error-datum this))
-           (observed-type (observable-type-of specimen))) 
-      (e. tw |print| "problem: the ")
-      (if (eql observed-type 't)
-        ; xxx should this code be in a function?
-        (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
-        (e. tw |print| (cl-type-simple-expr observed-type)))
-      (e. tw |print| " ")
-      (e. tw |quote| (type-error-datum this))
-      (e. tw |print| " doesn't coerce to "
-                     (e-util:aan (cl-type-simple-expr (type-error-expected-type this)))))))
+    (e. tw |write| "problem: ")
+    (print-object-with-type tw (type-error-datum this))
+    (e. tw |write| " doesn't coerce to ")
+    (e. tw |print| (e-util:aan (e-quote (type-specifier-to-guard (type-error-expected-type this)))))))
 
 (def-vtable synchronous-call-error
   ; XXX should we really be doing this?
