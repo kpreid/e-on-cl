@@ -18,6 +18,7 @@
 
 (defgeneric node-elements (node))
 (defgeneric node-static-scope (node))
+(defgeneric opt-node-property-getter (node field-keyword))
 
 (defmacro def-node-maker (class-sym subnode-flags args &optional elements-form
     &aux (span-sym (gensym "SPAN"))
@@ -51,7 +52,7 @@
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
       fqn)))
 
-(defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key no-dnm)
+(defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key no-dnm rest-slot)
   (let (subnode-flags dnm-args)
     (loop for pd in property-defs do
       (destructuring-bind (property-name subnode-flag type &key) pd
@@ -61,11 +62,37 @@
     (nreverse-here dnm-args)
     `(progn
       (defclass ,class-name ,superclasses ())
+      
       (%setup-node-class ',class-name)
+      
       ,(unless no-dnm
         `(def-node-maker ,class-name
           ,subnode-flags
-          ,dnm-args)))))
+          ,dnm-args))
+      
+      ,@(loop for (property-name) in property-defs
+              for i below (- (length property-defs) (if rest-slot 1 0))
+              collect
+                 `(defmethod opt-node-property-getter 
+                      ((node ,class-name) 
+                       (field-keyword (eql ',property-name)))
+                    (declare (ignore field-keyword))
+                    (lambda () (nth ',i (node-elements node)))))
+      
+      ,@(when rest-slot
+        (destructuring-bind (property-name &rest rest) (car (last property-defs))
+          (declare (ignore rest))
+          `((defmethod opt-node-property-getter 
+                ((node ,class-name) 
+                 (field-keyword (eql ',property-name)))
+              (declare (ignore field-keyword))
+              (lambda () (coerce (nthcdr ',(1- (length property-defs)) (node-elements node)) 'vector))))))
+      
+      (defmethod opt-node-property-getter 
+          ((node ,class-name) 
+           (field-keyword t))
+        (declare (ignore field-keyword))
+        nil))))
 
 ;;; --- Node definitions ---
 
@@ -86,10 +113,10 @@
   ((:|noun|   t (or |NounExpr| |QuasiExpr|))
    (:|rValue| t |EExpr|)))
 (define-node-class |CallExpr|        (|EExpr|)
-  ((:|target| t |EExpr|)
+  ((:|recipient| t |EExpr|)
    (:|verb| nil string) 
    (:|args| t (e-list |EExpr|)))
-  ;; :rest-slot t
+  :rest-slot t
   :no-dnm t)
 (define-node-class |CatchExpr|       (|EExpr|)
   ((:|attempt| t |EExpr|)
@@ -108,7 +135,7 @@
   ((:|attempt| t |EExpr|)
    (:|unwinder| t |EExpr|)))
 (define-node-class |HideExpr|        (|EExpr|)
-  ((:|body| t |EExpr|)))
+  ((:|block| t |EExpr|)))
 (define-node-class |IfExpr|          (|EExpr|)
   ((:|test| t |EExpr|) 
    (:|then| t |EExpr|) 
@@ -132,7 +159,7 @@
    (:|script| t |EScript|)))
 (define-node-class |SeqExpr|         (|EExpr|)
   ((:|subs| t (e-list |EExpr|)))
-  ;; :rest-slot t
+  :rest-slot t
   :no-dnm t)
 (define-node-class |SlotExpr|        (|EExpr|)
   ((:|noun| t (or |NounExpr| |QuasiExpr|))))
@@ -157,6 +184,7 @@
   ())
 (define-node-class |ListPattern|     (|Pattern|)
   ((:|subs| t (e-list |Pattern|)))
+  :rest-slot t
   :no-dnm t)
 (define-node-class |SuchThatPattern| (|Pattern|)
   ((:|pattern| t |Pattern|) 
@@ -333,35 +361,6 @@
     (e. this |welcome|
       (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw))))
 
-(defgeneric opt-node-property-getter (node field-keyword))  ;XXX this should be elsewhere
-
-(defmacro def-indexed-node-properties (class-name names)
-  (labels ((method (name body)
-            `(defmethod opt-node-property-getter 
-                ((node ,class-name) 
-                 (field-keyword (eql ',(intern (string name) "KEYWORD"))))
-              (declare (ignore field-keyword))
-              (lambda () ,body)))
-           (generate (i list)
-            (cond
-              ((null list) 
-                nil)
-              ((eql (first list) '&rest)
-                (assert (= (length list) 2))
-                (list (method (second list) `(coerce (nthcdr ',i (node-elements node)) 'vector))))
-              (t
-                (destructuring-bind (name &rest tail) list
-                  (cons
-                    (method name `(nth ',i (node-elements node)))
-                    (generate (1+ i) tail)))))))
-  `(progn
-    ,@(generate 0 names)
-    (defmethod opt-node-property-getter 
-        ((node ,class-name) 
-         (field-keyword t))
-      (declare (ignore field-keyword))
-      nil))))
-
 (defmethod e-call-match ((rec |ENode|) mverb &rest args
     &aux (mverb-string (symbol-name mverb)) opt-getter)
   (declare (ignore args))
@@ -377,30 +376,6 @@
                                       "KEYWORD"))))
     (funcall opt-getter)
     (call-next-method)))
-
-; XXX put these somewhere else
-(def-indexed-node-properties |AssignExpr| ("noun" "rValue"))
-(def-indexed-node-properties |CallExpr| ("recipient" "verb" &rest "args"))
-(def-indexed-node-properties |CatchExpr| ("attempt" "pattern" "catcher"))
-(def-indexed-node-properties |DefineExpr| ("pattern" "rValue" "optEjectorExpr"))
-(def-indexed-node-properties |EscapeExpr| ("exitPattern" "body" "optArgPattern" "optCatcher"))
-(def-indexed-node-properties |FinallyExpr| ("attempt" "unwinder"))
-(def-indexed-node-properties |HideExpr| ("block"))
-(def-indexed-node-properties |IfExpr| ("test" "then" "else"))
-(def-indexed-node-properties |MatchBindExpr| ("specimen" "pattern"))
-(def-indexed-node-properties |NounExpr| ("name"))
-(def-indexed-node-properties |ObjectExpr| ("docComment" "qualifiedName" "auditorExprs" "script"))
-(def-indexed-node-properties |SeqExpr| (&rest "subs"))
-(def-indexed-node-properties |SlotExpr| ("noun"))
-
-(def-indexed-node-properties |EScript| ("optMethods" "matchers"))
-(def-indexed-node-properties |EMatcher| ("pattern" "body"))
-(def-indexed-node-properties |EMethod| ("docComment" "verb" "patterns" "optResultGuard" "body"))
-
-(def-indexed-node-properties |NounPattern| ("noun" "optGuardExpr"))
-(def-indexed-node-properties |CdrPattern| ("listPatt" "restPatt"))
-(def-indexed-node-properties |ListPattern| (&rest "subs"))
-(def-indexed-node-properties |SuchThatPattern| ("pattern" "test"))
 
 (def-vtable |EExpr|
   (:|quasiTypeTag| (this)
@@ -675,11 +650,11 @@
               (e. +the-make-static-scope+ |getEmptyScope|))))))
 
 (def-scope-rule |EscapeExpr|
-  (hide (seq (hide (seq :|exitPattern| :|body|))
-             (! (if (:get :|optArgPattern|)
-                  (e. (e. (:get :|optArgPattern|) |staticScope|) 
+  (hide (seq (hide (seq :|ejectorPattern| :|body|))
+             (! (if (:get :|optCatchPattern|)
+                  (e. (e. (:get :|optCatchPattern|) |staticScope|) 
                       |add|
-                      (e. (:get :|optCatcher|) |staticScope|))
+                      (e. (:get :|optCatchBody|) |staticScope|))
                   (e. +the-make-static-scope+ |getEmptyScope|))))))
 
 (def-scope-rule |FinallyExpr|
