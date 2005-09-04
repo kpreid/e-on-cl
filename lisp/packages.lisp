@@ -128,6 +128,9 @@
     :observable-type-of 
     :def-class-opaque
     :cl-type-guard
+    :type-specifier-to-guard
+    :guard-to-type-specifier
+    
     :+the-void-guard+
     :+the-any-guard+
     :+the-text-writer-guard+

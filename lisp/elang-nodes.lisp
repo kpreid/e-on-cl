@@ -71,7 +71,9 @@
 
 #+sbcl (sb-ext:unlock-package :e.elang.vm-node)
 
-(defclass |ENode| () ((elements :initarg :elements :accessor node-elements)))
+(defclass |ENode| () 
+  ((elements :initarg :elements :accessor node-elements)
+   (static-scope :initform nil :type function)))
 
 (define-node-class |EExpr|   (|ENode|)
   ()
@@ -300,7 +302,9 @@
   (:|staticScope| (this)
     "Return a static scope analysis of this subtree that doesn't depend on the enclosing context."
     ; xxx in Java-E this caches the result (doing so will require StaticScope to be Selfless)
-    (node-static-scope this))
+    (with-slots (static-scope) this
+      (or static-scope
+          (setf static-scope (node-static-scope this)))))
   (:|substitute| (this args)
     "Quasiliteral ValueMaker interface"
     (e-coercef args 'vector)
@@ -517,7 +521,7 @@
     (read-names (e. #() |asMap|))
     (set-names  (e. #() |asMap|)))
   (with-result-promise (self)
-    (e-lambda "org.erights.e.elang.evm.StaticScope" ()
+    (e-lambda "org.erights.e.elang.evm.StaticScope" (:stamped +selfless-stamp+)
       (:|__printOn| (tw)
         (e-coercef tw +the-text-writer-guard+)
         (e. tw |print| "<" (e. set-names  |getKeys|) " := "
@@ -528,6 +532,12 @@
                              ", meta.getState()" 
                              "") 
                        ">"))
+      (:|__optUncall| ()
+        `#(,+the-make-static-scope+
+           "run"
+           #(,set-names ,read-names 
+             ,def-names ,var-names 
+             ,has-meta-state-expr)))
       (:|add| (right &aux (left self))
         (let ((left-out   (e. left |outNames|))
               (left-def   def-names)
@@ -565,6 +575,21 @@
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
   (defglobal +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
+    (:|run| (sn rn dn vn hms)
+      "General StaticScope constructor. Currently provided only to make StaticScopes selfless."
+      (warn "using inefficient makeStaticScope#run")
+      (let ((map-guard (e-import "org.erights.e.elib.slot.Map"))
+            (string-guard (type-specifier-to-guard 'string)))
+        (e-coercef sn (e. map-guard |get| string-guard (type-specifier-to-guard '|NounExpr|)))
+        (e-coercef rn (e. map-guard |get| string-guard (type-specifier-to-guard '(or |NounExpr| |SlotExpr|))))
+        (e-coercef dn (e. map-guard |get| string-guard (type-specifier-to-guard '|FinalPattern|)))
+        (e-coercef vn (e. map-guard |get| string-guard (type-specifier-to-guard '(or |VarPattern| |SlotPattern|)))))
+      (e-coercef sn 'boolean)
+      (make-static-scope :set-names sn
+                         :read-names rn
+                         :def-names dn
+                         :var-names vn
+                         :has-meta-state-expr hms))
     (:|scopeAssign| (node)
       (e-coercef node '|NounExpr|)
       (make node :set-names (e. node |name|)))
