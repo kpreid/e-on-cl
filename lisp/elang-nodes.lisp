@@ -20,7 +20,8 @@
 (defgeneric node-static-scope (node))
 (defgeneric opt-node-property-getter (node field-keyword))
 
-(defmacro def-node-maker (class-sym subnode-flags args &optional elements-form
+;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
+(defmacro def-node-maker (class-sym subnode-flags args rest-p
     &aux (span-sym (gensym "SPAN"))
          (jlayout-sym (gensym "SCOPE-JLAYOUT"))
          (bare-args (mapcar #'car args)))
@@ -45,14 +46,17 @@
         (assert (null ,jlayout-sym))
         ,@(loop for (arg type) in args
                 collect `(e-coercef ,arg ',type))
-        (make-instance ',class-sym :elements ,(or elements-form `(list ,@bare-args)))))))
+        (make-instance ',class-sym :elements
+          ,(if rest-p
+            `(list* ,@(subseq bare-args 0 (1- (length args))) (coerce ,(car (last bare-args)) 'list))
+            `(list ,@bare-args)))))))
 
 (defun %setup-node-class (node-type)
   (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
       fqn)))
 
-(defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key no-dnm rest-slot)
+(defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key rest-slot)
   (let (subnode-flags dnm-args)
     (loop for pd in property-defs do
       (destructuring-bind (property-name subnode-flag type &key) pd
@@ -65,10 +69,10 @@
       
       (%setup-node-class ',class-name)
       
-      ,(unless no-dnm
-        `(def-node-maker ,class-name
-          ,subnode-flags
-          ,dnm-args))
+      (def-node-maker ,class-name
+        ,subnode-flags
+        ,dnm-args
+        ,rest-slot)
       
       ,@(loop for (property-name) in property-defs
               for i below (- (length property-defs) (if rest-slot 1 0))
@@ -103,11 +107,9 @@
    (static-scope :initform nil :type function)))
 
 (define-node-class |EExpr|   (|ENode|)
-  ()
-  :no-dnm t)
+  ())
 (define-node-class |Pattern| (|ENode|)
-  ()
-  :no-dnm t)
+  ())
 
 (define-node-class |AssignExpr|      (|EExpr|)
   ((:|noun|   t (or |NounExpr| |QuasiExpr|))
@@ -116,8 +118,7 @@
   ((:|recipient| t |EExpr|)
    (:|verb| nil string) 
    (:|args| t (e-list |EExpr|)))
-  :rest-slot t
-  :no-dnm t)
+  :rest-slot t)
 (define-node-class |CatchExpr|       (|EExpr|)
   ((:|attempt| t |EExpr|)
    (:|pattern| t |Pattern|)
@@ -159,8 +160,7 @@
    (:|script| t |EScript|)))
 (define-node-class |SeqExpr|         (|EExpr|)
   ((:|subs| t (e-list |EExpr|)))
-  :rest-slot t
-  :no-dnm t)
+  :rest-slot t)
 (define-node-class |SlotExpr|        (|EExpr|)
   ((:|noun| t (or |NounExpr| |QuasiExpr|))))
 
@@ -184,15 +184,13 @@
   ())
 (define-node-class |ListPattern|     (|Pattern|)
   ((:|subs| t (e-list |Pattern|)))
-  :rest-slot t
-  :no-dnm t)
+  :rest-slot t)
 (define-node-class |SuchThatPattern| (|Pattern|)
   ((:|pattern| t |Pattern|) 
    (:|test| t |EExpr|)))
 
 (define-node-class |NounPattern|     (|Pattern|)
-  ()
-  :no-dnm t)
+  ())
 
 (define-node-class |FinalPattern|    (|NounPattern|)
   ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
@@ -214,11 +212,9 @@
   ((:|index| nil (integer 0))))
 
 (define-node-class |QuasiExpr| (|EExpr| |QuasiNode|)
-  ()
-  :no-dnm t)
+  ())
 (define-node-class |QuasiPatt| (|Pattern| |QuasiNode|)
-  ()
-  :no-dnm t)
+  ())
 
 (define-node-class |QuasiLiteralExpr| (|QuasiLiteralNode| |QuasiExpr|)
   ((:|index| nil (integer 0))))
@@ -236,41 +232,6 @@
 (defmethod print-object ((node |ENode|) stream)
   (print-unreadable-object (node stream :type nil :identity nil)
     (format stream "~A ~W" (type-of node) (node-elements node))))
-
-; --- makers ---
-
-;;; XXX to be moved into define-node-class and shared-initialize :after
-
-(def-node-maker |CallExpr|
-  (t nil t)
-  ; XXX parameterized list guard is not available at this layer: consider fixing.
-  ;     -- and if it was, we'd need a way to incorporate the reference to it in the type specifier def-node-maker provides
-  ;     perhaps we should use (vector EExpr)? cl-type-guard would need to be smart enough to coerce elements, and we'd want it to resemble E-level List[EExpr]
-  ((recipient |EExpr|) (verb string) (args vector))
-  (list* recipient verb (loop for arg across args collect (e-coerce arg '|EExpr|))))
-
-(def-node-maker |SeqExpr|
-  (t)
-  ((subs t))
-  (progn
-    (unless (> (length subs) 0)
-      (error "SeqExpr must have at least one subexpression"))
-    (loop for sub across subs collect (e-coerce sub '|EExpr|))))
-
-(def-node-maker |EScript|
-  (t t)
-  ((methods (or null vector)) (matchers vector))
-  (progn
-    (unless (or methods (> (length matchers) 0))
-      (error "EScript must have methods or at least one matcher"))
-    (list (and methods (map 'vector (lambda (sub) (e-coerce sub '|EMethod|)) methods))
-          (map 'vector (lambda (sub) (e-coerce sub '|EMatcher|)) matchers))))
-
-(def-node-maker |ListPattern|
-  (t)
-  ((subs t))
-  (progn
-    (loop for sub across subs collect (e-coerce sub '|Pattern|))))
 
 ; --- constraints on nodes ---
 
@@ -290,6 +251,16 @@
 ;;                            |QuasiPatternExpr| |QuasiPatternPatt|))
 ;;     (error "Attempt to construct a quasi-node of unspecific class ~S." (class-of node))))
 
+(defmethod shared-initialize :after ((node |SeqExpr|) slot-names &key &allow-other-keys)
+  (unless (> (length (funcall (opt-node-property-getter node :|subs|))) 0)
+    (error "SeqExpr must have at least one subexpression")))
+
+(defmethod shared-initialize :after ((node |EScript|) slot-names &key &allow-other-keys
+    &aux (methods (funcall (opt-node-property-getter node :|optMethods|)))
+         (matchers (funcall (opt-node-property-getter node :|matchers|))))
+  (unless (or methods (> (length matchers) 0))
+      (error "EScript must have methods or at least one matcher")))
+    
 (defmethod shared-initialize :after ((node |DefineExpr|) slot-names &key &allow-other-keys
     &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
          (r-value (funcall (opt-node-property-getter node :|pattern|)))
