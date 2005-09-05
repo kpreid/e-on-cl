@@ -15,6 +15,7 @@
 (defgeneric node-elements (node))
 (defgeneric compute-node-static-scope (node))
 (defgeneric opt-node-property-getter (node field-keyword))
+(defgeneric node-visitor-arguments (node))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
 (defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
@@ -53,7 +54,9 @@
       fqn)))
 
 (defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key rest-slot)
-  (let (subnode-flags dnm-types)
+  (let ((normal-prop-count (- (length property-defs) (if rest-slot 1 0)))
+        subnode-flags 
+        dnm-types)
     (loop for pd in property-defs do
       (destructuring-bind (property-name subnode-flag type &key) pd
         (declare (ignore property-name))
@@ -72,7 +75,7 @@
         ,rest-slot)
       
       ,@(loop for (property-name) in property-defs
-              for i below (- (length property-defs) (if rest-slot 1 0))
+              for i below normal-prop-count
               collect
                  `(defmethod opt-node-property-getter 
                       ((node ,class-name) 
@@ -87,7 +90,14 @@
                 ((node ,class-name) 
                  (field-keyword (eql ',property-name)))
               (declare (ignore field-keyword))
-              (lambda () (coerce (nthcdr ',(1- (length property-defs)) (node-elements node)) 'vector))))))
+              (lambda () (coerce (nthcdr ',normal-prop-count (node-elements node)) 'vector))))))
+      
+      (defmethod node-visitor-arguments ((node ,class-name))
+        ,(if rest-slot
+          `(let ((elements (node-elements node)))
+             (append (subseq elements 0 ',normal-prop-count)
+                     (list (coerce (subseq elements ',normal-prop-count) 'vector))))
+          `(node-elements node)))
       
       (defmethod opt-node-property-getter 
           ((node ,class-name) 
@@ -650,21 +660,3 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
             (sum-node-scopes (:get :|optMethods|))
             (e. +the-make-static-scope+ |getEmptyScope|)))
        (! (sum-node-scopes (:get :|matchers|)))))
-
-; --- visitors ---
-
-(defgeneric node-visitor-arguments (node))
-
-(defmethod node-visitor-arguments ((node |ENode|))
-  (node-elements node))
-
-(defmethod node-visitor-arguments ((node |CallExpr|))
-  (destructuring-bind (rec verb &rest args) (node-elements node)
-    `(,rec ,verb ,(coerce args 'vector))))
-
-(defmethod node-visitor-arguments ((node |SeqExpr|))
-  `(,(coerce (node-elements node) 'vector)))
-
-(defmethod node-visitor-arguments ((node |ListPattern|))
-  `(,(coerce (node-elements node) 'vector)))
-
