@@ -1,0 +1,41 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.eq
+  (:use :cl :e.lisp-test :e.elib))
+(cl:in-package :e.lisp-test.eq)
+
+(import 'e.elib::fast-sameness-test #.*package*)
+
+
+(defun resembles-constantly (value function)
+  (eql value (funcall function 'foo 'bar 'baz 'whatever 1 2 3 4 5)))
+
+
+(deftest fast-sameness-test.general
+  (fast-sameness-test 't 't)
+  #.#'eeq-is-same-ever)
+
+(deftest fast-sameness-test.disjoint-eql
+  (resembles-constantly nil (fast-sameness-test 'integer 'float))
+  t)
+
+(deftest fast-sameness-test.function-general
+  (fast-sameness-test 'function 't)
+  #.#'eeq-is-same-ever)
+
+(deftest fast-sameness-test.symbol-general
+  (fast-sameness-test 'symbol 't)
+  #.#'eeq-is-same-ever)
+
+(deftest fast-sameness-test.disjoint-general
+  (resembles-constantly nil (fast-sameness-test 'symbol 'function))
+  t)
+
+(deftest fast-sameness-test.subrange-right
+  (fast-sameness-test 'character '(member #\a))
+  #.#'eql)
+
+(deftest fast-sameness-test.subrange-left
+  (fast-sameness-test 'bit 'integer)
+  #.#'eql)

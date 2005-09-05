@@ -43,8 +43,10 @@
       (t                    (error "shouldn't happen: broken string comparison"))))
   (:|add| (a b)
     "Concatenate this string and the other string."
-    ; XXX OPT: check the simple case of b being a string
-    (concatenate 'string a (e-print b)))
+    (e-coercef b 'vector)
+    (if (stringp b)
+      (concatenate 'string a b)
+      (call-next-method)))
   (:|startsWith| (this prefix)
     "Return whether 'prefix' is a prefix of this string."
     (as-e-boolean (string= this prefix :end1 (min (length this) 
@@ -164,12 +166,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable symbol
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    ; xxx does with-standard-io-syntax constitute adequate measures to hide any effects from dynamic variables?
-    (e. tw |print| 
-      (with-standard-io-syntax
-        (if (e. tw |isQuoting|)
-          (prin1-to-string this)
-          (princ-to-string this))))))
+    (e. tw |write| (symbol-name this))))
 
 ;(def-atomic-sameness symbol eql sxhash)
 
@@ -248,16 +245,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       ; general comparison
       (t 
         #'eeq-is-same-ever))))
-
-; XXX we should have tests for the above but we don't have any test system for the Lisp side yet - this is the one-time code I wrote to test it:
-; (mapcar #'(lambda (x) (cons x (eval (car x)))) '(
-;   ((fast-sameness-test 't 't) (#'eeq-is-same-ever))
-;   ((fast-sameness-test 'integer 'float) (constantly nil))
-;   ((fast-sameness-test 'function 't) #'eeq-is-same-ever)
-;   ((fast-sameness-test 'symbol 't) #'eeq-is-same-ever)
-;   ((fast-sameness-test 'symbol 'function) (constantly nil))
-;   ((fast-sameness-test 'character '(member #\a)) #'eql)
-;   ((fast-sameness-test 'bit 'integer) #'eql)))
 
 (defun reprint (obj fqn printer)
   (declare (ignore fqn)) ; XXX should be put into the getAllegedType
@@ -352,7 +339,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|add| (this other) 
     "Return the concatenation of both lists."
     (e-coercef other 'vector)
-    (concatenate 'vector this other))
+    (concatenate `(vector (or ,(array-element-type this)
+                              ,(array-element-type other))) 
+                 this other))
   (:|multiply| (vector times)
     "Return a list containing the elements of this list repeated 'times' times."
     (let* ((step (length vector))
@@ -366,7 +355,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
           for elem across vector
           do  (e. func |run| i elem))
     nil)
-  ; XXX OPT use less expensive eq tests if actual element type can be so tested
   (:|indexOf1| (vector elem)
     (or (position elem vector :test (fast-sameness-test `(eql ,elem)
                                                         (array-element-type vector)))
@@ -449,7 +437,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     ; XXX inheriting CL result-type rules - any problems?
     (e-coercef b 'number)
     (+ a b))
-  ; XXX tests for lack of coercion on: subtract multiply min max approxDivide floorDivide truncDivide mod remainder op__cmp
   (:|subtract| (a b)
     (e-coercef b 'number)
     (- a b))
@@ -528,13 +515,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable integer
   (:|__conformTo| (this guard) ; XXX should this be implemented by the guard? same question for float32 too
     ; XXX should use coerce/observable-type, not typep
-    (setf guard (ref-shorten guard))
-    (if (and (typep guard 'cl-type-guard) 
-             (not (typep this (cl-type-specifier guard)))
-             (subtypep `(eql ,(coerce this 'float64))
-                       (cl-type-specifier guard)))
-      (coerce this 'float64)
-      this))
+    (let ((ts (guard-to-type-specifier guard)))
+      (if (and (not (typep this ts))
+               (subtypep `(eql ,(coerce this 'float64)) ts))
+        (coerce this 'float64)
+        this)))
   (:|previous/0| '1-)
   (:|next/0| '1+)
   (:|isNaN| (this)
@@ -636,11 +621,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; XXX the <typename: desc> is inherited from Java-E: consider whether it's the Right Thing
 (def-vtable condition
   (:|__printOn| (this tw
-      &aux (interesting-type (not (typep this 'simple-error))))
+      &aux (interesting-type (not (eql (observable-type-of this) 'simple-error))))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "problem: ")
     (when interesting-type
-      (e. tw |print| "<" (simplify-fq-name (cl-type-fq-name (class-name (class-of this)))) ": "))
+      (e. tw |print| "<" (simplify-fq-name (cl-type-fq-name (observable-type-of this))) ": "))
     (e. tw |print|
       ; CMUCL workaround
       (if (typep this 'simple-condition)
@@ -932,9 +917,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defglobal +the-e+ (e-lambda "org.erights.e.elib.prim.E"
     (:stamped +deep-frozen-stamp+)
-  (:|__printOn| (tw) ; XXX this can be deleted, I think - try later
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "<E>"))
   (:|call| (r v a)
     (e-coercef v 'string)
     (e-coercef a 'vector)

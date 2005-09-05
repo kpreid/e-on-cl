@@ -111,7 +111,7 @@ This is for creating a scope with the usual safeScope structure but with differe
 
   xxx does this truly belong in prim?
   ? def makeSafeScope := <import:org.cubik.cle.prim.makeSafeScope>
-  # value: <native function E.KNOT:MAKE-SAFE-SCOPE>
+  # value: <native function MAKE-SAFE-SCOPE>
   
   ? def altImport := [
   >   "org.erights.e.elib.eio.EIO" => def altEIO {}

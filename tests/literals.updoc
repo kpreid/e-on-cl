@@ -107,6 +107,9 @@ split
 
   ? "<>abc<>".split("<>")
   # value: ["", "abc", ""]
+  
+  ? "<>abc<>".split("")
+  # problem: split: separator may not be empty
 
 String#add/1
 
@@ -114,10 +117,13 @@ String#add/1
   # value: "abbc"
   
   ? "ab" + 10
-  # value: "ab10"
+  # problem: the int 10 doesn't coerce to a ConstList
   
   ? "ab" + ["cd"]
-  # value: "ab[\"cd\"]"
+  # value: ['a', 'b', "cd"]
+  
+  ? "ab" + ['c', 'd']
+  # value: ['a', 'b', 'c', 'd']
 
 rjoin/1
 

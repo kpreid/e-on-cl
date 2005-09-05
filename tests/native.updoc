@@ -45,7 +45,7 @@ symbol-function
   # value: [null]
   
   ? def freshSymbol := makeSymbol("HELLO-WORLD")
-  # value: #:HELLO-WORLD
+  # value: HELLO-WORLD
   
   returned values are *not* altered - XXX function-is-object-or-function issue?
   ? freshSymbol.__respondsTo("getValue", 0)
@@ -53,7 +53,7 @@ symbol-function
   
   for multiple-value functions - XXX write a test that shows this
   ? makeSymbol.tuple("FOO")
-  # value: [#:FOO]
+  # value: [FOO]
   
   ? makeSymbol.__respondsTo("run", 1)
   # value: true

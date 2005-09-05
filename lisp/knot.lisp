@@ -297,7 +297,11 @@
   (e-lambda "org.cubik.cle.prim.lisp$symbolAccessor" ()
     (:|__printOn| (tw)
       (e-coercef tw +the-text-writer-guard+)
-      (e. tw |print| "<" symbol ">")
+      (e. tw |write| "<")
+      (e. tw |print| 
+        (with-standard-io-syntax
+          (prin1-to-string symbol)))
+      (e. tw |write| ">")
       nil)
     (:|getValue| ()
       "CL:SYMBOL-VALUE"
