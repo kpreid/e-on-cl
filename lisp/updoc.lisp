@@ -166,7 +166,7 @@
                     (let ((s (get-output-stream-string eval-err-stream)))
                       (unless (string= s "") (push (list "stderr" s) new-answers))))
                    (finish-step ()
-                    (setf new-answers (nreverse new-answers))
+                    (nreverse-here new-answers)
                     (if (not (tree-equal answers new-answers :test #'equal))
                       (let ((*print-pretty* t)
                             (*package* #.*package*)
@@ -323,7 +323,7 @@
                     :test #'string-equal)))
         (collect path)))
     
-    (setf file-paths (nreverse file-paths))
+    (nreverse-here file-paths)
     
     (profile-start profiler)    
     (chain

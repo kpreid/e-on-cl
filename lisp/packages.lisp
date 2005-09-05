@@ -42,6 +42,7 @@
     :without-suffix
     :without-prefix
     :popping-equal-case
+    :nreverse-here
     
     :class-precedence-list
     :with-appropriate-floating-point-rules

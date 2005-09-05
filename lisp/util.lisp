@@ -124,6 +124,10 @@
             (pop ,list-sym)
             ,@body))))))
 
+(define-modify-macro nreverse-here ()
+  nreverse
+  "In-place updating version of cl:nreverse.")
+
 ; --- floating-point rules ---
 
 ; I was going to use this to get NaN/Infinity for OpenMCL, but when I tried:

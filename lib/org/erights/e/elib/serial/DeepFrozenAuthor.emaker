@@ -203,9 +203,9 @@ def DeepFrozenAuthor(DeepFrozenStamp,
                                   slot :any,
                                   precedingNodes :Really[List[ENode]]) :boolean {
         return expr =~ nounExpr :NounExpr \
-               && witness.getSlot(nounExpr.name()) == slot \
+               && witness.getSlot(def noun := nounExpr.getName()) == slot \
                && accum true for p in precedingNodes {
-                    _ & !(p.staticScope().outNames().maps(nounExpr.name())) }
+                    _ & !(p.staticScope().outNames().maps(noun)) }
       }
 
       def script := objectExpr.getScript()

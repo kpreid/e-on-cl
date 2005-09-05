@@ -182,7 +182,7 @@ NounExpr
   ? makeNounExpr(null, "xy", null)
   # value: e`xy`
 
-  ? makeNounExpr(null, "a", null).name()
+  ? makeNounExpr(null, "a", null).getName()
   # value: "a"
 
   ? makeNounExpr(null, "b", null).staticScope()

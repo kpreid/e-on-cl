@@ -12,19 +12,15 @@
           (every (lambda (element) (typep element element-type)) specimen)))
   `(and vector (satisfies ,sym)))
 
-;; XXX this should go elsewhere
-(define-modify-macro nreverse-here ()
-  nreverse)
-
 (defgeneric node-elements (node))
-(defgeneric node-static-scope (node))
+(defgeneric compute-node-static-scope (node))
 (defgeneric opt-node-property-getter (node field-keyword))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
-(defmacro def-node-maker (class-sym subnode-flags args rest-p
+(defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
     &aux (span-sym (gensym "SPAN"))
          (jlayout-sym (gensym "SCOPE-JLAYOUT"))
-         (bare-args (mapcar #'car args)))
+         (param-syms (loop repeat (length param-types) collect (gensym))))
   `(setf 
     (get ',class-sym 'static-maker)
     ; XXX don't ignore span-sym
@@ -33,23 +29,23 @@
                               (symbol-name class-sym))
         ()
       (:|asType| () 
-        (make-instance 'cl-type-guard :type-specifier ',class-sym))
+        (type-specifier-to-guard ',class-sym))
       (:|getParameterSubnodeFlags| ()
         "Return a list of booleans which indicate whether the corresponding parameter (as used in makers and visitors) is a 'subnode' of the node (e.g. HideExpr's sole parameter) or not (e.g. LiteralExpr's sole parameter). XXX clarify"
-        ; XXX make this constant - note that e-booleans currently aren't compilable
-        (map 'vector #'as-e-boolean ',subnode-flags))
+        ',(map 'vector #'as-e-boolean subnode-flags))
       (,(locally
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-          (e-util:mangle-verb "run" (+ 2 (length args))))
-        (,span-sym ,@bare-args ,jlayout-sym)
+          (e-util:mangle-verb "run" (+ 2 (length param-types))))
+        (,span-sym ,@param-syms ,jlayout-sym)
         (declare (ignore ,span-sym))
         (assert (null ,jlayout-sym))
-        ,@(loop for (arg type) in args
-                collect `(e-coercef ,arg ',type))
+        ,@(loop for param in param-syms
+                for type in param-types
+                collect `(e-coercef ,param ',type))
         (make-instance ',class-sym :elements
           ,(if rest-p
-            `(list* ,@(subseq bare-args 0 (1- (length args))) (coerce ,(car (last bare-args)) 'list))
-            `(list ,@bare-args)))))))
+            `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))
+            `(list ,@param-syms)))))))
 
 (defun %setup-node-class (node-type)
   (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
@@ -57,21 +53,22 @@
       fqn)))
 
 (defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key rest-slot)
-  (let (subnode-flags dnm-args)
+  (let (subnode-flags dnm-types)
     (loop for pd in property-defs do
       (destructuring-bind (property-name subnode-flag type &key) pd
+        (declare (ignore property-name))
         (push subnode-flag subnode-flags)
-        (push `(,(intern (string property-name) :e.elang) ,type) dnm-args)))
+        (push type dnm-types)))
     (nreverse-here subnode-flags)
-    (nreverse-here dnm-args)
+    (nreverse-here dnm-types)
     `(progn
       (defclass ,class-name ,superclasses ())
       
       (%setup-node-class ',class-name)
       
-      (def-node-maker ,class-name
+      (%def-node-maker ,class-name
         ,subnode-flags
-        ,dnm-args
+        ,dnm-types
         ,rest-slot)
       
       ,@(loop for (property-name) in property-defs
@@ -271,7 +268,7 @@
              (usesp opt-ejector-expr pattern))
     (error "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
 
-; --- E-level methods, and printing ---
+; --- E-level methods ---
 
 (defmethod eeq-is-transparent-selfless ((a |ENode|))
   (declare (ignore a))
@@ -288,65 +285,67 @@
       (when quote
         (e. tw |print| "`"))))
   (:|__optUncall| (this)
+    ;; xxx if errors in Selfless uncalls should be vat-killing, this is one of them
     `#(,(let ((sm (get (observable-type-of this) 'static-maker)))
           (assert sm () "Missing maker for E-node class ~A" (observable-type-of this))
           sm)
        "run"
        #(nil ,@(node-visitor-arguments this) nil)))
-  (:|asText| (this)
-    (e-print this))
+  (:|asText/1| 'e-print)
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "e??")
   (:|staticScope| (this)
     "Return a static scope analysis of this subtree that doesn't depend on the enclosing context."
-    ; xxx in Java-E this caches the result (doing so will require StaticScope to be Selfless)
     (with-slots (static-scope) this
       (or static-scope
-          (setf static-scope (node-static-scope this)))))
+          (setf static-scope (compute-node-static-scope this)))))
   (:|substitute| (this args)
-    "Quasiliteral ValueMaker interface"
+    "Quasiliteral ValueMaker interface.
+
+NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced."
     (e-coercef args 'vector)
-    ; XXX the test is a non-transparent optimization: if a tree has quasi-fields anyway, we'll return them instead of failing now as index-out-of-range
-    ; XXX vat-locally cache makeQuasiSubstituteVisitor until we have it properly deep-frozen so <import> can do so
-    (if (/= (length args) 0)
+    (if (= (length args) 0)
+      this
       (e. this |welcome|
           (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
-              |run| args))
-      this))
+              |run| args))))
   (:|welcome| (this visitor)
     (e-call
       visitor
       ; xxx should we use our alleged type method instead of observable-type-of?
       (concatenate 'string "visit" (symbol-name (observable-type-of this))) 
       (cons this (node-visitor-arguments this))))
-  (:|lnPrintOn| (this tw priority)
+  (:|lnPrintOn| (this tw precedence)
     "Java-E compatibility"
-    (declare (ignore priority)) ; XXX
     (e. tw |println|)
-    (e. this |welcome|
-      (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw)))
-  (:|subPrintOn| (this tw priority)
+    (e. this |subPrintOn| tw precedence))
+  (:|subPrintOn| (this tw precedence)
     "Java-E compatibility"
-    (declare (ignore priority)) ; XXX
     (e. this |welcome|
-      (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw))))
+      (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw precedence))))
 
-(defmethod e-call-match ((rec |ENode|) mverb &rest args
-    &aux (mverb-string (symbol-name mverb)) opt-getter)
+(defun mverb-get-to-property-name (mverb)
+  "Return \"foo\" if mverb is :|getFoo/0|, otherwise nil."
+  (when (keywordp mverb)
+    (let* ((name (symbol-name mverb))
+           (length (length name)))
+      (when (and (>= length 5)
+                 (string= name "get" :end1 3)
+                 (string= name "/0" :start1 (- length 2)))
+        (concatenate 'string
+          (string (char-downcase (char name 3)))
+          (subseq name 4 (- length 2)))))))
+    
+(defmethod e-call-match ((rec |ENode|) mverb &rest args)
   (declare (ignore args))
-  (if (and (keywordp mverb)
-           (>= (length mverb-string) 5)
-           (string= mverb-string "get" :end1 3)
-           (string= mverb-string "/0" :start1 (- (length mverb-string) 2))
-           (setf opt-getter (opt-node-property-getter 
-                              rec
-                              (intern (concatenate 'string
-                                        (string (char-downcase (char mverb-string 3)))
-                                        (subseq mverb-string 4 (- (length mverb-string) 2)))
-                                      "KEYWORD"))))
-    (funcall opt-getter)
-    (call-next-method)))
+  (let* ((property (mverb-get-to-property-name mverb))
+         (opt-getter (when property
+                       (opt-node-property-getter rec 
+                                                 (intern property :keyword)))))
+    (if opt-getter
+      (funcall opt-getter)
+      (call-next-method))))
 
 (def-vtable |EExpr|
   (:|quasiTypeTag| (this)
@@ -357,61 +356,12 @@
     "Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings."
     (multiple-value-call #'vector (eval-e this scope))))
 
-(def-vtable |AssignExpr|)
-
-(def-vtable |CallExpr|)
-
-(def-vtable |DefineExpr|)
-
-(def-vtable |EscapeExpr|)
-
-(def-vtable |LiteralExpr|)
-
-(def-vtable |NounExpr|
-  (:|name| (this)
-    (nth 0 (node-elements this))))
-
-(def-vtable |ObjectExpr|)
-
-(def-vtable |SeqExpr|)
-
-(def-vtable |SlotExpr|)
-
-(def-vtable |EMethod|)
-
-(def-vtable |EMatcher|)
-    
-(def-vtable |EScript|
-  (:|getDocComment| (this)
-    (nth 0 (node-elements this))))
-    
-
 (def-vtable |Pattern|
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "epatt"))
-
-(def-vtable |FinalPattern|)
-
-(def-vtable |VarPattern|)
-
-(def-vtable |IgnorePattern|)
-
-(def-vtable |SlotPattern|)
-
-(def-vtable |SuchThatPattern|)
-      
+     
 ; --- analysis ---
-
-; XXX merge this with staticScope? not user-visible?
-; XXX this isn't actually used
-(defgeneric needs-reified-slot (node name))
-
-(defmethod needs-reified-slot ((node |ENode|) name)
-  (some #'(lambda (node) (needs-reified-slot node name)) (node-elements node)))
-
-(defmethod needs-reified-slot ((node |SlotExpr|) name)
-  (string= name (first (node-elements node))))
 
 ; XXX pattern-opt-noun and pattern-to-param-desc are looking similar - perhaps pattern-opt-noun should be defined as a wrapper
 
@@ -437,7 +387,6 @@
 (defmethod pattern-to-param-desc ((pattern |NounPattern|))
   (make-instance 'param-desc
     :opt-name (e. (e. pattern |getNoun|) |getName|)
-    ; XXX make this a formal NotAGuard
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
 
 (defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
@@ -514,6 +463,9 @@
                                 :set-names set-names
                                 :has-meta-state-expr has-meta-state-expr)))))
 
+(defglobal +empty-static-scope+ (make-static-scope))
+(defglobal +has-meta-static-scope+ (make-static-scope :has-meta-state-expr +e-true+))
+
 (flet ((make (node kind label)
         ;; muffle non-constant keyword argument warning
         (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
@@ -538,23 +490,21 @@
                          :has-meta-state-expr hms))
     (:|scopeAssign| (node)
       (e-coercef node '|NounExpr|)
-      (make node :set-names (e. node |name|)))
+      (make node :set-names (e. node |getName|)))
     (:|scopeDef| (node)
       (e-coercef node '|FinalPattern|)
-      (make node :def-names (e. (e. node |getNoun|) |name|)))
+      (make node :def-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeRead| (node)
       (e-coercef node '(or |NounExpr| |SlotExpr|))
-      (make node :read-names (e. node |name|)))
+      (make node :read-names (e. node |getName|)))
     (:|scopeVar| (node)
       (e-coercef node '|VarPattern|)
-      (make node :var-names (e. (e. node |getNoun|) |name|)))
+      (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeSlot| (node)
       (e-coercef node '|SlotPattern|)
-      (make node :var-names (e. (e. node |getNoun|) |name|)))
-    (:|scopeMeta| ()
-      (make-static-scope :has-meta-state-expr +e-true+))
-    (:|getEmptyScope| ()
-      (make-static-scope)))))
+      (make node :var-names (e. (e. node |getNoun|) |getName|)))
+    (:|scopeMeta| ()     +has-meta-static-scope+)
+    (:|getEmptyScope| () +empty-static-scope+))))
 
 ; --- static scope computation ---
 
@@ -589,7 +539,7 @@
                 `(sum-node-scopes (:get ',(second expr))))
               (t
                 (error "Unknown scope-rule expression: ~S" expr)))))
-    `(defmethod node-static-scope ((node ,specializer))
+    `(defmethod compute-node-static-scope ((node ,specializer))
       (flet ((:get (keyword) (funcall (opt-node-property-getter node keyword))))
         (declare (ignorable (function :get)))
         ,(transform scope-expr)))))
@@ -650,7 +600,6 @@
 (def-scope-rule |MetaStateExpr|
   (! (e. +the-make-static-scope+ |scopeMeta|)))
 
-; XXX 'node' not explicitly bound
 (def-scope-rule |NounExpr|
   (! (e. +the-make-static-scope+ |scopeRead| node)))
 
@@ -667,7 +616,6 @@
 (def-scope-rule |CdrPattern|
   (seq :|listPatt| :|restPatt|))
 
-; XXX hidden binding
 (def-scope-rule |FinalPattern|
   (! (e. +the-make-static-scope+ |scopeDef| node)))
 
