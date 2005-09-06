@@ -115,6 +115,8 @@ This unfinished scrap of code from vtable-case-entry wouldn't have worked, but m
 
 Possibly for use in float next/previous methods
 
+http://paste.lisp.org/display/10847
+
 ------ Begin Forwarded Message -------
 
 Subject:     Re: A function returning the next representable floating 
