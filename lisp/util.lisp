@@ -73,22 +73,42 @@
 
 ; --- misc functions ---
 
-(locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  ; Regarding the SBCL conditionals below: I want this code fast, but there seems to be *no* way to get SBCL not to output warnings on the parts which it can't optimize *at every point at which it is inlined*.
+(defconstant +arity-limit+ call-arguments-limit)
+(deftype arity () `(integer 0 ,+arity-limit+))
+
+(locally ;; XXX stale
 
   (declaim (inline mangle-verb)
-           (ftype (function (string (integer 0)) keyword) mangle-verb))
+           (ftype (function (string arity) keyword) mangle-verb))
   (defun mangle-verb (verb arity)
-    (declare (optimize (speed #-sbcl 3 #+sbcl 2) (safety 3) (space 2)))
-    (intern (format nil "~A/~A" verb arity) "KEYWORD"))
+    (declare (string verb)
+             (type arity arity)
+             (optimize (safety 3)))
+    (intern (let* ((sep (length verb))
+                   (digits (max (loop for n of-type arity = arity
+                                                     then (floor n 10)
+                                      while (> n 0)
+                                      count t)
+                                1))
+                   (mv-string (make-array (+ sep 1 digits) 
+                                :element-type 'character 
+                                :fill-pointer nil
+                                :adjustable nil)))
+              (replace mv-string verb :end1 sep)
+              (setf (aref mv-string sep) #\/)
+              (loop for pos from (1- (length mv-string)) above sep
+                    for n of-type arity = arity then (floor n 10)
+                    do (setf (aref mv-string pos) 
+                               (digit-char (mod n 10) 10)))
+              mv-string)
+            "KEYWORD"))
   
   (declaim (inline unmangle-verb)
            (ftype (function (keyword) (values string (integer 0))) unmangle-verb))
   (defun unmangle-verb (mverb
       &aux (mv-string (symbol-name mverb))
            (slash     (position #\/ mv-string)))
-    (declare 
-             (optimize (speed #-sbcl 3 #+sbcl 1) (safety 3) (space 2)))
+    (declare (optimize (safety 3)))
     (assert slash)
     (values
       (subseq mv-string 0 slash)

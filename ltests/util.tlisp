@@ -62,3 +62,14 @@
   (e.util:without-prefix "ceadfb" "ce")
   "adfb")
 
+(defun leql (ab)
+  (destructuring-bind (a b) ab
+    (eql a b)))
+
+(deftest mangle-verb.arity
+  (remove-if #'leql
+    (mapcar (lambda (n)
+              (list (e.util:mangle-verb "foo" n)
+                    (intern (format nil "~A/~A" "foo" n) "KEYWORD")))
+            '(0 1 2 3 4 5 6 7 8 9 10 11 12 98 99 100 101 102 1234)))
+  ())
