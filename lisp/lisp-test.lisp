@@ -3,7 +3,7 @@
 
 (cl:defpackage :e.lisp-test
   (:use :cl 
-        #+sbcl :sb-rt #-sbcl :rt
+        #+e.sb-rt :sb-rt #-e.sb-rt :rt
         :e.elib)
   (:export :system-test))
 (cl:in-package :e.lisp-test)

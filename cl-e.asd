@@ -94,8 +94,15 @@
   (funcall (intern "SYSTEM-TEST" "E.LISP-TEST") op system)
   (funcall (intern "SYSTEM-TEST" "E.UPDOC")     op system))
 
+;; Use RT unless under SBCL *and* there is no RT
+#+sbcl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (find-system :rt nil)
+    (pushnew :e.sb-rt *features*)))
+
 (defsystem e-on-cl.lisp-test
-  :depends-on (:cl-e #+sbcl :sb-rt
-                     #-sbcl :rt)
+  :depends-on (:cl-e
+               #+e.sb-rt :sb-rt
+               #-e.sb-rt :rt)
   :components ((:module "lisp" :components
                 ((:file "lisp-test")))))
