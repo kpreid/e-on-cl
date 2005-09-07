@@ -77,6 +77,13 @@
   (force-output)
   (global-exit 0))
 
+(defun lisptest-toplevel (args)
+  (assert (= 0 (length args)))
+  (asdf:operate 'asdf:load-op :e-on-cl.lisp-test)
+  (funcall (intern "SYSTEM-TEST" :e.lisp-test) nil (asdf:find-system :cl-e))
+  (force-output)
+  (global-exit 0))
+
 (defun updoc-toplevel (args)
   (establish-vat)
   (asdf:operate 'asdf:load-op :cl-e.updoc)
@@ -123,6 +130,8 @@
         (setf *break-on-ejections* (read-from-string (pop args))))
       (("--selftest")
         (setf toplevel #'selftest-toplevel))
+      (("--lisptest")
+        (setf toplevel #'lisptest-toplevel))
       (("--updoc")
         (setf toplevel #'updoc-toplevel))
       (("--translate")
