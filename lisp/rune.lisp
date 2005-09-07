@@ -37,7 +37,7 @@
   (error "Don't know how to global-exit"))
 
 (defun script-toplevel (args)
-  (establish-vat)
+  (establish-vat :label "rune script toplevel")
   (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
          (Ref (e. scope |get| "Ref"))
          (outcome-vow (e. (e. scope |get| "rune") |run| (coerce args 'vector))))
@@ -53,7 +53,7 @@
     (vat-loop)))
 
 (defun repl-toplevel (args)
-  (establish-vat)
+  (establish-vat :label "rune repl toplevel")
   (assert (null args))
   (let ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*)))
     (loop (with-simple-restart (abort "Return to E REPL.")
@@ -85,21 +85,21 @@
   (global-exit 0))
 
 (defun updoc-toplevel (args)
-  (establish-vat)
+  (establish-vat :label "rune updoc toplevel")
   (asdf:operate 'asdf:load-op :cl-e.updoc)
   (apply (intern "UPDOC-RUNE-ENTRY" "E.UPDOC") args)
   (force-output)
   (global-exit 0))
 
 (defun irc-repl-toplevel (args)
-  (establish-vat)
+  (establish-vat :label "rune irc toplevel")
   (asdf:operate 'asdf:load-op :cl-e.irc-repl)
   (apply (intern "START-IRC-REPL" :e.irc-repl) args)
   (vat-loop))
 
 (defun translate-toplevel (args)
   (assert (= 1 (length args)))
-  (establish-vat)
+  (establish-vat "rune --translate toplevel")
   (print (e.elang:get-translation (e.syntax:e-source-to-tree (first args))))
   (fresh-line)
   (force-output)

@@ -367,7 +367,7 @@
         (asdf:component-pathname system)))
     (let ((result
             (block test
-              (with-vat ()
+              (with-vat (:label "updoc system-test")
                 (when-resolved (result)
                     (updoc-start
                       (list (merge-pathnames

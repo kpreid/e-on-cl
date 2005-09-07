@@ -5,13 +5,32 @@
   (:use :cl :e.lisp-test :elib :e.util))
 (cl:in-package :e.lisp-test.turn)
 
+
+(deftest vat-label.init
+  (vat-label (make-instance 'vat :label "aardvarks"))
+  "aardvarks")
+
+(deftest vat-label.establish-vat
+  (prog2
+    (establish-vat :label "initiative")
+    (vat-label *vat*)
+    (setf *vat* nil))
+  "initiative")
+  
+(deftest vat-label.with-vat
+  (block nil
+    (with-vat (:label "potato")
+      (return (vat-label *vat*))))
+  "potato")
+
+
 (defun stream-handler-target (stream)
   ;; XXX this belongs in e.util
   #+sbcl (sb-sys:fd-stream-fd stream)
   #+clisp stream)
 
 (deftest exclusive-io-handler-pound
-  (let* ((vat (make-instance 'vat))
+  (let* ((vat (make-instance 'vat :label "exclusive-io-handler-pound test"))
          (*vat* vat)
          (group (make-instance 'io-handler-exclusion-group))
          (seen 0)

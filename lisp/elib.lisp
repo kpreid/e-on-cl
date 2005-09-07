@@ -416,7 +416,17 @@ If there is no current vat at initialization time, captures the current vat at t
                :accessor vat-safe-scope)
    (handler-group :type io-handler-exclusion-group
                   :initform (make-instance 'io-handler-exclusion-group)
-                  :reader vat-handler-group)))
+                  :reader vat-handler-group)
+   (label :initarg :label
+          :initform nil
+          :type (or null string)
+          :reader vat-label)))
+
+(defmethod print-object ((vat vat) stream)
+  (print-unreadable-object (vat stream :type t :identity t)
+    (format stream "~S~:[~; (in turn)~]"
+      (vat-label vat)
+      (vat-in-turn vat))))
 
 (defun vat-enqueue-turn (vat fun)
   ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
@@ -482,9 +492,9 @@ If there is no current vat at initialization time, captures the current vat at t
   (with-slots (time-queue) *vat*
     (sorted-queue-put time-queue time func)))
 
-(defun establish-vat ()
+(defun establish-vat (&rest initargs)
   (assert (null *vat*))
-  (setf *vat* (make-instance 'vat)))
+  (setf *vat* (apply #'make-instance 'vat initargs)))
 
 ; --- Type description objects ---
 

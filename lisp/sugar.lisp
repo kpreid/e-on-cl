@@ -54,16 +54,15 @@
 ;      (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
 ;        ,@forms))))
 
-(defun call-with-vat (function)
+(defun call-with-vat (function &rest initargs)
   (assert (null *vat*))
   ; xxx eventually we will need a shutdown operation on the vat to break inter-vat refs, do some sort of shutdown on registered input streams, etc.
-  (let ((*vat* (make-instance 'vat)))
+  (let ((*vat* (apply #'make-instance 'vat initargs)))
     (funcall function)
     (vat-loop)))
 
-(defmacro with-vat ((&optional) &body start-forms)
-  ;; the &optional is for a clisp (2.33.2) bug: it interprets () as a variable instead of a destructuring list
-  `(call-with-vat (lambda () ,@start-forms)))
+(defmacro with-vat ((&rest initargs) &body start-forms)
+  `(call-with-vat (lambda () ,@start-forms) ,@initargs))
 
 (defmacro when-resolved ((result-var) ref-form &body forms)
   "Execute the body forms when the value of ref-form becomes resolved. Returns a promise for the value of the last form.

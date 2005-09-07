@@ -80,6 +80,7 @@
     :with-turn
     :establish-vat
     :run-vats  ; deprecated
+    :vat-label
     :vat-safe-scope
     :vat-privileged-scope
     :vat-checking
