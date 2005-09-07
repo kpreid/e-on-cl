@@ -70,6 +70,13 @@
     (t
       (error "unsupported result type ~S in map-from-hash" result-type))))
 
+(defun system-symbol (name package system)
+  "Return the symbol with name NAME in PACKAGE, after ensuring that asdf system SYSTEM is loaded."
+  (asdf:operate 'asdf:load-op system)
+  (multiple-value-bind (symbol found)
+      (find-symbol name package)
+    (assert found ())
+    symbol))
 
 ; --- misc functions ---
 

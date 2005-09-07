@@ -25,6 +25,7 @@
     :aan
     :named-lambda
     :map-from-hash
+    :system-symbol
 
     :serve-event
     :add-io-handler

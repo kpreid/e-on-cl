@@ -392,8 +392,7 @@
     (append *emaker-search-list*
       (handler-case
           (progn
-            (asdf:operate 'asdf:load-op :cl-e.jar)
-            (list (funcall (intern "OPEN-JAR" :e.jar)
+            (list (funcall (system-symbol "OPEN-JAR" :e.jar :cl-e.jar)
               (merge-pathnames #p"e.jar" dir-pathname))))
         (error (c)
           (warn "Could not use e.jar because: ~A" c)

@@ -79,22 +79,19 @@
 
 (defun lisptest-toplevel (args)
   (assert (= 0 (length args)))
-  (asdf:operate 'asdf:load-op :e-on-cl.lisp-test)
-  (funcall (intern "SYSTEM-TEST" :e.lisp-test) nil (asdf:find-system :cl-e))
+  (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil (asdf:find-system :cl-e))
   (force-output)
   (global-exit 0))
 
 (defun updoc-toplevel (args)
   (establish-vat :label "rune updoc toplevel")
-  (asdf:operate 'asdf:load-op :cl-e.updoc)
-  (apply (intern "UPDOC-RUNE-ENTRY" "E.UPDOC") args)
+  (apply (system-symbol "UPDOC-RUNE-ENTRY" "E.UPDOC" :cl-e.updoc) args)
   (force-output)
   (global-exit 0))
 
 (defun irc-repl-toplevel (args)
   (establish-vat :label "rune irc toplevel")
-  (asdf:operate 'asdf:load-op :cl-e.irc-repl)
-  (apply (intern "START-IRC-REPL" :e.irc-repl) args)
+  (apply (system-symbol "START-IRC-REPL" :e.irc-repl :cl-e.irc-repl) args)
   (vat-loop))
 
 (defun translate-toplevel (args)
