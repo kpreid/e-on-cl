@@ -389,10 +389,11 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defun %with-turn (body vat)
   "Execute the 'body' thunk, as a turn in the given vat."
-  (assert (and (not (vat-in-turn vat))
-               (or (null *vat*)
-                   (eq *vat* vat)))
-          (vat))
+  (when (vat-in-turn vat)
+    (error "~S is already executing a turn" vat))
+  (unless (or (null *vat*)
+              (eq *vat* vat))
+    (error "there is already a current vat, ~S, so ~S may not execute a turn" *vat* vat))
   (unwind-protect
     (let ((*vat* vat))
       (setf (vat-in-turn vat) t)
@@ -439,6 +440,9 @@ If there is no current vat at initialization time, captures the current vat at t
                             (lambda (target)
                               (with-turn (vat)
                                 (funcall function target)))))
+
+(defun vat-remove-io-handler (handler)
+  (remove-exclusive-io-handler handler))
 
 (defmethod e-send-dispatch (rec mverb &rest args)
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")

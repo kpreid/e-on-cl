@@ -31,6 +31,7 @@
     :add-io-handler
     :remove-io-handler
     :add-exclusive-io-handler
+    :remove-exclusive-io-handler
     :io-handler-exclusion-group
     
     :run-program
@@ -88,6 +89,7 @@
     :vat-enqueue-turn
     :vat-enqueue-timed
     :vat-add-io-handler
+    :vat-remove-io-handler
   
     :e-call :e-call-dispatch :e.
     :e-send :e-send-dispatch :e<-

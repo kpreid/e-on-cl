@@ -131,7 +131,7 @@
       (e. e-function |run|))))
 
 (defun foo-remove-receive-handler (handler)
-  (e.util:remove-io-handler handler))
+  (vat-remove-io-handler handler))
 
 ; --- ---
 
