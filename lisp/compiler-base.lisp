@@ -177,7 +177,7 @@
   `(,binding ,elib:+the-unset-slot+))
 
 (defmethod binding-smash-code ((binding symbol) broken-ref-form)
-  `(setq ,binding (make-instance 'elib:e-simple-slot :value ,broken-ref-form)))
+  `(setf ,binding (make-instance 'elib:e-simple-slot :value ,broken-ref-form)))
 
 
 
@@ -190,13 +190,13 @@
   `(make-instance 'elib:e-simple-slot :value ,(binding-get-code binding)))
 
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
-  `(setq ,(binding-get-code binding) ,value-form))
+  `(setf ,(binding-get-code binding) ,value-form))
 
 (defmethod binding-let-entry ((binding direct-def-binding))
   `(,(binding-get-code binding) ',(elib:make-unconnected-ref "accidentally unbound direct binding")))
 
 (defmethod binding-smash-code ((binding direct-def-binding) broken-ref-form)
-  `(setq ,(binding-get-code binding) ,broken-ref-form))
+  `(setf ,(binding-get-code binding) ,broken-ref-form))
 
 
 (defclass value-binding ()

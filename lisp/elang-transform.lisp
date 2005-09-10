@@ -495,11 +495,11 @@ XXX This is an excessively large authority and will probably be replaced."
     &aux (vars ()) sym)
   (let ((guard-code (if (not (null optGuardExpr))
                       (updating-transform optGuardExpr layout vars))))
-    (multiple-value-setq (sym layout) (pick-slot-symbol (car (node-elements nounExpr)) layout))
+    (setf (values sym layout) (pick-slot-symbol (car (node-elements nounExpr)) layout))
     (values 
       (cons sym vars)
       layout
-      `(setq ,sym ,(funcall slot-expr-func
+      `(setf ,sym ,(funcall slot-expr-func
         (if (not coerce-immediately)
           guard-code)
         (if (and guard-code coerce-immediately)
@@ -516,9 +516,9 @@ XXX This is an excessively large authority and will probably be replaced."
   (let ((guard-code (if (not (null optGuardExpr))
                       (updating-transform optGuardExpr layout vars)))
         (binding nil))
-    (multiple-value-setq (binding layout) (pick-binding-symbol (car (node-elements nounExpr)) layout))
+    (setf (values binding layout) (pick-binding-symbol (car (node-elements nounExpr)) layout))
     (values (cons binding vars) layout 
-      `(setq ,(binding-get-code binding)
+      `(setf ,(binding-get-code binding)
                   ,(if guard-code
                     `(e. ,guard-code |coerce|
                                      ,specimen-form
@@ -530,7 +530,7 @@ XXX This is an excessively large authority and will probably be replaced."
   (let ((guard-code (if (not (null optGuardExpr))
                       (updating-transform optGuardExpr layout vars)))
         (binding nil))
-    (multiple-value-setq (binding layout) (pick-binding-symbol (car (node-elements nounExpr)) layout))
+    (setf (values binding layout) (pick-binding-symbol (car (node-elements nounExpr)) layout))
     (make-lets vars
       `(let ((,(binding-get-code binding)
                 ,(if guard-code
