@@ -133,6 +133,7 @@
     :observable-type-of 
     :def-class-opaque
     :cl-type-guard
+    :make-e-type-error
     :type-specifier-to-guard
     :guard-to-type-specifier
     
@@ -271,7 +272,9 @@
     :make-io-scope
     
     :found-e-on-java-home
-    :*emaker-search-list*))
+    :*emaker-search-list*
+    
+    :+traceln+))
   
 (cl:defvar e.knot:*emaker-search-list*)
 

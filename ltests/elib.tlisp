@@ -9,3 +9,18 @@
              (:|run| ()
                :hi))))))
   "Method \"run\" has 0 parameters, which is not enough to accept 1 prefix argument.")
+
+(defun same-or-objects (test a b)
+  (if (funcall test a b)
+    t
+    (values a b)))
+
+(deftest guard->type-specifier->guard
+  (let ((guard (e-lambda "$typeSpecifierTest" ())))
+    (same-or-objects #'eeq-is-same-ever guard (type-specifier-to-guard (guard-to-type-specifier guard))))
+  t)
+  
+(deftest type-specifier->guard->type-specifier
+  (let ((ts '(integer -10 10)))
+    (same-or-objects #'equal ts (guard-to-type-specifier (type-specifier-to-guard ts))))
+  t)

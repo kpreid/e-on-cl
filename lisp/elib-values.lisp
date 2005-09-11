@@ -591,7 +591,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (cl-type-specifier guard))
 
 (defmethod guard-to-type-specifier (guard)
-  (let ((sym (gensym (e-quote guard)))) 
+  (let ((sym (make-symbol (e-quote guard)))) 
     (setf (symbol-function sym) 
       (lambda (specimen) 
         (block nil
@@ -600,14 +600,15 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                   (efun (c) 
                                     (declare (ignore c)) 
                                     (return nil)))))))
-    (setf (get sym 'type-specifier-guard) guard)
+    (setf (get sym 'satisfies-type-specifier-guard) guard)
     `(satisfies ,sym)))
-
-(defgeneric type-specifier-to-guard (type-specifier))
 
 (defun type-specifier-to-guard (ts)
   (or
-    (and (symbolp ts) (get ts 'type-specifier-guard))
+    (and (consp ts)
+         (= (length ts) 2)
+         (eq (first ts) 'satisfies)
+         (get (second ts) 'satisfies-type-specifier-guard))
     (make-instance 'cl-type-guard :type-specifier ts)))
 
 (defun make-e-type-error (specimen guard)
