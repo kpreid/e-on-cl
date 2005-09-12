@@ -145,17 +145,14 @@
 
 ; --- Script running ---
 
-(defvar *print-steps* nil
-  "incomplete tracing of step execution, for debugging if updoc just hangs")
-
-(defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream)
+(defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream &key print-steps)
   (symbol-macrolet ((scope (e-slot-value scope-slot))
                     (wait-hook (e-slot-value wait-hook-slot)))
     (lambda (step
         &aux new-answers new-result backtrace)
       (destructuring-bind (expr answers) step
         (multiple-value-bind (result-promise result-resolver) (make-promise)
-          (if *print-steps*
+          (if print-steps
             (format t "~&? ~A~%" expr)
             (princ "."))
           (force-output)
@@ -196,7 +193,7 @@
               (collect-streams)
               (when new-result
                 (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers)
-                (when *print-steps*
+                (when print-steps
                   (format t "~&# ~A: ~A~%" (caar new-answers) (cadar new-answers))))
               (e. (e. scope |get| "Ref") |whenResolved| wait-hook (efun (x)
                 ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
@@ -205,7 +202,7 @@
                 (e. result-resolver |resolve| (finish-step)))))))
           result-promise)))))
 
-(defun updoc-file (file)
+(defun updoc-file (file &key print-steps)
   (with-open-file (s file
       :external-format e.extern:+standard-external-format+)
     (let* ((script (read-updoc s))
@@ -213,7 +210,7 @@
            (eval-err-stream (make-string-output-stream))
            (scope-slot (make-instance 'elib:e-var-slot :value nil))
            (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain"))
-           (stepper (make-stepper file scope-slot wait-hook-slot eval-out-stream eval-err-stream))
+           (stepper (make-stepper file scope-slot wait-hook-slot eval-out-stream eval-err-stream :print-steps print-steps))
            (runner (e-lambda "org.cubik.cle.updoc.Runner" ()
               (:|__printOn| (tw)
                 (e-coercef tw +the-text-writer-guard+)
@@ -304,7 +301,7 @@
 
 ; --- Entry points, etc. ---
 
-(defun updoc-start (paths &key profiler
+(defun updoc-start (paths &key profiler print-steps
   &aux file-paths)
   
   (flet ((collect (pathname)
@@ -330,7 +327,7 @@
       #'result+
       (make-instance 'result)
       (lambda () file-paths)
-      (lambda () (updoc-file (pop file-paths)))
+      (lambda () (updoc-file (pop file-paths) :print-steps print-steps))
       (lambda (result)
         (profile-finish profiler)
         (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
@@ -339,7 +336,7 @@
         (values)))))
 
 (defun updoc-rune-entry (&rest args
-    &aux profiler)
+    &aux profiler print-steps)
   (popping-equal-case args
     (("--profile")
       (assert args (args) "--profile requires an argument")
@@ -347,12 +344,14 @@
         (let ((*package* (find-package :keyword)))
           (read-from-string (pop args))))
       (assert (member profiler *profilers*) (profiler) "~S is not a known profiler." profiler))
+    (("--steps" "--print-steps")
+      (setf print-steps t))
     (("--confine")
       ; XXX implement this - if nothing else to avoid the expense of making an io-scope when it's unnecessary
       (error "--confine not yet implemented")))
   
   (when-resolved (result)
-      (updoc-start (mapcar #'pathname args) :profiler profiler) 
+      (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps) 
     (declare (ignore result))
     (force-output)
     (return-from updoc-rune-entry))
