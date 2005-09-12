@@ -839,3 +839,6 @@ If a log message is produced, context-thunk is run to produce a string describin
                                  +lisp+))))
             #||#)))))
 
+;;; --- end ---
+
+#+sbcl (sb-ext:lock-package #.*package*)

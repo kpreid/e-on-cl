@@ -5,6 +5,22 @@
   (:use :cl :e.lisp-test :e.elib))
 (cl:in-package :e.lisp-test.sugar)
 
+
+(deftest escape-bind.no
+  (escape-bind (foo)
+      (*)
+    (value)
+      (list value))
+  1)
+
+(deftest escape-bind.yes
+  (escape-bind (foo)
+      (e. foo |run| "out")
+    (value)
+      (list value))
+  ("out"))
+
+
 (deftest mapping-bind.trivial
   (mapping-bind (e. #() |asMap|)
                 ()

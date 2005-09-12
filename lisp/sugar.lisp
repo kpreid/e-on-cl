@@ -54,6 +54,19 @@
 ;      (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
 ;        ,@forms))))
 
+(defmacro escape-bind ((ejector-var) try-form (result-var) &body catch-forms)
+  "Execute TRY-FORM with an ejector bound to EJECTOR-VAR. If the ejector is used, control is transferred to the CATCH-FORMS with the ejector's argument bound to RESULT-VAR. Returns the value of whichever of TRY-FORM or the last of CATCH-FORMS returns."
+  (let ((tag-var (gensym "ESCAPE-BIND-TAG"))
+        (normal-block (gensym "ESCAPE-BIND-NORMAL")))
+    `(let ((,tag-var (make-symbol "TAG")))
+      (block ,normal-block
+        (let ((,result-var
+                (catch ,tag-var
+                  (return-from ,normal-block 
+                    (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
+                      ,try-form)))))
+          ,@catch-forms)))))
+
 (defun call-with-vat (function &rest initargs)
   (assert (null *vat*))
   ; xxx eventually we will need a shutdown operation on the vat to break inter-vat refs, do some sort of shutdown on registered input streams, etc.

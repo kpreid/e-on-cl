@@ -206,6 +206,7 @@
     
     :e-slot-value :place-slot
     :def-shorten-methods
+    :escape-bind
     :with-vat :when-resolved
     :mapping-bind
     :e-import))

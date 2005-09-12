@@ -277,3 +277,17 @@
   (defun class-precedence-list (&rest args)
     (error "No MOP package known for this implementation, to retrieve class-precedence-list from."))
 
+;;; --- miscellaneous ---
+
+(defun system-symbol (name package system)
+  "Return the symbol with name NAME in PACKAGE, after ensuring that asdf system SYSTEM is loaded."
+  (asdf:operate 'asdf:load-op system)
+  (multiple-value-bind (symbol found)
+      (find-symbol name package)
+    (assert found () "The symbol ~A::~A was not found after loading ~A."
+                     package name system)
+    symbol))
+
+;;; --- end ---
+
+#+sbcl (sb-ext:lock-package #.*package*)
