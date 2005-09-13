@@ -325,52 +325,34 @@
   (declare (ignore arg-forms))
   '(progn))
 
+(defmacro sort-two-by-hash (a b)
+  "not multiple-evaluation safe"
+  `(when (< (sxhash ,b) 
+            (sxhash ,a))
+     (setf ,a ,b 
+           ,b ,a)))
+
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun make-equalizer (
-      &aux (lefts  (make-array 30 :element-type t :adjustable t :fill-pointer 0)) 
-           (rights (make-array 30 :element-type t :adjustable t :fill-pointer 0))
-           (equalizer-busy nil)
-           (next-equalizer nil)) 
-    (declare (optimize (speed 3) (safety 3) (debug 0))
-             (type (and (vector t) (not simple-array) (not simple-vector)) lefts rights))
-    (labels  ((clear () 
-                (fill lefts  nil)
-                (fill rights nil)
-                (setf (fill-pointer lefts)  0
-                      (fill-pointer rights) 0))
-                
-              (push-sofar (left right sofar)
-                (declare (fixnum sofar))
-                (when (< (sxhash right) 
-                         (sxhash left))
-                  (setf left  right
-                        right left))
-                (if (>= sofar (fill-pointer lefts))
-                  (progn
-                    (assert (= sofar (fill-pointer lefts)))
-                    (vector-push-extend left  lefts)
-                    (vector-push-extend right rights))
-                  (setf (aref lefts sofar) left
-                        (aref rights sofar) right))
-                (let ((sofarther (1+ sofar)))
-                  (declare (fixnum sofarther))
-                  sofarther))
+  (defun make-equalizer () 
+    (declare (optimize (speed 3) (safety 3) (debug 0)))
+    (labels  ((push-sofar (left right sofar)
+                (declare (type (cons list list) sofar))
+                (sort-two-by-hash left right)
+                (cons (cons left  (car sofar))
+                      (cons right (cdr sofar))))
               
               (find-sofar (left right sofar)
-                (declare (fixnum sofar))
-                (when (< (sxhash right)
-                         (sxhash left))
-                  (setf left  right
-                        right left))
-                (loop for i below sofar
-                      when (and (eql left  (aref lefts i))
-                                (eql right (aref rights i)))
-                        do (return-from find-sofar t))
-                nil)
+                (declare (type (cons list list) sofar))
+                (sort-two-by-hash left right)
+                (some (lambda (sofar-left sofar-right)
+                        (and (eql left  sofar-left)
+                             (eql right sofar-right)))
+                      (car sofar)
+                      (cdr sofar)))
   
               (opt-same-spread (left right sofar)
                 "returns e-boolean or nil"
-                (declare (fixnum sofar))
+                (declare (type (cons list list) sofar))
                 (equalizer-trace "enter opt-same-spread ~S ~S ~S" left right sofar)
                 (let ((leftv  (spread-uncall left))
                       (rightv (spread-uncall right))
@@ -411,7 +393,7 @@
                   
               (opt-same (left right sofar)
                 "returns e-boolean or nil"
-                (declare (fixnum sofar))
+                (declare (type (cons list list) sofar))
                 (equalizer-trace "enter opt-same ~S ~S ~S" left right sofar)
                 ; XXX translation of Java - should be cleaned up to be less sequential
                 (block nil
@@ -468,16 +450,7 @@
             (or (e. equalizer |optSame| left right) +e-false+))
         
           (:|optSame| (left right)
-            (if equalizer-busy
-              (funcall (or next-equalizer
-                         (setf next-equalizer (make-equalizer)))
-                       :|optSame/2| left right)
-              (progn
-                (setf equalizer-busy t)
-                (unwind-protect
-                  (opt-same left right 0)
-                  (clear)
-                  (setf equalizer-busy nil))))))))))
+            (opt-same left right '(() . ()))))))))
 
 ; --- Type/FQN mapping miscellaneous ---
 
