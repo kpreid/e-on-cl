@@ -177,6 +177,14 @@ EscapeExpr with catch
   XXX catch pattern failure
   XXX multiple catch, and failure thereof
 
+EscapeExpr bug: ejector should be valid in the pattern
+
+  ? escape ej ? ej("ok") { ej("oops") }
+  # value: "ok"
+
+  ? escape ej ? ej("ok") { ej("oops") } catch v { v + "." }
+  # value: "ok."
+
 List expressions for further testing
 
   ? [1, 2, 3]

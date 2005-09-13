@@ -69,14 +69,14 @@
   (error condition))
 
 (def-expr-transformation |CatchExpr| (outer-layout attempt pattern catcher)
-  (let* ((catch-tag-sym (gensym "E-CATCH-EJECTOR-TAG-VAR-"))
+  (let* ((pattern-eject-block (gensym "E-CATCH-PATTERN-BLOCK-"))
          (condition-sym (gensym "E-CATCH-CONDITION-"))
          (attempt-vars ())
          (catcher-vars ())
          (attempt-layout outer-layout)
          (catcher-layout outer-layout)
          (attempt-code (updating-transform attempt attempt-layout attempt-vars))
-         (pattern-code (updating-transform-pattern pattern `(transform-condition-for-e-catch ,condition-sym) `(catch-tag ,catch-tag-sym) catcher-layout catcher-vars))
+         (pattern-code (updating-transform-pattern pattern `(transform-condition-for-e-catch ,condition-sym) `(eject-function "catch-pattern" (lambda (v) (return-from ,pattern-eject-block v))) catcher-layout catcher-vars))
          (catcher-code (updating-transform catcher catcher-layout catcher-vars))
          (attempt-block-sym (gensym "E-CATCH-BLOCK-")))
     (values () outer-layout 
@@ -85,8 +85,8 @@
           ,(make-lets attempt-vars attempt-code)
           (e-catchable-condition (,condition-sym)
             ,(make-lets catcher-vars
-              `(let ((,catch-tag-sym (gensym "E-CATCH-EJECTOR-TAG-")))
-                (catch ,catch-tag-sym
+              `(progn
+                (block ,pattern-eject-block
                   ,pattern-code
                   (return-from ,attempt-block-sym 
                     ,catcher-code))
@@ -157,13 +157,11 @@
          (catch-layout outer-layout)
          (escape-vars ())
          (catch-vars ())
-         (etag-var (gensym "ESCAPE-TAG-"))
-         (block-sym (gensym "ESCAPE-CATCH-BLOCK-"))
+         (body-block (gensym "ESCAPE-CATCH-BODY-BLOCK-"))
+         (block-sym (gensym "ESCAPE-CATCH-OUTER-BLOCK-"))
          (catch-value-var (gensym "ESCAPE-CATCH-VALUE-"))
          (hatch-code (updating-transform-pattern hatch
-                       `(make-instance 'elib:ejector 
-                         :catch-tag ,etag-var
-                         :label ',(pattern-opt-noun hatch)) 'nil
+                       `(ejector ',(pattern-opt-noun hatch) (lambda (v) (return-from ,body-block v))) 'nil
                        escape-layout
                        escape-vars))
          (body-code (updating-transform body escape-layout escape-vars))
@@ -173,21 +171,20 @@
       (values () outer-layout
         `(block ,block-sym
           ,(make-lets escape-vars
-            `(let ((,etag-var (make-symbol ,(write-to-string hatch))))
-              ,hatch-code
-              (let ((,catch-value-var 
-                      (catch ,etag-var (return-from ,block-sym ,body-code))))
-                ,(make-lets catch-vars
-                  `(progn
-                    ,catch-patt-code
-                    ,catch-body-code)))))))
+            `(let ((,catch-value-var 
+                    (block ,body-block 
+                      ,hatch-code
+                      (return-from ,block-sym ,body-code))))
+              ,(make-lets catch-vars
+                `(progn
+                  ,catch-patt-code
+                  ,catch-body-code))))))
       (scope-box
         escape-vars
         outer-layout
-        `(let ((,etag-var (make-symbol ,(write-to-string hatch))))
+        `(block ,body-block
           ,hatch-code
-          (catch ,etag-var
-            ,body-code))))))
+          ,body-code)))))
 
 (def-expr-transformation |FinallyExpr| (layout attempt unwinder)
   (let* ((attempt-code (nth-value 2 (scope-box-transform layout attempt)))
@@ -228,26 +225,25 @@
 
 (def-expr-transformation |MatchBindExpr| (layout specimen pattern &aux
     specimen-vars pattern-vars)
-  (let* ((tag-sym (gensym "E-MATCH-BIND-TAG-VAR-"))
+  (let* ((pattern-eject-block (gensym "E-CATCH-PATTERN-BLOCK-"))
          (problem-var (make-symbol "PROBLEM"))
          (broken-ref-var (make-symbol "BROKEN-REF"))
          (specimen-code (updating-transform specimen layout specimen-vars))
-         (patt-code (updating-transform-pattern pattern specimen-code `(catch-tag ,tag-sym) layout pattern-vars)))
+         (patt-code (updating-transform-pattern pattern specimen-code `(eject-function "match-bind" (lambda (v) (return-from ,pattern-eject-block v))) layout pattern-vars)))
     (values (concatenate 'list specimen-vars pattern-vars) layout 
       `(block match-bind
-        (let ((,tag-sym (gensym "E-MATCH-BIND-TAG-"))) 
-          (let* ((,problem-var (catch ,tag-sym
-                                 ,patt-code
-                                 ; if we reach here, the pattern matched
-                                 (return-from match-bind ,elib:+e-true+)))
-                 ,@(when pattern-vars
-                     `((,broken-ref-var (elib:make-unconnected-ref ,problem-var)))))
-            (declare (ignorable ,problem-var))
-            ; if we reach here, the ejector was used
-            ; all variables defined by the pattern become broken references
-            ,@(loop for binding in pattern-vars
-                    collect (binding-smash-code binding broken-ref-var))
-            elib:+e-false+))))))
+        (let* ((,problem-var (block ,pattern-eject-block
+                               ,patt-code
+                               ; if we reach here, the pattern matched
+                               (return-from match-bind ,elib:+e-true+)))
+               ,@(when pattern-vars
+                   `((,broken-ref-var (elib:make-unconnected-ref ,problem-var)))))
+          (declare (ignorable ,problem-var))
+          ; if we reach here, the ejector was used
+          ; all variables defined by the pattern become broken references
+          ,@(loop for binding in pattern-vars
+                  collect (binding-smash-code binding broken-ref-var))
+          elib:+e-false+)))))
 
 
 (def-expr-transformation |MetaContextExpr| (layout
@@ -293,20 +289,19 @@
     &aux vars)
   (destructuring-bind (pattern body) (node-elements matcher)
     (setf layout (scope-layout-nest layout))
-    (let* ((tag-sym (gensym "E-MATCH-TAG-VAR-"))
-           (patt-code (updating-transform-pattern pattern `(vector (e-util:unmangle-verb mverb) (coerce args 'vector)) `(catch-tag ,tag-sym) layout vars))
+    (let* ((pattern-eject-block (gensym "E-CATCH-PATTERN-BLOCK-"))
+           (patt-code (updating-transform-pattern pattern `(vector (e-util:unmangle-verb mverb) (coerce args 'vector)) `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))) layout vars))
            (body-code (updating-transform body layout vars)))
       `(block method-matcher
-        (let ((,tag-sym (gensym "E-MATCH-TAG-"))) 
-          ,(make-lets vars
-            `(catch ,tag-sym
-              ,patt-code
-              ; if we reach here, the pattern matched
-              (return-from 
-                method-matcher
-                ,body-code)))
-          ; if we reach here, the ejector was used
-          ,remaining-code)))))
+        ,(make-lets vars
+          `(block ,pattern-eject-block
+            ,patt-code
+            ; if we reach here, the pattern matched
+            (return-from 
+              method-matcher
+              ,body-code)))
+        ; if we reach here, the ejector was used
+        ,remaining-code))))
 
 (defun matchers-body (layout matchers remaining-code)
   (labels ((m-b-list (matchers)

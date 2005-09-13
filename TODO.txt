@@ -37,6 +37,9 @@ Code cleanups not marked in the code:
   - reorganize: move stuff that isn't really about the root scopes out of knot.lisp
   - reorganize: rename tables2.lisp now that elib-tables.lisp is gone
 
+Optimizations:
+  - Perhaps instead of EscapeExpr, MatchBind, etc, immediately reifying ejectors, they could make ejector bindings whose get-code creates the ejector. The straightforward places to take advantage of this would be in trinary-define and CallExpr where the receiver is an ejector binding's value.
+
 ---
 
   

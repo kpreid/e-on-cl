@@ -240,18 +240,21 @@
 ; --- ... ---
 
 (defun eject-code (ejector-specifier condition-code)
-  (ecase (car ejector-specifier)
-    ((ejector)   `(eject-or-ethrow ,(cadr ejector-specifier) ,condition-code))
-    ((catch-tag) `(let ((condition ,condition-code))
-                    (elib:ejector-prethrow ',ejector-specifier condition)
-                    (throw ,(cadr ejector-specifier) condition)))
+  (ecase (first ejector-specifier)
+    ((ejector)   `(eject-or-ethrow ,(second ejector-specifier) ,condition-code))
+    ((eject-function)
+                 (destructuring-bind (label-form function-form) (rest ejector-specifier)
+                   `(let ((condition ,condition-code))
+                      (elib:ejector-prethrow ,label-form condition)
+                      (funcall ,function-form condition))))
     ((nil)       `(error ,condition-code))))
 
 (defun opt-ejector-make-code (ejector-specifier)
   "Given an ejector specifier, return a form which returns a nullOk[Ejector]."
   (ecase (car ejector-specifier)
     ((ejector)   (cadr ejector-specifier))
-    ((catch-tag) `(make-instance 'elib:ejector :catch-tag ,(cadr ejector-specifier)))
+    ((eject-function)
+                 `(ejector ,@(rest ejector-specifier)))
     ((nil)       `nil)))
 
 (defun outer-slot-symbol (var-name)

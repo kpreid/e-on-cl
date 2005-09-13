@@ -247,6 +247,7 @@
   elib:+the-make-proxy-resolver+)
 
 (declaim (ftype function
+  e.elib:ejector
   e.elib:simplify-fq-name
   e.elib:join-fq-name
   e.elib:make-equalizer

@@ -48,24 +48,24 @@
 
 ; I wrote this and found I didn't need it, but here it is in case it's useful later. Untested.
 ;(defmacro escape ((ejector-var) &body forms
-;    &aux (tag-var (gensym)))
-;  `(let ((,tag-var (gensym)))
-;    (catch ,tag-var
-;      (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
-;        ,@forms))))
+;    &aux (block-name ejector-var))
+;  `(block ,block-name
+;    (let ((,ejector-var (ejector ',(symbol-name ejector-var) 
+;                                 (lambda (v) (return-from ,block-name v)))))
+;      ,@forms)))
 
 (defmacro escape-bind ((ejector-var) try-form (result-var) &body catch-forms)
   "Execute TRY-FORM with an ejector bound to EJECTOR-VAR. If the ejector is used, control is transferred to the CATCH-FORMS with the ejector's argument bound to RESULT-VAR. Returns the value of whichever of TRY-FORM or the last of CATCH-FORMS returns."
-  (let ((tag-var (gensym "ESCAPE-BIND-TAG"))
+  (let ((escape-block (gensym "ESCAPE-BIND-BLOCK"))
         (normal-block (gensym "ESCAPE-BIND-NORMAL")))
-    `(let ((,tag-var (make-symbol "TAG")))
-      (block ,normal-block
-        (let ((,result-var
-                (catch ,tag-var
-                  (return-from ,normal-block 
-                    (let ((,ejector-var (make-instance 'ejector :catch-tag ,tag-var)))
-                      ,try-form)))))
-          ,@catch-forms)))))
+    `(block ,normal-block
+      (let ((,result-var
+              (block ,escape-block
+                (return-from ,normal-block 
+                  (let ((,ejector-var (ejector ',(symbol-name ejector-var) 
+                                               (lambda (v) (return-from ,escape-block v)))))
+                    ,try-form)))))
+        ,@catch-forms))))
 
 (defun call-with-vat (function &rest initargs)
   (assert (null *vat*))

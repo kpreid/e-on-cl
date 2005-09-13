@@ -1323,23 +1323,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
 (defglobal +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
-; --- Ejector ---
-
-(defun ejector-prethrow (ejector-spec value)
-  "Implements elib:*break-on-ejections*, analogously to cl:*break-on-signals*."
-  (when (typep value *break-on-ejections*)
-    (break "About to exit via ~W with value ~W" ejector-spec value))
-  nil)
-
-(defclass ejector (vat-checking)
-  ((catch-tag :initarg :catch-tag
-              :initform (error "attempted to make ejector with no catch-tag"))
-   (label     :initarg :label     
-              :initform nil
-              :type (or null string))))
-
-; eject-or-ethrow found above
-
 ; --- Equalizer ---
 
 ; XXX OPT cache equalizer per-thread (in vat?)
