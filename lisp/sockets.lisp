@@ -58,23 +58,28 @@
     :format-arguments (list errno (sb-impl::strerror errno))))
 
 #+sbcl
-(defun foo-write (target vector error-ejector)
+(defun foo-write (target vector error-ejector &key (start 0) (end (length vector)))
   "half-baked function used from IPAuthor"
   (setf target (ref-shorten target))
   (e-coercef vector '(vector (unsigned-byte 8)))
   (multiple-value-bind (n errno)
-      (sb-unix::unix-write (socket-file-descriptor target) vector 0 (length vector))
+      (sb-unix::unix-write (socket-file-descriptor target) vector start end)
     (if (= 0 errno)
       n
       (eject-or-ethrow error-ejector (errno-to-condition errno)))))
 
 #+clisp
-(defun foo-write (target vector error-ejector)
+(defun foo-write (target vector error-ejector &key (start 0) (end (length vector)))
   (e-coercef vector '(vector (unsigned-byte 8)))
-  (multiple-value-bind (x n)
-      (ext:write-byte-sequence vector target :no-hang t)
-    (declare (ignore x))
-    n))
+  (when (typep target 'deferred-socket)
+    (setf target (deferred-socket-socket target)))
+  (handler-case
+    (multiple-value-bind (x n)
+        (ext:write-byte-sequence vector target :no-hang t :start start :end end)
+      (declare (ignore x))
+      n)
+    (error (c)
+      (eject-or-ethrow error-ejector c))))
 
 #-(or sbcl clisp)
 (defun foo-write (target vector error-ejector)
@@ -115,9 +120,57 @@
 
 ; --- ---
 
+#+sbcl
+(defun foo-make-socket (domain type)
+  (check-type domain (member :internet))
+  (check-type type (member :stream))
+  (make-instance 'inet-socket
+    :type     (ref-shorten type)
+    :protocol 0))
+
+#+clisp
+(progn
+  (defclass deferred-socket ()
+    ((domain :initarg :domain
+             :reader foo-socket-domain
+             :type keyword)
+     (type :initarg :type
+           :reader foo-socket-type
+           :type keyword)
+     (real-socket :initform nil
+                  :accessor deferred-socket-socket))
+    (:documentation "For socket interfaces which don't offer unbound/unconnected socket objects."))
+    
+  (defun foo-make-socket (domain type)
+    (check-type domain (member :internet))
+    (check-type type (member :stream))
+    (make-instance 'deferred-socket :domain domain :type type)))
+    
+#+sbcl
+(defun foo-connect-socket (socket addr-info)
+  (socket-connect socket
+                  (host-ent-address (addr-info-host-ent addr-info))
+                  (addr-info-port addr-info)))
+
+#+clisp
+(defun foo-connect-socket (socket addr-info)
+  (assert (not (real-socket socket)))
+  (setf (deferred-socket-socket socket)
+        (socket-connect (addr-info-port addr-info)
+                        (addr-info-unresolved-name addr-info)
+                        :element-type '(unsigned-byte 8) 
+                        :buffered nil 
+                        :timeout 0))
+  (values))
+
+; --- ---
+
 #+sbcl (defun %convert-handler-target (target)
          (socket-file-descriptor target))
 #+clisp (defun %convert-handler-target (target)
+          (when (typep target 'deferred-socket)
+            (setf target (deferred-socket-socket target))
+            (assert target))
           target)
 
 (defun foo-add-receive-handler (target e-function)
@@ -132,6 +185,21 @@
 
 (defun foo-remove-receive-handler (handler)
   (vat-remove-io-handler handler))
+
+(defmacro form-or (&rest forms)
+  (first forms))
+
+(defun foo-sockopt-receive-buffer (impl-socket)
+  (form-or
+    #+sbcl (sockopt-receive-buffer impl-socket)
+    #+clisp (socket-options (deferred-socket-socket impl-socket) :so-rcvbuf)
+    (error "foo-sockopt-receive-buffer not implemented")))
+
+(defun foo-sockopt-send-buffer (impl-socket)
+  (form-or
+    #+sbcl (sockopt-send-buffer impl-socket)
+    #+clisp (socket-options (deferred-socket-socket impl-socket) :so-sndbuf)
+    (error "foo-sockopt-send-buffer not implemented")))
 
 ; --- ---
 

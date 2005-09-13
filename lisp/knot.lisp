@@ -608,6 +608,8 @@ If a log message is produced, context-thunk is run to produce a string describin
       (e-lambda "org.cubik.cle.prim.simplifyFQName" 
           (:stamped +deep-frozen-stamp+)
         (:|run| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
+    ("org.cubik.cle.io.makeSocket"
+      (symbol-value (system-symbol "+THE-MAKE-SOCKET+" :e.sockets :cl-e.sockets)))
     ))
 
 (defun f+ (f1 f2)
@@ -837,6 +839,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                              (e. (e-import "org.cubik.cle.IPAuthor")
                                  |run|
                                  +lisp+))))
+            ("&getSocketPeerRef"        ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :cl-e.sockets)))))
             #||#)))))
 
 ;;; --- end ---

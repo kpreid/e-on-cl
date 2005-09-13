@@ -434,15 +434,16 @@ If there is no current vat at initialization time, captures the current vat at t
   (enqueue (slot-value vat 'sends) fun))
 
 (defun vat-add-io-handler (vat target direction function)
+  (setf vat (ref-shorten vat))
   (add-exclusive-io-handler (vat-handler-group vat)
-                            target
-                            direction
+                            (ref-shorten target)
+                            (ref-shorten direction)
                             (lambda (target)
                               (with-turn (vat)
-                                (funcall function target)))))
+                                (funcall (ref-shorten function) target)))))
 
 (defun vat-remove-io-handler (handler)
-  (remove-exclusive-io-handler handler))
+  (remove-exclusive-io-handler (ref-shorten handler)))
 
 (defmethod e-send-dispatch (rec mverb &rest args)
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")

@@ -1,0 +1,76 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+This is the second try at network access.
+
+From what I've seen, there are two kinds of Internet-protocol network APIs: 'BSD sockets', and ones with limitations. '
+
+Therefore, I have decided to provide a nearly[1]-unaltered socket interface for E-on-CL, and add shortcuts later.
+
+If I understand correctly, a socket 'by itself' provides no communication - bind(), connect(), or sendto() must be used. Therefore, my taming plan so far is to make the sockaddr-equivalent carry the authority for connection, and creating sockets an unprivileged operation.
+
+http://www.opengroup.org/onlinepubs/009695399/functions/xsh_chap02_10.html#tag_02_10
+
+[1] By "nearly", I mean that there shall be socket objects, and operations corresponding to the standard functions, etc; so the interface does not accidentally prevent one from, say, bind()ing a TCP socket. There will still be taming.
+
+  ? def makeSocket := <import:org.cubik.cle.io.makeSocket>
+  # value: <makeSocket>
+  
+  ? pragma.enable("dot-props")
+  > def socket := makeSocket(makeSocket::internet, makeSocket::stream)
+  # value: <internet stream socket>
+  
+  ? def localHTTP := getSocketPeerRef("localhost", "80")
+  # value: <socket peer localhost:80>
+  
+  ? socket.connect(def test extends localHTTP {})
+  # problem: the "__main$test__C" <test> doesn't coerce to a <SocketPeerRef>
+
+  ? def outs := socket.getOut()
+  # value: -><internet stream socket>
+    
+  ? outs.available()
+  # value: 0
+  
+  ? def ins := socket.getIn()
+  # value: <-<internet stream socket>
+  
+  ? ins.available()
+  # value: 0
+    
+  ? [def connectResult := socket.connect(localHTTP), socket]
+  # value: [<Promise>, <internet stream socket>]
+  
+In order to preserve E semantics by default:
+    - Sockets are set non-blocking on creation.
+    - connect() is not performed within the turn.
+  
+  ? interp.waitAtTop(connectResult)
+  ? connectResult
+  # value: true
+  
+  ? socket
+  # value: <internet stream socket connected to 127.0.0.1:80>
+
+  
+  ? interp.waitAtTop(outs.whenAvailable(18, thunk {}))
+  
+  ? outs.available() > 0
+  # value: true
+  
+  this is "GET / HTTP/1.0\r\n\r\n"
+  ? outs.write([71, 69, 84, 32, 47, 32, 72, 84, 84, 80, 47, 49, 46, 48, 13, 10, 13, 10])
+  
+  ? outs.flush()
+  
+  ? interp.waitAtTop(ins.whenAvailable(8, thunk { 
+  >   print(ins.obtain(0, 17, "NOW", "ADVANCE", "ELEMENTS"))
+  > }))
+
+  this is "HTTP/1.1 200 OK\r\n"
+  # stdout: [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10]
+  
+  ? [ins.close(), outs.close()]
+  # value: [true, true]
+
+  

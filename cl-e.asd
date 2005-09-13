@@ -73,7 +73,9 @@
   :name "cl-e.sockets"
   :depends-on (#+sbcl :sb-bsd-sockets)
   :components ((:module "lisp" :components
-    ((:file "sockets")))))
+    ((:file "sockets")
+     (:file "sockets2"
+            :depends-on ("sockets"))))))
 
 ;;; --- Gimmicks ---
 
