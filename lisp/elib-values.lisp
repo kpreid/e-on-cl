@@ -70,7 +70,6 @@
                  (incf rfill))
                (pick ()
                  (let ((pos (search sep this :start2 start)))
-                   ;(print `(pos-is ,pos))
                    (cond 
                      ((null pos) (output this :start start :end pos)
                                  nil)
@@ -121,9 +120,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                    :end2   end)
                  (incf rfill (- (or end (length this)) start)))
                (pick ()
-                 ;(print `(replaceAll ,this ,old ,new - ,result ,start ,rfill))
                  (let ((pos (search old this :start2 start)))
-                   ;(print `(pos-is ,pos))
                    (cond 
                      ((null pos) (output this :start start :end pos)
                                  nil)
@@ -131,7 +128,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                        (output this :start start :end pos)
                        (replace result new :start1 rfill)
                        (incf rfill (length new))
-                       ;(output new)
                        (setf start (+ pos (length old)))
                        t)))))
         (loop while (pick))
@@ -167,8 +163,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| (symbol-name this))))
-
-;(def-atomic-sameness symbol eql sxhash)
 
 ; --- Character ---
 

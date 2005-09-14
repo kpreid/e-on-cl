@@ -73,8 +73,6 @@
 
 ; --- Ref protocol ---
 
-;(declaim (ftype (function (t keyword &rest t) t) e-call-dispatch e-call-match e-send-dispatch))
-
 ; mverb is :|verb/arity|
 (defgeneric e-call-dispatch (rec mverb &rest args)
   (declare (optimize (speed 3))))
@@ -94,29 +92,17 @@
 
 (defun e-call (rec verb args)
   (declare (string verb) (type (or list vector) args))
-  (apply #'e-call-dispatch rec (e-util:mangle-verb verb (length args)) (coerce args 'list)))
+  (apply #'e-call-dispatch rec (mangle-verb verb (length args)) (coerce args 'list)))
   
 (defun e-send (rec verb args)
   (declare (string verb) (type (or list vector) args))
-  (apply #'e-send-dispatch rec (e-util:mangle-verb verb (length args)) (coerce args 'list)))
+  (apply #'e-send-dispatch rec (mangle-verb verb (length args)) (coerce args 'list)))
 
 (defmacro e. (rec-form verb-des &rest args-forms)
-  `(e-call-dispatch ,rec-form ,(e-util:mangle-verb (string verb-des) (length args-forms)) ,@args-forms))
-
-;; this doesn't seem to actually be faster
-;(defmacro e. (rec-form verb-des &rest args-forms
-;    &aux (rec-sym (gensym))
-;         (mverb (e-util:mangle-verb (string verb-des) (length args-forms)))
-;         (arg-syms (mapcar (lambda (x) (gensym)) args-forms)))
-;  `(let ((,rec-sym ,rec-form)
-;         ,@(mapcar #'list arg-syms args-forms))
-;    (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-;    (typecase ,rec-sym
-;      (function (funcall         ,rec-sym ',mverb ,@arg-syms))
-;      (t        (e-call-dispatch ,rec-sym ',mverb ,@arg-syms)))))
+  `(e-call-dispatch ,rec-form ,(mangle-verb (string verb-des) (length args-forms)) ,@args-forms))
 
 (defmacro e<- (rec-form verb-des &rest args-forms)
-  `(e-send-dispatch ,rec-form ,(e-util:mangle-verb (string verb-des) (length args-forms)) ,@args-forms))
+  `(e-send-dispatch ,rec-form ,(mangle-verb (string verb-des) (length args-forms)) ,@args-forms))
 
 
 (defgeneric %ref-shorten (ref)
@@ -125,10 +111,6 @@
 ;; REF-SHORTEN is defined *later* so that sbcl may "open-code test of type REF". This is here to declare the existence of the function.
 (declaim (ftype (function (t) t) ref-shorten))
 
-
-;(declaim (ftype (function (t) (values (member near eventual broken)
-;                                      &optional t))
-;                ref-state))
 
 (defgeneric ref-state (ref)
   (:documentation "Returns 'near, (values 'eventual is-resolved), or (values 'broken problem)"))
@@ -581,7 +563,6 @@ If there is no current vat at initialization time, captures the current vat at t
         (if (gethash (message-desc-mverb md) seen)
           (setf (first (gethash (message-desc-mverb md) seen)) md)
           (push md out)))
-      ;(print (mapcar #'e-quote out))
       (coerce (reverse out) 'vector))))
 
 ; --- E objects ---
@@ -1030,8 +1011,6 @@ fqn may be NIL or a string."
 ; xxx it might be useful to enforce the constraint that anything returning t from eeq-is-transparent-selfless must have a specialized observable-type-of, or something to that effect.
 ;
 ; Or, perhaps, the observable-type-of anything transparent-selfless should be derived from its uncall's maker somehow.
-
-;(declaim (ftype (function (t) string) cl-type-fq-name cl-type-parameters))
 
 (defgeneric cl-type-fq-name (type-sym)
   (:documentation  "Given a type specifier, return the corresponding E fully-qualified-name. Usually specialized via the def-fqn macro."))

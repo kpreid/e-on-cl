@@ -92,34 +92,6 @@
                     ,catcher-code))
                 ; If we reach here, then the pattern did not match.
                 (catch-expr-resignal ,condition-sym)))))))))
- 
-; broken version: executes the catch block before unwind-protect/finally         
-;(def-expr-transformation |CatchExpr| (outer-layout attempt pattern catcher)
-;  (let* ((catch-tag-sym (gensym "E-CATCH-EJECTOR-TAG-VAR-"))
-;         (condition-sym (gensym "E-CATCH-CONDITION-"))
-;         (attempt-vars ())
-;         (catcher-vars ())
-;         (attempt-layout outer-layout)
-;         (catcher-layout outer-layout)
-;         (attempt-code (updating-transform attempt attempt-layout attempt-vars))
-;         (pattern-code (updating-transform-pattern pattern condition-sym `(catch-tag ,catch-tag-sym) catcher-layout catcher-vars))
-;         (catcher-code (updating-transform catcher catcher-layout catcher-vars))
-;         (attempt-block-sym (gensym "E-CATCH-BLOCK-")))
-;    (values () outer-layout 
-;      `(block ,attempt-block-sym
-;        (handler-bind
-;          ; XXX is 'error the right type specifier?
-;          ; We don't want to handle non-exceptionish nonlocal exits.
-;          ; We don't want to handle nondeterministic errors, if possible.
-;          ; We do want to handle conditions signaled by translated E code.
-;          ; We do want to handle ordinarily-fatal conditions signaled by CL stuff E code calls.
-;          ((error #'(lambda (,condition-sym)
-;            ,(make-lets catcher-vars
-;              `(let ((,catch-tag-sym (gensym "E-CATCH-EJECTOR-TAG-")))
-;                (catch ,catch-tag-sym
-;                  ,pattern-code
-;                  (return-from ,attempt-block-sym ,catcher-code)))))))
-;          ,(make-lets attempt-vars attempt-code))))))
 
 (def-expr-transformation |DefineExpr| (layout patt rValue opt-ejector-expr &aux (vars ()))
   ; XXX statically reject references to pattern vars in rvalue/ejector
@@ -428,7 +400,7 @@
 XXX This is an excessively large authority and will probably be replaced."
                   ,witness-check-form
                   ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
-
+                  ;; XXX this is also hugely inefficient, isn't it? we're constructing the full meta.state, and then throwing away all but one element. figure out why the alternate method below was taken out -- lack of hashing?
                   (e. ,(nth-value 2 (transform (make-instance '|MetaStateExpr| :elements '()) layout))
                       |get| (e. "&" |add| slot-name))
                   #-(and) (cond
@@ -505,7 +477,7 @@ XXX This is an excessively large authority and will probably be replaced."
 
 
 ; old code for FinalPattern: (binding-pattern-impl #'final-binding-impl t specimen-form ejector-spec layout nounExpr optGuardExpr)
-; XXX throw out final-binding-impl; review other binding kinds for simplar optimizations
+; XXX throw out final-binding-impl; review other binding kinds for similar optimizations
 
 (def-patt-transformation |FinalPattern| (specimen-form ejector-spec layout nounExpr optGuardExpr &aux vars)
   (let ((guard-code (if (not (null optGuardExpr))
