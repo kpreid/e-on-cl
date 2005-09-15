@@ -1,6 +1,10 @@
 # Copyright 2005 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+  Using the primitive guards, not the complex E-implemented ones
+  ? def tfloat64 := <import:org.cubik.cle.prim.float64>; null
+  ? def tint := <import:org.cubik.cle.prim.int>; null
+
 LiteralExpr
   
   ? 43
@@ -51,7 +55,7 @@ VarPattern, AssignExpr
   
 var slot with guard
   
-  ? def var guarded_var :float64 := 1.0
+  ? def var guarded_var :tfloat64 := 1.0
   # value: 1.0
   
   ? guarded_var
@@ -72,7 +76,7 @@ var slot with guard
   ? guarded_var := "four"
   # problem: the String "four" doesn't coerce to a float64
   
-  ? def var failing_guarded_var :float64 := "five"
+  ? def var failing_guarded_var :tfloat64 := "five"
   # problem: the String "five" doesn't coerce to a float64
   
 Non-contagion:
@@ -207,13 +211,13 @@ MatchBindExpr, FinalPattern guards
   ? {[92 =~ x, x]}
   # value: [true, 92]
   
-  ? {[93 =~ x :int, x]}
+  ? {[93 =~ x :tint, x]}
   # value: [true, 93]
   
-  ? {[94 =~ x :float64, x]}
+  ? {[94 =~ x :tfloat64, x]}
   # value: [true, 94.0]
   
-  ? {[95.0 =~ x :int, x]}
+  ? {[95.0 =~ x :tint, x]}
   # value: [false, <ref broken by problem: the float64 95.0 doesn't coerce to an int>]
 
 MetaContextExpr
@@ -226,8 +230,8 @@ MetaContextExpr
 
 MetaStateExpr
 
-  ? (def _() :any { def x := int; meta.getState() })()
-  # value: ["&x" => <& int>, "&__return" => <& <__return ejector>>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
+  ? (def _() :any { def x := &int; meta.getState() })()
+  # value: ["&x" => <& <LazyEvalSlot>>, "&__return" => <& <__return ejector>>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
   
   XXX toplevel meta.getState()
 
@@ -455,7 +459,7 @@ Trinary DefineExpr
 
  Equivalent to binary define
   ? pragma.enable("trinary-define")
-  > def x :int := (9, null)
+  > def x :tint := (9, null)
   # value: 9
   
   ? x
@@ -467,7 +471,7 @@ Trinary DefineExpr
   
  With non-null ejector
   ? pragma.enable("trinary-define")
-  > def x :int := (9, def _(e) :void { print(e); throw("biff") })
+  > def x :tint := (9, def _(e) :void { print(e); throw("biff") })
   # value: 9
 
   ? pragma.enable("trinary-define")
@@ -642,7 +646,7 @@ SlotExpr, SlotPattern, AssignExpr
   >   var v := 0
   >   def perverseSlot {
   >     to getValue() :any { return v += 1 }
-  >     to setValue(new :int) :void { v += new * 100 }
+  >     to setValue(new :tint) :void { v += new * 100 }
   >   }
   > }
   # value: <perverseSlot>
@@ -667,7 +671,7 @@ SlotExpr, SlotPattern, AssignExpr
 
 ListPattern
 
-  ? [1, 2, 3] =~ [lp_a, lp_b, lp_c :float64]
+  ? [1, 2, 3] =~ [lp_a, lp_b, lp_c :tfloat64]
   # value: true
   
   ? [lp_c, lp_b, lp_a]
