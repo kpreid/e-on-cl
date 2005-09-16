@@ -10,6 +10,7 @@ Minor bugs:
   
   - clrune <relative-path-to-script> doesn't work because file__uriGetter doesn't accept relative paths. This is a design issue.
   - NaN/Infinity aren't sufficiently faked on lisps not exposing them.
+  - for run-program, add interfaces to process-kill and process-close so that the io-handler-pound test doesn't leak fds
 
 Internal bugs:
 
@@ -36,6 +37,7 @@ Code cleanups not marked in the code:
   - reorganize: rename elib.lisp once it's been pared down to just the external macros and stuff
   - reorganize: move stuff that isn't really about the root scopes out of knot.lisp
   - reorganize: rename tables2.lisp now that elib-tables.lisp is gone
+  - make sure we have vm.updoc tests for rebinding boundaries' presence and absence
 
 Optimizations:
   - Perhaps instead of EscapeExpr, MatchBind, etc, immediately reifying ejectors, they could make ejector bindings whose get-code creates the ejector. The straightforward places to take advantage of this would be in trinary-define and CallExpr where the receiver is an ejector binding's value.

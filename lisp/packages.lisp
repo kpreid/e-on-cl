@@ -270,6 +270,7 @@
   (:use :cl :e.util :elib)
   (:export
     :scope
+    :make-scope
     :make-safe-scope
     :make-io-scope
     

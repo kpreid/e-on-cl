@@ -133,6 +133,12 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defclass const-map () ())
 
+(defmethod print-object ((map const-map) stream)
+  (print-unreadable-object (map stream :type t :identity nil)
+    (loop for sep = "" then " "
+          for key across (ref-shorten (e. map |getKeys|))
+          for value across (ref-shorten (e. map |getValues|))
+          do (format stream "~A~W => ~W" sep key value))))
 
 (def-vtable const-map
   ; XXX import documentation strings lazily from EMap interface

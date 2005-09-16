@@ -98,15 +98,27 @@
       (list (subseq s 0 colon) (subseq s (+ 2 colon) (length s)))
       (list "problem" s))))
 
-(defun chain (combiner accumulator test getter finalizer
-    &aux (ref-kit (e. (vat-safe-scope *vat*) |get| "Ref")))
+(defun standalone-when-resolved (ref ereactor)
+  "implemented here to avoid E-language dependencies"
+  (multiple-value-bind (result result-resolver) (make-promise)
+    (let ((safe-reactor
+           (with-result-promise (safe-reactor)
+             (efun ()
+               (if (ref-is-resolved ref)
+                 (unless (e-is-true (e. result-resolver |isDone|))
+                   (e. result-resolver |resolve| (e<- ereactor |run| ref)))
+                 (e<- ref |__whenMoreResolved| safe-reactor))))))
+      (e. safe-reactor |run|)
+      result)))
+
+(defun chain (combiner accumulator test getter finalizer)
   "Accumulate the eventual results of calling 'getter' into 'accumulator' using 'combiner' until 'test' returns false, then call 'finalizer' with the final value and return it."
   (multiple-value-bind (result-promise result-resolver) (make-promise)
     (labels ((proceed ()
               (handler-case-with-backtrace
                 (if (funcall test)
                   (let ((element-vow (funcall getter)))
-                    (e. ref-kit |whenResolved| element-vow (efun (x)
+                    (standalone-when-resolved element-vow (efun (x)
                       (declare (ignore x))
                       (setf accumulator (funcall combiner accumulator element-vow))
                       (proceed))))
@@ -168,7 +180,7 @@
                       (let ((*print-pretty* t)
                             (*package* #.*package*)
                             (*print-case* :downcase)
-                            (*print-level* 6)
+                            (*print-level* 7)
                             (*print-length* 20))
                         (print `(mismatch (file ,file)
                                           (source ,expr)
@@ -195,14 +207,14 @@
                 (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers)
                 (when print-steps
                   (format t "~&# ~A: ~A~%" (caar new-answers) (cadar new-answers))))
-              (e. (e. scope |get| "Ref") |whenResolved| wait-hook (efun (x)
+              (standalone-when-resolved wait-hook (efun (x)
                 ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
                 (declare (ignore x))
                 (collect-streams)
                 (e. result-resolver |resolve| (finish-step)))))))
           result-promise)))))
 
-(defun updoc-file (file &key print-steps)
+(defun updoc-file (file &key print-steps confine)
   (with-open-file (s file
       :external-format e.extern:+standard-external-format+)
     (let* ((script (read-updoc s))
@@ -231,16 +243,34 @@
                e.knot::+eprops+)
              (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
                (e. wait-hook-slot |setValue|
-                 (e. (e. (vat-safe-scope *vat*) |get| "Ref") |whenResolved| ref
+                 (standalone-when-resolved ref
                    (efun (ref)
                      (declare (ignore ref))
                      old-wait)))
                nil)))
-           (scope (e. (e. (make-io-scope :stdout eval-out-stream 
-                                         :stderr eval-err-stream
-                                         :interp interp) 
-                          |withPrefix| "__main$")
-                      |with| "updoc" runner))
+           (scope (if confine
+                    (e. (e. (vat-safe-scope *vat*) |withPrefix| "__main$") |or| (e.knot:make-scope "updocAdditions$"
+                      `(("updoc" runner)
+                        ("print"
+                         ,(e-lambda "$print" ()
+                            (otherwise (mverb &rest args)
+                              (if (string= (unmangle-verb mverb) "run")
+                                (loop for a in args do
+                                  (princ (e-print a) eval-out-stream))
+                                (error "no such method: <print>#~A ~S" mverb args)))))
+                        ("println"
+                         ,(e-lambda "$println" ()
+                            (otherwise (mverb &rest args)
+                              (if (string= (unmangle-verb mverb) "run")
+                                (loop for a in args do
+                                  (princ (e-print a) eval-out-stream)
+                                  finally (terpri eval-out-stream))
+                                (error "no such method: <println>#~A ~S" mverb args))))))))
+                    (e. (e. (make-io-scope :stdout eval-out-stream 
+                                           :stderr eval-err-stream
+                                           :interp interp) 
+                            |withPrefix| "__main$")
+                        |with| "updoc" runner)))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope
            )
       (e. scope-slot |setValue| scope)
@@ -301,7 +331,7 @@
 
 ; --- Entry points, etc. ---
 
-(defun updoc-start (paths &key profiler print-steps
+(defun updoc-start (paths &key profiler print-steps confine
   &aux file-paths)
   
   (flet ((collect (pathname)
@@ -327,7 +357,7 @@
       #'result+
       (make-instance 'result)
       (lambda () file-paths)
-      (lambda () (updoc-file (pop file-paths) :print-steps print-steps))
+      (lambda () (updoc-file (pop file-paths) :print-steps print-steps :confine confine))
       (lambda (result)
         (profile-finish profiler)
         (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
@@ -336,7 +366,7 @@
         (values)))))
 
 (defun updoc-rune-entry (&rest args
-    &aux profiler print-steps)
+    &aux profiler print-steps confine)
   (popping-equal-case args
     (("--profile")
       (assert args (args) "--profile requires an argument")
@@ -347,14 +377,15 @@
     (("--steps" "--print-steps")
       (setf print-steps t))
     (("--confine")
-      ; XXX implement this - if nothing else to avoid the expense of making an io-scope when it's unnecessary
-      (error "--confine not yet implemented")))
+      ;; XXX should probably be default
+      (setf confine t)))
   
-  (when-resolved (result)
-      (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps) 
-    (declare (ignore result))
-    (force-output)
-    (return-from updoc-rune-entry))
+  (standalone-when-resolved
+      (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps :confine confine)
+    (efun (result)
+      (declare (ignore result))
+      (force-output)
+      (return-from updoc-rune-entry)))
   (vat-loop))
 
 (defun system-test (op system)
@@ -367,12 +398,13 @@
     (let ((result
             (block test
               (with-vat (:label "updoc system-test")
-                (when-resolved (result)
+                (standalone-when-resolved
                     (updoc-start
                       (list (merge-pathnames
                               (make-pathname :directory '(:relative "tests"))
                               (asdf:component-pathname system))))
-                  (return-from test result))))))
+                  (efun (result) 
+                    (return-from test result)))))))
       (when (eql (ref-state result) 'broken)
         (cerror "Ignore failures." "Tests for ~A did not execute properly: ~A" system (ref-opt-problem result)))
       (when (> (result-failure-count result) 0)

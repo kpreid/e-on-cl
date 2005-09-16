@@ -281,7 +281,7 @@ Matcher
 
   ? def maybes {
   >   to regular() :any { return "yep" }
-  >   match [x ? x <=> "yes", args] { args[1] }
+  >   match [x ? (x == "yes"), args] { args[1] }
   > }
   # value: <maybes>
   

@@ -9,23 +9,26 @@
 (cl:in-package :e.lisp-test)
 (export 'deftest)
 
+(defun test-once (system)
+  (rem-all-tests)
+  (let ((*package* #.*package*))
+    (map nil
+       #'load
+       (directory
+         (merge-pathnames
+           (make-pathname :name :wild 
+                          :type "tlisp" 
+                          :directory '(:relative "ltests"))
+           (asdf:component-pathname system)))))
+  (do-tests))
+
 (defun system-test (op system)
   "Invoked by an implementation of asdf:test-op."
   (declare (ignore op))
   (with-simple-restart (continue "Proceed as if the lisp-side tests passed.")
     (loop
       (with-simple-restart (:retry "Retry the lisp-side tests.")
-        (rem-all-tests)
-        (let ((*package* #.*package*))
-          (map nil
-             #'load
-             (directory
-               (merge-pathnames
-                 (make-pathname :name :wild 
-                                :type "tlisp" 
-                                :directory '(:relative "ltests"))
-                 (asdf:component-pathname system)))))
-        (if (do-tests)
+        (if (test-once system)
           (return)
           (error "Some tests failed.")))))
   (fresh-line)
