@@ -114,7 +114,8 @@
                 ,(with-nested-scope-layout (layout)
                   (sequence-to-form 
                     (updating-sequence-patt catch-pattern layout `(transform-condition-for-e-catch ,condition-var) `(eject-function "catch-pattern" (lambda (v) (return-from ,pattern-eject-block v))))
-                    `(return-from ,catch-outer ,(leaf-sequence catch-body layout))))))))))
+                    `(return-from ,catch-outer ,(leaf-sequence catch-body layout)))))
+              (%catch-expr-resignal ,condition-var))))))
     layout))
 
 (define-sequence-expr |DefineExpr| (layout result pattern value opt-ejector

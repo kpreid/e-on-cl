@@ -454,6 +454,10 @@ CatchExpr
   >   try { print("body "); throw("biff") } finally { print("finally ") }
   > } catch p { print("catch ") }
   # stdout: body finally catch 
+  
+  non-catching
+  ? try { throw("hi") } catch _ ? false { "oops" }
+  # problem: hi
 
 Trinary DefineExpr
 

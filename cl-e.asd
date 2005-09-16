@@ -41,10 +41,8 @@
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-base"
             :depends-on ("elang-nodes"))
-     (:file "elang-transform"
-            :depends-on ("compiler-base"))
      (:file "compiler-seq"
-            :depends-on ("packages" "elang-nodes" "elang-transform"))
+            :depends-on ("packages" "elang-nodes"))
      (:file "compiler-entry"
             :depends-on ("compiler-base"))
      (:file "rune"
