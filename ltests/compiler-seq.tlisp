@@ -1,0 +1,112 @@
+; Copyright 2005 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.compiler-seq
+  (:use :cl :e.lisp-test :e.elib :e.elang :e.elang.vm-node))
+(cl:in-package :e.lisp-test.compiler-seq)
+
+(defun n (nt)
+  (e.syntax::build-nodes nt))
+  
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *scope*
+    (e.knot::make-scope "seqCompilerDemoScope"
+      `(("any" +the-any-guard+))))
+  (defparameter *layout*
+    (list (cons "any"
+                (make-instance 'e.elang::value-binding :value 
+                  +the-any-guard+)))))
+
+(deftest e.literal
+  (e.elang::sequence-expr (n '(|LiteralExpr| 1)) nil 'r)
+  ((r '1))
+  nil)
+
+(deftest e.noun
+  (e.elang::sequence-expr (n '(|NounExpr| "any")) *layout* 'r)
+  ((r '#.+the-any-guard+))
+  #.*layout*)
+
+(deftest p.ignore
+  (e.elang::sequence-patt (n '(|IgnorePattern|)) *layout* 's 'e)
+  ()
+  #.*layout*)
+
+(defun ev (expr)
+  (nth-value 0 (eval (e.elang::sequence-e-to-cl 
+                       (n expr)
+                       *scope*))))
+
+(deftest eval.e.literal
+  (ev '(|LiteralExpr| 1))
+  1)
+
+(deftest eval.e.seq
+  (ev '(|SeqExpr| (|NounExpr| "any") (|LiteralExpr| 2)))
+  2)
+
+(deftest eval.define.nothing
+  (ev '(|DefineExpr| (|IgnorePattern|) (|LiteralExpr| 0) nil))
+  0)
+
+(deftest eval.define.final
+  (ev '(|SeqExpr| (|DefineExpr| (|FinalPattern| (|NounExpr| "x") nil) 
+                                (|LiteralExpr| 0) 
+                                nil)
+                  (|NounExpr| "x")))
+  0)
+
+(deftest eval.if.simple1
+  (ev '(|IfExpr| (|LiteralExpr| #.+e-true+)
+                 (|LiteralExpr| "a")
+                 (|LiteralExpr| "b")))
+  "a")
+
+(deftest eval.if.elaborate
+  (ev '(|SeqExpr|
+         (|DefineExpr| (|FinalPattern| (|NounExpr| "x") nil)
+                       (|LiteralExpr| #.+e-true+) nil)
+         (|IfExpr| (|DefineExpr| (|FinalPattern| (|NounExpr| "y") nil)
+                                 (|NounExpr| "x") nil)
+                   (|NounExpr| "x")
+                   (|LiteralExpr| "b"))))
+  #.+e-true+)
+
+(deftest eval.call
+  (ev '(|CallExpr| (|LiteralExpr| #(1))
+                   "add"
+                   (|LiteralExpr| #(2))))
+  #(1 2))
+
+(deftest eval.match-bind.ok
+  (ev '(|SeqExpr| 
+         (|MatchBindExpr| (|LiteralExpr| 0) 
+                          (|FinalPattern| (|NounExpr| "x") nil))
+         (|NounExpr| "x")))
+  0)
+  
+(deftest eval.match-bind.nok
+  (e-quote
+    (ev `(|SeqExpr| 
+           (|MatchBindExpr| (|LiteralExpr| 0) 
+                            (|FinalPattern| 
+                              (|NounExpr| "x") 
+                              (|LiteralExpr| ,(type-specifier-to-guard 'null))))
+           (|NounExpr| "x"))))
+  "<ref broken by problem: the int 0 doesn't coerce to a Null>")
+  
+(deftest eval.catch.ok
+  (ev `(|CatchExpr| (|LiteralExpr| 0)
+                    (|FinalPattern| (|NounExpr| "p") nil)
+                    (|NounExpr| "p")))
+  0)
+
+(deftest eval.catch.nok
+  (e-quote
+    (ev `(|CatchExpr| (|CallExpr| (|LiteralExpr| ,e.knot::+the-thrower+)
+                                  "run"
+                                  (|LiteralExpr| "biff"))
+                      (|FinalPattern| (|NounExpr| "p") nil)
+                      (|NounExpr| "p"))))
+  "<sealed problem>")
+

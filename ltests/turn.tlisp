@@ -29,6 +29,7 @@
   #+sbcl (sb-sys:fd-stream-fd stream)
   #+clisp stream)
 
+#-(and) ;; XXX *TEMPORARILY* disabled because it leaks fds
 (deftest exclusive-io-handler-pound
   (let* ((vat (make-instance 'vat :label "exclusive-io-handler-pound test"))
          (*vat* vat)
