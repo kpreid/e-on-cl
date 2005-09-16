@@ -150,12 +150,12 @@
   (:|resolveRace/1| 'resolve-race)
   (:|resolve| (this target)
     (unless (e-is-true (resolve-race this target))
-      (error "already resolved")))
+      ;; under sealed exception rules, this is not an information leak
+      (error "this resolver's ref has already been resolved, therefore cannot be resolved to ~A" (e-quote target))))
   (:|smash| (this problem)
     "Equivalent to this.resolve(Ref.broken(problem))."
     ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
-    (unless (resolve-race this (elib:make-unconnected-ref (e-coerce problem 'condition)))
-      (error "Already resolved")))
+    (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
   (:|isDone| (this)
     "Returns whether this resolver's promise has been resolved already."
     (as-e-boolean (not (slot-value this 'ref)))))

@@ -36,7 +36,7 @@ resolver#resolve
   # value: true
   
   ? r.resolve(2)
-  # problem: already resolved
+  # problem: this resolver's ref has already been resolved, therefore cannot be resolved to 2
   
   ? [p, r]
   # value: [1, <Closed Resolver>]
