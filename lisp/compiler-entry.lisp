@@ -1,8 +1,9 @@
 ; Copyright 2005 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang)
+(in-package :e.elang.compiler)
 
+;; XXX stale?
 (defun extract-outer-scope (layout 
     &aux (table-sym (gensym))
          (bindings (scope-layout-bindings layout)))
@@ -77,7 +78,7 @@
                        (space 1)
                        (speed 1))
              #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-    ,(sequence-e-to-cl expr outer-scope)))
+    ,(e.elang.compiler.seq:sequence-e-to-cl expr outer-scope)))
 
 (defun cl-to-lambda (form &key (name (gensym "cl-to-lambda-")))
   "to show up in profiles"
@@ -92,11 +93,10 @@
                            ; using KEYWORD package because using something else might? trigger the sbcl leak
                            :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD")))))
 
-(defun get-translation (tree)
-  ; XXX not deterministic - uses *gensym-counter*
+(defun get-translation (expr)
   ; XXX document this - * means use |outer-&foo| for outer vars
-  (multiple-value-bind (vars layout form) (scope-box-transform '* tree)
-    (assert (null vars))
-    (assert (eq '* layout))
-    form))
+  ; XXX poking at compiler internals
+  (e.elang.compiler.seq::sequence-to-form
+    (e.elang.compiler.seq::sequence-expr expr '* 'return-value)
+    'return-value))
 

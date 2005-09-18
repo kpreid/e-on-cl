@@ -14,26 +14,26 @@
       `(("any" +the-any-guard+))))
   (defparameter *layout*
     (list (cons "any"
-                (make-instance 'e.elang::value-binding :value 
+                (make-instance 'e.compiler:value-binding :value 
                   +the-any-guard+)))))
 
 (deftest e.literal
-  (e.elang::sequence-expr (n '(|LiteralExpr| 1)) nil 'r)
+  (e.compiler.seq::sequence-expr (n '(|LiteralExpr| 1)) nil 'r)
   ((r '1))
   nil)
 
 (deftest e.noun
-  (e.elang::sequence-expr (n '(|NounExpr| "any")) *layout* 'r)
+  (e.compiler.seq::sequence-expr (n '(|NounExpr| "any")) *layout* 'r)
   ((r '#.+the-any-guard+))
   #.*layout*)
 
 (deftest p.ignore
-  (e.elang::sequence-patt (n '(|IgnorePattern|)) *layout* 's 'e)
+  (e.compiler.seq::sequence-patt (n '(|IgnorePattern|)) *layout* 's 'e)
   ()
   #.*layout*)
 
 (defun ev (expr)
-  (nth-value 0 (eval (e.elang::sequence-e-to-cl 
+  (nth-value 0 (eval (e.compiler.seq::sequence-e-to-cl 
                        (n expr)
                        *scope*))))
 

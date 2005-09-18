@@ -3,6 +3,38 @@
 
 (in-package :elang)
 
+(defun make-lets (vars inner-form)
+  (if vars
+    `(let (,@(mapcar (lambda (v) (binding-let-entry v)) vars)) 
+      (declare (ignorable ,@(mapcar (lambda (v) (car (binding-let-entry v))) vars)))
+      ,inner-form)
+    inner-form))
+
+(defgeneric transform (expr outer-layout))
+(defgeneric transform-pattern (patt specimen-form ejector-spec outer-layout)
+  (:documentation "note that the transform function MUST generate code which evaluates specimen-form exactly once"))
+
+(defmacro updating-transform (expr-var layout-var vars-var)
+  `(multiple-value-bind (new-vars new-layout result) (transform ,expr-var ,layout-var)
+    (setf ,layout-var new-layout)
+    (setf ,vars-var (append new-vars ,vars-var))
+    result))
+
+(defmacro updating-transform-pattern (expr-var specimen-form-var ejector-spec-var layout-var vars-var)
+  `(multiple-value-bind (new-vars new-layout result) (transform-pattern ,expr-var ,specimen-form-var ,ejector-spec-var ,layout-var)
+    (setf ,layout-var new-layout)
+    (setf ,vars-var (append new-vars ,vars-var))
+    result))
+
+(defun scope-box (vars outer-layout sub-form)
+  (values () outer-layout (make-lets vars sub-form)))
+
+(defun scope-box-transform (outer-layout sub)
+  (values () outer-layout
+          (tail-transform-exprs
+            (list sub)
+            (scope-layout-nest outer-layout))))
+
 ; --- transformation utils ---
 
 (defmacro def-expr-transformation (class (layout-var &rest elements-lambda-list) &body body
@@ -366,4 +398,40 @@
 
 (def-patt-transformation |VarPattern| (specimen-form ejector-spec layout &rest args)
   (apply #'binding-pattern-impl #'var-binding-impl nil specimen-form ejector-spec layout args))
+
+;;; --- ObjectExpr component functions ---
+
+(defun method-body (layout method args-var &aux vars)
+  (destructuring-bind (docComment verb patterns optResultGuard body) (node-elements method)
+    (declare (ignore docComment verb))
+    (setf layout (scope-layout-nest layout))
+    (let* ((arg-symbols (loop for i below (length patterns)
+                              collect (intern (format nil "arg~A" i))))
+           (code `(destructuring-bind (,@arg-symbols) ,args-var
+                    ,@(loop for pat across (coerce patterns 'vector)
+                            and sym in arg-symbols
+                            collect (updating-transform-pattern pat sym nil layout vars))
+                    ,(if (null optResultGuard) 
+                       (updating-transform body layout vars)
+                       `(e. ,(updating-transform optResultGuard layout vars) |coerce| ,(updating-transform body layout vars) nil)
+                       ))))
+      (make-lets vars code))))
+
+(defun matcher-body (layout matcher mverb-var args-var remaining-code
+    &aux vars)
+  (destructuring-bind (pattern body) (node-elements matcher)
+    (setf layout (scope-layout-nest layout))
+    (let* ((pattern-eject-block (gensym "E-CATCH-PATTERN-BLOCK-"))
+           (patt-code (updating-transform-pattern pattern `(vector (e-util:unmangle-verb ,mverb-var) (coerce ,args-var 'vector)) `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))) layout vars))
+           (body-code (updating-transform body layout vars)))
+      `(block method-matcher
+        ,(make-lets vars
+          `(block ,pattern-eject-block
+            ,patt-code
+            ; if we reach here, the pattern matched
+            (return-from 
+              method-matcher
+              ,body-code)))
+        ; if we reach here, the ejector was used
+        ,remaining-code))))
 

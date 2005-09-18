@@ -1,7 +1,7 @@
 ; Copyright 2005 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang)
+(in-package :e.elang.compiler)
 
 ; --- Scope layouts ---
 
@@ -158,9 +158,9 @@
 (defgeneric binding-set-code      (binding value-form)
   (:documentation "Return a form which will set the value of the binding to the result of evaluating value-form."))
 (defgeneric binding-let-entry     (binding)
-  (:documentation "Return the LET clause which must be scoped outside of all uses of this binding.")) ; XXX is it let*?
+  (:documentation "Return the LET clause which must be scoped outside of all uses of this binding. XXX needs updating - this is an original-compiler issue.")) ; XXX is it let*?
 (defgeneric binding-smash-code    (binding broken-ref-form)
-  (:documentation "Return a form which should be evaluated iff the binding is to remain in scope without its ordinary initialization code running. This is used to implement MatchBindExpr."))
+  (:documentation "Return a form which should be evaluated iff the binding is to remain in scope without its ordinary initialization code running. This is used to implement MatchBindExpr.")) ; XXX new compiler doesn't do this, but hasn't needed to yet
 
 ; slot bindings - represented as symbols for historical reasons - xxx change that?
 
@@ -258,19 +258,23 @@
     ((nil)       `nil)))
 
 (defun outer-slot-symbol (var-name)
+  ;; XXX stale?
   "The symbol used for a variable when the name map contains an outer-scope wildcard (*)."
   (intern (concatenate 'string "outer-&" var-name)))
 
 (defun outer-slot-binding (var-name)
+  ;; XXX stale?
   "The binding used for a variable when the name map contains an outer-scope wildcard (*)."
   (make-instance 'direct-def-binding :symbol (intern (concatenate 'string "outer-" var-name))))
 
 (defun simple-slot-symbol (var-name)
+  ;; XXX stale!
   "The symbol used for a variable when there are no scope conflicts requiring another name to be used."
   (intern (concatenate 'string "&" var-name)))
 
 ; XXX this should be either fixed or scrapped. It was stubbed out when scope layout objects (then 'inner scopes', and 'name maps' before that) were introduced.
 (defun unmapped-symbol-such-as (symbol layout)
+  ;; XXX stale!
   "Given a symbol and a name map, returns a symbol not present in the name map, which may be the input symbol or a similarly- or identically-named (possibly uninterned) symbol."
   (declare (ignore layout))
   (make-symbol (symbol-name symbol)))
@@ -285,55 +289,26 @@
 
 (defun pick-slot-symbol (varName outer-layout)
   ; XXX documentation is variously stale
+  ;; XXX stale!
   "Returns an unused symbol for the given variable name, and a new layout with an entry for it."
   (let ((sym (unmapped-symbol-such-as (simple-slot-symbol varName) outer-layout)))
     (values sym (scope-layout-bind outer-layout varName sym))))
 
 (defun pick-binding-symbol (varName outer-layout)
   ; XXX documentation is variously stale
+  ;; XXX stale!
   "Returns a new direct-def binding object for the given variable name, and a new layout with an entry for it."
   (let* ((sym (unmapped-symbol-such-as (intern varName) outer-layout))
          (binding (make-instance 'direct-def-binding :symbol sym)))
     (values binding (scope-layout-bind outer-layout varName binding))))
 
 (defun slot-symbol-var-name (sym)
+  ;; XXX stale?
   "Return the Kernel-E variable name corresponding to the given symbol's name, or nil if it is not in the expected format."
   (let* ((sn (symbol-name sym))
          (amp (position #\& sn)))
     (if amp
       (subseq sn (1+ amp)))))
-
-(defun make-lets (vars inner-form)
-  (if vars
-    `(let (,@(mapcar (lambda (v) (binding-let-entry v)) vars)) 
-      (declare (ignorable ,@(mapcar (lambda (v) (car (binding-let-entry v))) vars)))
-      ,inner-form)
-    inner-form))
-
-(defgeneric transform (expr outer-layout))
-(defgeneric transform-pattern (patt specimen-form ejector-spec outer-layout)
-  (:documentation "note that the transform function MUST generate code which evaluates specimen-form exactly once"))
-
-(defmacro updating-transform (expr-var layout-var vars-var)
-  `(multiple-value-bind (new-vars new-layout result) (transform ,expr-var ,layout-var)
-    (setf ,layout-var new-layout)
-    (setf ,vars-var (append new-vars ,vars-var))
-    result))
-
-(defmacro updating-transform-pattern (expr-var specimen-form-var ejector-spec-var layout-var vars-var)
-  `(multiple-value-bind (new-vars new-layout result) (transform-pattern ,expr-var ,specimen-form-var ,ejector-spec-var ,layout-var)
-    (setf ,layout-var new-layout)
-    (setf ,vars-var (append new-vars ,vars-var))
-    result))
-
-(defun scope-box (vars outer-layout sub-form)
-  (values () outer-layout (make-lets vars sub-form)))
-
-(defun scope-box-transform (outer-layout sub)
-  (values () outer-layout
-          (tail-transform-exprs
-            (list sub)
-            (scope-layout-nest outer-layout))))
 
 ;;; --- ---
 
@@ -344,52 +319,20 @@
 
 ;;; --- ObjectExpr code generation ---
 
-(defun method-body (layout method args-var &aux vars)
-  (destructuring-bind (docComment verb patterns optResultGuard body) (node-elements method)
-    (declare (ignore docComment verb))
-    (setf layout (scope-layout-nest layout))
-    (let* ((arg-symbols (loop for i below (length patterns)
-                              collect (intern (format nil "arg~A" i))))
-           (code `(destructuring-bind (,@arg-symbols) ,args-var
-                    ,@(loop for pat across (coerce patterns 'vector)
-                            and sym in arg-symbols
-                            collect (updating-transform-pattern pat sym nil layout vars))
-                    ,(if (null optResultGuard) 
-                       (updating-transform body layout vars)
-                       `(e. ,(updating-transform optResultGuard layout vars) |coerce| ,(updating-transform body layout vars) nil)
-                       ))))
-      (make-lets vars code))))
-
 (defun miranda-case-maybe (mverb methods &rest body)
   (unless (find-if (lambda (method &aux (e (node-elements method)))
                      (eq mverb (e-util:mangle-verb (cadr e) (length (caddr e)))))
                    methods)
     `(((,mverb) ,@body))))
 
-(defun matcher-body (layout matcher remaining-code
-    &aux vars)
-  (destructuring-bind (pattern body) (node-elements matcher)
-    (setf layout (scope-layout-nest layout))
-    (let* ((pattern-eject-block (gensym "E-CATCH-PATTERN-BLOCK-"))
-           (patt-code (updating-transform-pattern pattern `(vector (e-util:unmangle-verb mverb) (coerce args 'vector)) `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))) layout vars))
-           (body-code (updating-transform body layout vars)))
-      `(block method-matcher
-        ,(make-lets vars
-          `(block ,pattern-eject-block
-            ,patt-code
-            ; if we reach here, the pattern matched
-            (return-from 
-              method-matcher
-              ,body-code)))
-        ; if we reach here, the ejector was used
-        ,remaining-code))))
-
-(defun matchers-body (generators layout matchers remaining-code)
+(defun matchers-body (generators layout matchers mverb-var args-var remaining-code)
   (let ((matcher-body (getf generators :matcher-body)))
     (labels ((m-b-list (matchers)
                (if matchers
                  (funcall matcher-body layout 
-                                       (first matchers) 
+                                       (first matchers)
+                                       mverb-var
+                                       args-var
                                        (m-b-list (rest matchers)))
                  remaining-code)))
       (m-b-list (coerce matchers 'list)))))
@@ -433,7 +376,7 @@
       (if (position auditor ,approvers-sym :test #'elib:eeq-is-same-ever) t)))
     (otherwise 
       (elib:miranda #',self-fsym mverb args (lambda ()
-        ,(matchers-body generators layout matchers
+        ,(matchers-body generators layout matchers 'mverb 'args
           `(error "no such method: ~A#~A" ',qualified-name mverb)))))))
 
 (defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name approvers-sym doc-comment)
@@ -444,7 +387,7 @@
       (if (position auditor ,approvers-sym :test #'elib:eeq-is-same-ever) t)))
     ; XXX should propagate match failure exception instead
     (otherwise 
-      ,(matchers-body generators layout matchers
+      ,(matchers-body generators layout matchers 'mverb 'args
         `(error "Plumbing match failure: ~W#~A" ',qualified-name mverb)))))
 
 (defmacro updating-fully-qualify-name (scope-layout-place qn-form
@@ -504,7 +447,8 @@ XXX This is an excessively large authority and will probably be replaced."
                 ,witness-check-form
                 ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
                 ;; XXX this is also hugely inefficient, isn't it? we're constructing the full meta.state, and then throwing away all but one element. figure out why the alternate method below was taken out -- lack of hashing?
-                (e. ,(leaf-sequence (make-instance '|MetaStateExpr| :elements '()) layout)
+                ;; XXX also, cross-layer reference into the current compiler implementation
+                (e. ,(e.compiler.seq::leaf-sequence (make-instance '|MetaStateExpr| :elements '()) layout)
                     |get| (e. "&" |add| slot-name))
                 #-(and) (cond
                   ,@(loop for (name . binding) in (scope-layout-bindings layout) collect

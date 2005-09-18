@@ -341,7 +341,15 @@
     :eval-e
     :get-translation
     
-    :+the-make-static-scope+))
+    :+the-make-static-scope+
+    
+    :node-elements ;; XXX shouldn't really be exported
+    :opt-guard-expr-to-safe-opt-guard
+    :pattern-opt-noun
+    :pattern-to-param-desc
+    
+    :slot-symbol-var-name ;; XXX stale
+    ))
 
 (e.util:defglobals
   elang:+the-make-static-scope+)
@@ -366,7 +374,7 @@
     
     :+prim-parser+
   ))
-
+  
 (e.util:defglobals
   e.elang.syntax:+prim-parser+
   e.elang.syntax:+e-printer+)
@@ -377,6 +385,55 @@
   e.elang.syntax:save-parse-cache
   e.elang.syntax:load-parse-cache-file
   e.elang.syntax:save-parse-cache-file))
+
+
+(cl:defpackage :e.elang.compiler
+  (:nicknames :e.compiler)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node)
+  (:export
+    :scope-layout
+    :scope-layout-noun-binding
+    :scope-layout-fqn-prefix
+    :scope-layout-to-outer-scope
+    :scope-layout-bindings
+    :scope-layout-noun-is-local
+    :scope-layout-meta-state-bindings
+    :scope-layout-bind
+    :scope-layout-nest
+    
+    :binding-get-code
+    :binding-get-slot-code
+    :binding-set-code
+    :binding-let-entry
+    :binding-smash-code
+    
+    :direct-def-binding
+    :value-binding
+    :binding-for-slot
+    
+    ;; ejector specifier tags
+    :nil
+    :ejector
+    :eject-function
+    
+    :eject-code
+    :opt-ejector-make-code
+    
+    :object-form
+    :updating-fully-qualify-name
+    
+    :%catch-expr-resignal
+    
+    :delta-extract-outer-scope
+    :outer-scope-to-layout))
+
+
+(cl:defpackage :e.elang.compiler.seq
+  (:nicknames :e.compiler.seq)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :e.elang.compiler)
+  (:export
+    :sequence-e-to-cl))
+
 
 (cl:defpackage :e.extern
   (:use :common-lisp :e.util :elib :elang)

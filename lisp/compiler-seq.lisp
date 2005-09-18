@@ -1,7 +1,7 @@
 ; Copyright 2005 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang)
+(in-package :e.elang.compiler.seq)
 
 (defgeneric sequence-expr (node layout result)
   (:documentation "Compile an E expression into a series of LET* binding clauses, and return the clauses and the updated scope layout. The symbol in RESULT will be bound to the return value of the node."))
@@ -287,7 +287,7 @@
             `(e. ,guard-var |coerce| ,result-var nil)
             result-var))))))
 
-(defun seq-matcher-body (layout matcher remaining-code)
+(defun seq-matcher-body (layout matcher mverb-var args-var remaining-code)
   (check-type matcher |EMatcher|)
   (destructuring-bind (pattern body) (node-elements matcher)
     (setf layout (scope-layout-nest layout))
@@ -299,7 +299,7 @@
         (block ,pattern-eject-block
           ,(sequence-to-form
              (append
-               `((,pair-var (vector (unmangle-verb mverb) (coerce args 'vector)) sv-temporary))
+               `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector)) sv-temporary))
                (updating-sequence-patt pattern layout pair-var `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))))
                (updating-sequence-expr body layout result-var))
              `(return-from ,matcher-block ,result-var)))
