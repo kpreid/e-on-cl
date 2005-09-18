@@ -33,10 +33,12 @@
             :depends-on ("elib"))
      (:file "knot"
             :depends-on ("elib" "sugar"))
-     (:file "elang"
-            :depends-on ("tables2" "elib-values" "elib" "util" "packages"))
      (:file "elang-nodes"
-            :depends-on ("elang"))
+            :depends-on ("elib" 
+                         "util"
+                         "sugar" 
+                         "elib-values"
+                         "tables2"))
      (:file "syntax"
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-base"

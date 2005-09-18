@@ -394,7 +394,6 @@
     :scope-layout
     :scope-layout-noun-binding
     :scope-layout-fqn-prefix
-    :scope-layout-to-outer-scope
     :scope-layout-bindings
     :scope-layout-noun-is-local
     :scope-layout-meta-state-bindings

@@ -3,6 +3,29 @@
 
 (in-package :elang)
 
+;;; --- misc. symbol utils that were in compiler-base ---
+
+; XXX this should be either fixed or scrapped. It was stubbed out when scope layout objects (then 'inner scopes', and 'name maps' before that) were introduced.
+(defun unmapped-symbol-such-as (symbol layout)
+  "Given a symbol and a name map, returns a symbol not present in the name map, which may be the input symbol or a similarly- or identically-named (possibly uninterned) symbol."
+  (declare (ignore layout))
+  (make-symbol (symbol-name symbol)))
+
+(defun pick-slot-symbol (varName outer-layout)
+  ; XXX documentation is variously stale
+  "Returns an unused symbol for the given variable name, and a new layout with an entry for it."
+  (let ((sym (unmapped-symbol-such-as (simple-slot-symbol varName) outer-layout)))
+    (values sym (scope-layout-bind outer-layout varName sym))))
+
+(defun pick-binding-symbol (varName outer-layout)
+  ; XXX documentation is variously stale
+  "Returns a new direct-def binding object for the given variable name, and a new layout with an entry for it."
+  (let* ((sym (unmapped-symbol-such-as (intern varName) outer-layout))
+         (binding (make-instance 'direct-def-binding :symbol sym)))
+    (values binding (scope-layout-bind outer-layout varName binding))))
+
+;;; --- core ---
+
 (defun make-lets (vars inner-form)
   (if vars
     `(let (,@(mapcar (lambda (v) (binding-let-entry v)) vars)) 

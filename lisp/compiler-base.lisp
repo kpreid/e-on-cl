@@ -19,9 +19,6 @@
 (defgeneric scope-layout-fqn-prefix (scope)
   (:documentation "Return the FQN prefix for objects defined in this scope."))
 
-; XXX this appears to be a completely unreferenced and unimplemented function - remove
-(defgeneric scope-layout-to-outer-scope (scope-layout))
-
 (defgeneric scope-layout-bindings (scope-layout)
   (:documentation "Return an alist of the nouns defined in this scope and their binding objects."))
 
@@ -33,7 +30,8 @@
 
 
 (defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
-  (outer-slot-binding noun-string))
+  (make-instance 'direct-def-binding 
+    :symbol (make-symbol (concatenate 'string "free-" noun-string))))
 
 (defmethod scope-layout-bindings ((scope-layout (eql '*)))
   nil)
@@ -50,12 +48,13 @@
 
 
 (defmethod scope-layout-noun-binding ((scope-layout null) noun-string)
-  (error 'unbound-variable :name (simple-slot-symbol noun-string)))
+  (error 'unbound-noun :noun noun-string))
 
 (defmethod scope-layout-bindings ((scope-layout null))
   nil)
 
 (defmethod scope-layout-fqn-prefix ((scope-layout null))
+  ;; XXX add a :if-unavailable (member :error :default nil) parameter?
   "__unknown")
 
 (defmethod scope-layout-noun-is-local ((scope-layout null) noun-string)
@@ -237,7 +236,7 @@
   ; could be extended to cover any DeepFrozen slot
   (make-instance 'value-binding :value (e. slot |getValue|)))
 
-; --- ... ---
+;;; --- ejector-specifier utilities ---
 
 (defun eject-code (ejector-specifier condition-code)
   (ecase (first ejector-specifier)
@@ -257,63 +256,21 @@
                  `(ejector ,@(rest ejector-specifier)))
     ((nil)       `nil)))
 
-(defun outer-slot-symbol (var-name)
-  ;; XXX stale?
-  "The symbol used for a variable when the name map contains an outer-scope wildcard (*)."
-  (intern (concatenate 'string "outer-&" var-name)))
+;;; --- support for (scope-layout-noun-binding nil *) ---
 
-(defun outer-slot-binding (var-name)
-  ;; XXX stale?
-  "The binding used for a variable when the name map contains an outer-scope wildcard (*)."
-  (make-instance 'direct-def-binding :symbol (intern (concatenate 'string "outer-" var-name))))
+(define-condition unbound-noun (program-error)
+  ((noun :initarg :noun :reader unbound-noun-noun :type string)))
 
-(defun simple-slot-symbol (var-name)
-  ;; XXX stale!
-  "The symbol used for a variable when there are no scope conflicts requiring another name to be used."
-  (intern (concatenate 'string "&" var-name)))
+(def-vtable unbound-noun
+  (:|__printOn| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    ;; XXX review wording of this error
+    (e. tw |write| "problem: undefined variable: ")
+    (e. tw |print| (unbound-noun-noun this))))
 
-; XXX this should be either fixed or scrapped. It was stubbed out when scope layout objects (then 'inner scopes', and 'name maps' before that) were introduced.
-(defun unmapped-symbol-such-as (symbol layout)
-  ;; XXX stale!
-  "Given a symbol and a name map, returns a symbol not present in the name map, which may be the input symbol or a similarly- or identically-named (possibly uninterned) symbol."
-  (declare (ignore layout))
-  (make-symbol (symbol-name symbol)))
-
-; (defun unmapped-symbol-such-as (symbol name-map)
-;   "Given a symbol and a name map, returns a symbol not present in the name map, which may be the input symbol or a similarly- or identically-named (possibly uninterned) symbol."
-;   (cond
-;     ((or (null name-map)
-;          (eql '* name-map))       symbol)
-;     ((eql (cdar name-map) symbol) (make-symbol (symbol-name symbol)))
-;     (t                            (unmapped-symbol-such-as symbol (cdr name-map)))))
-
-(defun pick-slot-symbol (varName outer-layout)
-  ; XXX documentation is variously stale
-  ;; XXX stale!
-  "Returns an unused symbol for the given variable name, and a new layout with an entry for it."
-  (let ((sym (unmapped-symbol-such-as (simple-slot-symbol varName) outer-layout)))
-    (values sym (scope-layout-bind outer-layout varName sym))))
-
-(defun pick-binding-symbol (varName outer-layout)
-  ; XXX documentation is variously stale
-  ;; XXX stale!
-  "Returns a new direct-def binding object for the given variable name, and a new layout with an entry for it."
-  (let* ((sym (unmapped-symbol-such-as (intern varName) outer-layout))
-         (binding (make-instance 'direct-def-binding :symbol sym)))
-    (values binding (scope-layout-bind outer-layout varName binding))))
-
-(defun slot-symbol-var-name (sym)
-  ;; XXX stale?
-  "Return the Kernel-E variable name corresponding to the given symbol's name, or nil if it is not in the expected format."
-  (let* ((sn (symbol-name sym))
-         (amp (position #\& sn)))
-    (if amp
-      (subseq sn (1+ amp)))))
-
-;;; --- ---
+;;; --- utilities for generated code ---
 
 (defun %catch-expr-resignal (condition)
-  ;;; XXX this is to be renamed once we've used it in the new compiler
   "This function exists to make it clear in a backtrace that the condition did not originate at this location."
   (error condition))
 
