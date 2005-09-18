@@ -42,7 +42,7 @@
      (:file "syntax"
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-base"
-            :depends-on ("elang-nodes"))
+            :depends-on ("packages" "elang-nodes"))
      (:file "compiler-seq"
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-entry"

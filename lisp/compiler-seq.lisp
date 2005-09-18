@@ -415,10 +415,10 @@
   (if guard-var
     (values
       `((,coerced-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
-      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var)))
+      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :noun noun)))
     (values
       '()
-      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol specimen-var)))))
+      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol specimen-var :noun noun)))))
 
 (defun var-sequence-binding (noun layout specimen-var ejector-spec guard-var
     &aux (slot-var (gensym (concatenate 'string "var " noun))))

@@ -53,6 +53,10 @@ VarPattern, AssignExpr
   ? x
   # value: 2
   
+  Bug: def variables were once assignable:
+  ? { def x := 1; x += 1; x }
+  # problem: x is not an assignable variable
+  
 var slot with guard
   
   ? def var guarded_var :tfloat64 := 1.0

@@ -31,7 +31,8 @@
 
 (defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
   (make-instance 'direct-def-binding 
-    :symbol (make-symbol (concatenate 'string "free-" noun-string))))
+    :symbol (make-symbol (concatenate 'string "free-" noun-string))
+    :noun noun-string))
 
 (defmethod scope-layout-bindings ((scope-layout (eql '*)))
   nil)
@@ -182,14 +183,20 @@
 
 (defclass direct-def-binding () 
   ((symbol :initarg :symbol
-           :reader binding-get-code)))
+           :type symbol
+           :reader binding-get-code)
+   (noun :initarg :noun ;; XXX this ought to be on a general binding class
+         :initform (error ":noun not supplied for a direct-def-binding")
+         :type string
+         :reader binding-get-source-noun)))
 
 (defmethod binding-get-slot-code ((binding direct-def-binding))
   ; requires that e-simple-slot be selfless (which it is now)
   `(make-instance 'elib:e-simple-slot :value ,(binding-get-code binding)))
 
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
-  `(setf ,(binding-get-code binding) ,value-form))
+  ;; xxx eventually this should be able to point at the source position of the assignment
+  (error "~A is not an assignable variable" (binding-get-source-noun binding)))
 
 (defmethod binding-let-entry ((binding direct-def-binding))
   `(,(binding-get-code binding) ',(elib:make-unconnected-ref "accidentally unbound direct binding")))
