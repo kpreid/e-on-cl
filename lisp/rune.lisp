@@ -96,7 +96,7 @@
 
 (defun translate-toplevel (args)
   (assert (= 1 (length args)))
-  (establish-vat "rune --translate toplevel")
+  (establish-vat :label "rune --translate toplevel")
   (print (e.elang:get-translation (e.syntax:e-source-to-tree (first args))))
   (fresh-line)
   (force-output)
