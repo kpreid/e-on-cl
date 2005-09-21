@@ -772,6 +772,10 @@ IgnorePattern
   
   ? throw("bang") =~ _
   # problem: bang
+  
+  check for non-evaluation
+  ? var x := 0; def _ := (x += 1); x
+  # value: 1
 
 SuchThatPattern
 

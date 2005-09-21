@@ -96,7 +96,7 @@
 (defun get-translation (expr)
   ; XXX document this - * means use |outer-&foo| for outer vars
   ; XXX poking at compiler internals
-  (e.elang.compiler.seq::sequence-to-form
+  (e.elang.compiler.seq::naive-sequence-to-form
     (e.elang.compiler.seq::sequence-expr expr '* 'return-value)
     'return-value))
 

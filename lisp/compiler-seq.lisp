@@ -7,9 +7,38 @@
   (:documentation "Compile an E expression into a series of LET* binding clauses, and return the clauses and the updated scope layout. The symbol in RESULT will be bound to the return value of the node."))
 
 (defgeneric sequence-patt (node layout specimen ejector-spec)
-  (:documentation "Compile an E pattern into a series of LET* binding clauses, and return the clauses and the updated scope layout."))
+  (:documentation "Compile an E pattern into a series of LET* binding clauses, and return the clauses and the updated scope layout. The result will evaluate the SPECIMEN form exactly once, unless it is a symbol."))
+
+(defgeneric inline-expr (node layout)
+  (:documentation "Compile an E expression into a form. This must not be used if bindings from the expression may be referenced later."))
+
+;; XXX the below two methods are a potential infinite recursion
+
+(defmethod inline-expr (node layout
+    &aux (result (gensym "R")))
+  "fall to general compilation"
+  (sequence-to-form (sequence-expr node layout result) result))
+
+(defmethod sequence-expr (node layout result)
+  (if (inlinable node)
+    (values `((,result ,(inline-expr node layout)))
+            layout)
+    (call-next-method)))
+
+(defun inlinable (node)
+  (= (e. (e. (e. node |staticScope|) |outNames|) |size|) 0))
+
+(defun safe-inline-expr (node layout)
+  (unless (inlinable node)
+    (error "~A cannot be inlined since it defines ~A"
+      node
+      (e. (e. (e. node |staticScope|) |outNames|) |getKeys|)))
+  (inline-expr node layout))
+
+;;; ---
 
 ;; The bizarre use of destructuring-bind is so that (declare (ignore)) works unsurprisingly in the body.
+;; XXX write a macro-generating macro for these
 
 (defmacro define-sequence-expr (class (layout-var result-var &rest elements-lambda-list) &body body
     &aux (node-var (gensym)))
@@ -23,11 +52,26 @@
     (destructuring-bind (,layout-var ,specimen-var ,ejector-var ,@elements-lambda-list) (list* ,layout-var ,specimen-var ,ejector-var (node-elements ,node-var))
       ,@body)))
 
-(defmacro updating-sequence-expr (node layout result
+(defmacro define-inline-expr (class (layout-var &rest elements-lambda-list) &body body
+    &aux (node-var (gensym)))
+  `(defmethod inline-expr ((,node-var ,class) ,layout-var)
+    (destructuring-bind (,layout-var ,@elements-lambda-list) (list* ,layout-var (node-elements ,node-var))
+      ,@body)))
+
+(defmacro updating-sequence-expr (node layout result &key may-inline
     &aux (cv (gensym)) (lv (gensym)))
-  `(multiple-value-bind (,cv ,lv) (sequence-expr ,node ,layout ,result)
-    (setf ,layout ,lv)
-    ,cv))
+  "if MAY-INLINE is true, may replace RESULT with a form to be evaluated exactly once"
+  (let ((general-form
+         `(multiple-value-bind (,cv ,lv) (sequence-expr ,node ,layout ,result)
+            (setf ,layout ,lv)
+            ,cv)))
+    (if may-inline
+      `(if (and ,may-inline (inlinable ,node))
+        (progn
+          (setf ,result (inline-expr ,node ,layout))
+          '())
+        ,general-form)
+      general-form)))
 
 (defmacro updating-sequence-patt (node layout specimen ejector-spec
     &aux (cv (gensym)) (lv (gensym)))
@@ -37,17 +81,30 @@
 
 ;;; --- ---
 
-(defun sequence-to-form (seq value-form)
+(defun naive-sequence-to-form (seq value-form)
   (map nil (lambda (x)
              (check-type x (cons symbol (cons t null)))) 
            seq)
   `(let* ,seq
      (declare (ignorable ,@(mapcar #'first seq)))
      ,value-form))
+     
+(defun sequence-to-form (seq value-form)
+  (let ((last (first (last seq))))
+    (cond 
+      ((and last
+            (symbolp value-form)
+            (eql value-form (first last)))
+        ;; transforms (let (... (a #)) a) into (let (...) #)
+        (sequence-to-form (butlast seq) (second last)))
+      ((null seq)
+        ;; empty sequence, so just use the form
+        value-form)
+      (t 
+        (naive-sequence-to-form seq value-form)))))
 
-(defun leaf-sequence (node layout
-    &aux (result (gensym "R")))
-  (sequence-to-form (sequence-expr node layout result) result))
+(defun leaf-sequence (node layout)
+  (inline-expr node layout))
 
 (defun hide-sequence (node layout)
   "for sequences within scope boxes"
@@ -84,10 +141,10 @@
     &aux (rec-var (gensym "REC"))
          (arg-vars (loop for arg in args collect (gensym "ARG"))))
   (values
-    (append (updating-sequence-expr recipient layout rec-var)
-            (loop for arg in args
-                  for arg-var in arg-vars
-                  append (updating-sequence-expr arg layout arg-var))
+    (append (updating-sequence-expr recipient layout rec-var :may-inline (every #'inlinable args))
+            (loop for (arg . arg-expr-tail) on args
+                  for arg-var-cell on arg-vars
+                  append (updating-sequence-expr arg layout (first arg-var-cell) :may-inline (every #'inlinable arg-expr-tail) #| XXX O(n^2) |#))
             `((,result (e. ,rec-var ,verb ,@arg-vars))))
     layout))
 
@@ -110,27 +167,32 @@
     layout))
 
 (define-sequence-expr |DefineExpr| (layout result pattern value opt-ejector
-    &aux (ej (gensym "DEFEJ")))
+    &aux (ej (gensym "DEFEJ")) (value-var result))
   (values
-    (append (updating-sequence-expr value layout result)
+    (append ;; if there is an ejector, inlining 
+            (updating-sequence-expr value layout value-var :may-inline (not opt-ejector))
             (if opt-ejector
-              (updating-sequence-expr opt-ejector layout ej)
-              `((,ej nil)))
-            (updating-sequence-patt pattern layout result `(ejector ,ej)))
+              (updating-sequence-expr opt-ejector layout ej :may-inline nil)
+              '())
+            (unless (eql value-var result)
+              `((,result ,value-var)))
+            (updating-sequence-patt pattern layout result (when opt-ejector `(ejector ,ej))))
     layout))
 
 (define-sequence-expr |EscapeExpr| (layout result ejector-patt body opt-catch-pattern opt-catch-body
     &aux (outer-block (gensym "ESCAPE"))
          (ejector-block (gensym "ESCAPE-BODY-"))
-         (ejector-var (gensym "ESCAPE-EJ-"))
          (catch-value-var (gensym "CAUGHT"))
          (inner-result-var (gensym "ESCRESULT")))
   (values
     (labels ((body-form (ejector-block outer-block)
               (sequence-to-form 
                 (with-nested-scope-layout (layout)
-                  (append `((,ejector-var (ejector ',(pattern-opt-noun ejector-patt) (lambda (v) (return-from ,ejector-block v)))))
-                          (updating-sequence-patt ejector-patt layout ejector-var nil)
+                  (append (updating-sequence-patt 
+                            ejector-patt 
+                            layout 
+                            `(ejector ',(pattern-opt-noun ejector-patt) (lambda (v) (return-from ,ejector-block v)))
+                            nil)
                           (updating-sequence-expr body layout inner-result-var)))
                 `(return-from ,outer-block ,inner-result-var))))
       `((,result 
@@ -156,6 +218,7 @@
          ,(hide-sequence unwind-body layout))))
     layout))
 
+;; XXX define inlinably
 (define-sequence-expr |HideExpr| (layout result body)
   (values
     (with-nested-scope-layout (layout)
@@ -170,16 +233,15 @@
        (block ,block-name
          ,(with-nested-scope-layout (layout)
             (sequence-to-form 
-              (updating-sequence-expr test layout test-result)
+              (updating-sequence-expr test layout test-result :may-inline t)
               `(when (e-is-true ,test-result)
                  (return-from ,block-name ,(leaf-sequence then layout)))))
          ,(hide-sequence else layout))))
     layout))
 
-(define-sequence-expr |LiteralExpr| (layout result value)
-  (values
-    `((,result (quote ,value)))
-    layout))
+(define-inline-expr |LiteralExpr| (layout value)
+  (declare (ignore layout))
+  `(quote ,value))
 
 ;; Um--I blame the ugliness of the implementation on the ugliness of
 ;; the definition.
@@ -249,10 +311,8 @@
                  (vector ,@(scope-layout-meta-state-bindings layout)))))
     layout))
 
-(define-sequence-expr |NounExpr| (layout result noun)
-  (values
-    `((,result ,(binding-get-code (scope-layout-noun-binding layout noun))))
-    layout))
+(define-inline-expr |NounExpr| (layout noun)
+  (binding-get-code (scope-layout-noun-binding layout noun)))
 
 (defglobal +seq-object-generators+
   '(:method-body  seq-method-body
@@ -276,8 +336,8 @@
                                                        arg-var
                                                        nil))
                   (when opt-result-guard
-                    (updating-sequence-expr opt-result-guard layout guard-var))
-                  (updating-sequence-expr body layout result-var))
+                    (updating-sequence-expr opt-result-guard layout guard-var :may-inline (inlinable body)))
+                  (updating-sequence-expr body layout result-var :may-inline t))
           (if opt-result-guard
             `(e. ,guard-var |coerce| ,result-var nil)
             result-var))))))
@@ -296,7 +356,7 @@
              (append
                `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector))))
                (updating-sequence-patt pattern layout pair-var `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))))
-               (updating-sequence-expr body layout result-var))
+               (updating-sequence-expr body layout result-var :may-inline t))
              `(return-from ,matcher-block ,result-var)))
         ;; if we reach here, the ejector was used
         ,remaining-code))))
@@ -306,9 +366,9 @@
          (fqn (updating-fully-qualify-name layout qualified-name)))
   (values
     (append
-      (loop for auditor-expr across auditor-exprs
-            for auditor-var in auditor-vars
-            append (updating-sequence-expr auditor-expr layout auditor-var))
+      (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
+            for auditor-var-cell on auditor-vars
+            append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
       `((,result
          ,(object-form +seq-object-generators+
                        layout 
@@ -322,6 +382,7 @@
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values
     (loop for (sub . next) on subs append
+      ;; this would be inlinable if we evaluated the SEQ variables -- XXX figure out if this could produce better code
       (updating-sequence-expr sub layout (if next 
                                            (gensym "SEQ")
                                            result)))
@@ -382,11 +443,9 @@
                    ,(eject-code ejector-spec `(%make-list-pattern-arity-error (length ,coerced) ',pattern-arity))))))
             (loop for patt in patterns
                   for i from 0
-                  for sub-specimen-var = (gensym (format nil "ELIST~A-" i))
-                  append `((,sub-specimen-var (aref ,coerced ',i)))
                   append (updating-sequence-patt patt
                                                  layout
-                                                 sub-specimen-var
+                                                 `(aref ,coerced ',i)
                                                  ejector-spec)))
     layout))
 
@@ -394,7 +453,7 @@
     &aux (test-result (gensym "TEST")))
   (values
     (append (updating-sequence-patt pattern layout specimen ejector-spec)
-            (updating-sequence-expr test layout test-result)
+            (updating-sequence-expr test layout test-result :may-inline t)
             `((,(gensym "JUNK")
                (unless (e-is-true ,test-result)
                  ,(eject-code ejector-spec `(%make-such-that-error))))))
@@ -403,14 +462,18 @@
 ;;; --- Binding patterns ---
 
 (defun final-sequence-binding (noun layout specimen-var ejector-spec guard-var
-    &aux (coerced-var (gensym (concatenate 'string "var " noun))))
+    &aux (coerced-var (make-symbol noun)) #| must be deterministic |#)
   (if guard-var
     (values
       `((,coerced-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
       (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :noun noun)))
-    (values
-      '()
-      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol specimen-var :noun noun)))))
+    (if (symbolp specimen-var) ;; XXX really means no-side-effects-p
+      (values
+        '()
+        (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol specimen-var :noun noun)))
+      (values
+        `((,coerced-var ,specimen-var))
+        (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :noun noun))))))
 
 (defun var-sequence-binding (noun layout specimen-var ejector-spec guard-var
     &aux (value-var (gensym (concatenate 'string "var " noun)))
@@ -428,9 +491,13 @@
     (values
       `((,slot-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
       (scope-layout-bind layout noun slot-var))
-    (values
-      '()
-      (scope-layout-bind layout noun specimen-var))))
+    (if (symbolp specimen-var)
+      (values
+        '()
+        (scope-layout-bind layout noun specimen-var))
+      (values
+        `((,slot-var ,specimen-var))
+        (scope-layout-bind layout noun slot-var)))))
 
 (defun sequence-binding-pattern (fn specimen ejector-spec layout noun-expr opt-guard-expr
     &aux (guardv (gensym "FINAL-GUARD")))
@@ -438,7 +505,7 @@
   (let ((noun (first (node-elements noun-expr))))
     (values
       (append (if opt-guard-expr
-                (updating-sequence-expr opt-guard-expr layout guardv)
+                (updating-sequence-expr opt-guard-expr layout guardv :may-inline nil)
                 `())
               (multiple-value-bind (seq layout2) (funcall fn noun layout specimen ejector-spec (if opt-guard-expr guardv))
                 (setf layout layout2)
