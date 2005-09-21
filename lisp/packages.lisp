@@ -116,10 +116,8 @@
     :e-var-slot
     :e-guarded-slot
     :native-e-slot
-    :+the-unset-slot+
     :+the-make-simple-slot+
     :+the-make-var-slot+
-    :place-slot
     
     :cl-type-fq-name
     :cl-type-fq-expr :cl-type-simple-expr
@@ -212,7 +210,6 @@
     :e-import))
 
 (e.util:defglobals
-  elib:+the-unset-slot+
   elib:+the-make-simple-slot+
   elib:+the-make-var-slot+
 
@@ -404,8 +401,6 @@
     :binding-get-code
     :binding-get-slot-code
     :binding-set-code
-    :binding-let-entry
-    :binding-smash-code
     :binding-exit-info
     
     :direct-def-binding

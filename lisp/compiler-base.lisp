@@ -172,13 +172,10 @@
   (:documentation "Return a form which evaluates to the slot of the binding."))
 (defgeneric binding-set-code      (binding value-form)
   (:documentation "Return a form which will set the value of the binding to the result of evaluating value-form."))
-(defgeneric binding-let-entry     (binding)
-  (:documentation "Return the LET clause which must be scoped outside of all uses of this binding. XXX needs updating - this is an original-compiler issue.")) ; XXX is it let*?
-(defgeneric binding-smash-code    (binding broken-ref-form)
-  (:documentation "Return a form which should be evaluated iff the binding is to remain in scope without its ordinary initialization code running. This is used to implement MatchBindExpr.")) ; XXX new compiler doesn't do this, but hasn't needed to yet
 
 (defgeneric binding-exit-info     (binding broken-ref-form)
-  ;; sequence compiler support
+  ;; NOTE: this was written for the sequence compiler, but it *might*
+  ;; be generic enough for future work, so I'm leaving it here.
   (:documentation "Returns a list of, for each Lisp variable used by the binding's code, the variable and the form to which it should be bound if an enclosing MatchBindExpr fails, which may evaluate broken-ref-form at most once."))
 
 
@@ -193,12 +190,6 @@
 (defmethod binding-set-code ((binding symbol) value-form)
   `(e. ,binding |setValue| ,value-form))
 
-(defmethod binding-let-entry ((binding symbol))
-  `(,binding ,elib:+the-unset-slot+))
-
-(defmethod binding-smash-code ((binding symbol) broken-ref-form)
-  `(setf ,binding (make-instance 'elib:e-simple-slot :value ,broken-ref-form)))
-  
 (defmethod binding-exit-info ((binding symbol) broken-ref-form)
   `((,binding ,broken-ref-form)))
 
@@ -220,12 +211,6 @@
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
   ;; xxx eventually this should be able to point at the source position of the assignment
   (error "~A is not an assignable variable" (binding-get-source-noun binding)))
-
-(defmethod binding-let-entry ((binding direct-def-binding))
-  `(,(binding-get-code binding) ',(elib:make-unconnected-ref "accidentally unbound direct binding")))
-
-(defmethod binding-smash-code ((binding direct-def-binding) broken-ref-form)
-  `(setf ,(binding-get-code binding) ,broken-ref-form))
 
 (defmethod binding-exit-info ((binding direct-def-binding) broken-ref-form)
   `((,(binding-get-code binding) ,broken-ref-form)))
@@ -269,12 +254,6 @@
      ,(if (%binding-guard-code binding)
         `(setf ,(%var-binding-symbol binding) (e. ,(%binding-guard-code binding) |coerce| ,value-form))
         `(setf ,(%var-binding-symbol binding) ,value-form))))
-
-(defmethod binding-let-entry ((binding direct-var-binding))
-  `(,(%var-binding-symbol binding) ',(elib:make-unconnected-ref "accidentally unset direct var binding")))
-
-(defmethod binding-smash-code ((binding direct-var-binding) broken-ref-form)
-  (error "not implemented"))
 
 (defmethod binding-exit-info ((binding direct-var-binding) broken-ref-form)
   `((,(%var-binding-symbol binding) ,broken-ref-form)

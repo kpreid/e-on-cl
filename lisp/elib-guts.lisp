@@ -160,7 +160,136 @@
     "Returns whether this resolver's promise has been resolved already."
     (as-e-boolean (not (slot-value this 'ref)))))
 
-; --- e-boolean ---
+;;; --- Basic slots ---
+
+
+;;; XXX review the actual uses of these various slot implementations; also consider moving them to e-lambdas
+
+(defun import-uncall (fqn)
+  `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
+
+(defglobal +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
+    (:stamped +deep-frozen-stamp+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
+  (:|run| (value)
+    (make-instance 'e-simple-slot :value value))))
+
+(defglobal +the-make-var-slot+ (e-lambda "org.erights.e.elib.slot.makeVarSlot"
+    (:stamped +deep-frozen-stamp+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeVarSlot"))
+  (:|run| (value)
+    (make-instance 'e-var-slot :value value))))
+
+(defclass e-simple-slot () 
+  ((value :initarg :value))
+  (:documentation "A normal immutable slot."))
+
+(defmethod print-object ((slot e-simple-slot) stream)
+  ; xxx make readable under read-eval?
+  (print-unreadable-object (slot stream :type nil :identity nil)
+    (format stream "& ~W" (slot-value slot 'value))))
+
+(def-vtable e-simple-slot
+  (:|__optUncall| (this)
+    `#(,+the-make-simple-slot+ "run" #(,(slot-value this 'value))))
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| "<& ")
+    (e. tw |quote| (slot-value this 'value))
+    (e. tw |print| ">")
+    nil)
+  (:|getValue| (this)
+    "Returns the constant value of this slot."
+    (slot-value this 'value))
+  (:|setValue| (this new-value)
+    "Always fails."
+    (declare (ignore new-value))
+    (error "not an assignable slot: ~A" (e-quote this)))
+  (:|isFinal| (this)
+    "Returns true."
+    (declare (ignore this))
+    +e-true+))
+
+(defmethod eeq-is-transparent-selfless ((a e-simple-slot))
+  (declare (ignore a)) t)
+  
+
+(defclass base-closure-slot (vat-checking)
+  ((getter :initarg :getter
+           :type (function () t))
+   (setter :initarg :setter
+           :type (function (t) *))))
+
+(def-vtable base-closure-slot
+  (:|getValue| (this)
+    (funcall (slot-value this 'getter)))
+  (:|isFinal| (this)
+    (declare (ignore this))
+    +e-false+))
+
+(defmethod shared-initialize :after ((slot base-closure-slot) slot-names &key (value nil value-supplied) &allow-other-keys)
+  (declare (ignore slot-names))
+  (with-slots (getter setter) slot
+    (when value-supplied
+      (assert (not (slot-boundp slot 'getter)))
+      (assert (not (slot-boundp slot 'setter)))
+      (setf getter (lambda () value)
+            setter (lambda (new) (setf value new))))))
+  
+
+(defclass e-var-slot (base-closure-slot) 
+  ())
+
+(def-vtable e-var-slot
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| "<var ")
+    (e. tw |quote| (e. this |getValue|))
+    (e. tw |print| ">"))
+  (:|__optUncall| (this)
+    `#(,+the-make-var-slot+ "run" #(,(e. this |getValue|))))
+  (:|setValue| (this new-value)
+    (funcall (slot-value this 'setter) new-value)
+    nil))
+
+(defmethod print-object ((slot e-var-slot) stream)
+  (print-unreadable-object (slot stream :type nil :identity nil)
+    (format stream "var & ~W" (e. slot |getValue|))))
+
+(defclass e-guarded-slot (base-closure-slot) 
+  ((guard :initarg :guard)))
+
+(defmethod shared-initialize :around ((slot e-guarded-slot) slot-names &rest initargs &key (value nil value-supplied) guard opt-ejector &allow-other-keys)
+  "if this slot is initialized with a value, it is coerced; if initialized with a getter and setter, it is assumed to be correct"
+  (declare (ignore slot-names))
+  (if value-supplied
+    (apply #'call-next-method 
+      :value (e. guard |coerce| value opt-ejector)
+      initargs)
+    (call-next-method)))
+
+(def-vtable e-guarded-slot
+  (:|__printOn| (this tw) ; XXX move to e.syntax?
+    (e-coercef tw +the-text-writer-guard+)
+    (with-slots (guard getter) this
+      (e. tw |print| "<var ")
+      (e. tw |quote| (funcall getter))
+      (e. tw |print| " :")
+      (e. tw |quote| guard)
+      (e. tw |print| ">")))
+  (:|setValue| (this new-value)
+    (with-slots (guard setter) this
+      (funcall setter (e. guard |coerce| new-value nil)))
+    nil))
+
+(defmethod print-object ((slot e-guarded-slot) stream)
+  (print-unreadable-object (slot stream :type nil :identity nil)
+    (format stream "var & ~W :~W" (e. slot |getValue|) (slot-value slot 'guard))))
+
+
+;;; --- e-boolean ---
 
 (def-vtable e-boolean
   (:|__printOn| (this tw) ; XXX move to e.syntax?

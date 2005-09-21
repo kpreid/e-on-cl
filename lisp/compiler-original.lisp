@@ -458,3 +458,44 @@
         ; if we reach here, the ejector was used
         ,remaining-code))))
 
+;;; --- binding operations ---
+
+(defgeneric binding-let-entry     (binding)
+  (:documentation "Return the LET clause which must be scoped outside of all uses of this binding."))
+
+(defgeneric binding-smash-code    (binding broken-ref-form)
+  (:documentation "Return a form which should be evaluated iff the binding is to remain in scope without its ordinary initialization code running. This is used to implement MatchBindExpr."))
+
+
+(defmethod binding-let-entry ((binding symbol))
+  `(,binding ,+the-unset-slot+))
+
+(defmethod binding-smash-code ((binding symbol) broken-ref-form)
+  `(setf ,binding (make-instance 'elib:e-simple-slot :value ,broken-ref-form)))
+  
+
+(defmethod binding-let-entry ((binding direct-def-binding))
+  `(,(binding-get-code binding) ',(elib:make-unconnected-ref "accidentally unbound direct binding")))
+
+(defmethod binding-smash-code ((binding direct-def-binding) broken-ref-form)
+  `(setf ,(binding-get-code binding) ,broken-ref-form))
+
+
+(defmethod binding-let-entry ((binding direct-var-binding))
+  `(,(%var-binding-symbol binding) ',(elib:make-unconnected-ref "accidentally unset direct var binding")))
+
+(defmethod binding-smash-code ((binding direct-var-binding) broken-ref-form)
+  (error "not implemented"))
+
+
+(defclass e-unset-slot () ())
+
+(def-vtable e-unset-slot
+  (:|getValue| (this)
+    (declare (ignore this))
+    (error "internal error: slot variable never assigned"))
+  (:|setValue| (this new-value)
+    (declare (ignore this new-value))
+    (error "internal error: slot variable never assigned")))
+
+(defglobal +the-unset-slot+ (make-instance 'e-unset-slot))
