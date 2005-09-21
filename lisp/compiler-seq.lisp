@@ -199,19 +199,22 @@
     &aux (list-block (gensym "MB-PATTERN-LIST"))
          (exit-block (gensym "MB-PATTERN-EXIT"))
          (specimen-var (gensym "SPECIMEN"))
-         (values-var (gensym "MB-VALUES")))
+         (values-var (gensym "MB-VALUES"))
+         (problem-var (gensym "MB-PROBLEM")))
   (values
     (let* ((specimen-seq (updating-sequence-expr specimen layout specimen-var))
+           (layout-before-pattern layout)
            (pattern-seq (updating-sequence-patt 
                           pattern layout specimen-var 
                           `(eject-function 
                              "match-bind" 
                              (lambda (v) 
                                (return-from ,exit-block v)))))
-           (pattern-vars (mapcar #'first
-                                 (remove-if-not #'sv-preserve
-                                                pattern-seq
-                                                :key #'third))))
+           (pattern-info (loop for (noun . binding) in 
+                                 (scope-layout-bindings-before
+                                   layout
+                                   layout-before-pattern)
+                               append (binding-exit-info binding problem-var))))
       (append specimen-seq
               ;; squeeze all the vars from the pattern into a list
               `((,values-var
@@ -219,19 +222,21 @@
                    ;; constructing the *failure* value - will never
                    ;; reach here on success
                    (cons +e-false+ 
-                         (make-list ,(length pattern-seq) :initial-element 
-                           (make-unconnected-ref 
-                             (block ,exit-block
-                               ;; this is the normal case - on success,
-                               ;; the return-from jumps out of the
-                               ;; failure list construction
-                               ,(sequence-to-form pattern-seq
-                                  `(return-from ,list-block
-                                     (list +e-true+ 
-                                           ,@pattern-vars))))))))
+                         (let ((,problem-var
+                             (make-unconnected-ref 
+                               (block ,exit-block
+                                 ;; this is the normal case - on success,
+                                 ;; the return-from jumps out of the
+                                 ;; failure list construction
+                                 ,(sequence-to-form pattern-seq
+                                    `(return-from ,list-block
+                                       (list +e-true+ 
+                                             ,@(mapcar #'first pattern-info))))))))
+                           (declare (ignorable ,problem-var))
+                           (list ,@(mapcar #'second pattern-info)))))
                  sv-temporary))
               ;; destructure the list back to the expected vars
-              (loop for var in (cons result pattern-vars)
+              (loop for (var) in (cons (list result) pattern-info)
                     append `((,var (first ,values-var))
                              (,values-var (rest ,values-var) sv-temporary)))))
     layout))
@@ -422,12 +427,10 @@
 
 (defun var-sequence-binding (noun layout specimen-var ejector-spec guard-var
     &aux (slot-var (gensym (concatenate 'string "var " noun))))
-  (declare (ignore ejector-spec))
   (values
     ;; XXX look into not always reifying var slots
-    ;; XXX this will not use the ejector on coercion failure - find out whether this is a bug
     (if guard-var
-      `((,slot-var (make-instance 'e-guarded-slot :value ,specimen-var :guard ,guard-var)))
+      `((,slot-var (make-instance 'e-guarded-slot :value (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec)) :guard ,guard-var)))
       `((,slot-var (make-instance 'e-var-slot :value ,specimen-var))))
     (scope-layout-bind layout noun slot-var)))
 

@@ -224,6 +224,26 @@ MatchBindExpr, FinalPattern guards
   ? {[95.0 =~ x :tint, x]}
   # value: [false, <ref broken by problem: the float64 95.0 doesn't coerce to an int>]
 
+Testing form of smashed remnants from binding patterns
+ 
+  ? def q := def "shortProblemGuard" { to coerce(_, e) :void { throw.eject(e, "Q") } }
+  # value: <shortProblemGuard>
+ 
+  ? [1 =~ matchBindNoun :q, &matchBindNoun, matchBindNoun]
+  # value: [false, <& <ref broken by problem: Q>>, <ref broken by problem: Q>]
+  
+  Given a SlotPattern, we don't know what behavior might be expected of the slot, so the slot itself is broken. '
+  ? [&any =~ &matchBindNoun :q, &matchBindNoun]
+  # value: [false, <ref broken by problem: Q>]
+  ? matchBindNoun
+  # problem: Q
+  
+  VarPattern slots act like SlotPattern slots for now.
+  ? [1 =~ var matchBindNoun :q, &matchBindNoun]
+  # value: [false, <ref broken by problem: Q>]
+  ? matchBindNoun
+  # problem: Q
+
 MetaContextExpr
 
   ? meta.context()
@@ -798,3 +818,5 @@ XXX test perverse scoping cases:
   def x := y && x static rejection (also ||)
   for x in x {} static rejection
   check that all cases of scope boxes allow redefinition, and that all kinds of defining patterns check for disallowed redefinitions
+
+XXX var slots should not double-coerce

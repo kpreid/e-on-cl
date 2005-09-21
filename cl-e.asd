@@ -44,7 +44,7 @@
      (:file "compiler-base"
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-seq"
-            :depends-on ("packages" "elang-nodes"))
+            :depends-on ("compiler-base"))
      (:file "compiler-entry"
             :depends-on ("compiler-base"))
      (:file "rune"

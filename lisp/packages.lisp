@@ -394,9 +394,10 @@
     :scope-layout
     :scope-layout-noun-binding
     :scope-layout-fqn-prefix
-    :scope-layout-bindings
     :scope-layout-noun-is-local
+    :scope-layout-bindings
     :scope-layout-meta-state-bindings
+    :scope-layout-bindings-before
     :scope-layout-bind
     :scope-layout-nest
     
@@ -405,6 +406,7 @@
     :binding-set-code
     :binding-let-entry
     :binding-smash-code
+    :binding-exit-info
     
     :direct-def-binding
     :value-binding

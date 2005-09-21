@@ -14,7 +14,7 @@
 ;   object-scope-layout - providing the innermost enclosing ObjectExpr's static scope, for scope-layout-meta-state-bindings
 
 (defgeneric scope-layout-noun-binding (scope noun-string)
-  (:documentation "Return the binding object for a given noun in this scope. Signals UNBOUND-VARIBLE if there is no binding."))
+  (:documentation "Return the binding object for a given noun in this scope. Signals UNBOUND-NOUN if there is no binding."))
 
 (defgeneric scope-layout-fqn-prefix (scope)
   (:documentation "Return the FQN prefix for objects defined in this scope."))
@@ -27,6 +27,15 @@
 
 (defgeneric scope-layout-meta-state-bindings (scope-layout)
   (:documentation "Returns a list of '(vector # #) forms suitable for constructing the return value of MetaStateExpr."))
+
+(defgeneric scope-layout-bindings-before (inner-layout outer-layout)
+  (:documentation "Returns a list of (noun . binding) from INNER-LAYOUT until reaching OUTER-LAYOUT. For example, if A and B consist entirely of conses, (scope-layout-bindings-before a b) is similar to (ldiff a b)."))
+
+
+(defmethod scope-layout-bindings-before :around (inner outer)
+  (if (eql inner outer)
+    nil
+    (call-next-method)))
 
 
 (defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
@@ -88,7 +97,11 @@
   (cons `(vector ,(concatenate 'string "&" (caar scope-layout))
                  ,(binding-get-slot-code (cdar scope-layout)))
         (scope-layout-meta-state-bindings (rest scope-layout))))
-  
+
+(defmethod scope-layout-bindings-before ((inner cons) outer)
+  (cons (first inner)
+        (scope-layout-bindings-before (rest inner) outer)))
+
 
 (defclass scope-layout () 
   ((rest :initarg :rest))
@@ -113,6 +126,8 @@
 (defmethod scope-layout-meta-state-bindings ((scope-layout scope-layout))
   (scope-layout-meta-state-bindings (slot-value scope-layout 'rest)))
 
+(defmethod scope-layout-bindings-before ((inner scope-layout) outer)
+  (scope-layout-bindings-before (slot-value inner 'rest) outer))
 
 (defclass prefix-scope-layout (scope-layout)
   ((fqn-prefix :initarg :fqn-prefix :reader scope-layout-fqn-prefix))
@@ -162,6 +177,11 @@
 (defgeneric binding-smash-code    (binding broken-ref-form)
   (:documentation "Return a form which should be evaluated iff the binding is to remain in scope without its ordinary initialization code running. This is used to implement MatchBindExpr.")) ; XXX new compiler doesn't do this, but hasn't needed to yet
 
+(defgeneric binding-exit-info     (binding broken-ref-form)
+  ;; sequence compiler support
+  (:documentation "Returns a list of, for each Lisp variable used by the binding's code, the variable and the form to which it should be bound if an enclosing MatchBindExpr fails, which may evaluate broken-ref-form at most once."))
+
+
 ; slot bindings - represented as symbols for historical reasons - xxx change that?
 
 (defmethod binding-get-code ((binding symbol))
@@ -178,6 +198,9 @@
 
 (defmethod binding-smash-code ((binding symbol) broken-ref-form)
   `(setf ,binding (make-instance 'elib:e-simple-slot :value ,broken-ref-form)))
+  
+(defmethod binding-exit-info ((binding symbol) broken-ref-form)
+  `((,binding ,broken-ref-form)))
 
 
 
@@ -204,6 +227,9 @@
 (defmethod binding-smash-code ((binding direct-def-binding) broken-ref-form)
   `(setf ,(binding-get-code binding) ,broken-ref-form))
 
+(defmethod binding-exit-info ((binding direct-def-binding) broken-ref-form)
+  `((,(binding-get-code binding) ,broken-ref-form)))
+
 
 (defclass value-binding ()
   ((value :initarg :value)))
@@ -221,6 +247,10 @@
   (declare (ignore value-form))
   (error "not an assignable slot: <& ~A>" (e-quote (slot-value binding 'value))))
 
+(defmethod binding-exit-info ((binding value-binding) broken-ref-form)
+  (error "binding-exit-info on a value-binding shouldn't happen"))
+
+
 (defclass slot-binding ()
   ((slot :initarg :slot)))
   
@@ -232,6 +262,9 @@
 
 (defmethod binding-set-code ((binding slot-binding) value-form)
   `(e. ,(slot-value binding 'slot) |setValue| ,value-form))
+
+(defmethod binding-exit-info ((binding slot-binding) broken-ref-form)
+  (error "binding-exit-info on a slot-binding shouldn't happen"))
 
 
 (defgeneric binding-for-slot (slot))
