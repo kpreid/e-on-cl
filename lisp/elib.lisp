@@ -1105,6 +1105,8 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 ; --- slots ---
 
+;;; XXX review the actual uses of these various slot implementations
+
 (defun import-uncall (fqn)
   `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
 
@@ -1169,61 +1171,77 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 (defglobal +the-unset-slot+ (make-instance 'e-unset-slot))
 
 
-(defclass e-var-slot (vat-checking) 
-  ((value :initarg :value)))
+(defclass base-closure-slot (vat-checking)
+  ((getter :initarg :getter
+           :type (function () t))
+   (setter :initarg :setter
+           :type (function (t) *))))
+
+(def-vtable base-closure-slot
+  (:|getValue| (this)
+    (funcall (slot-value this 'getter)))
+  (:|isFinal| (this)
+    (declare (ignore this))
+    +e-false+))
+
+(defmethod shared-initialize :after ((slot base-closure-slot) slot-names &key (value nil value-supplied) &allow-other-keys)
+  (declare (ignore slot-names))
+  (with-slots (getter setter) slot
+    (when value-supplied
+      (assert (not (slot-boundp slot 'getter)))
+      (assert (not (slot-boundp slot 'setter)))
+      (setf getter (lambda () value)
+            setter (lambda (new) (setf value new))))))
+  
+
+(defclass e-var-slot (base-closure-slot) 
+  ())
 
 (def-vtable e-var-slot
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<var ")
-    (e. tw |quote| (slot-value this 'value))
+    (e. tw |quote| (e. this |getValue|))
     (e. tw |print| ">"))
   (:|__optUncall| (this)
-    `#(,+the-make-var-slot+ "run" #(,(slot-value this 'value))))
-  (:|getValue| (this)
-    (slot-value this 'value))
+    `#(,+the-make-var-slot+ "run" #(,(e. this |getValue|))))
   (:|setValue| (this new-value)
-    (setf (slot-value this 'value) new-value)
-    nil)
-  (:|isFinal| (this)
-    (declare (ignore this))
-    +e-false+))
+    (funcall (slot-value this 'setter) new-value)
+    nil))
 
 (defmethod print-object ((slot e-var-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "var & ~W" (slot-value slot 'value))))
+    (format stream "var & ~W" (e. slot |getValue|))))
 
-(defclass e-guarded-slot (vat-checking) 
-  ((value :initarg :value)
-   (guard :initarg :guard)))
+(defclass e-guarded-slot (base-closure-slot) 
+  ((guard :initarg :guard)))
 
-(defmethod shared-initialize :after ((slot e-guarded-slot) slot-names &key opt-ejector &allow-other-keys)
+(defmethod shared-initialize :around ((slot e-guarded-slot) slot-names &rest initargs &key (value nil value-supplied) guard opt-ejector &allow-other-keys)
+  "if this slot is initialized with a value, it is coerced; if initialized with a getter and setter, it is assumed to be correct"
   (declare (ignore slot-names))
-  (with-slots (guard value) slot
-    (setf value (e. guard |coerce| value opt-ejector))))
+  (if value-supplied
+    (apply #'call-next-method 
+      :value (e. guard |coerce| value opt-ejector)
+      initargs)
+    (call-next-method)))
 
 (def-vtable e-guarded-slot
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
-    (with-slots (guard value) this
+    (with-slots (guard getter) this
       (e. tw |print| "<var ")
-      (e. tw |quote| value)
+      (e. tw |quote| (funcall getter))
       (e. tw |print| " :")
       (e. tw |quote| guard)
       (e. tw |print| ">")))
-  (:|getValue| (this)
-    (slot-value this 'value))
   (:|setValue| (this new-value)
-    (with-slots (guard value) this
-      (setf value (e. guard |coerce| new-value nil)))
-    nil)
-  (:|isFinal| (this)
-    (declare (ignore this))
-    +e-false+))
+    (with-slots (guard setter) this
+      (funcall setter (e. guard |coerce| new-value nil)))
+    nil))
 
 (defmethod print-object ((slot e-guarded-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "var & ~W :~W" (slot-value slot 'value) (slot-value slot 'guard))))
+    (format stream "var & ~W :~W" (e. slot |getValue|) (slot-value slot 'guard))))
 
 ; --- guards ---
 

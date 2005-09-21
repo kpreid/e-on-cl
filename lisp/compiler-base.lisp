@@ -231,6 +231,57 @@
   `((,(binding-get-code binding) ,broken-ref-form)))
 
 
+(defclass direct-var-binding ()
+  ((value-symbol :initarg :value-symbol
+                 :type symbol
+                 :reader %var-binding-symbol)
+   (broken-symbol :initarg :broken-symbol
+                  :type symbol
+                  :reader %var-binding-broken-flag)
+   (guard-symbol :initarg :guard-symbol
+                 :type symbol
+                 :reader %binding-guard-code)
+   (noun :initarg :noun ;; XXX this ought to be on a general binding class
+         :initform (error ":noun not supplied for a direct-var-binding")
+         :type string
+         :reader binding-get-source-noun)))
+
+(defmethod binding-get-code ((binding direct-var-binding))
+  `(if ,(%var-binding-broken-flag binding)
+     (error (ref-opt-problem ,(%var-binding-broken-flag binding)))
+     ,(%var-binding-symbol binding)))
+
+(defmethod binding-get-slot-code ((binding direct-var-binding))
+  `(or ,(%var-binding-broken-flag binding)
+       (make-instance ',(if (%binding-guard-code binding)
+                          'elib:e-guarded-slot
+                          'elib:e-var-slot)
+         :getter (lambda () ,(%var-binding-symbol binding))
+         :setter ,(let ((x (gensym)))
+                    `(lambda (,x)
+                       (setf ,(%var-binding-symbol binding) ,x)))
+         ,@(when (%binding-guard-code binding)
+             `(:guard ,(%binding-guard-code binding))))))
+
+(defmethod binding-set-code ((binding direct-var-binding) value-form)
+  `(if ,(%var-binding-broken-flag binding)
+     (error (ref-opt-problem ,(%var-binding-broken-flag binding)))
+     ,(if (%binding-guard-code binding)
+        `(setf ,(%var-binding-symbol binding) (e. ,(%binding-guard-code binding) |coerce| ,value-form))
+        `(setf ,(%var-binding-symbol binding) ,value-form))))
+
+(defmethod binding-let-entry ((binding direct-var-binding))
+  `(,(%var-binding-symbol binding) ',(elib:make-unconnected-ref "accidentally unset direct var binding")))
+
+(defmethod binding-smash-code ((binding direct-var-binding) broken-ref-form)
+  (error "not implemented"))
+
+(defmethod binding-exit-info ((binding direct-var-binding) broken-ref-form)
+  `((,(%var-binding-symbol binding) ,broken-ref-form)
+    (,(%binding-guard-code binding) ,broken-ref-form)
+    (,(%var-binding-broken-flag binding) ,broken-ref-form)))
+
+
 (defclass value-binding ()
   ((value :initarg :value)))
   

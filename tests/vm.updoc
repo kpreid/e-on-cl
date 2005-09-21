@@ -235,12 +235,16 @@ Testing form of smashed remnants from binding patterns
   Given a SlotPattern, we don't know what behavior might be expected of the slot, so the slot itself is broken. '
   ? [&any =~ &matchBindNoun :q, &matchBindNoun]
   # value: [false, <ref broken by problem: Q>]
+  ? matchBindNoun := "hi"
+  # problem: Q
   ? matchBindNoun
   # problem: Q
   
-  VarPattern slots act like SlotPattern slots for now.
+  VarPattern slots act like SlotPattern slots. XXX is this most correct?
   ? [1 =~ var matchBindNoun :q, &matchBindNoun]
   # value: [false, <ref broken by problem: Q>]
+  ? matchBindNoun := "hi"
+  # problem: Q
   ? matchBindNoun
   # problem: Q
 

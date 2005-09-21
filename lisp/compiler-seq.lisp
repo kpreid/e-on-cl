@@ -413,13 +413,14 @@
       (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol specimen-var :noun noun)))))
 
 (defun var-sequence-binding (noun layout specimen-var ejector-spec guard-var
-    &aux (slot-var (gensym (concatenate 'string "var " noun))))
+    &aux (value-var (gensym (concatenate 'string "var " noun)))
+         (broken-var (gensym "BROKEN")))
   (values
-    ;; XXX look into not always reifying var slots
-    (if guard-var
-      `((,slot-var (make-instance 'e-guarded-slot :value (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec)) :guard ,guard-var)))
-      `((,slot-var (make-instance 'e-var-slot :value ,specimen-var))))
-    (scope-layout-bind layout noun slot-var)))
+    (append `((,broken-var nil))
+            (if guard-var
+              `((,value-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
+              `((,value-var ,specimen-var))))
+    (scope-layout-bind layout noun (make-instance 'direct-var-binding :value-symbol value-var :guard-symbol guard-var :broken-symbol broken-var :noun noun))))
 
 (defun slot-sequence-binding (noun layout specimen-var ejector-spec guard-var
     &aux (slot-var (gensym (concatenate 'string "&" noun))))

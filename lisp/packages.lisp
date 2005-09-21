@@ -409,6 +409,7 @@
     :binding-exit-info
     
     :direct-def-binding
+    :direct-var-binding
     :value-binding
     :binding-for-slot
     
