@@ -35,22 +35,13 @@
     (setf ,layout ,lv)
     ,cv))
 
-;;; --- sequence variable tags ---
-
-;; XXX the sv-preserve/sv-temporary system is Not The Right Thing. instead, our let*-clause language should be extended to have 'end of uses of variable' declaration, which permits but does not require processors to take it out of scope.
-
-(defgeneric sv-preserve (tag)
-  (:documentation "If false, this variable need not be kept in scope. Used by match-bind."))
-
-(defmethod sv-preserve ((tag (eql 'nil)))
-  t)
-(defmethod sv-preserve ((tag (eql 'sv-temporary)))
-  nil)
-
 ;;; --- ---
 
 (defun sequence-to-form (seq value-form)
-  `(let* ,(mapcar (lambda (x) (subseq x 0 2)) seq)
+  (map nil (lambda (x)
+             (check-type x (cons symbol (cons t null)))) 
+           seq)
+  `(let* ,seq
      (declare (ignorable ,@(mapcar #'first seq)))
      ,value-form))
 
@@ -124,7 +115,7 @@
     (append (updating-sequence-expr value layout result)
             (if opt-ejector
               (updating-sequence-expr opt-ejector layout ej)
-              `((,ej nil sv-temporary)))
+              `((,ej nil)))
             (updating-sequence-patt pattern layout result `(ejector ,ej)))
     layout))
 
@@ -233,12 +224,11 @@
                                        (list +e-true+ 
                                              ,@(mapcar #'first pattern-info))))))))
                            (declare (ignorable ,problem-var))
-                           (list ,@(mapcar #'second pattern-info)))))
-                 sv-temporary))
+                           (list ,@(mapcar #'second pattern-info)))))))
               ;; destructure the list back to the expected vars
               (loop for (var) in (cons (list result) pattern-info)
                     append `((,var (first ,values-var))
-                             (,values-var (rest ,values-var) sv-temporary)))))
+                             (,values-var (rest ,values-var))))))
     layout))
 
 (define-sequence-expr |MetaContextExpr| (layout result)
@@ -304,7 +294,7 @@
         (block ,pattern-eject-block
           ,(sequence-to-form
              (append
-               `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector)) sv-temporary))
+               `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector))))
                (updating-sequence-patt pattern layout pair-var `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))))
                (updating-sequence-expr body layout result-var))
              `(return-from ,matcher-block ,result-var)))
@@ -356,8 +346,7 @@
                (let ((,coerced (e-coerce-native ,specimen 'vector ,(opt-ejector-make-code ejector-spec))))
                  (if (>= (length ,coerced) ,min-arity)
                    ,coerced
-                   ,(eject-code ejector-spec `(%make-cdr-pattern-arity-error (length ,coerced) ',min-arity))))
-               sv-temporary))
+                   ,(eject-code ejector-spec `(%make-cdr-pattern-arity-error (length ,coerced) ',min-arity))))))
             `((,head-var (subseq ,coerced 0 ',min-arity)))
             (updating-sequence-patt list-patt layout head-var ejector-spec)
             `((,rest-var (subseq ,coerced ',min-arity)))
@@ -390,8 +379,7 @@
                (let ((,coerced (e-coerce-native ,specimen 'vector ,(opt-ejector-make-code ejector-spec))))
                  (if (eql (length ,coerced) ,pattern-arity)
                    ,coerced
-                   ,(eject-code ejector-spec `(%make-list-pattern-arity-error (length ,coerced) ',pattern-arity))))
-               sv-temporary))
+                   ,(eject-code ejector-spec `(%make-list-pattern-arity-error (length ,coerced) ',pattern-arity))))))
             (loop for patt in patterns
                   for i from 0
                   for sub-specimen-var = (gensym (format nil "ELIST~A-" i))
@@ -409,8 +397,7 @@
             (updating-sequence-expr test layout test-result)
             `((,(gensym "JUNK")
                (unless (e-is-true ,test-result)
-                 ,(eject-code ejector-spec `(%make-such-that-error)))
-               sv-temporary)))
+                 ,(eject-code ejector-spec `(%make-such-that-error))))))
     layout))
 
 ;;; --- Binding patterns ---
