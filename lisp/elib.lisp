@@ -580,6 +580,19 @@ If there is no current vat at initialization time, captures the current vat at t
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
+  (defun partition (test sequence &rest options)
+    "Return, as two values, the elements of SEQUENCE satisfying the test and those not satisfying the test. Accepts all the options REMOVE-IF[-NOT] does."
+    (let (not)
+      (values
+        (apply #'remove-if-not 
+               #'(lambda (element)
+                 (not
+                   (unless (funcall test element) 
+                     (push element not))))
+               sequence
+               options)
+        (nreverse not))))
+  
   (defun vtable-entry-mverb (desc prefix-arity
       &aux (verb-or-mverb-string (string (first desc))))
     (if (find #\/ verb-or-mverb-string)
@@ -712,6 +725,8 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                     ',(mapcar #'vtable-entry-message-desc method-entries)))))
             
             ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
+              (e-coercef verb 'string)
+              (e-coercef arity '(integer 0))
               (as-e-boolean (or
                 (member (e-util:mangle-verb verb arity) 
                         ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
@@ -741,7 +756,6 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
 
 fqn may be NIL or a string."
   (let ((stamp-forms '())
-        (opt-otherwise-body nil)
         (documentation ""))
     ;; Normalize/check simple options
     (check-type fqn (or null string))
@@ -759,44 +773,31 @@ fqn may be NIL or a string."
                  key value fqn))))
     (check-type documentation string)
     ;; Extract 'otherwise' method
-    (setf entries
-      (remove-if
-        (lambda (entry)
-          (when (and (listp entry) (eql (first entry) 'otherwise))
-            (assert (null opt-otherwise-body))
-            (setf opt-otherwise-body (rest entry))
-            t))
-        entries))
-    ;; Expansion
-    (e-lambda-expansion entries fqn documentation stamp-forms opt-otherwise-body)))
+    (multiple-value-bind (otherwises specifics)
+        (partition (lambda (x) (typep x '(cons (eql otherwise) t)))
+                   entries)
+      (assert (<= (length otherwises) 1))
+      ;; Expansion
+      (e-lambda-expansion specifics fqn documentation stamp-forms (rest (first otherwises))))))
   
 ; --- Miranda methods ---
 
-; XXX merge def-miranda and the-miranda-method-case into one macro
-(defmacro the-miranda-method-case (type-designator verb-list-sym (mverb-form args-form) &body entries)
-  (let* ((type-name (string type-designator)))
-    `(let ((mverb ,mverb-form)
-           (args ,args-form)
-           (,verb-list-sym ',(mapcar #'(lambda (entry) (vtable-entry-mverb entry 0)) entries)))
-      (case mverb
-        ,@(loop for desc in entries 
-                collect (if (eql (car desc) 'otherwise)
-                           `(otherwise (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" type-name)) ,@(cdr desc)) mverb args))
-                           (vtable-case-entry desc 'args '() :type-name type-name)))))))
-
-(defmacro def-miranda (func-name descs-name fqn-designator (mverb-litem args-litem) &body entries)
+(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem verb-list-sym) &body entries)
   "The reason for this macro's existence is to allow compiling the miranda-methods into a single function and simultaneously capturing the method names and comments for alleged-type purposes. I realize this is ugly, and I'd be glad to hear of better solutions."
-  `(progn
-    (setf ,descs-name 
-      ',(loop for entry in entries
-              when (not (eql (first entry) 'otherwise))
-              collect (vtable-entry-message-desc entry)))
-    (defun ,func-name (self ,mverb-litem ,args-litem else-func)
-      (the-miranda-method-case ,fqn-designator miranda-mverbs (,mverb-litem ,args-litem)
-        ,@entries))))
+  (multiple-value-bind (otherwises specifics) 
+      (partition (lambda (x) (eq (first x) 'otherwise)) entries)
+    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (entry) (vtable-entry-mverb entry 0)) entries)))
+      (defglobal ,descs-name 
+        ',(mapcar #'vtable-entry-message-desc specifics))
+      (defun ,func-name (,self-var ,mverb-litem ,args-litem else-func)
+        (case ,mverb-litem
+          ,@(loop for desc in specifics collect
+              (vtable-case-entry desc args-litem '() :type-name fqn))
+          ,@(loop for desc in otherwises collect
+              `(otherwise (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" fqn)) ,@(cdr desc)) ,mverb-litem ,args-litem))))))))
  
 ;(declaim (inline miranda))
-(def-miranda miranda +miranda-message-descs+ "MirandaMethods" (mverb args)
+(def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args miranda-mverbs)
   
     (:|__printOn| (tw)
       ; FUNCTION-based E-objects must always implement their own __printOn/1.
@@ -811,7 +812,9 @@ fqn may be NIL or a string."
       (make-instance 'cl-type-guard :type-specifier (observable-type-of self)))
 
     (:|__respondsTo| (verb arity)
-      ; The object itself must handle returning true for those verbs which it implements.
+      ;; The object itself must handle returning true for those verbs which it implements.
+      (e-coercef verb 'string)
+      (e-coercef arity '(integer 0))
       (as-e-boolean (member (e-util:mangle-verb verb arity) miranda-mverbs)))
 
     (:|__conformTo| (guard)
@@ -991,6 +994,8 @@ fqn may be NIL or a string."
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
             (vtable-case-entry desc 'args `(rec) :type-name (prin1-to-string type-spec)))
         ((:|__respondsTo/2|) (destructuring-bind (verb arity) args
+          (e-coercef verb 'string)
+          (e-coercef arity '(integer 0))
           (as-e-boolean (or
             (member (e-util:mangle-verb verb arity) 
                     ',(mapcar (lambda (entry) (vtable-entry-mverb entry 1)) 

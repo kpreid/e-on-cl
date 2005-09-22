@@ -88,39 +88,38 @@ conformTo
 
 __respondsTo, of course, is dependent on the dispatch implementation, so it shall be tested for many object types again.
 
-  ? thing.__respondsTo("frog", 1)
-  # value: false
+  ? def testRespond(specimen, vas) :any {
+  >   var r := []
+  >   for [verb, arity] in vas {
+  >     def normal := specimen.__respondsTo(verb, arity)
+  >     def reffed := specimen.__respondsTo({(def x).resolve(verb); x},
+  >                                         {(def x).resolve(arity); x})
+  >     require(normal == reffed, thunk{ `$specimen didn't respond the same to a Ref-ified $verb/$arity: $reffed instead of $normal` })
+  >     r with= normal
+  >   }
+  >   return r
+  > }
+  # value: <testRespond>
+  
+  ? testRespond(thing, [["frog", 1], ["getX", 0], ["getX/1", 1]])
+  # value: [false, true, false]
 
-  ? thing.__respondsTo("getX", 0)
-  # value: true
-  
-  ? thing.__respondsTo("getX/1", 1)
-  # value: false
-  
-  ? specimen.__respondsTo("add", 1)
-  # value: true
-  
-  ? specimen.__respondsTo("toad", 2)
-  # value: false
-  
-  ? __loop.__respondsTo("newt", 3)
-  # value: false
-  
-  ? __loop.__respondsTo("run", 1)
-  # value: true
-  
-  ? thing.__respondsTo("__respondsTo", 2)
-  # value: true
+  ? testRespond(specimen, [["add", 1], ["toad", 2]])
+  # value: [true, false]
 
-  ? specimen.__respondsTo("__respondsTo", 2)
-  # value: true
+  ? testRespond(__loop, [["newt", 3], ["run", 1]])
+  # value: [false, true]
 
-  ? __loop.__respondsTo("__respondsTo", 2)
-  # value: true
+  ? testRespond(thing, def respondses := [["__respondsTo", 1], ["__respondsTo", 2], ["__respondsTo", 3]])
+  # value: [false, true, false]
 
-  XXX arity matters
+  ? testRespond(specimen, respondses)
+  # value: [false, true, false]
+
+  ? testRespond(__loop, respondses)
+  # value: [false, true, false]
+
   XXX e-impls with matchers (or eg, stdout.print)
-  XXX non-string verb / non-int arity (conforming or not)
 
 Detailed testing of __getAllegedType/0 is in help.updoc.
 

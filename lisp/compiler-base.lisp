@@ -393,6 +393,8 @@
     ,@(miranda-case-maybe :|__getAllegedType/0| methods `(destructuring-bind () args
       ',type-desc))
     ,@(miranda-case-maybe :|__respondsTo/2| methods `(destructuring-bind (verb arity) args
+      (e-coercef verb 'string)
+      (e-coercef arity '(integer 0))
       (as-e-boolean
         (or (member (e-util:mangle-verb verb arity)
                   ',(loop for method across methods
