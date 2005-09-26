@@ -74,9 +74,10 @@ Exponentiation
   ? 2.0 ** -2
   # value: 0.25
   
-  XXX there is some doubt as to the correctness of this value - ...865475 may be closer
-  ? 2.0 ** -0.5
+  ? def x := 2.0 ** -0.5
   # value: 0.7071067811865476
+  ? e__quasiParser(E.toQuote(x)).eval(safeScope) - x
+  # value: 0.0
   
   ? 2.0 ** 0.5
   # value: 1.4142135623730951
