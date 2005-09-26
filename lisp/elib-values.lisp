@@ -444,6 +444,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|max| (a b)
     (e-coercef b 'number)
     (max a b))
+
+  (:|floor/0| 'floor)  
+  
   (:|approxDivide| (a b) 
     (e-coercef b 'number)
     (handler-case
@@ -464,12 +467,18 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|truncDivide| (a b) 
     (e-coercef b 'number)
     (truncate (/ a b)))
+  
   (:|mod| (a b) 
     (e-coercef b 'number)
     (mod a b))
   (:|remainder| (a b) 
     (e-coercef b 'number)
     (rem a b))
+  
+  (:|pow| (a b)
+    (e-coercef b 'number)
+    (expt a b))
+  
   (:|aboveZero| (this)
     (as-e-boolean (> this 0)))
   (:|belowZero| (this)
@@ -518,7 +527,15 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|next/0| '1+)
   (:|isNaN| (this)
     (declare (ignore this))
-    +e-false+))
+    +e-false+)
+
+  (:|shiftLeft| (a b)
+    (e-coercef b 'integer)
+    (ash a b))
+
+  (:|and| (a b)
+    (e-coercef b 'integer)
+    (logand a b)))
 
 (def-fqn integer "org.cubik.cle.native.int")
 
