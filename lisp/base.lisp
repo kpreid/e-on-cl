@@ -91,6 +91,10 @@ This variable is deprecated and will be replaced by more fine-grained and well-d
   ((value :initarg :value
           :reader local-throw-sealed-box-value)))
 
+(defmethod print-object ((c local-throw-sealed-box) stream)
+  (print-unreadable-object (c stream :type t :identity nil)
+    (write (local-throw-sealed-box-value c) :stream stream)))
+
 
 (define-condition free-problem (error)
   ((value :initarg :value
