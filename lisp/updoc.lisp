@@ -237,8 +237,9 @@
                 nil)))
            (interp (e-lambda "org.cubik.cle.updocInterp" ()
              ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
-             (:|gc| () (e. e.extern:+gc+ |run|))
+             (:|gc| () (e. e.extern:+gc+ |run|) nil)
              (:|getProps| ()
+               (assert (not confine))
                ; XXX internal symbol
                e.knot::+eprops+)
              (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
@@ -250,7 +251,8 @@
                nil)))
            (scope (if confine
                     (e. (e. (vat-safe-scope *vat*) |withPrefix| "__main$") |or| (e.knot:make-scope "updocAdditions$"
-                      `(("updoc" runner)
+                      `(("updoc" ,runner)
+                        ("interp" ,interp)
                         ("print"
                          ,(e-lambda "$print" ()
                             (otherwise (mverb &rest args)

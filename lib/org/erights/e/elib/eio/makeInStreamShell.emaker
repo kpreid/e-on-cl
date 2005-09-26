@@ -41,6 +41,8 @@ def makeStreamShell := <elib:eio.makeStreamShell>
 def makeInStreamShell implements DeepFrozen {
   to run(Element, backend__Resolver, impl) {
 
+    def inStream
+
     def handleTerminate
     def [streamShell, &unclaimedAvailable, triggerAvailable] := makeStreamShell(Element)
 
@@ -60,17 +62,30 @@ def makeInStreamShell implements DeepFrozen {
     /** obtain without the scheduling. assumes arguments have been checked. */
     def obtainNow([atLeast, atMost, proceed, report], optEjector) {
       if (Ref.isBroken(terminator)) {
-        throw.eject(optEjector, Ref.optProblem(terminator))
+        # XXX make sub-problem accessible
+        throw.eject(optEjector, 
+                    if (Ref.optProblem(terminator) =~ p :notNull) \
+                      {`$inStream failed: $p`} \
+                      else {`$inStream closed`})
       }
       if (atLeast != ALL && atLeast > implAvailable) { # XXX method on ALL?
         throw.eject(optEjector, `<UnavailableException: $atLeast elements cannot be read at this time (only $implAvailable)>`) # XXX exception type, ejector
       }
-      def maybeElements := impl.semiObtain(atLeast, atMost, proceed, report)
+
+      def r := trace.runAsTurn(thunk {
+        def maybeElements := impl.semiObtain(atLeast, atMost, proceed, report)
+        switch (report) {
+          match ==ELEMENTS { maybeElements :List }
+          match ==STATUS   { terminator }
+          match _          { throw("shouldn't have reached here with bad 'report' $report") }
+        }
+      }, thunk {`semiObtain invocation by stream shell for $impl`})
       
-      return switch (report) {
-        match ==ELEMENTS { maybeElements :List }
-        match ==STATUS   { terminator }
-        match _          { throw("shouldn't have reached here with bad 'report' $report") }
+      if (Ref.isBroken(r)) {
+        streamShell.fail(Ref.optProblem(r))
+        throw.eject(optEjector, Ref.optProblem(terminator))
+      } else {
+        return r
       }
     }
   
@@ -99,7 +114,7 @@ def makeInStreamShell implements DeepFrozen {
       triggerAvailable()
     })
     
-    def inStream extends streamShell { # implements InStream
+    bind inStream extends streamShell { # implements InStream
       to __printOn(out :TextWriter) :void {
         out.write("<-")
         out.printSame(impl)

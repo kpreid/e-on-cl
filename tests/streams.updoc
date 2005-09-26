@@ -306,7 +306,34 @@ Termination
   # stdout: termination test whenAvailable -- <ref broken by problem: boo>
 
   ? [pwA, poAE, poAS]
-  # value: [0, <ref broken by problem: boo>, <ref broken by problem: boo>]
+  # value: [0, <ref broken by problem: <-<impl> failed: problem: boo>, <ref broken by problem: <-<impl> failed: problem: boo>]
+
+-- Input stream behavior on a dying impl
+
+  ? def stream := makeInStreamShell(int, def streamBackend, def impl {
+  >   to semiObtain(atLeast, var atMost, proceed, report) :any { 
+  >     throw("SPLORK")
+  >   }
+  >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }
+  > })
+  # value: <-<impl>
+  
+  
+  ? streamBackend.setAvailable(100)
+  
+  ? stream.terminates()
+  # value: <Promise>
+  
+  ? stream.obtain(1, 1, NOW, ADVANCE, ELEMENTS)
+  # problem: SPLORK
+  
+  ? stream.terminates()
+  # value: <ref broken by <sealed problem>>
+  
+  ? stream.obtain(1, 1, NOW, ADVANCE, ELEMENTS)
+  # problem: <-<impl> failed: <sealed problem>
+
+--
 
 XXX write tests that STATUS is correct: according to http://www.erights.org/elib/concurrency/eio/obtaining.html the return value of STATUS is "the termination status of the stream *after* these elements have been obtained" (emphasis mine)
 
