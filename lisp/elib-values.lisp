@@ -532,10 +532,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|shiftLeft| (a b)
     (e-coercef b 'integer)
     (ash a b))
+  (:|shiftRight| (a b)
+    (e-coercef b 'integer)
+    (ash a (- b)))
 
   (:|and| (a b)
     (e-coercef b 'integer)
-    (logand a b)))
+    (logand a b))
+  (:|or| (a b)
+    (e-coercef b 'integer)
+    (logior a b)))
 
 (def-fqn integer "org.cubik.cle.native.int")
 
