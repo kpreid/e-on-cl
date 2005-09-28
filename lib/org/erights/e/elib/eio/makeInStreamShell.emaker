@@ -82,7 +82,11 @@ def makeInStreamShell implements DeepFrozen {
       }, thunk {`semiObtain invocation by stream shell for $impl`})
       
       if (Ref.isBroken(r)) {
-        streamShell.fail(Ref.optProblem(r))
+        if (!Ref.isResolved(terminator)) {
+          streamShell.fail(Ref.optProblem(r))
+        } else {
+          traceln(`second failure for $inStream: ${Ref.optProblem(r)} ( first: ${terminator})`)
+        }
         throw.eject(optEjector, Ref.optProblem(terminator))
       } else {
         return r

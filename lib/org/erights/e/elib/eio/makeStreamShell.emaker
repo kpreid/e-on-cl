@@ -21,7 +21,7 @@ def makeStreamShell implements DeepFrozen {
     
     var availableHandler := noAvailableHandler
   
-    /** internal function */
+    /** common operation of #terminate and #fail */
     def terminate(value ? (Ref.isBroken(value) || value == true)) {
       # close() after termination returns silently - XXX is this the Right Thing?
       if (!(Ref.isResolved(terminator) && value == true)) {

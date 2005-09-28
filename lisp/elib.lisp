@@ -582,6 +582,7 @@ If there is no current vat at initialization time, captures the current vat at t
 (eval-when (:compile-toplevel :load-toplevel :execute) 
   (defun partition (test sequence &rest options)
     "Return, as two values, the elements of SEQUENCE satisfying the test and those not satisfying the test. Accepts all the options REMOVE-IF[-NOT] does."
+    ;; http://paste.lisp.org/display/10050
     (let (not)
       (values
         (apply #'remove-if-not 

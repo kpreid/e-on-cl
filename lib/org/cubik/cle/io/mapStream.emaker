@@ -28,13 +28,7 @@ def mapStream implements DeepFrozen {
         def original := sourceStream.obtain(atLeast, atMost, NOW, proceed, report)
         update() # XXX side effects?
         return if (report == "ELEMENTS") {
-                 try {
-                   func(original)
-                 } catch p {
-                   # XXX this catching should be handled by the stream shell, but isn't
-                   ourStream.fail(p)
-                   throw(p)
-                 }
+                 func(original)
                } else {
                  original
                }

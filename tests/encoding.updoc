@@ -1,0 +1,59 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def charsets := <import:org.cubik.cle.charsets>
+  # value: <IANA 'charsets'>
+  
+  ? def ascii := charsets["US-ASCII"]
+  # value: <US-ASCII encoding>
+  
+  x ? ascii == charsets["us-ascii"]
+  x # value: true
+  
+  ? def s := ascii.decode([97, 112, 112, 108, 101, 115, 32, 97, 110, 100, 32, 111, 114, 97, 110, 103, 101, 115].asStream(), [].asMap())
+  # value: <-from ASCII-[97, 112, 112, 108, 101, ...].asStream()
+  
+  ? s.obtain(0, EIO.getALL(), "NOW", "ADVANCE", "ELEMENTS")
+  # value: "apples and oranges"
+  
+  ? s.terminates()
+  # value: true
+
+  x ? def s := ascii.decode([256].asStream(), [].asMap())
+  x > s.obtain(0, EIO.getALL(), "NOW", "QUERY", "ELEMENTS")
+  x > s
+  x # problem: octet not in ASCII encoding: 256
+
+
+  ? def s := ascii.encode("apples and oranges".asStream(), [].asMap())
+  # value: <-to ASCII-"apples and oranges\...".asStream()
+  
+  ? s.obtain(0, EIO.getALL(), "NOW", "ADVANCE", "ELEMENTS")
+  # value: [97, 112, 112, 108, 101, 115, 32, 97, 110, 100, 32, 111, 114, 97, 110, 103, 101, 115]
+  
+  ? s.terminates()
+  # value: true
+
+  
+  ? def utf_8 := charsets["UTF-8"]
+  # value: <UTF-8>
+  
+  ? def s := utf_8.decode([0xE2, 0x80, 0xA2, 0x20, 0x68, 0x6f, 0x6c, 0xc3, 0xa9, 0x73].asStream(), [].asMap())
+  # value: <-from UTF-8-[226, 128, 162, 32, 104, ...].asStream()
+  
+  ? s.obtain(0, EIO.getALL(), "NOW", "ADVANCE", "ELEMENTS")
+  # value: "• holés"
+  
+  ? def s := utf_8.encode("ab•cdéfअ 𐐀".asStream(), [].asMap())
+  # value: <-to UTF-8-"ab•cdéfअ 𐐀\...".asStream()
+  
+  ? s.obtain(0, EIO.getALL(), "NOW", "ADVANCE", "ELEMENTS")
+  # value: [97, 98, 226, 128, 162, 99, 100, 195, 169, 102, 224, 164, 133, 32, 240, 144, 144, 128]
+
+todo:
+ascii range limitation
+coding errors, un-codable element policies
+case-insensitive charset names and aliases
+other encodings
+length ratio estimation
+test all cases of utf-8 decoding and encoding
