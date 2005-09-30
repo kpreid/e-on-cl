@@ -6,7 +6,8 @@ pragma.disable("explicit-result-guard")
 pragma.enable("dot-props")
 
 def makeInStreamShell := <elib:eio.makeInStreamShell>
-def NOW := "NOW"
+def NOW := EIO::NOW
+def ELEMENTS := EIO::ELEMENTS
 
 def mapStream implements DeepFrozen {
   /** Return an InStream which takes elements from the given InStream and provides the result of the given function applied to lists of elements. */
@@ -27,7 +28,7 @@ def mapStream implements DeepFrozen {
       to semiObtain(atLeast :EIO::Range, atMost :EIO::Range, proceed, report) {
         def original := sourceStream.obtain(atLeast, atMost, NOW, proceed, report)
         update() # XXX side effects?
-        return if (report == "ELEMENTS") {
+        return if (report == ELEMENTS) {
                  func(original)
                } else {
                  original

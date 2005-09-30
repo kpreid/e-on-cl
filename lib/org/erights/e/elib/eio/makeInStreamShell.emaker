@@ -8,13 +8,13 @@ pragma.enable("dot-props")
 def Range := EIO::Range
 def ALL := EIO::ALL
 
-# XXX get these from the InStream interface?
-def NOW := "NOW" 
-def LATER := "LATER" 
-def ADVANCE := "ADVANCE"
-def QUERY := "QUERY"
-def ELEMENTS := "ELEMENTS"
-def STATUS := "STATUS"
+def NOW := EIO::NOW
+def LATER := EIO::LATER 
+def WAIT := EIO::WAIT
+def ADVANCE := EIO::ADVANCE
+def QUERY := EIO::QUERY
+def ELEMENTS := EIO::ELEMENTS
+def STATUS := EIO::STATUS
 
 def Same {
   match [=="get", values] {
@@ -32,9 +32,9 @@ def Same {
   }
 }
 
-def Schedule := Same["NOW", "LATER", "WAIT"]
-def Proceed  := Same["ADVANCE", "QUERY"]
-def Report   := Same["ELEMENTS", "STATUS"]
+def Schedule := Same[NOW, LATER, WAIT]
+def Proceed  := Same[ADVANCE, QUERY]
+def Report   := Same[ELEMENTS, STATUS]
 
 def makeStreamShell := <elib:eio.makeStreamShell>
 

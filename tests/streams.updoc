@@ -179,14 +179,15 @@ XXX ejectors for kinds of failure from write()
   ? def makeInStreamShell := <elib:eio.makeInStreamShell>
   # value: <makeInStreamShell>
 
-  I expect to change these...
-  ? def NOW := "NOW"; null
-  ? def LATER := "LATER"; null
-  ? def WAIT := "WAIT"; null
-  ? def ADVANCE := "ADVANCE"; null
-  ? def QUERY := "QUERY"; null
-  ? def ELEMENTS := "ELEMENTS"; null
-  ? def STATUS := "STATUS"; null
+  ? pragma.enable("dot-props")
+  > def NOW := EIO::NOW
+  > def LATER := EIO::LATER
+  > def WAIT := EIO::WAIT
+  > def ADVANCE := EIO::ADVANCE
+  > def QUERY := EIO::QUERY
+  > def ELEMENTS := EIO::ELEMENTS
+  > def STATUS := EIO::STATUS
+  > null
 
   read may return more elements than currently available
   tryAvailable exists so that stream#whenAvailable can create suction if the stream is lazy

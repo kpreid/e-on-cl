@@ -9,4 +9,14 @@ def EIO0 := def "org.erights.e.elib.eio.EIO" implements DeepFrozen {
 
   /** The value denoting all remaining elements in an EIO stream. */
   to getALL() { return null }
+  
+  # XXX technically these are only used by InStream
+  # xxx should they be non-strings?
+  to getNOW() { return "NOW" }
+  to getLATER() { return "LATER" }
+  to getWAIT() { return "WAIT" }
+  to getELEMENTS() { return "ELEMENTS" }
+  to getSTATUS() { return "STATUS" }
+  to getADVANCE() { return "ADVANCE" }
+  to getQUERY() { return "QUERY" }
 }

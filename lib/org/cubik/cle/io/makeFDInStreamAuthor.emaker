@@ -53,9 +53,9 @@ def makeFDInStreamAuthor {
           to semiObtain(atLeast :int, atMost :Range, proceed, report) {
             # XXX use constants from InStream-somehow
             def n := if (atMost == ALL) { inBuffer.size() } else { inBuffer.size().min(atMost) }
-            return if (proceed == "ADVANCE") {
+            return if (proceed == EIO::ADVANCE) {
               inBuffer.removeRun(0, n)
-            } else if (report == "ELEMENTS") {
+            } else if (report == EIO::ELEMENTS) {
               inBuffer.run(0, n)
             }
           }
