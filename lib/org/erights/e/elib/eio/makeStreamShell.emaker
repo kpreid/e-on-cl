@@ -9,7 +9,7 @@ def Range := EIO::Range
 def ALL := EIO::ALL
 
 def makeStreamShell implements DeepFrozen {
-  to run(Element) {
+  to run(Element, terminationHook) {
   
     var available :Range := 0
     def [terminator, terminatorResolver] := Ref.promise()
@@ -28,6 +28,7 @@ def makeStreamShell implements DeepFrozen {
       
         terminatorResolver.resolve(value)
         available := 0
+        terminationHook() # xxx consider whether this is the proper synchronous ordering
       }
       
       return terminator

@@ -307,10 +307,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                         (when (equal proceed "ADVANCE")
                           (setf position end)
                           (update-available)))))
-                  (:|tryAvailable| (minimum)
-                    "no-op"
-                    (declare (ignore minimum))
-                    nil)))
+                  (:|tryAvailable/1| (constantly nil))
+                  (:|terminate/1| (constantly nil))))
                 "org.cubik.cle.prim.listStream"
                 (lambda (tw)
                   (if (stringp vector)

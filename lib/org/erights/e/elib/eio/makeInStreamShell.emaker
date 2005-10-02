@@ -43,10 +43,10 @@ def makeInStreamShell implements DeepFrozen {
 
     def inStream
 
-    def handleTerminate
-    def [streamShell, &unclaimedAvailable, triggerAvailable] := makeStreamShell(Element)
+    def terminator
+    def [streamShell, &unclaimedAvailable, triggerAvailable] := makeStreamShell(Element, thunk { impl.terminate(terminator) })
 
-    def terminator := streamShell.terminates()
+    bind terminator := streamShell.terminates()
     
     def waitersFlex := [].diverge()
     

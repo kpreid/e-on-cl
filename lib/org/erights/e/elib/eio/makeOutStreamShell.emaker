@@ -12,9 +12,12 @@ def makeStreamShell := <elib:eio.makeStreamShell>
 
 def makeOutStreamShell implements DeepFrozen {
   to run(Element, backend__Resolver, impl) {
-    def [streamShell, &available, triggerAvailable] := makeStreamShell(Element)
+
+    def terminator
+  
+    def [streamShell, &available, triggerAvailable] := makeStreamShell(Element, thunk {impl.terminate(terminator)})
     
-    def terminator := streamShell.terminates()
+    bind terminator := streamShell.terminates()
     
     def outStream extends streamShell { # implements OutStream
       to __printOn(out :TextWriter) :void {

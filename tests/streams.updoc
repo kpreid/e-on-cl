@@ -10,6 +10,7 @@
   ? def stream := makeOutStreamShell(float64, def streamBackend, def impl {
   >   to write(elements) :void { print(elements) }
   >   to flush() :void { print("flush") }
+  >   to terminate(t) :void { print(`terminate $t`) }
   > })
   # value: -><impl>
 
@@ -69,6 +70,8 @@ termination and consequences
   XXX Java FQN
 
   ? stream.fail("biff" :<type:java.lang.Exception>)
+  # stdout: terminate <ref broken by problem: biff>
+
   # value: <ref broken by problem: biff>
   
   ? stream.fail("blaff" :<type:java.lang.Exception>)
@@ -101,6 +104,7 @@ closure (testing with fresh stream)
   ? def stream := makeOutStreamShell(float64, def streamBackend, def impl {
   >   to write(elements) :void { print(elements) }
   >   to flush() :void { print("flush") }
+  >   to terminate(_) :void {}
   > })
   # value: -><impl>
   
@@ -136,6 +140,7 @@ whenAvailable
   ? def stream := makeOutStreamShell(float64, def streamBackend, def impl {
   >   to write(elements) :void { print(elements) }
   >   to flush() :void { print("flush") }
+  >   to terminate(_) :void {}
   > })
   # value: -><impl>
   
@@ -204,6 +209,7 @@ XXX ejectors for kinds of failure from write()
   >     return r
   >   }
   >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }
+  >   to terminate(_) :void {}
   > })
   # value: <-<impl>
 
@@ -316,6 +322,7 @@ Termination
   >     throw("SPLORK")
   >   }
   >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }
+  >   to terminate(_) :void {}
   > })
   # value: <-<impl>
   

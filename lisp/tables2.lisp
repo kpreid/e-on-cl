@@ -27,6 +27,7 @@
     
 The ConstList version of this is called fromIteratableValues, unfortunately. XXX decide what the right name for this operation is."
     ; XXX duplicated code with ConstList
+    ;; XXX implement efficiently if the source is a vector
     (let ((values))
       (e. iteratable |iterate| (efun (k v)
         (declare (ignore k))
