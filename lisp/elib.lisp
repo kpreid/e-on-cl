@@ -10,7 +10,6 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
   ; XXX tests for this
-  (declaim (ftype (function (string) string) simplify-fq-name))
   (defun simplify-fq-name (fq-name)
     " Drops any package or containing class prefixes and any \"__C\" or \"__T\"
       suffixes prior to the last \"significant\" name.

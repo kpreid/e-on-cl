@@ -238,7 +238,8 @@
   (:|run| (codepoint)
     ;; XXX Unicode assumption
     (or (code-char codepoint)
-        (error "character U+~16,4,'0R not supported")))))
+        (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
+          (error "character U+~16,4,'0R not supported"))))))
 
 (defun uncall-to-unget (loader portrayal)
   (e-coercef portrayal '(or null vector))

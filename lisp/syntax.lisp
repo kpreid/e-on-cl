@@ -620,7 +620,10 @@ XXX make precedence values available as constants"
   (force-output *trace-output*)
   (loop
     for (source tree) in
-      (let ((*package* (find-package :e.elang.vm-node))) (read stream))
+      (with-standard-io-syntax
+        (let ((*package* (find-package :e.elang.vm-node))
+              (*read-eval* nil)) 
+          (read stream)))
     do (setf (gethash source *parse-cache-hash*) tree))
   (format *trace-output* "done~%")
   (values))
@@ -628,12 +631,11 @@ XXX make precedence values available as constants"
 (defun save-parse-cache (stream)
   (format *trace-output* "~&; Writing parse cache to ~A..." (enough-namestring (pathname stream)))
   (force-output *trace-output*)
-  (let ((*package* (find-package :e.elang.vm-node)))
-    (write
-      (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
-        collect (list source tree))
-      :stream stream
-      :readably t))
+  (let ((data (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
+                    collect (list source tree))))
+    (with-standard-io-syntax
+      (let ((*package* (find-package :e.elang.vm-node)))
+        (write data :stream stream))))
   (format *trace-output* "done~%")
   (values))
 
