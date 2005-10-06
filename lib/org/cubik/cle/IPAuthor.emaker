@@ -124,6 +124,8 @@ def IPAuthor implements DeepFrozen {
                   }
                 }
                 
+                to terminate(t) { traceln(`XXX should be closing the socket $socket but that isn't implemented yet (IPAuthor)`) }
+                
               })
               
               bind inStream := makeFDInStream(nameObj, socket, socket::sockoptReceiveBuffer)

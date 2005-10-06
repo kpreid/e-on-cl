@@ -1,0 +1,49 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.enable("dot-props")
+  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
+  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
+  > null
+
+  ? def [o, i] := EIO.pipe("bufferLimit" => 10, "synchronous" => true, "label" => "test")
+  # value: [->"test" pipe, <-"test" pipe]
+
+  ? o.available()
+  # value: 10
+  
+  ? i.available()
+  # value: 0
+  
+  ? o.write("abc")
+
+  ? o.available()
+  # value: 7
+  
+  ? i.available()
+  # value: 3
+  
+  ? i.obtain(0, ALL, NOW, ADVANCE, ELEMENTS)
+  # value: ['a', 'b', 'c']
+  
+  ? i.available()
+  # value: 0
+  
+  ? o.available()
+  # value: 10
+  
+Asynchronous
+  
+  ? def [o, i] := EIO.pipe("synchronous" => false, "label" => "async test")
+  # value: [->"async test" pipe, <-"async test" pipe]
+
+  ? i.whenAvailable(1, thunk { println(`${i.available()} available.`) })
+  # value: <Promise>
+  
+  ? o.write("xy"); "result"
+  # value: "result"
+  
+  # stdout: 2 available.
+  #         
+  
+  

@@ -9,6 +9,14 @@ def makeInStreamShell := <elib:eio.makeInStreamShell>
 def NOW := EIO::NOW
 def ELEMENTS := EIO::ELEMENTS
 
+def terminate implements DeepFrozen { to run(stream, terminator) {
+  switch (Ref.optProblem(terminator)) {
+    match p :notNull { stream.fail(p) }
+    match ==null     { stream.close() }
+    match _          { throw("reality failure") }
+  }
+}}
+
 def mapStream implements DeepFrozen {
   /** Return an InStream which takes elements from the given InStream and provides the result of the given function applied to lists of elements. */
   to chunked(outType :Guard, sourceStream, func) :any {
@@ -36,16 +44,14 @@ def mapStream implements DeepFrozen {
       }
       
       # to tryAvailable... -- XXX this seems to have been intended to exist but isn't actually used. figure out what was intended.
+      
+      to terminate(t) { terminate(sourceStream, t) }
     })
 
     bind update() {
       backend.setAvailable(sourceStream.available())
       if (Ref.isResolved(def t := sourceStream.terminates())) {
-        switch (Ref.optProblem(t)) {
-          match p :notNull { ourStream.fail(p) }
-          match ==null     { ourStream.close() }
-          match _          { throw("reality failure") }
-        }
+        terminate(ourStream, t)
       }
     }
     
@@ -54,5 +60,6 @@ def mapStream implements DeepFrozen {
   
 }
 
+# XXX should there be a failure-problem-mapping function parameter?
 
 # XXX this file has no tests except in that it is currently used by charsets.emaker

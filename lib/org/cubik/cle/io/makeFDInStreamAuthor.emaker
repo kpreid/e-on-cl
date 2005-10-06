@@ -60,6 +60,8 @@ def makeFDInStreamAuthor {
             }
           }
           
+          to terminate(t) { traceln(`XXX should be closing the fd $fdRef but that isn't implemented yet (makeFDInStreamAuthor)`) }
+          
         })
         
         var eof := false

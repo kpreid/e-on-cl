@@ -52,6 +52,10 @@
                        (error)
                          (e. e.knot:+traceln+ |run| error)
                          (e. stream |fail| error))
+                     nil)
+                   (:|terminate| (terminator)
+                     ;; XXX to do this right we need shutdown(2)
+                     ;; for now we'll hope GC will clean up after us
                      nil))))
             (wait-for-available)
             (e. (e-import "org.erights.e.elib.eio.makeOutStreamShell")
