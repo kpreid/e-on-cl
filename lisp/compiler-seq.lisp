@@ -185,7 +185,7 @@
          (catch-value-var (gensym "CAUGHT"))
          (inner-result-var (gensym "ESCRESULT")))
   (values
-    (labels ((body-form (ejector-block outer-block)
+    (labels ((body-form (ejector-block)
               (sequence-to-form 
                 (with-nested-scope-layout (layout)
                   (append (updating-sequence-patt 
@@ -194,20 +194,20 @@
                             `(ejector ',(pattern-opt-noun ejector-patt) (lambda (v) (return-from ,ejector-block v)))
                             nil)
                           (updating-sequence-expr body layout inner-result-var)))
-                `(return-from ,outer-block ,inner-result-var))))
+                inner-result-var)))
       `((,result 
          (block ,outer-block
            ,(if opt-catch-pattern
              `(let ((,catch-value-var 
                      (block ,ejector-block
-                       ,(body-form ejector-block outer-block))))
+                       (return-from ,outer-block ,(body-form ejector-block)))))
                (declare (ignorable ,catch-value-var))
                ,(sequence-to-form 
                   (with-nested-scope-layout (layout)
                     (append (updating-sequence-patt opt-catch-pattern layout catch-value-var nil)
                             (updating-sequence-expr opt-catch-body layout result)))
                   result))
-             (body-form outer-block outer-block))))))
+             (body-form outer-block))))))
     layout))
 
 (define-sequence-expr |FinallyExpr| (layout result attempt-body unwind-body)

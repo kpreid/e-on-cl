@@ -364,7 +364,7 @@
                  remaining-code)))
       (m-b-list (coerce matchers 'list)))))
 
-(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name approvers-sym doc-comment
+(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym doc-comment
     &aux (simple-name (simplify-fq-name qualified-name))
          (type-desc
            (e. +the-make-type-desc+ |run|
@@ -382,7 +382,6 @@
                      :params (map 'vector #'pattern-to-param-desc patterns)
                      :opt-result-guard (opt-guard-expr-to-safe-opt-guard opt-result-guard))))))
          (method-body (getf generators :method-body)))
-  "pass NIL for approvers-sym for optimal code generation for auditorless objects"
   `(case mverb
     ,@(loop for method across methods
             for (nil verb patterns nil nil) = (node-elements method)
@@ -398,11 +397,8 @@
                 for (nil verb patterns nil nil) = (node-elements method)
                 collect (e-util:mangle-verb verb (length patterns)))))
     ((elib:audited-by-magic-verb) 
-      ,(if approvers-sym
-         `(when (position (first args) 
-                          ,approvers-sym 
-                          :test #'elib:eeq-is-same-ever) 
-            t)
+      ,(if checker-sym
+         `(funcall ,checker-sym (first args)) 
          nil))
     (otherwise 
       (elib:miranda #',self-fsym mverb args (lambda ()
@@ -421,12 +417,13 @@
       (or (member (e-util:mangle-verb verb arity) mangled-verbs)
           (e-is-true (elib:miranda self :|__respondsTo/2| args nil))))))
 
-(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name approvers-sym doc-comment)
+(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym doc-comment)
   (declare (ignore self-fsym methods doc-comment))
   `(case mverb
-    ; XXX remove duplication of audited-by-magic-verb implementation
-    ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
-      (if (position auditor ,approvers-sym :test #'elib:eeq-is-same-ever) t)))
+    ((elib:audited-by-magic-verb) 
+      ,(if checker-sym
+         `(funcall ,checker-sym (first args)) 
+         nil))
     ; XXX should propagate match failure exception instead
     (otherwise 
       ,(matchers-body generators layout matchers 'mverb 'args
@@ -444,43 +441,44 @@
       (t
         (join-fq-name ,prefix-var ,qn-var)))))
 
-(defun make-witness (witness-ok-p fqn this-expr approve meta-state)
-  (let (witness)
+(defun make-witness (fqn this-expr meta-state)
+  (let (witness 
+        (approvers '())
+        (witness-ok t))
     (setf witness
       (e-lambda "org.erights.e.elang.evm.AuditWitness" ()
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. tw |write| (concatenate 'string
             "<"
-            (if (funcall witness-ok-p) "" "closed ")
+            (if witness-ok "" "closed ")
             "Witness for "
             (aan fqn)
             ">"))
           nil)
         (:|ask| (other-auditor)
           "Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor"
-          (assert (funcall witness-ok-p) ()
+          (assert witness-ok ()
             "~A is out of scope" (e-quote witness))
           (when (e-is-true (e. other-auditor |audit| this-expr witness))
-            (funcall approve other-auditor))
+            (push other-auditor approvers))
           nil)
         (:|getSlot| (slot-name)
           "Returns the named slot in the audited object's lexical scope.
 
 XXX This is an excessively large authority and will probably be replaced."
-          (assert (funcall witness-ok-p) ()
+          (assert witness-ok ()
             "~A is out of scope" (e-quote witness))
           ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
           ;; XXX also, cross-layer reference into the current compiler implementation
-          (e. meta-state |get| (e. "&" |add| slot-name)))))))
-
-(defun function-witness-form (witness-ok-sym fqn this-expr approvers-sym layout)
-  `(make-witness (lambda () ,witness-ok-sym)
-                 ',fqn 
-                 ',this-expr
-                 (lambda (a) (push a ,approvers-sym)) 
-                 ,(e.compiler.seq::leaf-sequence 
-                   (make-instance '|MetaStateExpr| :elements '()) layout)))
+          (e. meta-state |get| (e. "&" |add| slot-name)))))
+    (values witness 
+            (lambda () (setf witness-ok nil)) 
+            (lambda (auditor)
+              (when (position auditor 
+                              approvers
+                              :test #'elib:eeq-is-same-ever) 
+                t)))))
 
 #| saved old getSlot impl that avoids touching every slot
 (cond
@@ -491,7 +489,7 @@ XXX This is an excessively large authority and will probably be replaced."
 (defun object-form (generators layout this-expr doc-comment auditor-forms script fqn)
   (destructuring-bind (opt-methods matchers) (node-elements script)
     (let* ((has-auditors (> (length auditor-forms) 0))
-           (approvers-sym (when has-auditors (make-symbol "APPROVERS")))
+           (checker-sym (when has-auditors (make-symbol "APPROVEDP")))
            (self-fsym (make-symbol fqn))
            (inner-layout
              (make-instance 'object-scope-layout
@@ -504,19 +502,21 @@ XXX This is an excessively large authority and will probably be replaced."
                  ,(funcall (if opt-methods
                              #'methodical-object-body
                              #'plumbing-object-body)
-                  generators self-fsym inner-layout opt-methods matchers fqn approvers-sym doc-comment)))))
+                  generators self-fsym inner-layout opt-methods matchers fqn checker-sym doc-comment)))))
         (if (not has-auditors)
           `(labels ,labels-fns #',self-fsym)
-          (let ((witness-sym    (make-symbol "WITNESS"))
-                (witness-ok-sym (make-symbol "WITNESS-OK")))
-            `(let* ((,approvers-sym '())
-                    (,witness-ok-sym t)
-                    (,witness-sym ,(function-witness-form witness-ok-sym fqn this-expr approvers-sym layout)))
+          (let ((witness-sym  (make-symbol "WITNESS"))
+                (finisher-sym (make-symbol "WITNESS-FINISH")))
+            `(multiple-value-bind (,witness-sym ,finisher-sym ,checker-sym) 
+                (make-witness ',fqn 
+                              ',this-expr
+                              ,(e.compiler.seq::leaf-sequence 
+                                (make-instance '|MetaStateExpr| :elements '()) layout))
               ,@(loop for auditor-form in auditor-forms collect
                   `(funcall ,witness-sym :|ask/1| ,auditor-form))
               (labels ,labels-fns
                 ;; This does not need to be in an unwind-protect, because in
                 ;; the event of a nonlocal exit the object reference will not
                 ;; be available, so its mutability is moot.
-                (setf ,witness-ok-sym nil)
+                (funcall ,finisher-sym)
                 #',self-fsym))))))))
