@@ -318,6 +318,22 @@
   '(:method-body  seq-method-body
     :matcher-body seq-matcher-body))
 
+(defmacro cheap-destructuring-bind ((&rest vars) list &body body)
+  "Like DESTRUCTURING-BIND, except that it does not check the length of the input list, and does not support destructuring to anything but a simple list of variables."
+  (if vars
+    (loop with source = (gensym)
+          for (var . more) on vars
+          collect `(,var (first ,source)) into let-clauses
+          when more
+            collect `(,source (rest ,source)) into let-clauses
+          finally (return `(let* ((,source ,list)
+                                  ,@let-clauses) 
+                             ,@body)))
+    (let ((body-form `(locally ,@body)))
+      (if (symbolp list)
+        body-form
+        `(progn ,list ,body-form)))))
+
 (defun seq-method-body (layout method args-var)
   (check-type method |EMethod|)
   (destructuring-bind (doc-comment verb patterns opt-result-guard body) (node-elements method)
@@ -326,7 +342,7 @@
            (guard-var (gensym "RESULT-GUARD"))
            (arg-symbols (loop for i below (length patterns)
                               collect (make-symbol (format nil "ARG~A" i)))))
-      `(destructuring-bind (,@arg-symbols) ,args-var
+      `(cheap-destructuring-bind (,@arg-symbols) ,args-var
         (declare (ignorable ,@arg-symbols))
         ,(sequence-to-form
           (append (loop for arg-patt across patterns
