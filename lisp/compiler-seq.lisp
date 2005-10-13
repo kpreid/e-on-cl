@@ -35,6 +35,14 @@
       (e. (e. (e. node |staticScope|) |outNames|) |getKeys|)))
   (inline-expr node layout))
 
+;;; --- checks
+
+(defmethod sequence-expr :around (node layout result)
+  (multiple-value-bind (seq layout-after) (call-next-method)
+    (when (some (complement #'first) seq)
+      (error "Malformed sequence (NIL as variable) from ~S in ~S to ~S:~%~S" node layout result seq))
+    (values seq layout-after)))
+
 ;;; ---
 
 ;; The bizarre use of destructuring-bind is so that (declare (ignore)) works unsurprisingly in the body.
@@ -263,11 +271,17 @@
                              "match-bind" 
                              (lambda (v) 
                                (return-from ,exit-block v)))))
-           (pattern-info (loop for (noun . binding) in 
-                                 (scope-layout-bindings-before
-                                   layout
-                                   layout-before-pattern)
-                               append (binding-exit-info binding problem-var))))
+           (pattern-info
+             (loop for (noun . binding) in 
+                     (scope-layout-bindings-before
+                       layout
+                       layout-before-pattern)
+                   for ei = (binding-exit-info binding problem-var)
+                   do (when (some (complement #'first) ei)
+                        (error "Malformed exit info (NIL as variable) ~
+                                from ~S => ~S: ~S" 
+                               noun binding ei))
+                   append ei)))
       (append specimen-seq
               ;; squeeze all the vars from the pattern into a list
               `((,values-var

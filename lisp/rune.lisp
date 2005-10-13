@@ -125,6 +125,8 @@
         (setf *break-on-signals* (read-from-string (pop args))))
       (("--boe" "--break-on-ejections")
         (setf *break-on-ejections* (read-from-string (pop args))))
+      (("--resources" "-R")
+        (push (merge-pathnames (pop args)) e.knot:*emaker-search-list*))
       (("--selftest")
         (setf toplevel #'selftest-toplevel))
       (("--lisptest")
@@ -154,6 +156,8 @@ Lisp-level options:
       Bind common-lisp:*break-on-signals* to the given value.
   --break-on-ejections|--boe <type>
       Bind e.elib:*break-on-ejections* to the given value.
+  --resources|-R <dir>
+      Add a directory to search for emakers and resource files.
   --selftest
       Action-selecting option:
       Run the tests for E-on-CL.

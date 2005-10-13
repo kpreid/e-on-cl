@@ -248,6 +248,11 @@ Testing form of smashed remnants from binding patterns
   ? matchBindNoun
   # problem: Q
 
+MatchBindExpr containing guardless VarPattern (bug test: wouldn't compile because the nonexistent guard variable (nil) was being passed through the match-bind boundary ')
+
+  ? {[null =~ var x, x, x := 1, x]}
+  # value: [true, null, 1, 1]
+
 MetaContextExpr
 
   ? meta.context()

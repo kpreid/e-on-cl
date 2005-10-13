@@ -257,8 +257,9 @@
 
 (defmethod binding-exit-info ((binding direct-var-binding) broken-ref-form)
   `((,(%var-binding-symbol binding) ,broken-ref-form)
-    (,(%binding-guard-code binding) ,broken-ref-form)
-    (,(%var-binding-broken-flag binding) ,broken-ref-form)))
+    (,(%var-binding-broken-flag binding) ,broken-ref-form)
+    ,@(when (%binding-guard-code binding)
+      `((,(%binding-guard-code binding) ,broken-ref-form)))))
 
 
 (defclass value-binding ()
