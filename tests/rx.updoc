@@ -36,3 +36,7 @@ part of the expansion of the above - for tracking down a "such-that expression w
 ? {def rx`(@{a}a.)(@{b}b.)?(@{c}c.)*(@{d}d.)+(@{e}e.)` := "a1c2c3d4d5e6"; [a,b,c,d,e]}
 # value: ["a1", null, "c3", "d5", "e6"]
 
+Bug: bad double-unquoting of $ hole syntax - this would die
+
+  ? def rx`a\$$b` := "a$b"
+  # value: "a$b"

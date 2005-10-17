@@ -1,0 +1,191 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# MODIFIED by kpreid:
+#   - bug fix: the pattern passed to simple__quasiParser must not be unescaped
+
+def <regex> := <import:org.apache.oro.text.regex.*>
+def Perl5CompilerMaker := <regex:Perl5Compiler>
+def Perl5MatcherMaker := <regex:Perl5Matcher>
+def PatternMatcherInputMaker := <regex:PatternMatcherInput>
+
+def <erights> := <import:org.erights.*>
+
+# IdentityCacheTable is unsafe. It violates emaker rules
+# def CacheMaker := <erights:e.elib.tables.IdentityCacheTable>
+# def OurCache := CacheMaker(100)
+# instead:
+def OurCache := [].asMap().diverge()
+
+# the characters that may appear after a "?" in a group (as defined by
+# the perl-5 extensions) as a modifier flag, and are supported by E.
+# Also includes "-" so the code below looks nicer.
+def flagExtenders := "imsx-"
+
+# the characters that may appear after a "?" in a group (as defined by
+# the perl-5 extensions) that suppresses saving of matched text, and
+# are supported by E.
+def unsavedExtenders := "#:"
+
+/**
+ * Given a Perl-5 regular expression string transformed to be a
+ * quasi-pattern template string, transform it back into a vanilla
+ * Perl-5 regular expression string, while accumulating an index map.
+ * <p>
+ * Return both the vanilla Perl-5 string and the index map.
+ * <p>
+ * XXX This routine is currently buggy, in that it doesn't actually
+ * parse the template according to Perl-5 rules. Therefore, it can get
+ * misled by some Perl-5 constructs, like "[.(@x..).]".
+ */
+def perlify(var template) :any {
+    var perlPattern := ""
+    def indexMap := [null].diverge()
+    while (true) {
+        switch (template) {
+            match `@left(@next` {
+                perlPattern += `$left(`
+                switch ([left, next]) {
+                    match [`@_\`, _] {
+                        # paren is escaped, ignore it
+                        # XXX bug: "\\(" isn't an escaped open paren,
+                        # but will fool the current code.
+                        template := next
+                    }
+                    match [_, `@@{@digits}@right`] {
+                        # open paren followed by an embedded pattern
+                        # remove the embedded pattern, but add it to
+                        # our mapping
+                        if (right.startsWith("?")) {
+                            throw("can't use ?-extension in E-bound group")
+                        }
+                        def index := __makeInt(digits)
+                        indexMap.push(index)
+                        template := right
+                    }
+                    match [_, `?@ext)@right`] {
+                        # A uninterpreted Perl-5 extended group may
+                        # either begin with one of the
+                        # unsavedExtenders or consist solely of the
+                        # flagExtenders
+                        if (! (unsavedExtenders.contains(ext[0]))) {
+                            for c in ext {
+                                if (! (flagExtenders.contains(c))) {
+                                    throw(`unsupported rx``..(?..$c..)..```)
+                                }
+                            }
+                        }
+                        template := next
+                    }
+                    match _ {
+                        # Otherwise, we have a saved-perl-group, but
+                        # not a saved-e-group. We enter a null into
+                        # our mapping to keep the counting straight.
+                        # We could have turned this into a "(?:"
+                        # group, but that would mess up perl-uses of
+                        # "\1" and such.
+                        indexMap.push(null)
+                        template := next
+                    }
+                }
+            }
+            match _ {
+                perlPattern += template
+                break
+            }
+        }
+    }
+    [perlPattern, indexMap.snapshot()]
+}
+
+def PerlMatchMakerMaker {
+    to matchMaker(template) :any {
+        var result := OurCache.fetch(template, thunk{})
+        if (result == null) {
+
+            def compiler := Perl5CompilerMaker()
+            def matcher := Perl5MatcherMaker()
+            def [noAtHoles, indexMap] := perlify(template)
+            def interpolator := simple__quasiParser.valueMaker(noAtHoles)
+
+            /**
+             * does dollar sign substitution and compiles a regex pattern
+             */
+            def makePattern(args) :any {
+                def quotemeta(str) :Twine {
+                    E.call(Perl5CompilerMaker, "quotemeta(String)", [str])
+                }
+                def qmargs := [].diverge()
+                for arg in args {
+                    def qmarg := quotemeta(E.toString(arg))
+                    qmargs.push(`(?:${qmarg})`)
+                }
+                def noDollars :=
+                    ""+(interpolator.substitute(qmargs.snapshot()))
+                E.call(compiler, "compile(String)", [noDollars])
+            }
+
+            /**
+             * matches a compiled pattern against a specimen
+             */
+            def matchBind(pattern, specimen, optEjector) :any[] {
+                def makeInput(specimen) :any {
+                    E.call(PatternMatcherInputMaker, "run(String)", [specimen])
+                }
+                def matches(input, pattern) :boolean {
+                    E.call(matcher,
+                            "matches(PatternMatcherInput, Pattern)",
+                            [input, pattern])
+                }
+                if (matches(makeInput(specimen), pattern)) {
+                    def matchResult := matcher.getMatch()
+                    def result := [].diverge()
+                    for perlIndex in 1..!matchResult.groups() {
+                        def resultIndex := indexMap[perlIndex]
+                        if (resultIndex != null) {
+                            result.ensureSize(resultIndex+1)
+                            result[resultIndex] := matchResult.group(perlIndex)
+                        }
+                    }
+                    return result.snapshot()
+                } else {
+                    throw.eject(optEjector,
+                                "Doesn't match: " + specimen)
+                }
+            }
+            if (interpolator.numArgs() == 0) {
+                # If the template defines no embedded $-expressions, then
+                # we can compile the pattern once and re-use it for
+                # multiple matches. This is especially good with caching,
+                # as we'll be caching a matchMaker that reuses a compiled
+                # pattern.
+                def pattern := makePattern([])
+                result := def matchMaker1 {
+                    to matchBind([], specimen, optEjector) :any[] {
+                        return matchBind(pattern, specimen, optEjector)
+                    }
+                    to __printOn(out :TextWriter) :void {
+                        out.print("regex ", noAtHoles, ":", indexMap)
+                    }
+                }
+
+            } else {
+                # If the template does define embedded $-expressions, we
+                # have to wait until match time before we can compile an
+                # pattern. Caching only saves us from perlifying
+                # redundantly.
+                result := def matchMaker2 {
+                    to matchBind(args, specimen, optEjector) :any[] {
+                        def pattern := makePattern(args)
+                        return matchBind(pattern, specimen, optEjector)
+                    }
+                    to __printOn(out :TextWriter) :void {
+                        out.print("regex ", noAtHoles, ":", indexMap)
+                    }
+                }
+            }
+            OurCache[template] := result
+        }
+        result
+    }
+}
