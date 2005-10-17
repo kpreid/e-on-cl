@@ -278,46 +278,39 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       &aux (position 0))
     "Return a stream providing the elements of this list."
     ;; XXX this is a mess. Revisit this once we have multiple uses of InStreamShell and figure out how the interface should be fixed to make common uses simple.
-    (multiple-value-bind (backend backend-resolver) (make-promise)
-      (with-result-promise (stream)
-        (flet ((update-available (&aux (a (- (length vector) position)))
-                (e. backend |setAvailable| a)
-                (if (= a 0)
-                  (e. stream |close|))))
-          (prog1
-            (reprint
-              (e. (e-import "org.erights.e.elib.eio.makeInStreamShell")
-                |run|
-                +the-any-guard+ ; XXX should be (e. vector |valueType|)
-                backend-resolver
-                (e-lambda "org.cubik.cle.prim.listStreamImpl" ()
-                  (:|semiObtain| (count proceed report)
-                    (e-coercef count '(or integer null)) ; XXX ALL
-                    (e-coercef proceed 'string) ; XXX enums
-                    (e-coercef report 'string) ; XXX enums
-                    (let* ((end (if count
-                                  (min (length vector)
-                                       (+ position count))
-                                  (length vector))))
-                      (prog1
-                        (subseq vector position end)
-                        (when (equal proceed "ADVANCE")
-                          (setf position end)
-                          (update-available)))))
-                  (:|tryAvailable/1| (constantly nil))
-                  (:|terminate/1| (constantly nil))))
-                "org.cubik.cle.prim.listStream"
-                (lambda (tw)
-                  (if (stringp vector)
-                    (progn
-                      (e. tw |write| "\"")
-                      (e. tw |print| (subseq vector position (min (length vector) (+ position 20))))
-                      (e. tw |write| "\\...\".asStream()"))
-                    (progn
-                      (e. tw |write| "[" #|]|#)
-                      (e. (subseq vector position (min (length vector) (+ position 5))) |printOn| "" ", " "" tw)
-                      (e. tw |write| #|[|# ", ...].asStream()")))))
-            (update-available))))))
+    (reprint
+      (e. (e-import "org.erights.e.elib.eio.makeInStreamShell")
+        |run|
+        +the-any-guard+ ; XXX should be (e. vector |valueType|)
+        (e-lambda nil () (:|resolve| (backend)
+          (e. backend |setAvailable| (length vector))
+          (e. backend |resolveRemaining| (length vector))))
+        (e-lambda "org.cubik.cle.prim.listStreamImpl" ()
+          (:|semiObtain| (count proceed report)
+            (e-coercef count '(or integer null)) ; XXX ALL
+            (e-coercef proceed 'string) ; XXX enums
+            (e-coercef report 'string) ; XXX enums
+            (let* ((end (if count
+                          (min (length vector)
+                               (+ position count))
+                          (length vector))))
+              (prog1
+                (subseq vector position end)
+                (when (equal proceed "ADVANCE")
+                  (setf position end)))))
+          (:|tryAvailable/1| (constantly nil))
+          (:|terminate/1| (constantly nil))))
+        "org.cubik.cle.prim.listStream"
+        (lambda (tw)
+          (if (stringp vector)
+            (progn
+              (e. tw |write| "\"")
+              (e. tw |print| (subseq vector position (min (length vector) (+ position 20))))
+              (e. tw |write| "\\...\".asStream()"))
+            (progn
+              (e. tw |write| "[" #|]|#)
+              (e. (subseq vector position (min (length vector) (+ position 5))) |printOn| "" ", " "" tw)
+              (e. tw |write| #|[|# ", ...].asStream()"))))))
   (:|size/0| 'length)
   (:|get| (this index)
     "Return the 'index'th element of this list."

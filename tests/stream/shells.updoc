@@ -202,7 +202,7 @@ XXX ejectors for kinds of failure from write()
   > def stream := makeInStreamShell(int, def streamBackend, def impl {
   >   to semiObtain(n, proceed, report) :any { 
   >     def r := if (report == ELEMENTS) { buffer(0, n) }
-  >     if (proceed == ADVANCE) { buffer(0, n) := []; streamBackend.setAvailable(buffer.size()) }
+  >     if (proceed == ADVANCE) { buffer(0, n) := [] }
   >     return r
   >   }
   >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }
@@ -215,8 +215,8 @@ Testing bad arguments to obtain:
   # problem: not in region
   ? stream.obtain(5, 4, NOW, ADVANCE, ELEMENTS)
   # problem: doesn't match any of [nullOk, (int >= 5)]
-  ? stream.obtain(ALL, 10, NOW, ADVANCE, ELEMENTS) # XXX the specific error will change when non-erroneous ALL is supported
-  # problem: the Null null doesn't coerce to an int
+  ? stream.obtain(ALL, 10, NOW, ADVANCE, ELEMENTS) # XXX should be a more specific error - the current one refers to that atLeast=ALL requires atMost=ALL
+  # problem: must be null
   ? stream.obtain(1, 1, 43, ADVANCE, ELEMENTS)
   # problem: must be one of ["NOW", "LATER", "WAIT"]: 43
   ? stream.obtain(1, 1, NOW, "foo", ELEMENTS)
@@ -236,14 +236,14 @@ Testing bad arguments to obtain:
   ? streamBackend.setAvailable(buffer.size())
   # stdout: first inStream whenAvailable
   
-  ? stream.obtain(5, 10, NOW, ADVANCE, ELEMENTS)
-  # value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  ? [stream.obtain(5, 10, NOW, ADVANCE, ELEMENTS), stream.available()]
+  # value: [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 8]
   
-  ? stream.obtain(4, 5, NOW, QUERY, ELEMENTS)
-  # value: [11, 12, 13, 14, 15]
+  ? [stream.obtain(4, 5, NOW, QUERY, ELEMENTS), stream.available()]
+  # value: [[11, 12, 13, 14, 15], 8]
   
-  ? stream.obtain(0, 6, NOW, QUERY, ELEMENTS)
-  # value: [11, 12, 13, 14, 15, 16]
+  ? [stream.obtain(4, 6, NOW, QUERY, ELEMENTS), stream.available()]
+  # value: [[11, 12, 13, 14, 15, 16], 8]
   
   ? def t := stream.obtain(6, 6, NOW, ADVANCE, STATUS)
   # value: <Promise>
@@ -338,12 +338,49 @@ Termination
   ? stream.obtain(1, 1, NOW, ADVANCE, ELEMENTS)
   # problem: <-<impl> failed: <sealed problem>
 
+--- remaining and obtain(ALL, ...)
+
+  ? def buffer := [0, 1, 2, 3, 4, 5, 6].diverge(int)
+  > def stream := makeInStreamShell(int, def streamBackend, def impl {
+  >   to semiObtain(count, proceed, report) :any { 
+  >     def r := buffer(0, count)
+  >     if (proceed == ADVANCE) { buffer(0, count) := [] }
+  >     return r
+  >   }
+  >   to terminate(_) :void {}
+  > })
+  # value: <-<impl>
+
+  ? streamBackend.setAvailable(buffer.size())
+
+  ? [stream.available(), stream.remaining(), stream.terminates()]
+  # value: [7, null, <Promise>]
+
+  ? stream.obtain(ALL, ALL, NOW, ADVANCE, ELEMENTS)
+  # problem: <UnavailableException: not all remaining elements are available yet from <-<impl>>
+
+  ? streamBackend.resolveRemaining(buffer.size())
+
+  ? [stream.available(), stream.remaining(), stream.terminates()]
+  # value: [7, 7, <Promise>]
+
+  ? stream.obtain(1, 1, NOW, ADVANCE, ELEMENTS)
+  # value: [0]
+
+  ? [stream.available(), stream.remaining(), stream.terminates()]
+  # value: [6, 6, <Promise>]
+
+  ? stream.obtain(ALL, ALL, NOW, ADVANCE, ELEMENTS)
+  # value: [1, 2, 3, 4, 5, 6]
+
+  shell automatically terminates on reaching remaining
+  ? stream.terminates()
+  # value: true
+
 --
 
 XXX write tests that STATUS is correct: according to http://www.erights.org/elib/concurrency/eio/obtaining.html the return value of STATUS is "the termination status of the stream *after* these elements have been obtained" (emphasis mine)
 
 XXX for both directions of streams: notify impl synchronously upon termination? (terminator provides eventual-or-poll notification)
-XXX notification by impl of closure -- needed? convenient?
-  possibly in the form "no more elements will become available than currently"
 XXX InStream sugar methods
-XXX InStream#remaining
+XXX maxAvailable

@@ -15,6 +15,9 @@
   ? s.available()
   # value: 46
   
+  ? s.remaining()
+  # value: 46
+  
   ? s.obtain(0, 10, NOW, ADVANCE, ELEMENTS)
   # value: "Teh quike "
   

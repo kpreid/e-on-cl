@@ -52,6 +52,8 @@ def makeInStreamShell implements DeepFrozen {
     
     var implAvailable :Range := 0
     
+    var remaining := ALL
+    
     /** update the visible 'available' - XXX should this be implicit? */
     def updateAvailable() {
       unclaimedAvailable :=  \
@@ -68,8 +70,17 @@ def makeInStreamShell implements DeepFrozen {
                       {`$inStream failed: $p`} \
                       else {`$inStream closed`})
       }
-      if (atLeast != ALL && atLeast > implAvailable) { # XXX method on ALL?
-        throw.eject(optEjector, `<UnavailableException: $atLeast elements cannot be read at this time (only $implAvailable)>`) # XXX exception type, ejector
+      if (atLeast == ALL) {
+        if (remaining != ALL) {
+          # xxx would this work and simplify the semiObtain interface?
+          # atLeast := remaining
+        } else {
+          throw.eject(optEjector, `<UnavailableException: not all remaining elements are available yet from $inStream>`) # XXX exception type, ejector
+        }
+      } else {
+        if (atLeast > implAvailable) {
+          throw.eject(optEjector, `<UnavailableException: $atLeast elements cannot be read at this time (only $implAvailable)>`) # XXX exception type, ejector
+        }
       }
 
       def r := trace.runAsTurn(thunk {
@@ -85,9 +96,18 @@ def makeInStreamShell implements DeepFrozen {
         switch (proceed) {
           match ==ADVANCE {
             if (implAvailable != ALL) {
+              # xxx duplication: this is a small version of what 
+              # backend.setAvailable must do
               implAvailable -= taken
+              updateAvailable()
             }
-            # remaining decrement goes here, when remaining is implemented
+            if (remaining != ALL) {
+              remaining -= taken
+              if (remaining <=> 0) {
+                # Automatic close when reaching the known end
+                inStream.close()
+              }
+            }
           }
           match ==QUERY {}
           match _ { throw("shouldn't have reached here with bad 'proceed' $proceed") }
@@ -120,7 +140,10 @@ def makeInStreamShell implements DeepFrozen {
     def triggerWaiters() {
       while (waitersFlex.size() > 0) {
         def [resolver, args] := waitersFlex[0]
-        if (implAvailable >= args[0] || Ref.isResolved(terminator)) { # atLeast
+        def [atLeast] + _ := args
+        if (if (atLeast == ALL) { remaining != ALL || implAvailable == ALL } \
+                           else { implAvailable >= atLeast } \ 
+            || Ref.isResolved(terminator)) {
           # XXX use an ejector from obtainNow
           resolver.resolve(
             escape fail {
@@ -148,7 +171,7 @@ def makeInStreamShell implements DeepFrozen {
       }
       
       # XXX the nullOk should be Same[ANY]
-      to obtain(atLeast :Range, atMost :any[nullOk, (int >= atLeast)], schedule :Schedule, proceed :Proceed, report :Report) {
+      to obtain(atLeast :Range, atMost :(if (atLeast != ALL) {any[nullOk, (int >= atLeast)]} else {nullOk}), schedule :Schedule, proceed :Proceed, report :Report) {
         # XXX ejectors for UnavailableException and failure
         def args := [atLeast, atMost, proceed, report]
         return switch (schedule) {
@@ -172,13 +195,24 @@ def makeInStreamShell implements DeepFrozen {
           match _ { throw(`shouldn't happen: unrecognized schedule $schedule`) }
         }
       }
+      
+      to remaining() { return remaining }
     }
     
     bind backend {
       to setAvailable(new) { 
+        require(remaining == ALL || new <= remaining, `available must not exeed remaining ($remaining, attempted to set to $new)`) 
+        require(new == ALL || new >= implAvailable, `available must not decrease (was $implAvailable, attempted to set to $new)`)
         implAvailable := new
         triggerWaiters()
         updateAvailable()
+        triggerAvailable()
+      }
+      
+      to resolveRemaining(new :(int >= 0)) {
+        require(if (implAvailable == ALL) { new == ALL} else { new >= implAvailable}, `remaining ($new) must not be less than available ($implAvailable)`)
+        remaining := new
+        triggerWaiters()
         triggerAvailable()
       }
     }
