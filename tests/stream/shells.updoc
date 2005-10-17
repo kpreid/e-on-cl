@@ -200,10 +200,7 @@ XXX ejectors for kinds of failure from write()
   ? def buffer := [].diverge(int)
   > pragma.enable("accumulator")
   > def stream := makeInStreamShell(int, def streamBackend, def impl {
-  >   to semiObtain(atLeast, var atMost, proceed, report) :any { 
-  >     if (atLeast == ALL) { throw("XXX testing stream impl got atLeast ALL") }
-  >     def n := if (atMost == ALL) { buffer.size() } \
-  >                                 else { (atLeast + atMost) // 2 }
+  >   to semiObtain(n, proceed, report) :any { 
   >     def r := if (report == ELEMENTS) { buffer(0, n) }
   >     if (proceed == ADVANCE) { buffer(0, n) := []; streamBackend.setAvailable(buffer.size()) }
   >     return r
@@ -239,13 +236,13 @@ Testing bad arguments to obtain:
   ? streamBackend.setAvailable(buffer.size())
   # stdout: first inStream whenAvailable
   
-  ? stream.obtain(5, 15, NOW, ADVANCE, ELEMENTS)
+  ? stream.obtain(5, 10, NOW, ADVANCE, ELEMENTS)
   # value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   
-  ? stream.obtain(4, 6, NOW, QUERY, ELEMENTS)
+  ? stream.obtain(4, 5, NOW, QUERY, ELEMENTS)
   # value: [11, 12, 13, 14, 15]
   
-  ? stream.obtain(4, 8, NOW, QUERY, ELEMENTS)
+  ? stream.obtain(0, 6, NOW, QUERY, ELEMENTS)
   # value: [11, 12, 13, 14, 15, 16]
   
   ? def t := stream.obtain(6, 6, NOW, ADVANCE, STATUS)
@@ -264,7 +261,7 @@ testing schedule==LATER
   # value: [17, 18]
   
  requesting more elements than currently available
-  ? def elementsVow := stream.obtain(3, 6, LATER, ADVANCE, ELEMENTS)
+  ? def elementsVow := stream.obtain(3, 4, LATER, ADVANCE, ELEMENTS)
   # value: <Promise>
   
  they are visibly claimed:
@@ -318,7 +315,7 @@ Termination
 -- Input stream behavior on a dying impl
 
   ? def stream := makeInStreamShell(int, def streamBackend, def impl {
-  >   to semiObtain(atLeast, var atMost, proceed, report) :any { 
+  >   to semiObtain(count, proceed, report) :any { 
   >     throw("SPLORK")
   >   }
   >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }

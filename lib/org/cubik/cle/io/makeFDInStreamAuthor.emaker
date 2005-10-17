@@ -50,9 +50,8 @@ def makeFDInStreamAuthor {
             out.printSame(nameObj)
           }
           
-          to semiObtain(atLeast :int, atMost :Range, proceed, report) {
-            # XXX use constants from InStream-somehow
-            def n := if (atMost == ALL) { inBuffer.size() } else { inBuffer.size().min(atMost) }
+          to semiObtain(count :Range, proceed, report) {
+            def n := if (count == ALL) { inBuffer.size() } else { inBuffer.size().min(count) }
             return if (proceed == EIO::ADVANCE) {
               inBuffer.removeRun(0, n)
             } else if (report == EIO::ELEMENTS) {

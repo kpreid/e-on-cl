@@ -50,9 +50,9 @@ def makeSimplePipe implements DeepFrozen {
         tw.write(" pipe")
       }
       
-      to semiObtain(atLeast, atMost, proceed, report) :any { 
-        def n := if (atMost == EIO::ALL) { buffer.size() } \
-                                    else { atMost.max(buffer.size()) }
+      to semiObtain(count, proceed, report) :any { 
+        def n := if (count == EIO::ALL) { buffer.size() } \
+                                   else { count.max(buffer.size()) }
         def r := if (report == EIO::ELEMENTS) { buffer(0, n) }
         if (proceed == EIO::ADVANCE) { 
           buffer(0, n) := []

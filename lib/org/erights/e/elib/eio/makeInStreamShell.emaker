@@ -73,12 +73,35 @@ def makeInStreamShell implements DeepFrozen {
       }
 
       def r := trace.runAsTurn(thunk {
-        def maybeElements := impl.semiObtain(atLeast, atMost, proceed, report)
+        # xxx impl.tryAvailable(atMost)
+        
+        def taken := if (atMost == ALL) \
+                       { implAvailable } \
+                       else { atMost.min(implAvailable) }
+        
+        # Adjusting implAvailable: this must happen before semiObtain,
+        # so that if semiObtain does setAvailable we don't overwrite
+        # that value.
+        switch (proceed) {
+          match ==ADVANCE {
+            if (implAvailable != ALL) {
+              implAvailable -= taken
+            }
+            # remaining decrement goes here, when remaining is implemented
+          }
+          match ==QUERY {}
+          match _ { throw("shouldn't have reached here with bad 'proceed' $proceed") }
+        }
+
+        def maybeElements := impl.semiObtain(taken, proceed, report)
+
         switch (report) {
           match ==ELEMENTS { maybeElements :List }
           match ==STATUS   { terminator }
           match _          { throw("shouldn't have reached here with bad 'report' $report") }
         }
+        
+        
       }, thunk {`semiObtain invocation by stream shell for $impl`})
       
       if (Ref.isBroken(r)) {

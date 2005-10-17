@@ -33,8 +33,8 @@ def mapStream implements DeepFrozen {
         tw.quote(sourceStream)
       }
       
-      to semiObtain(atLeast :EIO::Range, atMost :EIO::Range, proceed, report) {
-        def original := sourceStream.obtain(atLeast, atMost, NOW, proceed, report)
+      to semiObtain(count :EIO::Range, proceed, report) {
+        def original := sourceStream.obtain(count, count, NOW, proceed, report)
         update() # XXX side effects?
         return if (report == ELEMENTS) {
                  func(original)
@@ -54,6 +54,8 @@ def mapStream implements DeepFrozen {
         terminate(ourStream, t)
       }
     }
+    
+    update()
     
     return ourStream 
   }

@@ -291,17 +291,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                 +the-any-guard+ ; XXX should be (e. vector |valueType|)
                 backend-resolver
                 (e-lambda "org.cubik.cle.prim.listStreamImpl" ()
-                  (:|semiObtain| (at-least at-most proceed report)
-                    (e-coercef at-least 'integer)
-                    (e-coercef at-most '(or integer null)) ; XXX ALL
+                  (:|semiObtain| (count proceed report)
+                    (e-coercef count '(or integer null)) ; XXX ALL
                     (e-coercef proceed 'string) ; XXX enums
                     (e-coercef report 'string) ; XXX enums
-                    (let* ((end (if at-most
+                    (let* ((end (if count
                                   (min (length vector)
-                                       (+ position at-most))
-                                  (length vector)))
-                           (chunk (- end position)))
-                      (assert (>= chunk at-least)) ;; sanity check - the shell should take care of this for us
+                                       (+ position count))
+                                  (length vector))))
                       (prog1
                         (subseq vector position end)
                         (when (equal proceed "ADVANCE")
