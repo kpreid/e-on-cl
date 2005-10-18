@@ -49,6 +49,7 @@ def mapStream implements DeepFrozen {
     })
 
     bind update() {
+      # XXX propagate remaining
       backend.setAvailable(sourceStream.available())
       if (Ref.isResolved(def t := sourceStream.terminates())) {
         terminate(ourStream, t)

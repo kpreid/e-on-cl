@@ -2,9 +2,7 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
   ? pragma.enable("dot-props")
-  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
-  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
-  > null
+  > def ALL := EIO::ALL
 
   ? def t := "Teh quike bruin fax jimp't ovah thy lizy dugz."
   # value: "Teh quike bruin fax jimp't ovah thy lizy dugz."
@@ -18,13 +16,13 @@
   ? s.remaining()
   # value: 46
   
-  ? s.obtain(0, 10, NOW, ADVANCE, ELEMENTS)
+  ? s.read(0, 10)
   # value: "Teh quike "
   
   ? s
   # value: "bruin fax jimp't ova\...".asStream()
 
-  ? s.obtain(0, ALL, NOW, ADVANCE, ELEMENTS)
+  ? s.read(0, ALL)
   # value: "bruin fax jimp't ovah thy lizy dugz."
   
   ? s.terminates()

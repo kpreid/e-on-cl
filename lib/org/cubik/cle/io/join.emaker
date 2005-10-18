@@ -18,7 +18,7 @@ def join implements DeepFrozen {
     
     def transfer() {
       traceln(`join transfer $input $output: ${input.available()}, ${output.available()}`)
-      output.write(def e := input.obtain(0, output.available(), NOW, ADVANCE, ELEMENTS))
+      output.write(def e := input.read(0, output.available()))
       traceln(`join transferred: ${E.toQuote(e)}`)
       if (Ref.isResolved(def t := input.terminates())) {
         if (Ref.isBroken(t)) {

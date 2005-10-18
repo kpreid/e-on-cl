@@ -23,7 +23,7 @@
   ? i.available()
   # value: 3
   
-  ? i.obtain(0, ALL, NOW, ADVANCE, ELEMENTS)
+  ? i.read(0, ALL)
   # value: ['a', 'b', 'c']
   
   ? i.available()

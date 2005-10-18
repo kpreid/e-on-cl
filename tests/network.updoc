@@ -44,9 +44,8 @@ Trivial streams
   
   ? outs.flush()
   
-  ? pragma.enable("dot-props")
-  > interp.waitAtTop(ins.whenAvailable(8, thunk { 
-  >   print(ins.obtain(0, 17, EIO::NOW, EIO::ADVANCE, EIO::ELEMENTS))
+  ? interp.waitAtTop(ins.whenAvailable(8, thunk { 
+  >   print(ins.read(0, 17))
   > }))
 
   this is "HTTP/1.1 200 OK\r\n"
