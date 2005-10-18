@@ -212,7 +212,7 @@ XXX ejectors for kinds of failure from write()
 
 Testing bad arguments to obtain:
   ? stream.obtain(-1, 10, NOW, ADVANCE, ELEMENTS)
-  # problem: not in region
+  # problem: -1 is not in the region (int >= 0)
   ? stream.obtain(5, 4, NOW, ADVANCE, ELEMENTS)
   # problem: doesn't match any of [nullOk, (int >= 5)]
   ? stream.obtain(ALL, 10, NOW, ADVANCE, ELEMENTS) # XXX should be a more specific error - the current one refers to that atLeast=ALL requires atMost=ALL

@@ -1,7 +1,10 @@
 # Copyright 2002 Combex, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-# MODIFIED by kpreid to be DeepFrozen
+# MODIFIED by kpreid 
+#   DeepFrozen
+#   more helpful failure message
+
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 /**
@@ -193,7 +196,7 @@ def OrderedRegionMaker implements EventuallyDeepFrozen {
                 if (self(specimen)) {
                     specimen
                 } else {
-                    throw.eject(optEjector, "not in region")
+                    throw.eject(optEjector, `${E.toQuote(specimen)} is not in the region ${E.toQuote(self)}`)
                 }
             }
             

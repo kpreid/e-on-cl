@@ -272,7 +272,7 @@ __makeOrderedSpace / ..
   # value: 1..!3
   
   ? 0 :OneOrTwo
-  # problem: not in region
+  # problem: 0 is not in the region 1..!3
   
   ? 1 :OneOrTwo
   # value: 1
@@ -281,7 +281,7 @@ __makeOrderedSpace / ..
   # value: 2
   
   ? 3 :OneOrTwo
-  # problem: not in region
+  # problem: 3 is not in the region 1..!3
   
   ? 'a' :OneOrTwo
   # problem: the char 'a' doesn't coerce to an int
