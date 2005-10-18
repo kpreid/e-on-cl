@@ -377,6 +377,66 @@ Termination
   ? stream.terminates()
   # value: true
 
+--- stream with 0 remaining should be closed
+
+  ? def stream := makeInStreamShell(int, def streamBackend, def impl {
+  >   to semiObtain(count, proceed, report) :any { 
+  >     return []
+  >   }
+  >   to terminate(_) :void {}
+  > })
+  # value: <-<impl>
+
+  ? streamBackend.resolveRemaining(0); stream.terminates()
+  # value: true
+
+--- obtain shorthands
+
+  NOTE: These tests, for convenience, assume that a string's stream is implemented using this InStreamShell. '
+  
+  ? def stream := "abcdefghijklmnopqrstuvwxyz".asStream()
+  # value: "abcdefghijklmnopqrst\...".asStream()
+  
+  ? stream.read(1, 2)
+  # value: "ab"
+  
+  ? interp.waitAtTop(def p := stream.readLater(1, 2)); p
+  # value: <Promise>
+ 
+  ? p
+  # value: "cd"
+  
+  ? stream.readOptOne()
+  # value: 'e'
+  
+  XXX this test won't work until atLeast is fixed: if the stream is closed, fewer than atLeast elements may be returned, but we don't implement this
+  x ? "".asStream().readOptOne()
+  x # value: null
+  
+  ? "abcdef".asStream().readAll()
+  # value: "abcdef"
+  
+  XXX this is not working for mysterious reasons; test and implementation disabled until later
+  x ? interp.waitAtTop(def p := "abcdef".asStream().readAllLater(); p)
+  x # value: <Promise>
+  x 
+  x ? p
+  x # value: "abcdef"
+  
+  ? stream.peek(1, 2)
+  # value: "fg"
+
+  ? stream.peek(1, 2)
+  # value: "fg"
+  
+  ? def p := stream.skip(2)
+  # value: <Promise>
+  
+  ? p == stream.terminates()
+  # value: true
+  
+  XXX becomesReady (not done yet because of inconsistent documentation: defined as returning false==STATUS, but that would not result in resolution upon availability as documented in text)
+
 --
 
 XXX write tests that STATUS is correct: according to http://www.erights.org/elib/concurrency/eio/obtaining.html the return value of STATUS is "the termination status of the stream *after* these elements have been obtained" (emphasis mine)

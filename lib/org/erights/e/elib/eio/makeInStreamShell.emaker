@@ -53,6 +53,14 @@ def makeInStreamShell implements DeepFrozen {
     var implAvailable :Range := 0
     
     var remaining := ALL
+
+    def setRemaining(new) {    
+      remaining := new
+      if (remaining <=> 0) {
+        # Automatic close when reaching the known end
+        inStream.close()
+      }
+    }
     
     /** update the visible 'available' - XXX should this be implicit? */
     def updateAvailable() {
@@ -102,11 +110,7 @@ def makeInStreamShell implements DeepFrozen {
               updateAvailable()
             }
             if (remaining != ALL) {
-              remaining -= taken
-              if (remaining <=> 0) {
-                # Automatic close when reaching the known end
-                inStream.close()
-              }
+              setRemaining(remaining - taken)
             }
           }
           match ==QUERY {}
@@ -190,6 +194,7 @@ def makeInStreamShell implements DeepFrozen {
           match ==LATER { 
             waitersFlex.push([def result, args])
             updateAvailable()
+            triggerWaiters <- () # in case the request is immediately satisfiable
             result
           }
           match _ { throw(`shouldn't happen: unrecognized schedule $schedule`) }
@@ -197,6 +202,15 @@ def makeInStreamShell implements DeepFrozen {
       }
       
       to remaining() { return remaining }
+      
+      to read(l, m)        { return inStream.obtain(l,   m,   NOW,   ADVANCE, ELEMENTS) }
+      to readLater(l, m)   { return inStream.obtain(l,   m,   LATER, ADVANCE, ELEMENTS) }
+      to readOptOne()  { return if (inStream.obtain(1,   1,   NOW,   ADVANCE, ELEMENTS) =~ [x]) {x}}
+      to readAll()         { return inStream.obtain(ALL, ALL, NOW,   ADVANCE, ELEMENTS) }
+      #to readAllLater()    { return inStream.obtain(ALL, ALL, LATER, ADVANCE, ELEMENTS) }
+      to peek(l, m)        { return inStream.obtain(l,   m,   NOW,   QUERY,   ELEMENTS) }
+      to skip(num)         { return inStream.obtain(num, num, LATER, ADVANCE, STATUS  ) }
+      #to becomesReady(num) { return inStream.obtain(num, num, LATER, QUERY,   STATUS  ) }
     }
     
     bind backend {
@@ -211,7 +225,7 @@ def makeInStreamShell implements DeepFrozen {
       
       to resolveRemaining(new :(int >= 0)) {
         require(if (implAvailable == ALL) { new == ALL} else { new >= implAvailable}, `remaining ($new) must not be less than available ($implAvailable)`)
-        remaining := new
+        setRemaining(new)
         triggerWaiters()
         triggerAvailable()
       }
