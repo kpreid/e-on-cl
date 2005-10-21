@@ -4,8 +4,12 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def Term extends __makeGuard(Term) {
-  to coerce(specimen, optEjector) {
-    throw("XXX there is no such thing as a Term yet")
+def makeTerm implements DeepFrozen {
+  to asType() {
+    def Term extends __makeGuard(Term) {
+      to coerce(specimen, optEjector) {
+        throw("XXX there is no such thing as a Term yet")
+      }
+    }
   }
 }

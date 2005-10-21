@@ -690,8 +690,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :fringe fringe
       :snap-hash (eeq-same-yet-hash wrapped fringe))))
 
-(defglobal +the-make-traversal-key+ (e-lambda "makeTraversalKey" ()
-  (:|run/1| 'make-traversal-key)))
+(defglobal +the-make-traversal-key+ 
+  (let ((traversal-key-guard (make-instance 'cl-type-guard 
+                               :type-specifier 'traversal-key)))
+    (e-lambda "org.cubik.cle.prim.makeTraversalKey" ()
+      (:|asType| () traversal-key-guard)
+      (:|run/1| 'make-traversal-key))))
 
 (defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
   ;(format t "eeq-same-dispatch traversal-keys ~A ~A" (tk-wrapped a) (tk-wrapped b))

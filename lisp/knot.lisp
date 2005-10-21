@@ -475,7 +475,6 @@
     
     (:|FlexList|         elib:+the-flex-list-guard+)
     (:|Throwable|        elib:+the-exception-guard+)
-    (:|TraversalKey|     (make-instance 'cl-type-guard :type-specifier 'elib:traversal-key))
     
     (:|equalizer|        (make-equalizer))
     (:|E|                elib:+the-e+)
@@ -516,6 +515,7 @@
           nil)))))
 
 ; XXX optUnget?
+;; XXX with the new typeLoader system, we should supply these types from their makers
 (defglobal +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
     (:stamped +deep-frozen-stamp+)
   (:|fetch| (fqn absent-thunk
@@ -739,7 +739,7 @@ If a log message is produced, context-thunk is run to produce a string describin
           ; --- data guards: nonatomic, nonprimitive ---
           ("&List"        ,(lazy-import "org.erights.e.elib.slot.List"))
           ("&Map"         ,(lazy-import "org.erights.e.elib.slot.Map"))
-          ("&Set"         ,(lazy-import "org.erights.e.elib.tables.type.ConstSet"))
+          ("&Set"         ,(typical-lazy "<import:org.erights.e.elib.tables.ConstSet>.asType()"))
           ("&Tuple"       ,(lazy-import "org.erights.e.elib.slot.Tuple"))
           ("&__Portrayal" ,(typical-lazy "Tuple[any, String, List[any]]"))
   

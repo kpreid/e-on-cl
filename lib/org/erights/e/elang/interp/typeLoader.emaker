@@ -4,22 +4,39 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def typeTag := "type."
+def insertNamePrefix(fqn, insertion) {
+  def lastDotPos := fqn.lastIndexOf1('.')
+  return \
+    if (lastDotPos == -1) {
+      insertion + fqn
+    } else {
+      def after := lastDotPos + 1
+      fqn(0, after) + insertion + fqn(after)
+    }
+}
 
-/** Compatibility. <type:a.b.c> => <import:a.b.type.c> */
+/** Compatibility. <type:a.b.C> => <import:a.b.type.C> OR <import:a.b.makeC>.asType(), whichever exists */
 def typeLoader { # XXX implements DeepFrozen once import__uriGetter is DeepFrozen
   to __printOn(out :TextWriter) {
     out.print("<type:*>")
   }
 
   to get(fqn :String) :any {
-    return import__uriGetter[
-      def lastDotPos := fqn.lastIndexOf1('.')
-      if (lastDotPos == -1) {
-        typeTag + fqn
-      } else {
-        fqn(0, lastDotPos + 1) + typeTag + fqn(lastDotPos + 1)
-      }]
+    escape notTypeEmaker {
+      return <import>.fetch(insertNamePrefix(fqn, "type."), notTypeEmaker)
+    }
+  
+    def maker := <import>.fetch(
+                   insertNamePrefix(fqn, "make"),
+                   thunk { 
+                     throw(`no type object found for $fqn`)
+                   })
+    try {                  
+      return maker.asType()
+    } catch p {
+      traceln(`type-loader: maker $maker for fqn $fqn exists but .asType() failed`)
+      throw(p)
+    }
   }
   
   /** Always returns null. 
