@@ -4,7 +4,15 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def nullOk0 extends __makeGuard(nullOk0) {
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def nullOk0 extends __makeGuard(nullOk0) implements EventuallyDeepFrozen {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
   to __printOn(out :TextWriter) :void {
     out.print("nullOk")
   }
@@ -18,7 +26,13 @@ def nullOk0 extends __makeGuard(nullOk0) {
   to getTheTrivialValue() { return null }
   
   to get(subGuard) :Guard {
-    def nullOk1 extends __makeGuard(nullOk1) {
+    def nullOk1 extends __makeGuard(nullOk1) implements EventuallyDeepFrozen {
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+    
       to __printOn(out :TextWriter) :void {
         # XXX print this explicitly as E-syntax sugared "get" call
         out.quote(nullOk0, [subGuard])

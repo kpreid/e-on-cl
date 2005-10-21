@@ -109,6 +109,9 @@ nullOk base
   ? [nullOk.getTheTrivialValue()]
   # value: [null]
   
+  ? nullOk :DeepFrozen
+  # value: nullOk
+  
 nullOk parameterized
 
   ? nullOk[float64]
@@ -127,6 +130,9 @@ nullOk parameterized
   --but its subguard may coerce
   ? {def t :nullOk[float64] := 144; t}
   # value: 144.0
+
+  ? nullOk[float64] :DeepFrozen
+  # value: nullOk[float64]
   
 boolean
 

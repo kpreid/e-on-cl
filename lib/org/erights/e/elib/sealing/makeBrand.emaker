@@ -7,7 +7,10 @@ pragma.disable("explicit-result-guard")
 def makeBrand implements DeepFrozen {
   to run(label :String) :any {
   
-    var unsealHolder :nullOk[Tuple[any]] := null
+    # This holds nullOk[Tuple[any]], but stating so now creates a
+    # circular dependency makeBrand->nullOk->DeepFrozen, and is not
+    # necessary since all the assignments maintain that condition.
+    var unsealHolder := null
   
     def brand {
       to __printOn(out :TextWriter) :void {
