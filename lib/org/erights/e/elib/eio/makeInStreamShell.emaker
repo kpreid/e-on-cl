@@ -16,11 +16,11 @@ def QUERY := EIO::QUERY
 def ELEMENTS := EIO::ELEMENTS
 def STATUS := EIO::STATUS
 
-def Same {
+def Same implements DeepFrozen {
   match [=="get", values] {
     def valuesSet := values.asSet()
     def message := "must be one of " + E.toQuote(values) + ": "
-    def Same1 {
+    def Same1 implements DeepFrozen {
       to coerce(specimen, optEjector) {
         if (valuesSet.contains(specimen)) {
           return specimen

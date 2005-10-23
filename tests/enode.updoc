@@ -610,6 +610,8 @@ SuchThatPattern printing
   final
   ? epatt`a`.staticScope()
   # value: <[] := [] =~ ["a"] + var []>
+  ? epatt`a :b`.staticScope()
+  # value: <[] := ["b"] =~ ["a"] + var []>
 
   ignore
   ? epatt`_`.staticScope()
@@ -622,6 +624,8 @@ SuchThatPattern printing
   slot
   ? epatt`&a`.staticScope()
   # value: <[] := [] =~ [] + var ["a"]>
+  ? epatt`&a :b`.staticScope()
+  # value: <[] := ["b"] =~ [] + var ["a"]>
   
   such-that
   ? epatt`a ? (def bb := b)`.staticScope()
@@ -630,6 +634,8 @@ SuchThatPattern printing
   var
   ? epatt`var a`.staticScope()
   # value: <[] := [] =~ [] + var ["a"]>
+  ? epatt`var a :b`.staticScope()
+  # value: <[] := ["b"] =~ [] + var ["a"]>
 
 eval
 

@@ -73,8 +73,8 @@ def OrderedRegionMaker implements EventuallyDeepFrozen {
   
     to (myType,
         myName :String,
-        var myBoundedLeft :boolean,
-        var myEdges
+        var initBoundedLeft :boolean,
+        var initEdges
     ) :any {
 
         /**
@@ -92,15 +92,18 @@ def OrderedRegionMaker implements EventuallyDeepFrozen {
             }
         }
 
-        if (myEdges.size() >= 1 && myEdges[0].previous() <=> myEdges[0]) {
+        if (initEdges.size() >= 1 && initEdges[0].previous() <=> initEdges[0]) {
             # if the first edge is the least element, get rid of it and
             # flip parity
-            myEdges := myEdges(1, myEdges.size())
-            myBoundedLeft := !myBoundedLeft
+            initEdges := initEdges(1, initEdges.size())
+            initBoundedLeft := !initBoundedLeft
         }
-        myEdges := myEdges.snapshot()
-        def myInParity := if (myBoundedLeft) {0} else {1}
-        def myLen := myEdges.size()
+        initEdges := initEdges.snapshot()
+        def myInParity := if (initBoundedLeft) {0} else {1}
+        def myLen := initEdges.size()
+
+        def myBoundedLeft :DeepFrozen := initBoundedLeft
+        def myEdges :DeepFrozen := initEdges
 
         /**
          * Regions are directly ValueGuards, and delegate to settable for the

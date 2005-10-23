@@ -278,6 +278,8 @@
              (usesp opt-ejector-expr pattern))
     (error "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
 
+;; XXX reject NounPatterns that use their noun in the guard
+
 ; --- E-level methods ---
 
 (defmethod eeq-is-transparent-selfless ((a |ENode|))
@@ -521,7 +523,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defmacro def-scope-rule (specializer scope-expr)
   "Forms in the scope rule language:
     nil    -- the empty scope
-    :|foo| -- the static scope of the property foo of this node
+    :|foo| -- the static scope of the property foo of this node, 
+              if foo is not nil
     (seq <forms>) -- sequencing, as in StaticScope#add/1
     (hide <form>) -- hiding, as in StaticScope#hide/0
     (flatten :|foo|) -- the sequencing of the list property foo of this node
@@ -531,9 +534,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (labels ((transform (expr)
             (cond
               ((null expr)
-                `(e. +the-make-static-scope+ |getEmptyScope|))
+                `+empty-static-scope+)
               ((atom expr)
-                `(e. (:get ',expr) |staticScope|))
+                `(let ((.value. (:get ',expr)))
+                   (if .value.
+                     (e. .value. |staticScope|)
+                     +empty-static-scope+)))
               ((eql (first expr) 'hide)
                 (assert (= (length expr) 2))
                 `(e. ,(transform (second expr)) |hide|))
@@ -541,12 +547,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                 (reduce #'(lambda (a b) `(e. ,a |add| ,b)) 
                         (rest expr)
                         :key #'transform
-                        :initial-value `(e. +the-make-static-scope+ |getEmptyScope|)))
+                        :initial-value `+empty-static-scope+))
               ((eql (first expr) '!)
                 `(progn ,@(rest expr)))
               ((eql (first expr) 'flatten)
                 (assert (= (length expr) 2))
-                `(sum-node-scopes (:get ',(second expr))))
+                `(sum-node-scopes (or (:get ',(second expr)) #())))
               (t
                 (error "Unknown scope-rule expression: ~S" expr)))))
     `(defmethod compute-node-static-scope ((node ,specializer))
@@ -558,7 +564,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (reduce #'(lambda (a b) (e. a |add| b))
           (map 'list #'(lambda (a) (e. a |staticScope|))
                      nodes)
-          :initial-value (e. +the-make-static-scope+ |getEmptyScope|)))
+          :initial-value +empty-static-scope+))
 
 (def-scope-rule |AssignExpr|
   (seq (! (e. +the-make-static-scope+ |scopeAssign| (:get :|noun|)))
@@ -575,18 +581,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |DefineExpr|
   (seq :|pattern|
        :|rValue| 
-       (! (let ((ex (:get :|optEjectorExpr|)))
-            (if ex
-              (e. ex |staticScope|)
-              (e. +the-make-static-scope+ |getEmptyScope|))))))
+       :|optEjectorExpr|))
 
 (def-scope-rule |EscapeExpr|
   (hide (seq (hide (seq :|ejectorPattern| :|body|))
-             (! (if (:get :|optCatchPattern|)
-                  (e. (e. (:get :|optCatchPattern|) |staticScope|) 
-                      |add|
-                      (e. (:get :|optCatchBody|) |staticScope|))
-                  (e. +the-make-static-scope+ |getEmptyScope|))))))
+             :|optCatchPattern|
+             :|optCatchBody|)))
 
 (def-scope-rule |FinallyExpr|
   (hide (seq (hide :|attempt|)
@@ -627,7 +627,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (seq :|listPatt| :|restPatt|))
 
 (def-scope-rule |FinalPattern|
-  (! (e. +the-make-static-scope+ |scopeDef| node)))
+  (seq :|optGuardExpr|
+       (! (e. +the-make-static-scope+ |scopeDef| node))))
 
 (def-scope-rule |IgnorePattern|
   nil)
@@ -636,13 +637,15 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (flatten :|subs|))
 
 (def-scope-rule |SlotPattern|
-  (! (e. +the-make-static-scope+ |scopeSlot| node)))
+  (seq :|optGuardExpr|
+       (! (e. +the-make-static-scope+ |scopeSlot| node))))
 
 (def-scope-rule |SuchThatPattern|
   (seq :|pattern| :|test|))
 
 (def-scope-rule |VarPattern|
-  (! (e. +the-make-static-scope+ |scopeVar| node)))
+  (seq :|optGuardExpr|
+       (! (e. +the-make-static-scope+ |scopeVar| node))))
 
 (def-scope-rule |EMatcher|
   (hide (seq :|pattern|
@@ -650,13 +653,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |EMethod|
   (hide (seq (flatten :|patterns|)
-             (! (if (:get :|optResultGuard|)
-                  (e. (:get :|optResultGuard|) |staticScope|)
-                  (e. +the-make-static-scope+ |getEmptyScope|)))
+             :|optResultGuard|
              :|body|)))
 
 (def-scope-rule |EScript|
-  (seq (! (if (:get :|optMethods|)
-            (sum-node-scopes (:get :|optMethods|))
-            (e. +the-make-static-scope+ |getEmptyScope|)))
-       (! (sum-node-scopes (:get :|matchers|)))))
+  (seq (flatten :|optMethods|)
+       (flatten :|matchers|)))

@@ -789,8 +789,8 @@ If a log message is produced, context-thunk is run to produce a string describin
           ; --- utility: miscellaneous ---
           ("&__comparer"        ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
-          ("__MatchContext"     ,(e-lambda "org.erights.e.elib.slot.MatchContext" () 
-            ; XXX deep frozen
+          ("__MatchContext"     ,(e-lambda "org.erights.e.elib.slot.MatchContext" 
+              (:stamped +deep-frozen-stamp+)
             (:|coerce| (specimen opt-ejector)
               (vector specimen opt-ejector))))
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))

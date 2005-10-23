@@ -284,9 +284,13 @@ Map
   ? testGuardMany([[], [].asMap(), [].asMap().diverge(), [1=>2], [3 => "four"]], Map[float64, int])
   # value: [[].asMap(), [1.0 => 2]]
   
-  
  XXX conformTo for specimens
  XXX conformTo primitive guard
+
+__MatchContext
+
+  ? __MatchContext :DeepFrozen
+  # value: <MatchContext>
 
 ValueGuard
 
