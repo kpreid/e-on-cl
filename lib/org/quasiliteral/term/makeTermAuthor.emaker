@@ -1,0 +1,130 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def AstroTag := any # XXX restrict
+
+def makeTermAuthor(SelflessStamp) {
+  def TermStamp implements DeepFrozen { 
+    to audit(_, _) { return true }
+  }
+  
+  def makeTerm
+  
+  def _StandardTerm
+  def StandardTerm extends _StandardTerm implements EventuallyDeepFrozen {
+    method __optSealedDispatch(brand) :any {
+      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+      }
+    }
+  
+    to __printOn(tw :TextWriter) {
+      tw.print("Term")
+    }
+    
+    to get(Tag, TData, Arg) {
+      def Term implements EventuallyDeepFrozen {
+        method __optSealedDispatch(brand) :any {
+          if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+            EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+          }
+        }
+        
+        to __printOn(tw :TextWriter) {
+          tw.print("Term")
+          if (!__equalizer.sameYet(Term, _StandardTerm)) {
+            tw.quote([Tag, TData, Arg])
+          }
+        }
+        
+        to coerce(specimen, optEjector) {
+          def generalTerm := escape accept {
+            # XXX should reuse standard-coerce from the Lisp side
+            if (__auditedBy(TermStamp, specimen)) {
+              accept(specimen)
+            } else {
+              def coerced := specimen.__conformTo(Term)
+              if (__auditedBy(TermStamp, coerced)) {
+                accept(coerced)
+              } else {
+                # xxx exception type?
+                throw.eject(optEjector, `not a $Term: ${E.toQuote(specimen)}`)
+              }
+            }
+          }
+          
+          # XXX arrange ...somehow... to not reconstruct if the tree already fits
+          return makeTerm(Tag.coerce(specimen.getTag(), optEjector),
+                          TData.coerce(specimen.getData(), optEjector),
+                          specimen.getOptSpan(),
+                          List[Arg].coerce(specimen.getArgs(), optEjector))
+        }
+      }
+      return Term
+    }
+  }
+  bind _StandardTerm := StandardTerm[AstroTag, any[nullOk, int, float64, char, Twine], _StandardTerm]
+     
+  bind makeTerm := def "$makeTerm" implements EventuallyDeepFrozen {
+    method __optSealedDispatch(brand) :any {
+      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+      }
+    }
+    
+    /** Return the guard for standard Terms. */
+    to asType() {
+      return StandardTerm
+    }
+    
+    to run(tag :AstroTag, 
+           data :(tag.getDataGuard()),
+           optSpan :nullOk, # XXX SourceSpan
+           args :List) { # NOTE: unrestricted - XXX must offer default-compatible restrictive guard
+      def term implements SelflessStamp, TermStamp { # , PassByCopyStamp
+        to __optUncall() {
+          # indirect self-reference is to simplify DeepFrozen checking
+          return [<import:org.quasiliteral.term.makeTerm>, "run", [tag, data, optSpan, args]]
+        }
+        
+        to getTag()      { return tag }
+        to getData()   { return data }
+        to getOptSpan() { return optSpan }
+        to getArgs() { return args }
+        
+        to __printOn(tw :TextWriter) {
+          # XXX this should probably be in some TermUnparser object
+          
+          tw.write(tw.isQuoting().pick("term`", ""))
+          
+          tw.print(tag.getTagName()) # XXX inadequate: at least for data
+          if (data != null) { tw.quote(data) }
+          
+          if (args.size() > 0) {
+            tw.write("(")
+            var sep := ""
+            for arg in args { 
+              tw.write(sep)
+              if (__auditedBy(arg, TermStamp)) {
+                tw.print(arg)
+              } else {
+                tw.quote(arg)
+              }
+              sep := ", "
+            }
+            tw.write(")")
+          }
+          
+          tw.write(tw.isQuoting().pick("`", ""))
+        }
+      }
+      return term
+    }
+  }
+  return makeTerm
+}

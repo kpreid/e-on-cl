@@ -1,0 +1,32 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def Term := any # XXX restrict
+def AstroTag := any # XXX restrict
+def AstroArg := any # XXX restrict
+
+def makeTerm := <import:org.quasiliteral.term.makeTerm>
+
+def makeTermBuilder implements DeepFrozen {
+  to run() { # XXX schema parameter
+    def termBuilder {
+      to empty() {
+        return [] # XXX not like Java's ...
+      }
+      to term(functor :Term ? (functor.getArgs() == []), 
+              args :AstroArg) { # XXX args guard?
+        return makeTerm(functor.getTag(), functor.getData(), null, args)
+      }
+      
+      # XXX partially belongs to BaseBuilder in the Java system
+      to leafTag(tag :AstroTag, 
+                 optSpan :nullOk) { # XXX SourceSpan
+        return makeTerm(tag, null, optSpan, [])
+      }
+    }
+    return termBuilder
+  }
+}

@@ -1,0 +1,35 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeAstroTagAuthor(SelflessStamp) {
+  def makeAstroTag implements DeepFrozen {
+    /** Unlike E-on-Java, lack of a tag code is here represented by null, rather than -1; and lack of a data type is given by use of the nullOk guard. */
+    to run(optTagCode :nullOk[int >= 0], tagName :String, dataGuard :Guard) {
+      /** An AstroTag, which in this E implementation serves only as the label on a Term. See E-on-Java for further information. */
+      def astroTag implements SelflessStamp { # , PassByCopyStamp, AstroTagStamp
+        to __optUncall() {
+          # indirect self-reference is to simplify DeepFrozen checking
+          return [<import:org.quasiliteral.astro.makeAstroTag>, "run", [optTagCode, tagName, dataGuard]]
+        }
+        
+        to __printOn(tw :TextWriter) {
+          tw.write("<")
+          tw.print(tagName)
+          tw.write(">")
+        }
+        
+        to getTagName()    { return tagName }
+        to getOptTagCode() { return optTagCode }
+        to getDataGuard()  { return dataGuard }
+        
+        # to op__cmp
+        # to isTagForData
+      }
+      return astroTag
+    }
+  }
+  return makeAstroTag
+}

@@ -1,0 +1,72 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+#def &term__quasiParser0 := <elib:slot.makeLazySlot>(thunk {
+#  makeQBuilder(null)
+#})
+
+def makeTermParser := <import:org.quasiliteral.term.makeTermParser>
+def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
+
+def qtPrint implements DeepFrozen { to run(tw :TextWriter, what) {
+  tw.write("qterm`")
+  what.termPrint(tw)
+  tw.write("`")
+}}
+
+def _make implements DeepFrozen { to run(astroBuilder) {
+
+  def QTerm := any # XXX restrict
+  def QFunctor := any # XXX restrict
+
+  def qBuilder { # implements AstroBuilder?, QuasiBuilder?
+  
+    to doesQuasis() { return true }
+  
+    to start(top :QTerm) { return top }
+    
+    to term(functor :QFunctor) { return functor }
+    
+    to tag(tagPieces :List[Tuple[String, String]]) {
+      def tagName := accum "" for [kind, text] in tagPieces { _ + text}
+      def trueTag := makeAstroTag(null, tagName, nullOk) # XXX correct?
+    
+      def quasiTermTag {
+        to substitute(args) {
+          # XXX for proper implementation see QFunctor.java
+          return astroBuilder.leafTag(trueTag, null)
+        }
+      
+        to termPrint(tw :TextWriter) {
+          # XXX incorrect?
+          tw.print(tagName)
+        }
+        
+        to __printOn(tw) {
+          qtPrint(tw, quasiTermTag)
+        }
+      }
+      return quasiTermTag
+    }
+  
+    to valueMaker(template :String) {
+      # XXX cache
+      return makeTermParser(qBuilder).parseText(template.asStream())
+    }
+  }
+  return qBuilder
+}}
+
+def makeQBuilder implements DeepFrozen {
+  to getTerm__quasiParser() {
+    return _make(<import:org.quasiliteral.term.makeTermBuilder>())
+  }
+  
+  to run(abuilder) {
+    return _make(abuilder)
+  }
+}

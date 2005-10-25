@@ -1,0 +1,29 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+
+def makeTermParser implements DeepFrozen {
+  to run(builder) {
+  
+    def b := builder
+    
+    def termParser {
+      /** Parse the given stream of term-language text to a quasi-term tree. */
+      to parseText(textStream) {
+        return termParser.parse(<import:org.quasiliteral.term.makeTermLexer>(builder.doesQuasis())(textStream))
+      }
+      
+      /** Parse the given stream of term-language tokens to a quasi-term tree. */
+      to parse(lexStream) {
+        # XXX incomplete, obviously
+        def tokens := lexStream.readAll()
+        def [[=="Tag", tagpieces]] := tokens
+        return b.start(b.term(b.tag(tagpieces)))
+      }
+    }
+    return termParser
+  }
+}

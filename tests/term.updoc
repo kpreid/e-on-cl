@@ -1,0 +1,131 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def <qu> := <import:org.quasiliteral.*>; null
+
+--- Terms
+
+  ? def makeAstroTag := <qu:astro.makeAstroTag>
+  # value: <makeAstroTag>
+  
+  ? def tag := makeAstroTag(44, "foo", nullOk)
+  # value: <foo>
+
+  ? tag == makeAstroTag(44, "foo", nullOk)
+  # value: true
+
+  ? tag != makeAstroTag(null, "foo", nullOk)
+  # value: true
+  
+  ? [tag.getOptTagCode(), tag.getTagName(), tag.getDataGuard()]
+  # value: [44, "foo", nullOk]
+
+XXX EoJ tags respond to isTagForData/1, op__cmp/1
+
+  ? def makeTerm := <qu:term.makeTerm>
+  # value: <makeTerm>
+
+  ? makeTerm(tag, 99, null, [])
+  # problem: must be null
+  
+  ? def term := makeTerm(tag, null, null, [])
+  # value: term`foo`
+
+Term guard
+
+  ? def Term := makeTerm.asType()
+  # value: Term
+  
+  ? Term == <type:org.quasiliteral.term.Term>
+  # value: true
+
+ Basic accept/reject
+
+  ? "foo" :Term
+  # problem: not a Term: "foo"
+  
+  ? term :Term
+  # value: term`foo`
+
+ Terms can hold arbitrary data, but are not 'standard' Terms
+
+  ? def termBadData := makeTerm(makeAstroTag(44, "bar", any), def x {}, null, [])
+  # value: term`bar<x>`
+  
+  ? termBadData :Term
+  # problem: doesn't match any of [nullOk, int, float64, char, Twine]
+
+ Terms can hold arbitrary children, but ditto.
+  
+  ? def termNonTree := makeTerm(tag, null, null, ["bar"]) 
+  # value: term`foo("bar")`
+  
+  ? termNonTree :Term
+  # problem: not a Term: "bar"
+  
+  ? def LooseTerm := Term[any, any, any]
+  # value: Term[any, any, any]
+  
+  ? termNonTree :LooseTerm
+  # value: term`foo("bar")`
+  
+  ? termBadData :LooseTerm
+  # value: term`bar<x>`
+
+XXX test tag restrictions
+
+--- TermBuilder
+
+  ? def makeTermBuilder := <qu:term.makeTermBuilder>
+  # value: <makeTermBuilder>
+  
+  ? def termBuilder := makeTermBuilder()
+  # value: <termBuilder>
+
+XXX schema parameter?
+
+  ? termBuilder.term(term, termBuilder.empty())
+  # value: term`foo`
+
+XXX all builder methods
+
+--- Quasi and parsing
+
+  ? def makeTermLexer := <qu:term.makeTermLexer>; null
+  ? def makeTermParser := <qu:term.makeTermParser>; null
+  ? def makeQBuilder := <qu:quasiterm.makeQBuilder>; null
+
+  ? def genericBuilder { 
+  >   to doesQuasis() :any { true }
+  >   match [v, a] { [v] + a } }; null
+
+  ? def makeLexStream() :any { makeTermLexer(false)("foo".asStream()) }; null
+  
+  ? makeLexStream().obtain(0, EIO.getALL(), EIO.getNOW(), EIO.getADVANCE(), EIO.getELEMENTS())
+  # value: [["Tag", [["Ident", "foo"]]]]
+
+XXX all term-language tokens
+
+  ? makeTermParser(genericBuilder).parse(makeLexStream())
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
+
+  ? def qBuilder := makeQBuilder(termBuilder)
+  # value: <qBuilder>
+ 
+  ? makeTermParser(qBuilder).parse(makeLexStream())
+  # value: qterm`foo`
+
+  ? makeTermParser(qBuilder).parseText("foo".asStream())
+  # value: qterm`foo`
+
+XXX all term-language grammar
+
+  ? qBuilder.valueMaker("foo").substitute([])
+  # value: term`foo`
+
+XXX substitution on all term trees
+
+  ? term`foo`
+  # value: term`foo`
+
+XXX more tests...

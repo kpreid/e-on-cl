@@ -496,7 +496,9 @@
           |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))))
 
 (defglobal +selfless-maker-fqns+
-  '("org.erights.e.elib.tables.makeConstSet"))
+  '("org.erights.e.elib.tables.makeConstSet"
+    "org.quasiliteral.astro.makeAstroTag"
+    "org.quasiliteral.term.makeTerm"))
 
 (defun make-selfless-loader ()
   "Makes the loader for those makers which would be plain .emakers if they did not need the SelflessStamp."

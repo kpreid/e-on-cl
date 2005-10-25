@@ -1,0 +1,44 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# NOTE: The TermLexer in E-on-Java is under Mozilla license. This file has been written purely by examining the interface as used in other files, and examples of the Term language.
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeTermLexer implements DeepFrozen {
+  # from Term.y
+  # = new TermLexer(lineFeeder,          # input
+  #               false,                 # what?
+  #               builder.doesQuasis(),
+  #               false,                 # what?
+  #               builder);              # why?
+
+  to run(quasi :boolean) {
+    def termLexer {
+      to run(textIn) { # xx textIn :InStream
+        # kpreid's Standard Cheap Ugly Lexer Style
+        var text := textIn.obtain(def A := EIO.getALL(), A, EIO.getNOW(), EIO.getADVANCE(), EIO.getELEMENTS())
+        #traceln(`text: $text`)
+        def tokens := [].diverge()
+        
+        while (!(text <=> "")) {
+          #traceln(`looping; text: $text`)
+          switch (text) {
+            match rx`(@t[a-zA-Z_$$][a-zA-Z_$$0-9.-]*)(@r.*)` { # XXX Unicode character categories
+              #traceln(`pushing tag token into $tokens | $t:$r`)
+              text := r
+              tokens.push(["Tag", [["Ident", t]]])
+            }
+            match _ { return Ref.broken(`unexpected term token: $text`) }
+          }
+        }
+        #traceln(E.toQuote(tokens))
+        #traceln(E.toQuote(tokens.snapshot()))
+        #traceln(E.toQuote(tokens.snapshot().asStream()))
+        return tokens.snapshot().asStream()
+      }
+    }
+    return termLexer
+  }
+}
