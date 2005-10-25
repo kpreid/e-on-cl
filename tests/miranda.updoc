@@ -16,14 +16,14 @@ Miranda methods on E-implemented objects
 
 Miranda methods on native (in CL-E, DEF-VTABLE-based) objects
 
-  ? def specimen := 44
-  # value: 44
+  ? def specimen := 44.0
+  # value: 44.0
   
   ? specimen.__getAllegedType()
-  # value: int
+  # value: float64
   
   ? specimen.__order("__getAllegedType", [])
-  # value: [int, 44]
+  # value: [float64, 44.0]
 
 Miranda methods on CL-E E-LAMBDA-based objects
 
@@ -81,10 +81,10 @@ optSealedDispatch
 conformTo
   
   ? specimen.__conformTo(any)
-  # value: 44
+  # value: 44.0
   
   ? specimen.__conformTo(void)
-  # value: 44
+  # value: 44.0
 
 __respondsTo, of course, is dependent on the dispatch implementation, so it shall be tested for many object types again.
 

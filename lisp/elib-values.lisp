@@ -272,7 +272,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       +e-false+))
   (:|asSet| (vector)
     "Return a ConstSet with the elements of this list, omitting duplicates."
-    (e. (e-import "org.cubik.cle.prim.makeConstSet") 
+    (e. (e-import "org.erights.e.elib.tables.makeConstSet") 
         |make| (e. vector |asKeys|)))
   (:|asStream| (vector
       &aux (position 0))
@@ -504,13 +504,18 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   t)
 
 (def-vtable integer
-  (:|__conformTo| (this guard) ; XXX should this be implemented by the guard? same question for float32 too
-    ; XXX should use coerce/observable-type, not typep
-    (let ((ts (guard-to-type-specifier guard)))
-      (if (and (not (typep this ts))
-               (subtypep `(eql ,(coerce this 'float64)) ts))
-        (coerce this 'float64)
-        this)))
+  (:|__conformTo| (this guard)
+    (escape-bind (ej)
+        (let ((ts (guard-to-type-specifier
+                    (e-coerce guard 'cl-type-guard ej)))
+              (float (coerce this 'float64)))
+          (if (and (not (typep this ts))
+                   (typep float ts))
+            float
+            (e. ej |run|)))
+      (problem)
+        (declare (ignore problem))
+        this))
   (:|previous/0| '1-)
   (:|next/0| '1+)
   (:|isNaN| (this)

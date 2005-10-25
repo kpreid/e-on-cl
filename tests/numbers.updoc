@@ -158,3 +158,19 @@ Number formatting
   
   ? 99.toString("base" => like(10))
   # value: "99"
+
+Integer coercion
+
+  ? float64.coerce(1)
+  # value: 1.0
+  
+  ? 1.__conformTo(any)
+  # value: 1
+
+  ? 1.__conformTo(nullOk)
+  # value: 1
+
+  Bug: integer's __conformTo would infintely recurse given a typical non-native guard '
+  ? List.coerce(1)
+  # problem: the int 1 doesn't coerce to a ConstList
+  

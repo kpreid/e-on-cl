@@ -442,6 +442,11 @@
       `(list ,(concatenate 'string "&" prefix (string name))
              (make-lazy-apply-slot (lambda () ,value-form)))))))
 
+(defun selfless-authorize (fqn)
+  "Perform the typical load and authorization for an E-implemented maker of selfless objects."
+  (e. (e-import (concatenate 'string fqn "Author")) 
+      |run| elib:+selfless-stamp+))
+
 ; xxx review which of these ought to be moved to safe-extern-scope
 (defun make-primitive-loader ()
   (lazy-value-scope ("org.cubik.cle.prim.primLoader" "org.cubik.cle.prim.")
@@ -486,13 +491,21 @@
           elib:+deep-frozen-stamp+
           elib:+the-make-traversal-key+))
     
-    (:|makeConstSet|
-      (e. (e-import "org.erights.e.elib.tables.makeConstSetAuthor") 
-          |run| elib:+selfless-stamp+))
-    
     (:|makeBaseGuard|
       (e. (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
           |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))))
+
+(defglobal +selfless-maker-fqns+
+  '("org.erights.e.elib.tables.makeConstSet"))
+
+(defun make-selfless-loader ()
+  "Makes the loader for those makers which would be plain .emakers if they did not need the SelflessStamp."
+  (make-scope "org.cubik.cle.prim.selflessMakers" 
+    (mapcar (lambda (fqn)
+              (list (concatenate 'string "&" fqn)
+                    (make-lazy-apply-slot 
+                      (lambda () (selfless-authorize fqn)))))
+            +selfless-maker-fqns+)))
 
 (defglobal +vm-node-maker-importer+
   (let* ((prefix "org.erights.e.elang.evm."))
@@ -671,6 +684,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                   (e. +the-make-path-loader+ |run| "import" (vector 
                     (make-primitive-loader)
                     (make-safe-extern-loader)
+                    (make-selfless-loader)
                     emaker-importer
                     +vm-node-type-importer+
                     +vm-node-maker-importer+))))

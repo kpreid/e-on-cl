@@ -4,9 +4,17 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
 def makeUnionGuard implements DeepFrozen {
   to run(subGuards) {
-    def unionGuard extends __makeGuard(unionGuard) implements DeepFrozen.optionally() {
+    def unionGuard extends __makeGuard(unionGuard) implements EventuallyDeepFrozen {
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+
       to __printOn(out :TextWriter) {
         out.print("any")
         out.quote(subGuards)

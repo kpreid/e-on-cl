@@ -19,7 +19,6 @@ Internal bugs:
 Little features:
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
   - have updoc stop running a given script if a mismatch has occurred and a later step depends on a lexical binding made/shadowed by that step
-  - updoc should take options: profiling options, --confine
 
 Big features:
   - more complete socket IO
@@ -33,7 +32,6 @@ Big features:
   - Pluribus
 
 Code cleanups not marked in the code:
-  - reorganize: rename elang-transform.lisp to compiler-transform?
   - reorganize: rename elib.lisp once it's been pared down to just the external macros and stuff
   - reorganize: move stuff that isn't really about the root scopes out of knot.lisp
   - reorganize: rename tables2.lisp now that elib-tables.lisp is gone

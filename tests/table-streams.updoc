@@ -28,3 +28,7 @@
   ? s.terminates()
   # value: true
   
+XXX Should FlexLists have asStream? If so, what would it mean?
+XXX all varieties of map streams (pairs, values, keys)?
+XXX Set streams
+XXX turning streams into tables

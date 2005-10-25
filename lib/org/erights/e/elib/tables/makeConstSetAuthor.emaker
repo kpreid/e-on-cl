@@ -10,7 +10,7 @@ def makeConstSetAuthor(SelflessStamp) {
   }
   
   def ConstSet {
-    # XXX use some sort of BaseAuditGuard (or ProtocolDesc)
+    # XXX should reuse standard-coerce from the Lisp side
     to coerce(specimen, optEjector) {
       if (__auditedBy(ConstSetStamp, specimen)) {
         return specimen

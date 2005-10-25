@@ -52,7 +52,7 @@ any
   ? any
   # value: any
   
-  ? any[int, float64]
+  ? any[int, float64] :DeepFrozen
   # value: any[int, float64]
   
   ? any[]
