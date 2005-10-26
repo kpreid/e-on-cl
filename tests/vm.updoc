@@ -165,7 +165,7 @@ EscapeExpr
   # problem: ejector "ej__1" no longer in scope
   
   ? escape _ ? false { print("failing ejector pattern test") }
-  # problem: such-that expression was false
+  # problem: <such-that-error: false was false for <null ejector>>
   
  ejector printing
   ? { def ej; escape bind ej {}; ej }
@@ -526,7 +526,8 @@ Trinary DefineExpr
   #         patt
   #         
   
-  # problem: such-that expression was false
+  # problem: <such-that-error: println.run("patt")
+  #          false was false for 8>
   
  Returning "ejector"
   XXX in Java-E this creates a note in the trace that the ejector returned and proceeds as if the ejector was null
@@ -537,7 +538,7 @@ Trinary DefineExpr
  Scoping
   ? pragma.enable("trinary-define")
   > {def y := "NOT-AN-EJECTOR"; {def x ? false := (def y := null, y)}}
-  # problem: such-that expression was false
+  # problem: <such-that-error: false was false for null>
 
   Java-E would reject parsing and expanding the following code, so we have to test it by constructing nodes. (Note that this test does not yet care whether the failure is at node construction time or eval time.)
 
@@ -788,13 +789,13 @@ SuchThatPattern
   # value: [true, 1, true]
 
   ? {[ [2] =~ [stpv] ? (def stpev := stpv == 1), stpv, stpev ]}
-  # value: [false, <ref broken by problem: such-that expression was false>, <ref broken by problem: such-that expression was false>]
+  # value: [false, <ref broken by problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>>, <ref broken by problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>>]
 
   ? {[ def [stpv] ? (def stpev := stpv == 1) := [1], stpv, stpev ]}
   # value: [[1], 1, true]
 
   ? {[ def [stpv] ? (def stpev := stpv == 1) := [2], stpv, stpev ]}
-  # problem: such-that expression was false
+  # problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>
 
 
 Miscellaneous scoping

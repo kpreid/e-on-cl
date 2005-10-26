@@ -458,10 +458,6 @@
     :format-control "a ~A size list doesn't match a >= ~A size list pattern"
     :format-arguments (list has wants)))
 
-(defun %make-such-that-error ()
-  ;; XXX improvement: we could print the test expression and the specimen in this message
-  (make-condition 'simple-error :format-control "such-that expression was false"))
-
 (define-sequence-patt |ListPattern| (layout specimen ejector-spec &rest patterns
     &aux (coerced (gensym "ELIST"))
          (pattern-arity (length patterns)))
@@ -480,13 +476,15 @@
     layout))
 
 (define-sequence-patt |SuchThatPattern| (layout specimen ejector-spec pattern test
-    &aux (test-result (gensym "TEST")))
+    &aux (test-result (gensym "TEST"))
+         (specimen-var (gensym "STSP")))
   (values
-    (append (updating-sequence-patt pattern layout specimen ejector-spec)
+    (append `((,specimen-var ,specimen))
+            (updating-sequence-patt pattern layout specimen-var ejector-spec)
             (updating-sequence-expr test layout test-result :may-inline t)
             `((,(gensym "JUNK")
                (unless (e-is-true ,test-result)
-                 ,(eject-code ejector-spec `(%make-such-that-error))))))
+                 ,(eject-code ejector-spec `(%make-such-that-error ,specimen-var ',test))))))
     layout))
 
 ;;; --- Binding patterns ---

@@ -705,8 +705,7 @@
   (error "ref-state not overridden for a proxy-ref"))
 
 (defmethod e-call-dispatch ((ref proxy-ref) mverb &rest args)
-  (declare (ignore mverb args))
-  (error 'synchronous-call-error))
+  (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
 
 (defmethod e-send-dispatch ((ref proxy-ref) mverb &rest args)
   (with-slots (handler) ref

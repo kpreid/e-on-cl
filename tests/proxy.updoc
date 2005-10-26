@@ -31,7 +31,7 @@ The second argument to makeProxyResolver is the identity of the far reference, f
   # value: <Far ref>
   
   ? remote.hi()
-  # problem: not synchronously callable
+  # problem: not synchronously callable: <Far ref>.hi()
   
   ? pragma.enable("accumulator")
   > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remote])) }
@@ -88,7 +88,7 @@ XXX should breakage be not synchronously visible instead?
   # value: <Promise>
   
   ? remotePromise.hi()
-  # problem: not synchronously callable
+  # problem: not synchronously callable: <Promise>.hi()
   
   ? pragma.enable("accumulator")
   > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remotePromise])) }

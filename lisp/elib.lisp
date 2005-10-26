@@ -131,9 +131,21 @@
       tag
       t)))
 
-(define-condition synchronous-call-error (error) ()
+(define-condition message-condition (condition)
+  ((recipient :initarg :recipient :initform (error "no recipient") :reader message-condition-recipient)
+   (mverb :initarg :mverb :initform (error "no mverb") :reader message-condition-mverb)
+   (args :initarg :args :initform (error "no args") :reader message-condition-args)))
+
+(define-condition synchronous-call-error (error message-condition)
+  ()
   (:documentation "Indicates an attempt to synchronously call an EVENTUAL ref (i.e. a promise or remote reference.).")
-  (:report "not synchronously callable"))
+  (:report (lambda (condition stream)
+             (format stream "not synchronously callable: ~A.~A(~{~A~^, ~})"
+               (e-quote (message-condition-recipient condition))
+               (unmangle-verb (message-condition-mverb condition)) 
+               (mapcar #'e-quote 
+                       (coerce (message-condition-args condition) 
+                               'list))))))
 
 (define-condition vicious-cycle-error (error) ()
   (:documentation "Indicates that a promise resolved to itself.")
@@ -262,8 +274,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (values 'eventual nil))
 
 (defmethod e-call-dispatch ((ref promise-ref) mverb &rest args)
-  (declare (ignore mverb args))
-  (error 'synchronous-call-error))
+  (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
 
 (defmethod e-send-dispatch ((ref promise-ref) mverb &rest args)
   ; XXX provide send-only

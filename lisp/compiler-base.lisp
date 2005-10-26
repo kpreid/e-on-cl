@@ -345,6 +345,21 @@
   "This function exists to make it clear in a backtrace that the condition did not originate at this location."
   (error condition))
 
+(define-condition such-that-error (error)
+  ((specimen :initarg :specimen 
+             :initform (error "no specimen")
+             :reader such-that-error-specimen)
+   (test-expr :initarg :test-expr 
+              :initform (error "no test-expr")
+              :reader such-that-error-test-expr))
+  (:report (lambda (condition stream)
+             (format stream "~A was false for ~A"
+               (e-print (such-that-error-test-expr condition))
+               (e-print (such-that-error-specimen condition))))))
+
+(defun %make-such-that-error (specimen test-expr)
+  (make-condition 'such-that-error :specimen specimen :test-expr test-expr))
+
 ;;; --- ObjectExpr code generation ---
 
 (defun miranda-case-maybe (mverb methods &rest body)

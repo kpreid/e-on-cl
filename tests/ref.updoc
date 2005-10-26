@@ -9,6 +9,9 @@ XXX very incomplete tests - the first group originally written just to test the 
   ? r.isDone()
   # value: false
   
+  ? p.foo("bar", null)
+  # problem: not synchronously callable: <Promise>.foo("bar", null)
+  
   ? [r.resolve(1)]
   # value: [null]
   
