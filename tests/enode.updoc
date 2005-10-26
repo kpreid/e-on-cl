@@ -10,6 +10,9 @@
 ? def makeCallExpr := <import:org.erights.e.elang.evm.CallExpr>
 # value: <makeCallExpr>
 
+? makeCallExpr == <import:org.erights.e.elang.evm.makeCallExpr>
+# value: true
+
 ? def makeDefineExpr := <import:org.erights.e.elang.evm.DefineExpr>
 # value: <makeDefineExpr>
 

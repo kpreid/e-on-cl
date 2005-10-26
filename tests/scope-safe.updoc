@@ -42,13 +42,13 @@ import
   # value: [null]
 
   ? [<import>.optUncall(<elang:evm.NounExpr>)]
-  # value: [[<import:*>, "get", ["org.erights.e.elang.evm.NounExpr"]]]
+  # value: [[<import:*>, "get", ["org.erights.e.elang.evm.makeNounExpr"]]]
   
   ? [<import>.optUnget(<elang:evm.NounExpr>)]
-  # value: ["org.erights.e.elang.evm.NounExpr"]
+  # value: ["org.erights.e.elang.evm.makeNounExpr"]
   
   XXX uncall/unget on package loaders
-  XXX uncall of all varieties of subloaders
+  XXX uncall of all varieties of subloaders (vm-node is a bad general example)
 
 <elib>, <elang>
 

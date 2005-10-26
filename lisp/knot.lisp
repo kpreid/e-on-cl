@@ -510,11 +510,13 @@
             +selfless-maker-fqns+)))
 
 (defglobal +vm-node-maker-importer+
-  (let* ((prefix "org.erights.e.elang.evm."))
+  (let* ((prefixes '("org.erights.e.elang.evm.make"
+                     "org.erights.e.elang.evm.")))
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
       (:|fetch| (fqn absent-thunk
-          &aux (local-name (e.util:without-prefix fqn prefix)))
+          &aux (local-name (some (lambda (p) (without-prefix fqn p)) 
+                                 prefixes)))
         (if local-name
           (let* ((sym (find-symbol local-name :e.elang.vm-node)))
             (or (and sym
@@ -526,7 +528,9 @@
         (block opt-unget
           (do-symbols (node-type (find-package :e.elang.vm-node))
             (when (eeq-is-same-yet specimen (get node-type 'static-maker))
-              (return-from opt-unget (concatenate 'string prefix (string node-type)))))
+              (return-from opt-unget 
+                (concatenate 'string (first prefixes) 
+                                     (string node-type)))))
           nil)))))
 
 ; XXX optUnget?

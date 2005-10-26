@@ -26,6 +26,13 @@ def requireDF(condition, problemThunk) :void {
   if (!condition) { throw(problemThunk()) }
 }
 
+def makeCallExpr := <import:org.erights.e.elang.evm.makeCallExpr>
+
+def [=> NounExpr, => EExpr, => ENode, => FinalPattern, => IfExpr] := \
+  {def nodeTypeMap { to size() { return 0 } 
+                     to optExtract(key) { return [<import>["org.erights.e.elang.evm.type." + key], nodeTypeMap] }}}
+
+
 # /** Version of e__quasiParser that doesn't depend on DeepFrozen itself. */
 # def makeSubstituter := importCode["org.erights.e.elang.visitors.makeQuasiSubstituteVisitor"].eval(safeScope.with("DeepFrozen" => def stubAuditor {to audit(_, _) {return false}}))
 # def ep__quasiParser {
@@ -59,13 +66,13 @@ def DeepFrozenAuthor(DeepFrozenStamp,
   def &peekUnsealer := def _.getValue() { return getPeekBrandKit().getUnsealer() }
   def &peekBrand := def _.getValue() { return getPeekBrandKit().getBrand() }
 
-  def rtrace(x) {
-    #traceln(x)
+  def rtrace(msgThunk) {
+    #traceln(if (msgThunk =~ msg :String) {msg} else {msgThunk()})
   }
 
   # XXX sofar should be a set instead, but those aren't implemented yet
   def requireDeepFrozen(specimen, sofar, optEjector, root) :void {
-    rtrace("requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root))
+    rtrace(thunk{ "requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root) })
     def specimenKey := key(specimen)
     if (sofar.maps(specimenKey)) {
       # recursion check
@@ -87,11 +94,14 @@ def DeepFrozenAuthor(DeepFrozenStamp,
         
         # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
         if (optUncall =~ uncall ? (uncall != null)) {
-          def spreadUncall := uncall(0,2) + uncall[2]
-          
-          for component in spreadUncall {
+          def sub(_, component) {
             requireDeepFrozen(component, sofarther, optEjector, root)
           }
+          
+          sub(null, uncall[0])
+          sub(null, uncall[1])
+          List.coerce(uncall[2]).iterate(sub)
+          
           rtrace("--rDF selfless")
           return
         } else {
@@ -124,13 +134,12 @@ def DeepFrozenAuthor(DeepFrozenStamp,
               continue
             }
             
-            
             requireDeepFrozen(component, sofarther, ejectorForTranslucent, root)
           }
         } catch p {
           # XXX make the fallthrough else below eject a typed exception that we use in generating this message, so the client can know whether this is unsettled ('change your code to wait longer') or definitely not DeepFrozen ('sorry, hopeless')
           # xxx future extensions: make this exception contain (sealed) the full details of what chain of subobjects led to the non-DeepFrozen object.
-          rtrace("--rDF exiting and discarding subexception for privacy: " + E.toQuote(p))
+          rtrace(thunk{"--rDF exiting and discarding subexception for privacy: " + E.toQuote(p)})
           traceln("DeepFrozen not-yet-eventually: " + E.toQuote(p))
           throw.eject(optEjector, E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " contains references that are unsettled or not DeepFrozen")
         }
@@ -171,6 +180,7 @@ def DeepFrozenAuthor(DeepFrozenStamp,
     }
   }
 
+  /** Acts as the DeepFrozen auditor, but will not throw if the object is not acceptable. */
   bind OptionallyDeepFrozen implements DeepFrozenStamp {
     to audit(objectExpr, witness) {
       escape fail {
@@ -191,12 +201,6 @@ def DeepFrozenAuthor(DeepFrozenStamp,
       # xxx I am well aware that this code is an awful mess. I do plan to do something about it.
     
       def label := "EventuallyDeepFrozen: " + objectExpr.getQualifiedName()
-      def <vm> := <elang:evm.*>
-      def NounExpr := <elang:evm.type.NounExpr>
-      def EExpr := <elang:evm.type.EExpr>
-      def ENode := <elang:evm.type.ENode>
-      def FinalPattern := <elang:evm.type.FinalPattern>
-      def IfExpr := <elang:evm.type.IfExpr>
       
       /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'. */
       def expressionWillHaveValue(expr :Really[EExpr], 
@@ -232,7 +236,7 @@ def DeepFrozenAuthor(DeepFrozenStamp,
             requireDF(methd.getBody() =~ ifExpr :Really[IfExpr], thunk{label + ": __optSealedDispatch body is not an if"})
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
-            requireDF(ifExpr.getTest() == <vm:CallExpr>(null, e`__equalizer`, "sameEver", [brandPattern.getNoun(), e`EventuallyDeepFrozen.getPeekBrand()`], null) \
+            requireDF(ifExpr.getTest() == makeCallExpr(null, e`__equalizer`, "sameEver", [brandPattern.getNoun(), e`EventuallyDeepFrozen.getPeekBrand()`], null) \
                       && expressionWillHaveValue(e`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
                       && expressionWillHaveValue(e`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
               thunk{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
