@@ -38,6 +38,10 @@ Term guard
   
   ? Term == <type:org.quasiliteral.term.Term>
   # value: true
+  
+  check for BaseGuard
+  ? Term[]
+  # value: List[Term]
 
  Basic accept/reject
 

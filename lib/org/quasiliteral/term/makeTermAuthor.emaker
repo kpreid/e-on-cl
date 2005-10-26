@@ -28,7 +28,7 @@ def makeTermAuthor(SelflessStamp) {
     }
     
     to get(Tag, TData, Arg) {
-      def Term implements EventuallyDeepFrozen {
+      def Term extends __makeGuard(Term) implements EventuallyDeepFrozen {
         method __optSealedDispatch(brand) :any {
           if (brand == EventuallyDeepFrozen.getPeekBrand()) {
             EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
