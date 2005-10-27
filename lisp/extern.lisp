@@ -161,22 +161,31 @@
         (e-coercef pattern 'ppcre-scanner-box)
         (multiple-value-bind (match-start match-end reg-starts reg-ends)
             (cl-ppcre:scan (slot-value pattern 'scanner) input)
-          ;(print (list 'oro-results match-start match-end reg-starts reg-ends))
-          (setf result-obj (if match-start
-            (e-lambda "$matchResult" ()
-              (:|groups| () 
-                (1+ (length reg-starts)))
-              (:|group| (index) 
-                (e-coercef index 'unsigned-byte)
-                (if (= index 0)
-                  (subseq input match-start match-end)
-                  (let* ((cindex (1- index))
-                         (rstart (aref reg-starts cindex))
-                         (rend   (aref reg-ends   cindex)))
-                    (if rstart
-                      (subseq input rstart rend)
-                      nil)))))
-            nil))
+          (setf result-obj 
+            ;; XXX this match range check is what the original
+            ;; Java code, but may not be what we actually want for 
+            ;; the rx__quasiParser (as documented:
+            ;; http://www.erights.org/javadoc/org/apache/oro/text/regex/Perl5Matcher.html#matches(org.apache.oro.text.regex.PatternMatcherInput,org.apache.oro.text.regex.Pattern)
+            ;; ). Now that we've copied-and-modified
+            ;; the PerlMatchMakerMaker, do we "improve" this
+            ;; and/or move to a more natural interface to cl-ppcre?
+            (if (and match-start
+                     (= match-start 0) 
+                     (= match-end (length input)))
+              (e-lambda "$matchResult" ()
+                (:|groups| () 
+                  (1+ (length reg-starts)))
+                (:|group| (index) 
+                  (e-coercef index 'unsigned-byte)
+                  (if (= index 0)
+                    (subseq input match-start match-end)
+                    (let* ((cindex (1- index))
+                           (rstart (aref reg-starts cindex))
+                           (rend   (aref reg-ends   cindex)))
+                      (if rstart
+                        (subseq input rstart rend)
+                        nil)))))
+              nil))
           (as-e-boolean result-obj)))
       (:|getMatch| ()
         result-obj)))))

@@ -40,3 +40,8 @@ Bug: bad double-unquoting of $ hole syntax - this would die
 
   ? def rx`a\$$b` := "a$b"
   # value: "a$b"
+
+Bug: pattern not anchored - this would succeed
+  ? def rx`b` := "abc"
+  # problem: Doesn't match: abc
+  
