@@ -571,8 +571,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "-Infinity")))
 
-(defglobal +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" ()
+(defglobal +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" 
+    (:stamped +deep-frozen-stamp+
+     :doc "Operations for producing integers from other data such as strings.")
   (:|run| (value)
+    "Return the integer denoted by the given string in base ten. A leading '+' or '-' is allowed; whitespace or other extraneous characters are not."
     (e-coercef value 'string)
     (handler-case
       (parse-integer value)

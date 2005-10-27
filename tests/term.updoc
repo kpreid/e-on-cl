@@ -93,20 +93,38 @@ XXX schema parameter?
 
 XXX all builder methods
 
---- Quasi and parsing
+--- Lexer
 
   ? def makeTermLexer := <qu:term.makeTermLexer>; null
+
+  ? def lex(twine) :any { return makeTermLexer(false)(twine.asStream()).readAll() }; null
+
+  ? lex("foo")
+  # value: [["Tag", [["Ident", "foo"]]]]
+  
+  ? lex("(,)[{:]}")
+  # value: [["("], [","], [")"], ["["], ["{"], [":"], ["]"], ["}"]]
+  
+  ? lex("foo(bar)")
+  # value: [["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [")"]]
+  
+  ? lex("${9} @{10} ")
+  # value: [["Quasi$", 9], ["Quasi@", 10]]
+  
+XXX token types: integer, float, char, string, tag, punct, chars
+XXX consequence of loose ::, or malformed tags in general
+XXX consequence of non-token characters
+
+--- Quasi and parsing
+
   ? def makeTermParser := <qu:term.makeTermParser>; null
   ? def makeQBuilder := <qu:quasiterm.makeQBuilder>; null
 
+  ? def makeLexStream() :any { makeTermLexer(false)("foo".asStream()) }; null
+  
   ? def genericBuilder { 
   >   to doesQuasis() :any { true }
   >   match [v, a] { [v] + a } }; null
-
-  ? def makeLexStream() :any { makeTermLexer(false)("foo".asStream()) }; null
-  
-  ? makeLexStream().obtain(0, EIO.getALL(), EIO.getNOW(), EIO.getADVANCE(), EIO.getELEMENTS())
-  # value: [["Tag", [["Ident", "foo"]]]]
 
 XXX all term-language tokens
 

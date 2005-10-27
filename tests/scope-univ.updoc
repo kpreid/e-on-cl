@@ -220,7 +220,7 @@ __identityFunc
 
 __makeInt
 
-  ? __makeInt
+  ? __makeInt :DeepFrozen
   # value: <makeInt>
 
   ? __makeInt("3416")
