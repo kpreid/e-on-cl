@@ -156,6 +156,21 @@ isBare
 ? "abc" :DeepFrozen
 # value: "abc"
 
+String#contains/1
+
+  xxx should this merely be false?
+  ? "abc".contains("b")
+  # problem: the String "b" doesn't coerce to a char
+  
+  ? "abc".contains('b')
+  # value: true
+
+  ? "".contains('b')
+  # value: false
+
+  ? "abc".contains('d')
+  # value: false
+
 Characters
 
   ? 'a' :DeepFrozen

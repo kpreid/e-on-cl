@@ -54,6 +54,10 @@
   (:|endsWith| (this suffix)
     "Return whether 'prefix' is a suffix of this string."
     (as-e-boolean (string= this suffix :start1 (max 0 (- (length this) (length suffix))))))
+  (:|contains| (this element)
+    "Return whether this string contains the given character."
+    (e-coercef element 'character)
+    (as-e-boolean (find element this)))
   ; XXX simplify structure of both split and replaceAll
   (:|split| (this sep)
     "Return a list of substrings of this string which are separated by the string 'sep'. Will return empty elements at the end. The empty string results in a one-element result list."
