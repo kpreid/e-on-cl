@@ -250,7 +250,8 @@
   e.elib:make-equalizer
   e.elib:cl-type-simple-expr
   e.elib:eeq-same-yet-hash
-  e.elib:make-text-writer-to-cl-stream))
+  e.elib:make-text-writer-to-cl-stream
+  e.elib:e-import))
 
 (cl:defpackage :e.elib.tables
   (:nicknames :e.tables)

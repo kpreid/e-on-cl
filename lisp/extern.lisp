@@ -46,46 +46,62 @@
              ; XXX this is probably not a very reliable way of translating to CL pathnames
              (make-pathname :directory (cons :absolute (coerce (subseq path-components 0 (1- (length path-components))) 'list))
                             :name      (aref path-components (1- (length path-components))))))
-    (e-lambda "FileGetter" ()
-      (:|__printOn| (tw)
-        (e-coercef tw +the-text-writer-guard+)
-        (e. tw |print| "<file://")
-        (if (/= 0 (length path-components))
-          (loop for x across path-components do
-            (e. tw |print| "/" x))
-          (e. tw |print| "/"))
-        (e. tw |print| ">")
-        nil)
-      (:|getPath| ()
-        (with-text-writer-to-string (tw)
-          (loop for x across path-components do
+    (with-result-promise (file)
+      (e-lambda "FileGetter" ()
+        (:|__printOn| (tw)
+          (e-coercef tw +the-text-writer-guard+)
+          (e. tw |print| "<file://")
+          (if (/= 0 (length path-components))
+            (loop for x across path-components do
               (e. tw |print| "/" x))
-          (when (= 0 (length path-components))
-            ; must be the root
-            ; xxx Java-E appends a / to the regular path iff the file exists and is a directory. should we do this?
-            (e. tw |print| "/"))))
-      (:|get| (subpath)
-        (e-coercef subpath 'string)
-        (let* ((splat (e. subpath |split| "/")))
-          (make-file-getter
-            (concatenate 'vector
-              path-components
-              (loop for component across splat
-                    when (/= 0 (length component))
-                    collect component)))))
-      (:|getTwine| ()
-        ; XXX doesn't actually add twine info
-        (read-entire-file (get-cl-pathname)))
-      (:|textReader| (&aux (file (open (get-cl-pathname) :if-does-not-exist :error)))
-        ; XXX external format, etc.
-        (e-lambda "textReader" (:doc "Java-E compatibility")
-          ; XXX there'll probably be other situations where we want Readers so we should have a common implementation. we could even write it in E code?
-          (:|readText| ()
-            "Return the entire remaining contents of the file."
-            (read-entire-stream file))))
-      (:|iterate| (f)
-        (loop for subpath in (cl-fad:list-directory (get-cl-pathname))
-          do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath)))))))
+            (e. tw |print| "/"))
+          (e. tw |print| ">")
+          nil)
+        (:|getPath| ()
+          (with-text-writer-to-string (tw)
+            (loop for x across path-components do
+                (e. tw |print| "/" x))
+            (when (= 0 (length path-components))
+              ; must be the root
+              ; xxx Java-E appends a / to the regular path iff the file exists and is a directory. should we do this?
+              (e. tw |print| "/"))))
+        (:|exists| () 
+          "Return whether an actual file designated by this object currently exists."
+          (as-e-boolean
+            (some #'probe-file 
+              (let ((p (get-cl-pathname)))
+                (list p
+                      (cl-fad:pathname-as-directory p))))))
+        (:|get| (subpath)
+          (e-coercef subpath 'string)
+          (let* ((splat (e. subpath |split| "/")))
+            (make-file-getter
+              (concatenate 'vector
+                path-components
+                (loop for component across splat
+                      when (/= 0 (length component))
+                      collect component)))))
+        (:|getOpt| (subpath)
+          ;; XXX needs tests
+          "Return the file at 'subpath' in this directory if it exists, otherwise null."
+          (let ((sub (e. file |get| subpath)))
+            (when (e-is-true (e. sub |exists|))
+              sub)))
+        (:|getTwine| ()
+          ; XXX doesn't actually add twine info
+          (read-entire-file (get-cl-pathname)))
+        (:|textReader| (&aux (file (open (get-cl-pathname) :if-does-not-exist :error)))
+          ; XXX external format, etc.
+          (e-lambda "textReader" (:doc "Java-E compatibility")
+            ; XXX there'll probably be other situations where we want Readers so we should have a common implementation. we could even write it in E code?
+            (:|readText| ()
+              "Return the entire remaining contents of the file."
+              (read-entire-stream file))))
+        (:|iterate| (f)
+          (loop for subpath in (cl-fad:list-directory (get-cl-pathname))
+            do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))
+        (:|readOnly| ()
+          (e. (e-import "org.cubik.cle.file.makeReadOnlyFile") |run| file))))))
 
 ; --- GC ---
 

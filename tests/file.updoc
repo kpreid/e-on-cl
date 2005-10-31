@@ -1,0 +1,76 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+<file>
+
+ root
+
+  ? <file>
+  # value: <file:///>
+  
+  ? <file>.getPath()
+  # value: "/"
+  
+ a directory
+  
+  ? def home := <file>[interp.getProps()["e.home"]]; null
+
+ a file in the directory
+  
+  ? def runeScriptFile := home["clrune"]; null
+
+  check print  
+  ? def `<file:///@homeFragment/clrune>` := E.toQuote(runeScriptFile); null
+  
+  ? runeScriptFile.getPath().replaceAll(homeFragment, "<home>")
+  # value: "/<home>/clrune"
+  
+  ? runeScriptFile.getTwine().split("\n")[0]
+  # value: "#!/bin/bash"
+
+ directory listing
+ 
+  ? for name ? (name !~ `.@_`) => subfile in home["jlib"] { 
+  >   println(`$name ${E.toQuote(subfile).replaceAll(homeFragment, "<home>")}`) }
+  # stdout: parseEToSExpression.emaker <file:///<home>/jlib/parseEToSExpression.emaker>
+  #         
+
+ exists and getOpt
+
+  ? home.exists()
+  # value: true
+ 
+  ? runeScriptFile.exists()
+  # value: true
+  
+  ? home["nonexistent"].exists()
+  # value: false
+ 
+  ? home.getOpt("clrune").getPath() == runeScriptFile.getPath()
+  # value: true
+  
+  ? [home.getOpt("nonexistent")]
+  # value: [null]
+
+ readOnly
+ 
+  ? def roHome := home.readOnly(); null
+  
+  x ? E.toQuote(roHome).replaceAll(homeFragment, "<home>")
+  x # value: "<file:///<home>>.readOnly()"
+  
+  ? roHome.exists()
+  # value: true
+  
+  ? roHome.__respondsTo("setText", 1)
+  # value: false
+
+XXX
+  basics: get subdirs, getText/getTwine of contents, iteration
+
+  all file operations
+  all dir operations
+  path construction is independent of current filesystem state
+  readOnly is properly transitive
+
+XXX we need to test writing, but it'd be difficult to test in a harmless way - if it can't affect anything then it's not working with the 'real' filesystem interface code, unless we're on a cap-OS, which is unlikely '

@@ -1,0 +1,20 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def AssocFunc := any # XXX point to interface
+
+def File := <import:org.cubik.cle.makeAdvisoryInterface>(
+interface "org.cubik.cle.file.File" {
+  to exists() :boolean
+  to get(subpath :String) :File
+  to getOpt(subpath :String) :nullOk[File]
+  to getText() :String # XXX failure?
+  to getTwine() :Twine # XXX failure?
+  to readOnly() :File
+  to iterate(f :AssocFunc) :void
+})
+
+# XXX all methods, docs
