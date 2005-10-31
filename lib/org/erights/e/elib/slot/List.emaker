@@ -6,8 +6,16 @@ pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def List0 extends __makeGuard(List0) {
+def List0 extends __makeGuard(List0) implements EventuallyDeepFrozen {
+  
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
   to __printOn(out :TextWriter) {
     out.print("List")
   }
@@ -23,7 +31,13 @@ def List0 extends __makeGuard(List0) {
   }
 
   to get(elementGuard) {
-    def List1 extends __makeGuard(List1) {
+    def List1 extends __makeGuard(List1) implements EventuallyDeepFrozen {
+
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
 
       to coerce(var specimen, optEjector) {
         specimen := List0.coerce(specimen, optEjector)

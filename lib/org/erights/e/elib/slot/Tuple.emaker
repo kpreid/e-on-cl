@@ -5,13 +5,27 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
-def Tuple0 {
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def Tuple0 implements EventuallyDeepFrozen {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
   to __printOn(out :TextWriter) {
     out.print("Tuple")
   }
 
   match [=="get", elementGuards] {
-    def Tuple1 extends __makeGuard(Tuple1) {
+    def Tuple1 extends __makeGuard(Tuple1) implements EventuallyDeepFrozen {
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+
       to __printOn(out :TextWriter) {
         out.quote(Tuple0)
         out.quote(elementGuards)

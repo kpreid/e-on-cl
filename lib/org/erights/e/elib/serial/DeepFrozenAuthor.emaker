@@ -21,6 +21,8 @@ def Really {
   }
 }
 
+def ConstList := <import:org.cubik.cle.prim.ConstList>
+
 /** Version of safeScope["require"] that has fewer dependencies. */
 def requireDF(condition, problemThunk) :void {
   if (!condition) { throw(problemThunk()) }
@@ -100,7 +102,7 @@ def DeepFrozenAuthor(DeepFrozenStamp,
           
           sub(null, uncall[0])
           sub(null, uncall[1])
-          List.coerce(uncall[2]).iterate(sub)
+          ConstList.coerce(uncall[2]).iterate(sub)
           
           rtrace("--rDF selfless")
           return
@@ -205,7 +207,8 @@ def DeepFrozenAuthor(DeepFrozenStamp,
       /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'. */
       def expressionWillHaveValue(expr :Really[EExpr], 
                                   slot :any,
-                                  precedingNodes :Really[List[ENode]]) :boolean {
+                                  precedingNodes # :Really[List[ENode]]
+                                 ) :boolean {
         return expr =~ nounExpr :NounExpr \
                && witness.getSlot(def noun := nounExpr.getName()) == slot \
                && accum true for p in precedingNodes {
@@ -216,7 +219,7 @@ def DeepFrozenAuthor(DeepFrozenStamp,
       def auditorExprs := objectExpr.getAuditorExprs()
       
       # The matcher is irrelevant provided that our method exists
-      if (script.getOptMethods() =~ methds :Really[List]) {
+      if (script.getOptMethods() =~ methds :Really[ConstList]) {
         # both 'method' and 'methods' are E keywords
 
         requireDF(

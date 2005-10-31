@@ -228,10 +228,10 @@ notNull
 
 Tuple
 
-  ? Tuple
+  ? Tuple :DeepFrozen
   # value: Tuple
   
-  ? Tuple[any]
+  ? Tuple[any] :DeepFrozen
   # value: Tuple[any]
   
   ? testGuardMany([["one", 1], ["two", 2.2], ["three"], ["four", 4.0, 4], [5.0, 6.3]], Tuple[String, float64])
@@ -256,8 +256,11 @@ __Portrayal
   
 List
 
-  ? List
+  ? List :DeepFrozen
   # value: List
+  
+  ? List[float64] :DeepFrozen
+  # value: List[float64]
 
   ? {def t :List[float64] := [1, 2.0, 3.4]; t}
   # value: [1.0, 2.0, 3.4]
@@ -311,7 +314,7 @@ Union guards
   ? testGuardMany(["a", 'b', 3, 4.0], float64 | char)
   # value: ['b', 3.0, 4.0]
   
-  ? any[float64, char]
+  ? any[float64, char] :DeepFrozen
   # value: any[float64, char]
   
   test that union guard has BaseGuard methods
