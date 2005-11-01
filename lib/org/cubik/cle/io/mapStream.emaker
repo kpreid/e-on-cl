@@ -17,9 +17,8 @@ def terminate implements DeepFrozen { to run(stream, terminator) {
   }
 }}
 
-def mapStream implements DeepFrozen {
-  /** Return an InStream which takes elements from the given InStream and provides the result of the given function applied to lists of elements. */
-  to chunked(outType :Guard, sourceStream, func) :any {
+def chunkedMapStream implements DeepFrozen {
+  to run(outType :Guard, sourceStream, func, namer) :any {
     def update
     
     Ref.whenResolved(sourceStream.terminates(), def updateOnTerminate(_) {
@@ -28,7 +27,7 @@ def mapStream implements DeepFrozen {
   
     def ourStream := makeInStreamShell(outType, def backend, def mapStreamImpl {
       to __printOn(tw :TextWriter) {
-        tw.print(func)
+        tw.print(namer)
         tw.write("-")
         tw.quote(sourceStream)
       }
@@ -51,6 +50,9 @@ def mapStream implements DeepFrozen {
     bind update() {
       # XXX propagate remaining
       backend.setAvailable(sourceStream.available())
+      if ((def r := sourceStream.remaining()) != EIO::ALL) {
+        backend.resolveRemaining(r)
+      }
       if (Ref.isResolved(def t := sourceStream.terminates())) {
         terminate(ourStream, t)
       }
@@ -60,9 +62,24 @@ def mapStream implements DeepFrozen {
     
     return ourStream 
   }
+}
+
+def mapStream implements DeepFrozen {
+  /** Return an InStream which takes elements from the given InStream and provides the results of the given function applied to each element. */
+  to run(outType, sourceStream, func) :any {
+    def buffer := [].diverge(outType)
+    return chunkedMapStream(outType, sourceStream, def unchunker(l) {
+      buffer.setSize(l.size())
+      for i => x in l { buffer.put(i, func(x)) }
+      return buffer.snapshot()
+    }, func)
+  }
+
+  /** Return an InStream which takes elements from the given InStream and provides the result of the given function applied to lists of elements. */
+  to chunked(outType, sourceStream, func) :any {
+    return chunkedMapStream(outType, sourceStream, func, func)
+  }
   
 }
 
 # XXX should there be a failure-problem-mapping function parameter?
-
-# XXX this file has no tests except in that it is currently used by charsets.emaker
