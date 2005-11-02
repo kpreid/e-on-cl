@@ -1,0 +1,72 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def <parser> := <import:org.cubik.cle.parser.*>; null
+  
+  ? def makeLALR1Parser := <parser:makeLALR1Parser>
+  # value: <makeLALR1Parser>
+  
+  ? def s {}; def l {}; def r {}; def id {}; def star {}; def eq {}; null
+  
+  x ? def mapV(f, coll) { return accum [] for v in coll {_.with(f(v))}}; null
+  ? def mapStream := <import:org.cubik.cle.io.mapStream>; null
+  
+  ? def pr := __makeList # XXX to be eliminated
+  > null
+  
+  ? def parser := makeLALR1Parser("from cl-yacc test 4-20",
+  >                               s,
+  >                               [id, star, eq],
+  >                               [[s, [l, eq, r]],
+  >                                [s, [r]],
+  >                                [l, [star, r]],
+  >                                [l, [id]],
+  >                                [r, [l]]],
+  >                               ["tokenFunction" => \
+  >                                def identityValues(s) :any { [s, s] }])
+  # value: <from cl-yacc test 4-20 LALR(1) parser>
+  
+  ? parser.parse([star, id, eq, star, star, id].asStream())
+  # value: [[<star>, [[<id>]]], <eq>, [[<star>, [[<star>, [[<id>]]]]]]]
+  
+  ? parser.parse([eq].asStream())
+  # value: <ref broken by problem: parse error: expected one of [<id>, <star>], got <eq>>
+
+
+Actions
+
+  ? def parser := makeLALR1Parser("action test",
+  >                               "a",
+  >                               ["c"],
+  >                               [["a", ["b"], 
+  >                                   def _(x) :any {`[$x]`}],
+  >                                ["b", ["c", "c"], 
+  >                                   def _(x,y) :any {`$x $y`}]],
+  >                               ["tokenFunction" => \
+  >                                def _(s) :any { [s(0,1), s] }])
+  # value: <action test LALR(1) parser>
+
+  ? parser.parse(["carrots", "celery"].asStream())
+  # value: "[carrots celery]"
+
+quasi-parser
+
+  ? def lalr1__quasiParser := makeLALR1Parser.getLalr1__quasiParser()
+  # value: <lalr1__quasiParser>
+  
+  ? def parser := lalr1`"quasi-form cl-yacc test 4-20" := s.
+  >                     s := l $eq r.
+  >                     s := r.
+  >                     l := $star r.
+  >                     l := $id.
+  >                     r := l.`
+  # value: <quasi-form cl-yacc test 4-20 quasi-defined LALR(1) parser>
+  
+  ? parser.parse(mapStream(any, [star, id, eq, star, star, id].asStream(), identityValues))
+  # value: [[<star>, [[<id>]]], <eq>, [[<star>, [[<star>, [[<id>]]]]]]]
+
+XXX parse error details
+XXX error propagation if the stream fails
+XXX eof errors
+XXX actions
+XXX quasi's behavior if start symbol is undefined

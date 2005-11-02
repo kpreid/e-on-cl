@@ -1,0 +1,250 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("dot-props")
+pragma.enable("verb-curry")
+pragma.enable("accumulator")
+pragma.enable("trinary-define")
+
+def mapStream := <import:org.cubik.cle.io.mapStream>
+
+def mapV implements DeepFrozen {
+  to run(f, coll) { return accum [] for v in coll {_.with(f(v))}}}
+
+def GSymbol := any
+def GProduction := any[Tuple[any, List[any]],
+                       Tuple[any, List[any], any]]
+
+def makeLALR1ParserAuthor { # implements DeepFrozen
+  to run(lisp) {
+
+    # XXX duplicated code from IPAuthor.emaker
+    def intern := lisp["CL", "INTERN"]::"function"
+    def read := lisp["CL", "READ-FROM-STRING"]::"function"
+    def l__quasiParser {
+      to valueMaker(t) {
+        return def vm {
+          to substitute(values) { return read(simple__quasiParser.valueMaker(t).substitute(values)) }
+        } 
+      }
+    }
+    def <kw> { to get(k :String) { return intern(k, "KEYWORD") }}
+    
+    { def asdfOperate := lisp["ASDF", "OPERATE"]::"function"
+      def load_op := intern("LOAD-OP", "ASDF")
+      
+      # XXX :verbose nil for asdf loads
+      asdfOperate(load_op, intern("YACC", "KEYWORD"))
+    }
+    
+    def clCoerce := lisp["CL", "COERCE"]::"function"
+    def makeSymbol := lisp["CL", "MAKE-SYMBOL"]::"function"
+    def fdefinition := lisp["CL", "FDEFINITION"]::"function"
+    def eToLispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
+    def eToLispMVFunction := lisp["E.KNOT", "E-TO-LISP-MV-FUNCTION"]::"function"
+    def yaccMakeParser := lisp["YACC", "MAKE-PARSER"]::"function"
+    def yaccMakeGrammar := lisp["YACC", "MAKE-GRAMMAR"]::"function"
+    def yaccMakeProduction := lisp["YACC", "MAKE-PRODUCTION"]::"function"
+    def yaccParseWithLexer := lisp["YACC", "PARSE-WITH-LEXER"]::"function"
+    def YaccParseErrorT := lisp.unsealingConditionGuard(l`yacc:yacc-parse-error`)
+       
+    def ypeTerminal := lisp["YACC", "YACC-PARSE-ERROR-TERMINAL"]::"function"
+    def ypeExpectedTerminals := lisp["YACC", "YACC-PARSE-ERROR-EXPECTED-TERMINALS"]::"function"
+
+    def mapToSymbol(input, map) {
+      return map.fetch(
+        input, 
+        thunk {map[input] := makeSymbol(E.toString(input))})
+    }
+
+    def makeLALR1Parser {
+      to run(label :String, 
+             startSymbol :GSymbol,
+             terminals :List[GSymbol],
+             productions :List[GProduction],
+             [=> precedence :List[GSymbol] := [],
+              => tokenFunction]) { 
+             # , optWarningHandler
+        
+        def symbolsFlex := [].asMap().diverge()
+        
+        def convertSymbol(i) { return mapToSymbol(i, symbolsFlex) }
+        
+        def terminalsSet := mapV(convertSymbol, terminals).asSet()
+             
+        def yp := yaccMakeParser(
+          yaccMakeGrammar(
+            <kw:NAME>, makeSymbol(label), 
+            <kw:START-SYMBOL>, convertSymbol(startSymbol), 
+            <kw:TERMINALS>, clCoerce(terminalsSet.getElements(), l`cl:list`),
+            <kw:PRECEDENCE>, clCoerce(mapV(convertSymbol, precedence), l`cl:list`),
+            <kw:PRODUCTIONS>, clCoerce(accum [] for [fs, derives] + actionSection in productions {
+              _.with(yaccMakeProduction(
+                       convertSymbol(fs),
+                       clCoerce(mapV(convertSymbol, derives), l`cl:list`),
+                       <kw:ACTION>,
+                       switch (actionSection) {
+                         match [action] { eToLispFunction(action) }
+                         match [] { fdefinition(l`cl:vector`) }
+                       }))
+             }, l`cl:list`)))
+        
+        def parser {
+          to __printOn(tw :TextWriter) {
+            tw.write("<")
+            tw.print(label)
+            tw.write(" LALR(1) parser>")
+          }
+          
+          to parse(stream) {
+            # XXX error path
+            try {
+              return yaccParseWithLexer(
+                eToLispMVFunction(thunk {
+                  if (stream.remaining() != 0) {
+                    def [sym, value] := tokenFunction(stream.read(1, 1)[0])
+                    def ysym := convertSymbol(sym)
+                    if (!terminalsSet.contains(ysym)) {
+                      throw(`${E.toQuote(sym)} is not a terminal symbol`)
+                    }
+                    [ysym, value]
+                  } else {
+                    [null, null]
+                  }
+                }), 
+                yp)
+            } catch p :YaccParseErrorT {
+              # XXX provision for source spans
+              return Ref.broken(`parse error: expected one of ${E.toQuote(clCoerce(ypeExpectedTerminals(p), l`cl:vector`))}, got ${E.toQuote(ypeTerminal(p))}`)
+            }
+          }
+        }
+        
+        return parser
+      }
+      
+      to getLalr1__quasiParser() {
+        # XXX not cached
+        
+        def listAction(item, list) { return [item] + list }
+        
+        def lex(textIn) {
+          # XXX get a better lexer library/pattern
+          var text := textIn.read(EIO::ALL, EIO::ALL)
+          #traceln(`text is ->$text<-, match ${text =~ rx`(?s)"(@mid.*)`} ->$mid<-`)
+          def tokens := [].diverge()
+          
+          while (!(text <=> "")) {
+            switch (text) {
+              
+              match rx`(?s)\s+(@r.*)` { text := r }
+  
+              match rx`(?s)\.(@r.*)` {
+                text := r
+                tokens.push(["end", null])
+              }
+  
+              match rx`(?s):=(@r.*)` {
+                text := r
+                tokens.push(["derives", null])
+              }
+  
+              match rx`(?s)(@t[$$@@])\{(@n[0-9+]+)\}(@r.*)` {
+                text := r
+                tokens.push(["Quasi" + t, __makeInt(n)])
+              }
+            
+              match rx`(?s)(@t[a-zA-Z_][a-zA-Z_0-9-]*)(@r.*)` { 
+                # XXX Unicode character categories
+                # XXX the character syntax here was arbitrarily copied from the TermLexer
+                text := r
+                tokens.push(["symbol", t])
+              }
+
+              match rx`(?s)"(@mid.*)` {
+                def lexerRet := __return
+                def rx`(?s)(@t(?:[^@@$$"]|@@@@|$$$$|\\[\\"])*)"(@r.*)` := \
+                  (mid, def fail(p) {
+                          lexerRet(Ref.broken(`unclosed/malformed string literal ($p): "$mid`))
+                        })
+                # XXX doesn't handle \<doesn't need quoting>
+                text := r
+                def unquote := t.replaceAll("@@", "@").replaceAll("$$", "$").replaceAll("\\\\", "\\").replaceAll("\\\"", "\"")
+                tokens.push(["string", t])
+              }
+
+              match _ { return Ref.broken(`unexpected grammar token: $text`) }
+            }
+          }
+          return tokens.snapshot().asStream()
+        }
+        
+        def metaparser := makeLALR1Parser(
+          "grammar",
+          "grammar",
+          ["string", "derives", "symbol", "Quasi$", "end"],
+          [["grammar", ["string", "derives", "item", "end", "productions"],
+              def _(name, _, start, _, productions) {
+                
+                def terminalSymbolsFlex := [].diverge()
+                for [_, gsyms] + _ in productions {
+                  for quasiSym :int in gsyms {
+                    terminalSymbolsFlex.push(quasiSym)
+                  }
+                }
+                
+                def ePlainParser := makeLALR1Parser(name, start, terminalSymbolsFlex.snapshot(), productions, ["tokenFunction" => __identityFunc])
+                
+                def valueMaker {
+                  to substitute(args :List) {
+                    def terminalMap := accum [].asMap() for i => arg in args { _.with(arg, i) }
+                    require(terminalMap.size() == args.size(), thunk {`duplicate terminals in $args`})
+                    def quasiResultParser {
+                      to __printOn(tw :TextWriter) {
+                        tw.write("<")
+                        tw.print(name)
+                        tw.write(" quasi-defined LALR(1) parser>")
+                      }
+                    
+                      to parse(stream) {
+                        return ePlainParser.parse(mapStream(any, stream,
+                          def quasiParserSymbolizer(token) {
+                            def [sym, val] := token
+                            return [terminalMap[sym], val]
+                          }))
+                      }
+                    }
+                    
+                    return quasiResultParser
+                  }
+                }
+                return valueMaker
+              }],
+           ["productions", [], thunk{[]}],
+           ["productions", ["production", "productions"],
+              listAction],
+           ["production", ["symbol", "derives", "seq", "end"],
+              def _(symbol,_,seq,_) {
+                return [symbol, seq]
+              }],
+           ["seq", [], thunk{[]}],
+           ["seq", ["item", "seq"], listAction],
+           ["item", ["symbol"], __identityFunc],
+           ["item", ["Quasi$"], __identityFunc]],
+          ["tokenFunction" => __identityFunc])
+        
+        def lalr1__quasiParser {
+          to valueMaker(template :String) {
+            return metaparser.parse(lex(template.asStream()))
+          }
+        }
+        
+        return lalr1__quasiParser
+      }
+    }
+    
+    return makeLALR1Parser
+  }
+}

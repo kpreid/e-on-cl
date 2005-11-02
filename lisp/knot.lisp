@@ -307,6 +307,7 @@
     (:|getValue| ()
       "CL:SYMBOL-VALUE"
       (symbol-value symbol))
+    ;; XXX a useful additional feature would be a version of getFunction which ref-shortens any arguments to the function; when we add this, review where it should be used
     (:|getFunction| ()
       "CL:SYMBOL-FUNCTION with a wrapper"
       (wrap-function (symbol-function symbol)))
@@ -327,12 +328,25 @@
     (multiple-value-bind (symbol status) (find-symbol symbol-name package-name)
       (if status
         (make-symbol-accessor symbol)
-        (error "the symbol ~S does not exist in ~S" symbol-name package-name))))))
+        (error "the symbol ~S does not exist in ~S" symbol-name package-name))))
+  (:|unsealingConditionGuard| (class-name)
+    "Return a guard which accepts and unseals thrown (that is, SIGNALed) conditions of the given class."
+    (e-lambda "$unsealingConditionGuard" 
+        (:stamped +deep-frozen-stamp+)
+      (:|coerce| (specimen opt-ejector)
+        (let ((c (e-problem-unseal (ref-shorten specimen))))
+          (if (typep c class-name)
+            c
+            (eject-or-ethrow opt-ejector
+              (format nil "~A is not a ~S, even unsealed" (e-quote specimen) class-name)))))))))
 
 (defun e-to-lisp-function (e-function)
   "Wrap an E function (object with run/* methods) as an equivalent Lisp function."
-  ; XXX it would be nice to set up a function-name based on the e-function's print. Can this be done without EVAL?
   (lambda (&rest args) (e-call e-function "run" args)))
+
+(defun e-to-lisp-mv-function (e-function)
+  "Wrap an E function (object with run/* methods) as an equivalent Lisp function, treating a returned ConstList as multiple values."
+  (lambda (&rest args) (values-list (coerce (e-coerce (e-call e-function "run" args) 'vector) 'list))))
 
 ; --- scope construction utilities ---
 
@@ -620,6 +634,12 @@ If a log message is produced, context-thunk is run to produce a string describin
   (lazy-value-scope ("__cle_safe_extern" "")
     ("org.apache.oro.text.regex.Perl5Compiler" e.extern:+rx-perl5-compiler+)
     ("org.apache.oro.text.regex.Perl5Matcher"  e.extern:+rx-perl5-matcher+)
+    
+    ("org.cubik.cle.parser.makeLALR1Parser"
+     (e. (e-import "org.cubik.cle.parser.makeLALR1ParserAuthor") 
+         ;; XXX smaller authority: actually just wants access to cl-yacc
+         |run| +lisp+))
+    
     ("org.cubik.cle.prim.parser"               e.syntax:+prim-parser+)
     ("org.cubik.cle.prim.ePrinter"             e.syntax:+e-printer+)
     ("org.cubik.cle.prim.makeFirstCharSplitter" +make-first-char-splitter+)
