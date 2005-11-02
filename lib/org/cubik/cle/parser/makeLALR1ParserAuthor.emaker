@@ -126,7 +126,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
       }
       
       to getLalr1__quasiParser() {
-        # XXX not cached
+        # XXX move this to a separate emaker
         
         def listAction(item, list) { return [item] + list }
         
@@ -149,6 +149,11 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
               match rx`(?s):=(@r.*)` {
                 text := r
                 tokens.push(["derives", null])
+              }
+  
+              match rx`(?s)=>(@r.*)` {
+                text := r
+                tokens.push(["yields", null])
               }
   
               match rx`(?s)(@t[$$@@])\{(@n[0-9+]+)\}(@r.*)` {
@@ -184,16 +189,51 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
         def metaparser := makeLALR1Parser(
           "grammar",
           "grammar",
-          ["string", "derives", "symbol", "Quasi$", "end"],
+          ["string", "derives", "yields", "symbol", "Quasi$", "end"],
           [["grammar", ["string", "derives", "item", "end", "productions"],
-              def _(name, _, start, _, productions) {
+              def _(name, _, start, _, qproductions) {
                 
                 def terminalSymbolsFlex := [].diverge()
-                for [_, gsyms] + _ in productions {
-                  for quasiSym :int in gsyms {
-                    terminalSymbolsFlex.push(quasiSym)
-                  }
-                }
+                def productions := 
+                  accum [] for [left, right] + actionList in qproductions {_.with(
+                    # collect the indexes of values resulting from terminals,
+                    # which have no actions and therefore don't have nor need
+                    # our qpIntermediate gimmick
+                    var leaves := [].asSet()
+                    
+                    for argPosition => quasiSym :int in right {
+                      terminalSymbolsFlex.push(quasiSym)
+                      leaves with= argPosition
+                    }
+                    # cl-yacc doesn't allow parameterizing the actions after
+                    # the grammar has been built, so the quasiStubAction
+                    # generates closures which are supplied with the 
+                    # ValueMaker#substitute args after the parse finishes
+                    def quasiStubAction {
+                      match [=="run", args] {
+                        def qpIntermediate(qSubArgs) {
+                          def userArgs := \
+                            accum [] for i => parg in args { _.with(
+                              if (leaves.contains(i)) {
+                                # a value from a terminal
+                                parg
+                              } else {
+                                # parg is another qpIntermediate
+                                parg(qSubArgs)
+                              }
+                            )}
+                          return \
+                            if (actionList =~ [actionFnIndex]) {
+                              E.call(qSubArgs[actionFnIndex], "run", userArgs)
+                            } else {
+                              userArgs
+                            }
+                        }
+                      }
+                    }
+                    [left, right, quasiStubAction]
+                    
+                  )}
                 
                 def ePlainParser := makeLALR1Parser(name, start, terminalSymbolsFlex.snapshot(), productions, ["tokenFunction" => __identityFunc])
                 
@@ -209,11 +249,13 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
                       }
                     
                       to parse(stream) {
-                        return ePlainParser.parse(mapStream(any, stream,
+                        def intermediate := ePlainParser.parse(mapStream(any, stream,
                           def quasiParserSymbolizer(token) {
                             def [sym, val] := token
                             return [terminalMap[sym], val]
                           }))
+                        
+                        return intermediate.run(args)
                       }
                     }
                     
@@ -228,6 +270,10 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
            ["production", ["symbol", "derives", "seq", "end"],
               def _(symbol,_,seq,_) {
                 return [symbol, seq]
+              }],
+           ["production", ["symbol", "derives", "seq", "yields", "Quasi$", "end"],
+              def _(symbol,_,seq,_,actionIndex,_) {
+                return [symbol, seq, actionIndex]
               }],
            ["seq", [], thunk{[]}],
            ["seq", ["item", "seq"], listAction],

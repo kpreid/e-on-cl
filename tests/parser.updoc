@@ -65,8 +65,20 @@ quasi-parser
   ? parser.parse(mapStream(any, [star, id, eq, star, star, id].asStream(), identityValues))
   # value: [[<star>, [[<id>]]], <eq>, [[<star>, [[<star>, [[<id>]]]]]]]
 
+quasi-parser with actions
+
+  ? def calls(verb) :any { def caller { 
+  >   match [=="run", [rec] + args] { 
+  >     E.call(rec, verb, args) }}}
+  > null
+
+  ? lalr1`"sums" := sum.
+  >       sum := ${'1'} => ${calls("getCodepoint")}. 
+  >       sum := sum ${'+'} sum => ${def _(l,_,r) :any {l + r}}.
+  >      `.parse(mapStream(any, "1+1+1".asStream(), identityValues))
+  # value: 147
+
 XXX parse error details
 XXX error propagation if the stream fails
 XXX eof errors
-XXX actions
 XXX quasi's behavior if start symbol is undefined
