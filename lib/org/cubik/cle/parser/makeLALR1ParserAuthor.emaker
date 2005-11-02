@@ -235,12 +235,15 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
                     
                   )}
                 
-                def ePlainParser := makeLALR1Parser(name, start, terminalSymbolsFlex.snapshot(), productions, ["tokenFunction" => __identityFunc])
+                def terminalSymbols := terminalSymbolsFlex.snapshot()
+                
+                def ePlainParser := makeLALR1Parser(name, start, terminalSymbols, productions, ["tokenFunction" => __identityFunc])
                 
                 def valueMaker {
                   to substitute(args :List) {
-                    def terminalMap := accum [].asMap() for i => arg in args { _.with(arg, i) }
-                    require(terminalMap.size() == args.size(), thunk {`duplicate terminals in $args`})
+                    def terminalMap := accum [].asMap() for x in terminalSymbols { _.with(args[x], x) }
+                    require(terminalMap.size() == terminalSymbols.size(), thunk {`duplicate terminals in $args`}) # this could be done more simply with a strict 'with'
+                    
                     def quasiResultParser {
                       to __printOn(tw :TextWriter) {
                         tw.write("<")

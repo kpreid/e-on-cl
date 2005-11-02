@@ -78,6 +78,14 @@ quasi-parser with actions
   >      `.parse(mapStream(any, "1+1+1".asStream(), identityValues))
   # value: 147
 
+
+Bug: actions were being counted as terminals for the duplicate terminal check
+
+  ? lalr1`"_" := x. x := ${"y"} => ${"y"}.`
+  # value: <_ quasi-defined LALR(1) parser>
+
+
+
 XXX parse error details
 XXX error propagation if the stream fails
 XXX eof errors
