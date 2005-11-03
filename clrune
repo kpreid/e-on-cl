@@ -188,20 +188,23 @@ case "$LISPTYPE" in
       -e "(e.rune:rune $QUOTED_ARGS)"
   ;;
   clisp)
+
     if [ "`uname`" = "Darwin" -a \! \( "$LANG" -o "$LC_ALL" -o "$LC_CTYPE" \) ]; then
       lisp_extra_push "-E"
       lisp_extra_push "utf-8"
     fi
-    # XXX config option for whether we use -interactive-debug, and similar for other lisps - check if we can control such from Lisp code
-    #"$EXEC" "$LISP" -q -ansi \
-    #  -interactive-debug \
+
+    # XXX config option for -on-error mode, and similar for other lisps - check if we can control such from Lisp code
+    lisp_extra_push "-on-error"
+    lisp_extra_push "debug"
+
+    #"$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
     #  -x "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
     #     "$COMMON_INIT1" \
     #     "$COMMON_INIT2" \
     #     "(e.rune:rune $QUOTED_ARGS)"
-    # xxx Ick! We load .clisprc because using this form of clisp startup unconditionally disables the load file, and we want the rc so that the user's ASDF configuration is available.
+    # xxx Ick! We load .clisprc because using this form of clisp startup unconditionally disables the rc file, and we want the rc so that the user's ASDF configuration is available.
     "$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
-      -interactive-debug \
       <(echo \
         '(let ((p (or (probe-file (merge-pathnames ".clisprc.lisp" (user-homedir-pathname))) 
                       (probe-file (merge-pathnames ".clisprc" (user-homedir-pathname)))))) 
