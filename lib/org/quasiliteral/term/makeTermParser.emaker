@@ -3,12 +3,29 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+pragma.enable("verb-curry")
 
+def mapStream := <import:org.cubik.cle.io.mapStream>
 
 def makeTermParser implements DeepFrozen {
   to run(builder) {
+
+    # XXX move outside once it is DeepFrozen
+    def lalr1__quasiParser := <import:org.cubik.cle.parser.makeLALR1Parser>.getLalr1__quasiParser()
   
     def b := builder
+    
+    def lparser := lalr1`
+      "TermL" := start.
+      start := term                         => ${b.start}.
+      term := functor                       => ${b.term}.
+      term := functor ${"("} argList ${")"} => ${def _(f,_,a,_) {
+                                                   return b.term(f,a)}}.
+      argList := term                       => $__identityFunc.
+      argList := term ${","} argList        => ${b.seq}.
+      functor := tag                        => $__identityFunc.
+      tag := ${"Tag"}                       => ${b.tag}.
+    `
     
     def termParser {
       /** Parse the given stream of term-language text to a quasi-term tree. */
@@ -18,10 +35,13 @@ def makeTermParser implements DeepFrozen {
       
       /** Parse the given stream of term-language tokens to a quasi-term tree. */
       to parse(lexStream) {
-        # XXX incomplete, obviously
-        def tokens := lexStream.readAll()
-        def [[=="Tag", tagpieces]] := tokens
-        return b.start(b.term(b.tag(tagpieces)))
+        return lparser.parse(mapStream(any, lexStream, def tf(t) {
+          return switch (t) {
+            match [x] { [x, null] }
+            match [x,y] { [x, y] }
+            match [x] + y { [x, y] }
+          }
+        }))
       }
     }
     return termParser

@@ -1,0 +1,57 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+--- Setup
+
+  ? def <qu> := <import:org.quasiliteral.*>; null
+  ? def makeTermBuilder := <qu:term.makeTermBuilder>; null
+  ? def termBuilder := makeTermBuilder(); null
+  ? def makeTermLexer := <qu:term.makeTermLexer>; null
+
+---
+
+  ? def makeTermParser := <qu:term.makeTermParser>; null
+
+  ? def makeLexStream() :any { makeTermLexer(false)("foo".asStream()) }; null
+  
+  ? def genericBuilder { 
+  >   to doesQuasis() :any { true }
+  >   match [v, a] { [v] + a } }; null
+
+  ? makeTermParser(genericBuilder).parse(makeLexStream())
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
+
+  ? makeTermParser(genericBuilder).parseText("foo".asStream())
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
+
+  ? makeTermParser(genericBuilder).parse([
+  >   ["Tag", [["Ident", "foo"]]],
+  >   ["("],
+  >   ["Tag", [["Ident", "foo"]]],
+  >   [")"]].asStream())
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["term", ["tag", [["Ident", "foo"]]]]]]
+
+--- Quasi and parsing
+
+  ? def makeQBuilder := <qu:quasiterm.makeQBuilder>; null
+
+  ? def qBuilder := makeQBuilder(termBuilder)
+  # value: <qBuilder>
+ 
+  ? makeTermParser(qBuilder).parse(makeLexStream())
+  # value: qterm`foo`
+
+  ? makeTermParser(qBuilder).parseText("foo".asStream())
+  # value: qterm`foo`
+
+XXX all term-language grammar
+
+  ? qBuilder.valueMaker("foo").substitute([])
+  # value: term`foo`
+
+XXX substitution on all term trees
+
+  ? term`foo`
+  # value: term`foo`
+
+XXX more tests...

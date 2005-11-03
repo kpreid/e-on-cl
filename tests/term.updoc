@@ -115,39 +115,4 @@ XXX token types: integer, float, char, string, tag, punct, chars
 XXX consequence of loose ::, or malformed tags in general
 XXX consequence of non-token characters
 
---- Quasi and parsing
-
-  ? def makeTermParser := <qu:term.makeTermParser>; null
-  ? def makeQBuilder := <qu:quasiterm.makeQBuilder>; null
-
-  ? def makeLexStream() :any { makeTermLexer(false)("foo".asStream()) }; null
-  
-  ? def genericBuilder { 
-  >   to doesQuasis() :any { true }
-  >   match [v, a] { [v] + a } }; null
-
-XXX all term-language tokens
-
-  ? makeTermParser(genericBuilder).parse(makeLexStream())
-  # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
-
-  ? def qBuilder := makeQBuilder(termBuilder)
-  # value: <qBuilder>
- 
-  ? makeTermParser(qBuilder).parse(makeLexStream())
-  # value: qterm`foo`
-
-  ? makeTermParser(qBuilder).parseText("foo".asStream())
-  # value: qterm`foo`
-
-XXX all term-language grammar
-
-  ? qBuilder.valueMaker("foo").substitute([])
-  # value: term`foo`
-
-XXX substitution on all term trees
-
-  ? term`foo`
-  # value: term`foo`
-
-XXX more tests...
+... temporarily? continued in term/parse.updoc
