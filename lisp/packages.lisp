@@ -7,15 +7,16 @@
   (:nicknames :e-util) ; XXX remove use of this nickname
   (:use :cl)
   
-  #+(or sbcl ccl lispworks allegro openmcl cmu clisp) 
-  (:import-from 
-    #+(or allegro clisp lispworks) :clos
-    #+cmu :mop
-    #+sbcl :sb-mop
-    #+openmcl :openmcl-mop
-    #+(and (not openmcl) ccl)  :ccl
-    ; #+lispworks :hcl ; XXX worked but may be incorrect, so next time we test on lispworks delete this or the above lispworks->:clos case
-    :class-precedence-list)
+  #.(cl:let ((cl:package (cl:or 
+               #+(or allegro clisp lispworks) :clos
+               #+(or cmu) :mop
+               #+sbcl :sb-mop
+               #+abcl :system ; XXX possibly ABCL bug that it isn't in MOP:
+               #+openmcl :openmcl-mop
+               #+ccl :ccl)))
+    (cl:when cl:package
+      `(:import-from ,cl:package
+         :class-precedence-list)))
   
   (:export
     :defglobals

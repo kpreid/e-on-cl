@@ -9,13 +9,17 @@
 
 
 (defun resembles-constantly (value function)
-  (eql value (funcall function 'foo 'bar 'baz 'whatever 1 2 3 4 5)))
+  "returns T or the non-'constantly' function"
+  (or (and (not (member function '(#.#'eql #.#'eq #.#'equal)))
+           (eql value (funcall function 'foo 'bar 'baz 'whatever 1 2 3 4 5)))
+      function))
 
 
 (deftest fast-sameness-test.general
   (fast-sameness-test 't 't)
   #.#'eeq-is-same-ever)
 
+#-abcl ;; as of 0.0.9, ABCL's subtypep isn't smart enough for this
 (deftest fast-sameness-test.disjoint-eql
   (resembles-constantly nil (fast-sameness-test 'integer 'float))
   t)
@@ -28,6 +32,7 @@
   (fast-sameness-test 'symbol 't)
   #.#'eeq-is-same-ever)
 
+#-abcl ;; as of 0.0.9, ABCL's subtypep isn't smart enough for this
 (deftest fast-sameness-test.disjoint-general
   (resembles-constantly nil (fast-sameness-test 'symbol 'function))
   t)

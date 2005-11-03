@@ -235,7 +235,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       ; disjoint types - will never succeed
       ((subtypep `(and ,a-type ,b-type) nil)
         (constantly nil))
-      ((either-subtypep '(or symbol))
+      ((either-subtypep 'symbol)
         #'eq)
       ((either-subtypep '(or number character))
         ; XXX this should really be a test for "is an eql-atomic type, as in def-atomic-sameness"

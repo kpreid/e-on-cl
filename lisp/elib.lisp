@@ -680,9 +680,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       &aux (mverb (vtable-entry-mverb entry prefix-arity))
            (impl-desc (rest entry)))
     (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
-      ; XXX *TEMPORARY* workaround for ABCL's lack of MAKE-LOAD-FORM support
-      #+abcl "abcl-message-desc-load-gimmick"
-      #-abcl (make-instance 'message-desc
+      (make-instance 'message-desc
         :verb verb
         :doc-comment (or (find-if #'stringp impl-desc) "") ; XXX too lenient
         :params (if (rest impl-desc) ; therefore inline
