@@ -68,6 +68,13 @@
   (let ((make-fd-in-stream (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor") |run| e.knot::+lisp+)))
     (e. make-fd-in-stream |run| our-socket impl-socket (foo-sockopt-receive-buffer impl-socket))))
 
+(defun make-retriable-lazy-slot (maker &aux value-box)
+  "For lazy making that can fail and be retried later."
+  (e-lambda "$retriableLazyApplySlot"
+      ()
+    (:|getValue| ()
+      (first (or value-box (setf value-box (list (funcall maker))))))))
+
 (defglobal +the-make-socket+ (e-lambda "org.cubik.cle.socket.makeSocket" (:stamped +deep-frozen-stamp+)
   (:|getInternet/0| (constantly ':internet))
   (:|getStream/0|   (constantly ':stream))
@@ -78,8 +85,12 @@
       (let* (did-bind-visible
              did-connect-visible
              (impl-socket (foo-make-socket domain type))
-             (out-stream (make-socket-out-stream our-socket impl-socket))
-             (in-stream (make-socket-in-stream our-socket impl-socket)))
+             (out-stream-slot
+               (make-retriable-lazy-slot (lambda ()
+                 (make-socket-out-stream our-socket impl-socket))))
+             (in-stream-slot
+               (make-retriable-lazy-slot (lambda ()
+                 (make-socket-in-stream our-socket impl-socket)))))
 
         ;; XXX if the socket creation fails, it must be a vat-killing event unless authorized, as it is nondeterministic
 
@@ -105,8 +116,8 @@
                          (socket-error (c)
                            ;; to be improved later
                            (e. tw |print| c))))))
-              (x did-bind-visible " on " #'socket-name)
-              (x did-connect-visible " connected to " #'socket-peername))
+              (x did-bind-visible " on " #'foo-socket-name)
+              (x did-connect-visible " connected to " #'foo-socket-peername))
             (e. tw |write| ">"))
           (:|connect| (peer-ref)
             "connect() this socket eventually. Resolves to nil for no error, true for EINPROGRESS, and a broken reference (XXX specify errno access) for all other errors."
@@ -128,8 +139,8 @@
                 (socket-error (c) 
                   (make-unconnected-ref c)))
 ))
-          (:|getOut| () out-stream)
-          (:|getIn|  () in-stream)
+          (:|getOut| () (e. out-stream-slot |getValue|))
+          (:|getIn|  () (e. in-stream-slot  |getValue|))
           
           (:|setSockoptSendBuffer| (new)
             (e-coercef new '(integer 0))

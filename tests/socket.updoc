@@ -26,17 +26,18 @@ http://www.opengroup.org/onlinepubs/009695399/functions/xsh_chap02_10.html#tag_0
   ? socket.connect(def test extends localHTTP {})
   # problem: the "__main$test__C" <test> doesn't coerce to a <SocketPeerRef>
 
-  ? def outs := socket.getOut()
-  # value: -><internet stream socket>
-    
-  ? outs.available()
-  # value: 0
-  
-  ? def ins := socket.getIn()
-  # value: <-<internet stream socket>
-  
-  ? ins.available()
-  # value: 0
+  In the ideal model, these *should* work, and they do in SBCL (XXX make it possible to test this), but many CL implementations don't offer a socket interface with true unconnected sockets. '
+  x ? def outs := socket.getOut()
+  x # value: -><internet stream socket>
+  x   
+  x ? outs.available()
+  x # value: 0
+  x 
+  x ? def ins := socket.getIn()
+  x # value: <-<internet stream socket>
+  x 
+  x ? ins.available()
+  x # value: 0
     
   ? [def connectResult := socket.connect(localHTTP), socket]
   # value: [<Promise>, <internet stream socket>]
@@ -52,6 +53,16 @@ In order to preserve E semantics by default:
   ? socket
   # value: <internet stream socket connected to 127.0.0.1:80>
 
+
+  ? def outs := socket.getOut()
+  # value: -><internet stream socket>
+    
+  ? def ins := socket.getIn()
+  # value: <-<internet stream socket>
+  
+  ? ins.available()
+  # value: 0
+  
   
   ? interp.waitAtTop(outs.whenAvailable(18, thunk {}))
   

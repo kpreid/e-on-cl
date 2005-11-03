@@ -5,6 +5,7 @@
   (:use :cl :e.util :elib 
         #+sbcl :sb-bsd-sockets
         #+clisp :socket)
+  #+openmcl (:import-from :openmcl-socket :socket-error)
   (:documentation "Taming the Lisp's socket interface, if it has one.")
   (:export
     :foo-write
@@ -92,6 +93,12 @@
        (eql (sb-bsd-sockets::socket-error-errno error) 
             #.sb-posix:einprogress)))
 
+#+openmcl
+(defun in-progress-socket-error-p (error)
+  (declare (ignore error))
+  nil)
+
+
 #+sbcl
 (defun foo-connect-tcp (addr-info opt-ejector)
   (e-coercef addr-info 'pseudo-addr-info)
@@ -128,24 +135,30 @@
     :type     (ref-shorten type)
     :protocol 0))
 
-#+clisp
-(progn
-  (defclass deferred-socket ()
-    ((domain :initarg :domain
-             :reader foo-socket-domain
-             :type keyword)
-     (type :initarg :type
-           :reader foo-socket-type
+#+(or clisp openmcl)
+(defclass deferred-socket ()
+  ((domain :initarg :domain
+           :reader foo-socket-domain
            :type keyword)
-     (real-socket :initform nil
-                  :accessor deferred-socket-socket))
-    (:documentation "For socket interfaces which don't offer unbound/unconnected socket objects."))
-    
-  (defun foo-make-socket (domain type)
-    (check-type domain (member :internet))
-    (check-type type (member :stream))
-    (make-instance 'deferred-socket :domain domain :type type)))
-    
+   (type :initarg :type
+         :reader foo-socket-type
+         :type keyword)
+   (real-socket :initform nil
+                :accessor deferred-socket-socket))
+  (:documentation "For socket interfaces which don't offer unbound/unconnected socket objects."))
+
+#+clisp    
+(defun foo-make-socket (domain type)
+  (check-type domain (member :internet))
+  (check-type type (member :stream))
+  (make-instance 'deferred-socket :domain domain :type type))
+
+#+openmcl 
+(defun foo-make-socket (domain type)
+  (check-type domain (member :internet))
+  (check-type type (member :stream))
+  (make-instance 'deferred-socket :domain domain :type type))
+
 #+sbcl
 (defun foo-connect-socket (socket addr-info)
   (socket-connect socket
@@ -163,6 +176,17 @@
                         :timeout 0))
   (values))
 
+#+openmcl 
+(defun foo-connect-socket (socket addr-info)
+  (setf (deferred-socket-socket socket)
+        ;; OpenMCL happens to use the same keywords we do
+        (openmcl-socket:make-socket
+          :address-family (foo-socket-domain socket)
+          :type (foo-socket-type socket)
+          :connect :active
+          :remote-host (addr-info-ip-number addr-info)
+          :remote-port (addr-info-port addr-info))))
+
 ; --- ---
 
 #+sbcl (defun %convert-handler-target (target)
@@ -172,6 +196,12 @@
             (setf target (deferred-socket-socket target))
             (assert target))
           target)
+
+#+openmcl (defun %convert-handler-target (target)
+            (when (typep target 'deferred-socket)
+            (setf target (deferred-socket-socket target))
+              (assert target))
+            target)
 
 (defun foo-add-receive-handler (target e-function)
   ;; vat-add-io-handler takes care of establishing the turn
@@ -193,60 +223,109 @@
   (form-or
     #+sbcl (sockopt-receive-buffer impl-socket)
     #+clisp (socket-options (deferred-socket-socket impl-socket) :so-rcvbuf)
+    #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-receive-buffer not implemented")))
 
 (defun foo-sockopt-send-buffer (impl-socket)
   (form-or
     #+sbcl (sockopt-send-buffer impl-socket)
     #+clisp (socket-options (deferred-socket-socket impl-socket) :so-sndbuf)
+    #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-send-buffer not implemented")))
+
+;; XXX name/peername need to return their results in terms of sockaddr-oid E-structures so they're not ipv4-tied
+
+(defun foo-socket-name (socket)
+  (form-or 
+    #+sbcl (socket-name socket)
+    #+openmcl (values (ip4-number-to-vector
+                        (openmcl-socket:local-host (deferred-socket-socket socket)))
+                      (openmcl-socket:local-port (deferred-socket-socket socket)))
+    (error "foo-socket-name not implemented")))
+
+(defun foo-socket-peername (socket)
+  (form-or 
+    #+sbcl (socket-peername socket)
+    #+openmcl (values (ip4-number-to-vector
+                        (openmcl-socket:remote-host (deferred-socket-socket socket)))
+                      (openmcl-socket:remote-port (deferred-socket-socket socket)))
+    (error "foo-socket-peername not implemented")))
+
 
 ; --- ---
 
-#+(or sbcl clisp)
-(defclass pseudo-addr-info ()
-  (#+sbcl
-   (host-ent :initarg :host-ent :accessor addr-info-host-ent :type host-ent)
-   #+clisp
-   (unresolved-name :initarg :unresolved-name :accessor addr-info-unresolved-name :type string)
-   (port :initarg :port :accessor addr-info-port :type (unsigned-byte 16))))
+(defun ip4-number-to-vector (ip4-number)
+  (coerce 
+    (nreverse 
+      (loop for x = ip4-number then (ash x -8) 
+            collect (logand x #xFF))) 
+    'vector))
+
+#+(or sbcl clisp openmcl)
+(progn 
+  (defclass pseudo-addr-info ()
+    (#+sbcl
+     (host-ent :initarg :host-ent :accessor addr-info-host-ent :type host-ent)
+     #+openmcl
+     (ip-number :initarg :ip-number :accessor addr-info-ip-number :type (unsigned-byte 32))
+     #+clisp
+     (unresolved-name :initarg :unresolved-name :accessor addr-info-unresolved-name :type string)
+     (port :initarg :port :accessor addr-info-port :type (unsigned-byte 16))))
+  
+  (def-vtable pseudo-addr-info
+    (:|__printOn| (this tw)
+      (e-coercef tw +the-text-writer-guard+)
+      (e. tw |write| "<network address")
+      #+sbcl
+      (with-slots (host-ent port) this
+        (e. tw |write| " ")
+        (e. tw |quote| (host-ent-name host-ent))
+        (loop for address in (host-ent-addresses host-ent) do
+          (e. tw |write| " ")
+          (e. tw |print| (e. "." |rjoin| (map 'vector #'princ-to-string address))))
+        (e. tw |write| ":")
+        (e. tw |print| port))
+      #+openmcl
+      (with-slots (ip-number port) this
+        (e. tw |write| " ")
+        (e. tw |print| (e. "." |rjoin| (ip4-number-to-vector ip-number)))
+        (e. tw |write| ":")
+        (e. tw |print| port))
+      #+clisp
+      (with-slots (unresolved-name port) this
+        (e. tw |write| "<network address ")
+        (e. tw |print| unresolved-name)
+        (e. tw |write| ":")
+        (e. tw |print| port))
+      (e. tw |write| ">"))))
 
 (defun get-addr-info (host service hints)
+  ;; XXX needs a failure ejector
   (e-coercef host '(or null string))
   (e-coercef service '(or null string))
   (e-coercef hints 'null)
   (e<- (efun () 
-	 (or 
-	  #+sbcl (make-instance 'pseudo-addr-info
-				:host-ent (get-host-by-name host)
-				:port (if service (parse-integer service) 0))
-                 
-	  #+clisp (make-instance 'pseudo-addr-info
-				 :unresolved-name host
-				 :port (if service (parse-integer service) 0))
-	  (error "~A not implemented for this Lisp" 'get-addr-info)))
+         (or 
+          #+sbcl (make-instance 'pseudo-addr-info
+                   :host-ent (get-host-by-name host)
+                   :port (if service (parse-integer service) 0))
+                             
+          #+clisp (make-instance 'pseudo-addr-info
+                    :unresolved-name host
+                    :port (if service (parse-integer service) 0))
+          
+          #+openmcl 
+          (make-instance 'pseudo-addr-info
+            :ip-number (if host (openmcl-socket:lookup-hostname host) nil)
+            ;; XXX hints should be supported to choose "udp" instead
+            :port (if (null service) 0
+                    (handler-case
+                        (parse-integer service)
+                      (parse-error ()
+                        (openmcl-socket:lookup-port service "tcp")))))
+          
+          (error "~A not implemented for this Lisp" 'get-addr-info)))
        |run|))
-
-(def-vtable pseudo-addr-info
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
-    #+sbcl
-    (with-slots (host-ent port) this
-      (e. tw |write| "<network address ")
-      (e. tw |quote| (host-ent-name host-ent))
-      (loop for address in (host-ent-addresses host-ent) do
-        (e. tw |write| " ")
-        (e. tw |print| (e. "." |rjoin| (map 'vector #'princ-to-string address))))
-      (e. tw |write| ":")
-      (e. tw |print| port)
-      (e. tw |write| ">"))
-    #+clisp
-    (with-slots (unresolved-name port) this
-      (e. tw |write| "<network address ")
-      (e. tw |print| unresolved-name)
-      (e. tw |write| ":")
-      (e. tw |print| port)
-      (e. tw |write| ">"))))
 
 ; --- ---
 
