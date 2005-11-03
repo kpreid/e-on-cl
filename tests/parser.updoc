@@ -6,13 +6,14 @@
   ? def makeLALR1Parser := <parser:makeLALR1Parser>
   # value: <makeLALR1Parser>
   
-  ? def s {}; def l {}; def r {}; def id {}; def star {}; def eq {}; null
+  ? makeLALR1Parser :DeepFrozen
+  # value: <makeLALR1Parser>
   
-  x ? def mapV(f, coll) { return accum [] for v in coll {_.with(f(v))}}; null
+  ? def s implements DeepFrozen {}; def l implements DeepFrozen {}; def r implements DeepFrozen {}; def id implements DeepFrozen {}; def star implements DeepFrozen {}; def eq implements DeepFrozen {}; null
+  
   ? def mapStream := <import:org.cubik.cle.io.mapStream>; null
   
-  ? def pr := __makeList # XXX to be eliminated
-  > null
+  ? def identityValues implements DeepFrozen { to run(s) :any { [s, s] }}; null
   
   ? def parser := makeLALR1Parser("from cl-yacc test 4-20",
   >                               s,
@@ -22,8 +23,10 @@
   >                                [l, [star, r]],
   >                                [l, [id]],
   >                                [r, [l]]],
-  >                               ["tokenFunction" => \
-  >                                def identityValues(s) :any { [s, s] }])
+  >                               ["tokenFunction" => identityValues])
+  # value: <from cl-yacc test 4-20 LALR(1) parser>
+
+  ? parser :DeepFrozen
   # value: <from cl-yacc test 4-20 LALR(1) parser>
   
   ? parser.parse([star, id, eq, star, star, id].asStream())
@@ -53,6 +56,9 @@ quasi-parser
 
   ? def lalr1__quasiParser := makeLALR1Parser.getLalr1__quasiParser()
   # value: <lalr1__quasiParser>
+
+  ? lalr1__quasiParser :DeepFrozen
+  # value: <lalr1__quasiParser>
   
   ? def parser := lalr1`"quasi-form cl-yacc test 4-20" := s.
   >                     s := l $eq r.
@@ -61,13 +67,16 @@ quasi-parser
   >                     l := $id.
   >                     r := l.`
   # value: <quasi-form cl-yacc test 4-20 quasi-defined LALR(1) parser>
+
+  ? parser :DeepFrozen
+  # value: <quasi-form cl-yacc test 4-20 quasi-defined LALR(1) parser>
   
   ? parser.parse(mapStream(any, [star, id, eq, star, star, id].asStream(), identityValues))
   # value: [[<star>, [[<id>]]], <eq>, [[<star>, [[<star>, [[<id>]]]]]]]
 
 quasi-parser with actions
 
-  ? def calls(verb) :any { def caller { 
+  ? def calls(verb) :any { def caller implements DeepFrozen { 
   >   match [=="run", [rec] + args] { 
   >     E.call(rec, verb, args) }}}
   > null

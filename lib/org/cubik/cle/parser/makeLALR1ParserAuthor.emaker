@@ -9,6 +9,7 @@ pragma.enable("accumulator")
 pragma.enable("trinary-define")
 
 def mapStream := <import:org.cubik.cle.io.mapStream>
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def mapV implements DeepFrozen {
   to run(f, coll) { return accum [] for v in coll {_.with(f(v))}}}
@@ -39,11 +40,14 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
       asdfOperate(load_op, intern("YACC", "KEYWORD"))
     }
     
+    def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
+
     def clCoerce := lisp["CL", "COERCE"]::"function"
     def makeSymbol := lisp["CL", "MAKE-SYMBOL"]::"function"
     def fdefinition := lisp["CL", "FDEFINITION"]::"function"
     def eToLispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
     def eToLispMVFunction := lisp["E.KNOT", "E-TO-LISP-MV-FUNCTION"]::"function"
+
     def yaccMakeParser := lisp["YACC", "MAKE-PARSER"]::"function"
     def yaccMakeGrammar := lisp["YACC", "MAKE-GRAMMAR"]::"function"
     def yaccMakeProduction := lisp["YACC", "MAKE-PRODUCTION"]::"function"
@@ -59,7 +63,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
         thunk {map[input] := makeSymbol(E.toString(input))})
     }
 
-    def makeLALR1Parser {
+    def makeLALR1Parser implements DeepFrozenStamp {
       to run(label :String, 
              startSymbol :GSymbol,
              terminals :List[GSymbol],
@@ -91,7 +95,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
                        }))
              }, l`cl:list`)))
         
-        def parser {
+        def parser implements DeepFrozenStamp {
           to __printOn(tw :TextWriter) {
             tw.write("<")
             tw.print(label)
@@ -128,9 +132,9 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
       to getLalr1__quasiParser() {
         # XXX move this to a separate emaker
         
-        def listAction(item, list) { return [item] + list }
+        def listAction implements DeepFrozen { to run(item, list) { return [item] + list }}
         
-        def lex(textIn) {
+        def lex implements DeepFrozen { to run(textIn) {
           # XXX get a better lexer library/pattern
           var text := textIn.read(EIO::ALL, EIO::ALL)
           #traceln(`text is ->$text<-, match ${text =~ rx`(?s)"(@mid.*)`} ->$mid<-`)
@@ -184,7 +188,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
             }
           }
           return tokens.snapshot().asStream()
-        }
+        }}
         
         def metaparser := makeLALR1Parser(
           "grammar",
@@ -244,7 +248,14 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
                     def terminalMap := accum [].asMap() for x in terminalSymbols { _.with(args[x], x) }
                     require(terminalMap.size() == terminalSymbols.size(), thunk {`duplicate terminals in $args`}) # this could be done more simply with a strict 'with'
                     
-                    def quasiResultParser {
+                    def quasiResultParser implements EventuallyDeepFrozen {
+                      # must be E.D.F. since args can be anything
+                      method __optSealedDispatch(brand) :any {
+                        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+                        }
+                      }
+                
                       to __printOn(tw :TextWriter) {
                         tw.write("<")
                         tw.print(name)
@@ -284,7 +295,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
            ["item", ["Quasi$"], __identityFunc]],
           ["tokenFunction" => __identityFunc])
         
-        def lalr1__quasiParser {
+        def lalr1__quasiParser implements DeepFrozen {
           to valueMaker(template :String) {
             return metaparser.parse(lex(template.asStream()))
           }
