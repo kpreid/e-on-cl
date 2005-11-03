@@ -87,16 +87,20 @@
           (let ((sub (e. file |get| subpath)))
             (when (e-is-true (e. sub |exists|))
               sub)))
-        (:|getTwine| ()
-          ; XXX doesn't actually add twine info
+        (:|getText| ()
+          ;; XXX doesn't actually add twine info
           (read-entire-file (get-cl-pathname)))
-        (:|textReader| (&aux (file (open (get-cl-pathname) :if-does-not-exist :error)))
+        (:|getTwine| ()
+          ;; XXX doesn't actually add twine info
+          ;; (e. (e. file |getText|) |asFrom| ...)
+          (read-entire-file (get-cl-pathname)))
+        (:|textReader| (&aux (stream (open (get-cl-pathname) :if-does-not-exist :error)))
           ; XXX external format, etc.
           (e-lambda "textReader" (:doc "Java-E compatibility")
             ; XXX there'll probably be other situations where we want Readers so we should have a common implementation. we could even write it in E code?
             (:|readText| ()
               "Return the entire remaining contents of the file."
-              (read-entire-stream file))))
+              (read-entire-stream stream))))
         (:|iterate| (f)
           (loop for subpath in (cl-fad:list-directory (get-cl-pathname))
             do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))

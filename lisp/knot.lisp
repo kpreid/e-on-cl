@@ -448,6 +448,26 @@
                   (e. (vat-safe-scope *vat*) |withPrefix|
                       (concatenate 'string fqn "$")))))
 
+;;; this is here because it's closely related to emaker loading
+(defglobal +resource-importer+ (e-lambda "org.cubik.cle.prim.resource__uriGetter"
+    (:stamped +deep-frozen-stamp+)
+  (:|get| (subpath)
+    ;; XXX there should be a getter-shell for this common method - is path-loader fit for that?
+    (e. +resource-importer+ |fetch| subpath
+      (e-lambda "$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote +resource-importer+) (e-quote subpath))))))
+  (:|fetch| (subpath absent-thunk)
+    (e-coercef subpath 'string)
+    (loop for root in *emaker-search-list*
+          for froot = (if (pathnamep root)
+                        (e.extern:pathname-to-file root)
+                        root)
+          for file = (e. froot |getOpt| subpath)
+          when file
+            return (e. file |readOnly|)
+          finally (return (e. absent-thunk |run|))))))
+
+
+
 ; XXX move this macro elsewhere
 (defmacro lazy-value-scope ((fqn-form prefix) &body entries)
   (declare (string prefix))
@@ -835,6 +855,9 @@ If a log message is produced, context-thunk is run to produce a string describin
               (vector specimen opt-ejector))))
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
           ("&__makeVerbFacet" ,(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
+          
+          ; --- XXX describe this category ---
+          ("resource__uriGetter" ,+resource-importer+)
           
           ; --- user/REPL ---
           ("&help"              ,(lazy-import "org.erights.e.elang.interp.help")))))))

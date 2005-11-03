@@ -79,6 +79,14 @@ see ref.updoc for Ref
   ? <opaque>.optUncall(<import>)
   # value: [<opaque__uriGetter0>, "get", ["import:*"]]
 
+<resource>
+
+  ? <resource>
+  # value: <resource__uriGetter>
+  
+  ? <resource:org/cubik/cle/makeIOScope.emaker>.getText().split("\n")[0]
+  # value: "# Copyright 2005 Kevin Reid, under the terms of the MIT X license"
+
 safeScope
   
   ? safeScope["int"]

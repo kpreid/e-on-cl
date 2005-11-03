@@ -444,6 +444,7 @@
     :+standard-external-format-common-name+
     :+gc+
     :make-file-getter
+    :pathname-to-file
     :read-entire-file
     :+the-timer+
     :+rx-perl5-compiler+
