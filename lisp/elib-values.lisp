@@ -567,13 +567,19 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "Infinity")))
+    (e. tw |print| "Infinity"))
+  (:|isNaN| (this)
+    (declare (ignore this))
+    +e-false+))
 
 (def-vtable (eql #.|-Infinity|)
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "-Infinity")))
+    (e. tw |print| "-Infinity"))
+  (:|isNaN| (this)
+    (declare (ignore this))
+    +e-false+))
 
 (defglobal +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" 
     (:stamped +deep-frozen-stamp+
