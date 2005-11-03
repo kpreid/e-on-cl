@@ -210,6 +210,7 @@
 
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
   ;; xxx eventually this should be able to point at the source position of the assignment
+  (declare (ignore value-form))
   (error "~A is not an assignable variable" (binding-get-source-noun binding)))
 
 (defmethod binding-exit-info ((binding direct-def-binding) broken-ref-form)
@@ -279,6 +280,7 @@
   (error "not an assignable slot: <& ~A>" (e-quote (slot-value binding 'value))))
 
 (defmethod binding-exit-info ((binding value-binding) broken-ref-form)
+  (declare (ignore broken-ref-form))
   (error "binding-exit-info on a value-binding shouldn't happen"))
 
 
@@ -295,6 +297,7 @@
   `(e. ,(slot-value binding 'slot) |setValue| ,value-form))
 
 (defmethod binding-exit-info ((binding slot-binding) broken-ref-form)
+  (declare (ignore broken-ref-form))
   (error "binding-exit-info on a slot-binding shouldn't happen"))
 
 

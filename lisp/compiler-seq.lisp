@@ -147,7 +147,7 @@
 
 (define-sequence-expr |CallExpr| (layout result recipient verb &rest args
     &aux (rec-var (gensym "REC"))
-         (arg-vars (loop for arg in args collect (gensym "ARG"))))
+         (arg-vars (loop for nil in args collect (gensym "ARG"))))
   (values
     (append (updating-sequence-expr recipient layout rec-var :may-inline (every #'inlinable args))
             (loop for (arg . arg-expr-tail) on args

@@ -110,8 +110,12 @@
 #+sbcl (sb-ext:unlock-package :e.elang.vm-node)
 
 (defclass |ENode| () 
-  ((elements :initarg :elements :accessor node-elements)
-   (static-scope :initform nil :type function)))
+  ((elements  :initform (error "Can't have an ENode without elements.")
+              :initarg :elements
+              :accessor node-elements
+              :type list)
+   (static-scope :initform nil
+                 :type (or null function))))
 
 (define-node-class |EExpr|   (|ENode|)
   ())
@@ -251,6 +255,7 @@
      0))
 
 (defmethod change-class ((node |ENode|) new-class &key &allow-other-keys)
+  (declare (ignore new-class))
   (error "change-class is not a good idea for ENodes"))
 
 ;; (defmethod shared-initialize :before ((node |QuasiNode|) slot-names &key &allow-other-keys)
@@ -259,12 +264,14 @@
 ;;     (error "Attempt to construct a quasi-node of unspecific class ~S." (class-of node))))
 
 (defmethod shared-initialize :after ((node |SeqExpr|) slot-names &key &allow-other-keys)
+  (declare (ignore slot-names))
   (unless (> (length (funcall (opt-node-property-getter node :|subs|))) 0)
     (error "SeqExpr must have at least one subexpression")))
 
 (defmethod shared-initialize :after ((node |EScript|) slot-names &key &allow-other-keys
     &aux (methods (funcall (opt-node-property-getter node :|optMethods|)))
          (matchers (funcall (opt-node-property-getter node :|matchers|))))
+  (declare (ignore slot-names))
   (unless (or methods (> (length matchers) 0))
       (error "EScript must have methods or at least one matcher")))
     
@@ -272,6 +279,7 @@
     &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
          (r-value (funcall (opt-node-property-getter node :|pattern|)))
          (opt-ejector-expr (funcall (opt-node-property-getter node :|optEjectorExpr|))))
+  (declare (ignore slot-names))
   (when (usesp r-value pattern)
     (error "define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
   (when (and opt-ejector-expr
