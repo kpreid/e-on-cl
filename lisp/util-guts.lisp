@@ -21,7 +21,7 @@
 
 ;; Implement our own
 
-#+(or clisp) (progn
+#-(or sbcl cmu) (progn
   ;; XXX threading: for our purposes, this would better be represented as a vat/runner slot
   (defvar *serve-event-handlers* (make-hash-table))
   
@@ -46,6 +46,7 @@
     (change-class handler 'zombie-handler)
     (values))
   
+  #+clisp
   (defun serve-event (&optional timeout)
     #+e.serve-event-trace (format *trace-output* "~&; entering e serve-event ~A with ~A handlers~%" timeout (hash-table-count *serve-event-handlers*))
     (let* ((status-input
