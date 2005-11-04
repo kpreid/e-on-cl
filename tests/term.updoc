@@ -107,9 +107,19 @@ XXX all builder methods
   
   ? lex("foo(bar)")
   # value: [["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [")"]]
+
+  ? lex(".foo. .bar.baz")
+  # value: [["Tag", [["Ident", ".foo."]]], ["Tag", [["Ident", ".bar.baz"]]]]
   
   ? lex("${9} @{10} ")
   # value: [["Quasi$", 9], ["Quasi@", 10]]
+  
+  ? lex("0 1 2 107 -1 3 000")
+  # value: [["Integer", 0], ["Integer", 1], ["Integer", 2], ["Integer", 107], ["Integer", -1], ["Integer", 3], ["Integer", 0]]
+  
+  XXX errors to be changed
+  ? lex("+3")
+  # problem: unexpected term token: +3
   
 XXX token types: integer, float, char, string, tag, punct, chars
 XXX consequence of loose ::, or malformed tags in general
