@@ -127,6 +127,11 @@
 
 ; --- ---
 
+(defgeneric socket-shorten (socket))
+
+(defmethod socket-shorten ((socket t))
+  socket)
+  
 #+sbcl
 (defun foo-make-socket (domain type)
   (check-type domain (member :internet))
@@ -135,26 +140,21 @@
     :type     (ref-shorten type)
     :protocol 0))
 
-#+(or clisp openmcl)
-(defclass deferred-socket ()
-  ((domain :initarg :domain
-           :reader foo-socket-domain
+#+(or clisp openmcl) (progn
+  (defclass deferred-socket ()
+    ((domain :initarg :domain
+             :reader foo-socket-domain
+             :type keyword)
+     (type :initarg :type
+           :reader foo-socket-type
            :type keyword)
-   (type :initarg :type
-         :reader foo-socket-type
-         :type keyword)
-   (real-socket :initform nil
-                :accessor deferred-socket-socket))
-  (:documentation "For socket interfaces which don't offer unbound/unconnected socket objects."))
+     (real-socket :initform nil
+                  :accessor deferred-socket-socket))
+    (:documentation "For socket interfaces which don't offer unbound/unconnected socket objects."))
 
-(defgeneric socket-shorten (socket))
-
-(defmethod socket-shorten ((socket t))
-  socket)
-  
-(defmethod socket-shorten ((socket deferred-socket))
-  (or (deferred-socket-socket socket)
-      (error "~S is not yet a native socket" socket)))
+  (defmethod socket-shorten ((socket deferred-socket))
+    (or (deferred-socket-socket socket)
+        (error "~S is not yet a native socket" socket))))
 
 #+clisp    
 (defun foo-make-socket (domain type)
