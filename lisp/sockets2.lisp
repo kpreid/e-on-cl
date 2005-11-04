@@ -66,7 +66,7 @@
 
 (defun make-socket-in-stream (our-socket impl-socket)
   (let ((make-fd-in-stream (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor") |run| e.knot::+lisp+)))
-    (e. make-fd-in-stream |run| our-socket impl-socket (foo-sockopt-receive-buffer impl-socket))))
+    (e. make-fd-in-stream |run| our-socket (socket-shorten impl-socket) (foo-sockopt-receive-buffer (socket-shorten impl-socket)))))
 
 (defun make-retriable-lazy-slot (maker &aux value-box)
   "For lazy making that can fail and be retried later."

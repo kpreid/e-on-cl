@@ -55,10 +55,10 @@ In order to preserve E semantics by default:
 
 
   ? def outs := socket.getOut()
-  # value: -><internet stream socket>
+  # value: -><internet stream socket connected to 127.0.0.1:80>
     
   ? def ins := socket.getIn()
-  # value: <-<internet stream socket>
+  # value: <-<internet stream socket connected to 127.0.0.1:80>
   
   ? ins.available()
   # value: 0

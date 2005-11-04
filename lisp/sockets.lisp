@@ -147,6 +147,15 @@
                 :accessor deferred-socket-socket))
   (:documentation "For socket interfaces which don't offer unbound/unconnected socket objects."))
 
+(defgeneric socket-shorten (socket))
+
+(defmethod socket-shorten ((socket t))
+  socket)
+  
+(defmethod socket-shorten ((socket deferred-socket))
+  (or (deferred-socket-socket socket)
+      (error "~S is not yet a native socket" socket)))
+
 #+clisp    
 (defun foo-make-socket (domain type)
   (check-type domain (member :internet))
@@ -167,7 +176,7 @@
 
 #+clisp
 (defun foo-connect-socket (socket addr-info)
-  (assert (not (real-socket socket)))
+  (assert (not (deferred-socket-socket socket)))
   (setf (deferred-socket-socket socket)
         (socket-connect (addr-info-port addr-info)
                         (addr-info-unresolved-name addr-info)
@@ -192,16 +201,10 @@
 #+sbcl (defun %convert-handler-target (target)
          (socket-file-descriptor target))
 #+clisp (defun %convert-handler-target (target)
-          (when (typep target 'deferred-socket)
-            (setf target (deferred-socket-socket target))
-            (assert target))
-          target)
+          (socket-shorten target))
 
 #+openmcl (defun %convert-handler-target (target)
-            (when (typep target 'deferred-socket)
-            (setf target (deferred-socket-socket target))
-              (assert target))
-            target)
+            (socket-shorten target))
 
 (defun foo-add-receive-handler (target e-function)
   ;; vat-add-io-handler takes care of establishing the turn
@@ -222,33 +225,43 @@
 (defun foo-sockopt-receive-buffer (impl-socket)
   (form-or
     #+sbcl (sockopt-receive-buffer impl-socket)
-    #+clisp (socket-options (deferred-socket-socket impl-socket) :so-rcvbuf)
+    #+clisp (socket-options (socket-shorten impl-socket) :so-rcvbuf)
     #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-receive-buffer not implemented")))
 
 (defun foo-sockopt-send-buffer (impl-socket)
   (form-or
     #+sbcl (sockopt-send-buffer impl-socket)
-    #+clisp (socket-options (deferred-socket-socket impl-socket) :so-sndbuf)
+    #+clisp (socket-options (socket-shorten impl-socket) :so-sndbuf)
     #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-send-buffer not implemented")))
 
 ;; XXX name/peername need to return their results in terms of sockaddr-oid E-structures so they're not ipv4-tied
 
+#+clisp
+(defun convert-socket-address-return (fn socket)
+  (multiple-value-bind (host port) (funcall fn socket nil)
+    (values (coerce (split-sequence:split-sequence #\. (first (split-sequence:split-sequence #\Space host :count 1)) :count 4) 'vector)
+            port)))
+
 (defun foo-socket-name (socket)
+  (setf socket (socket-shorten socket))
   (form-or 
     #+sbcl (socket-name socket)
     #+openmcl (values (ip4-number-to-vector
-                        (openmcl-socket:local-host (deferred-socket-socket socket)))
-                      (openmcl-socket:local-port (deferred-socket-socket socket)))
+                        (openmcl-socket:local-host socket))
+                      (openmcl-socket:local-port socket))
+    #+clisp (convert-socket-address-return #'socket-stream-local socket)
     (error "foo-socket-name not implemented")))
 
 (defun foo-socket-peername (socket)
+  (setf socket (socket-shorten socket))
   (form-or 
     #+sbcl (socket-peername socket)
     #+openmcl (values (ip4-number-to-vector
-                        (openmcl-socket:remote-host (deferred-socket-socket socket)))
-                      (openmcl-socket:remote-port (deferred-socket-socket socket)))
+                        (openmcl-socket:remote-host socket))
+                      (openmcl-socket:remote-port socket))
+    #+clisp (convert-socket-address-return #'socket-stream-peer socket)
     (error "foo-socket-peername not implemented")))
 
 

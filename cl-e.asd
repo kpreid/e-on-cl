@@ -73,7 +73,8 @@
 ;; This is a separate system because I decided to lazily load the Lisp-side socket code, and so the relevant taming declarations cannot be loaded until the socket system is. -- kpreid 2005-04-30
 (defsystem cl-e.sockets
   :name "cl-e.sockets"
-  :depends-on (#+sbcl :sb-bsd-sockets)
+  :depends-on (#+sbcl :sb-bsd-sockets
+               #+clisp :split-sequence)
   :components ((:module "lisp" :components
     ((:file "sockets")
      (:file "sockets2"
