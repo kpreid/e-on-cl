@@ -24,3 +24,7 @@
   (let ((ts '(integer -10 10)))
     (same-or-objects #'equal ts (guard-to-type-specifier (type-specifier-to-guard ts))))
   t)
+  
+(deftest e-print-class-guard
+  (e-print (type-specifier-to-guard (find-class 'integer)))
+  "int")

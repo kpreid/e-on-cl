@@ -626,12 +626,22 @@
     (e-quote (coerce parameters 'vector))
     ""))
 
+; - separating compound type specifiers - 
+
 (defmethod cl-type-fq-name ((type cons))
   (cl-type-fq-name (car type)))
-
+  
 (defmethod cl-type-parameters ((type cons) non-parameters)
   (assert (null non-parameters))
   (cl-type-parameters (first type) (rest type)))
+
+; - classes as type specifiers -
+
+(defmethod cl-type-fq-name ((type-specifier class))
+  (cl-type-fq-name (class-name type-specifier)))
+
+(defmethod cl-type-parameters ((type-specifier class) parameters)
+  (cl-type-parameters (class-name type-specifier) parameters))
 
 ; - misc fqns - 
 
@@ -687,10 +697,14 @@
         ""))))
 
 (defun cl-type-simple-expr (type)
-  (concatenate 'string (simplify-fq-name (cl-type-fq-name type)) (cl-type-parameters type nil)))
+  (concatenate 'string
+    (simplify-fq-name (cl-type-fq-name type)) 
+    (cl-type-parameters type nil)))
   
 (defun cl-type-fq-expr (type)
-  (concatenate 'string (cl-type-fq-name type) (cl-type-parameters type nil)))
+  (concatenate 'string 
+    (cl-type-fq-name type)
+    (cl-type-parameters type nil)))
   
 ; --- far refs/proxies ---
 
