@@ -41,11 +41,28 @@
   (assert (eql (first components) :absolute))
   (make-file-getter (coerce (rest components) 'vector)))
 
+(defun path-components-to-pathname (path-components)
+  ;; XXX this is probably broken in various ways
+  (let* ((path-components (coerce path-components 'list))
+         ;; XXX the following is right for SBCL (and we can use a sbcl routine for it if my patch for bug 296 goes through --kpreid) but possibly not for other lisps
+         (end (first (last path-components)))
+         (name-and-type (let ((dot (position #\. end :from-end t)))
+                          (cond 
+                            ((string= end "")
+                             (list nil nil))
+                            ((and dot (> dot 0))
+                             (list (subseq end 0 dot) 
+                                   (subseq end (1+ dot))))
+                            (t
+                             (list end nil))))))
+  (make-pathname 
+    :directory (cons :absolute 
+                     (butlast path-components))
+    :name (first name-and-type)
+    :type (second name-and-type))))
+
 (defun make-file-getter (path-components)
-  (labels ((get-cl-pathname ()
-             ; XXX this is probably not a very reliable way of translating to CL pathnames
-             (make-pathname :directory (cons :absolute (coerce (subseq path-components 0 (1- (length path-components))) 'list))
-                            :name      (aref path-components (1- (length path-components))))))
+  (let ((pathname (path-components-to-pathname path-components)))
     (with-result-promise (file)
       (e-lambda "FileGetter" ()
         (:|__printOn| (tw)
@@ -69,9 +86,8 @@
           "Return whether an actual file designated by this object currently exists."
           (as-e-boolean
             (some #'probe-file 
-              (let ((p (get-cl-pathname)))
-                (list p
-                      (cl-fad:pathname-as-directory p))))))
+              (list pathname
+                    (cl-fad:pathname-as-directory pathname)))))
         (:|get| (subpath)
           (e-coercef subpath 'string)
           (let* ((splat (e. subpath |split| "/")))
@@ -89,12 +105,12 @@
               sub)))
         (:|getText| ()
           ;; XXX doesn't actually add twine info
-          (read-entire-file (get-cl-pathname)))
+          (read-entire-file pathname))
         (:|getTwine| ()
           ;; XXX doesn't actually add twine info
           ;; (e. (e. file |getText|) |asFrom| ...)
-          (read-entire-file (get-cl-pathname)))
-        (:|textReader| (&aux (stream (open (get-cl-pathname) :if-does-not-exist :error)))
+          (read-entire-file pathname))
+        (:|textReader| (&aux (stream (open pathname :if-does-not-exist :error)))
           ; XXX external format, etc.
           (e-lambda "textReader" (:doc "Java-E compatibility")
             ; XXX there'll probably be other situations where we want Readers so we should have a common implementation. we could even write it in E code?
@@ -102,7 +118,7 @@
               "Return the entire remaining contents of the file."
               (read-entire-stream stream))))
         (:|iterate| (f)
-          (loop for subpath in (cl-fad:list-directory (get-cl-pathname))
+          (loop for subpath in (cl-fad:list-directory pathname)
             do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))
         (:|readOnly| ()
           (e. (e-import "org.cubik.cle.file.makeReadOnlyFile") |run| file))))))
