@@ -139,6 +139,6 @@ This is for creating a scope with the usual safeScope structure but with differe
   ? anIOScope["interp"] == anInterp
   # value: true
 
-XXX write tests for the cl-e makeIOScope which is what ScopeSetup is based on
+XXX write tests for the e-on-cl makeIOScope which is what ScopeSetup is based on
 
 XXX nestOuter constraint

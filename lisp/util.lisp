@@ -27,6 +27,9 @@
 
 ; --- misc ---
 
+(defglobal +the-asdf-system+ 
+  (asdf:find-system :e-on-cl))
+
 (defun aan (s)
   (cond
     ((string= s "") "")

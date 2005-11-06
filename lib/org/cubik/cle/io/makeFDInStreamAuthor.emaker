@@ -25,7 +25,7 @@ def makeFDInStreamAuthor {
       def load_op := intern("LOAD-OP", "ASDF")
       
       # XXX :verbose nil for asdf loads
-      asdfOperate(load_op, intern("CL-E.SOCKETS", "KEYWORD"))
+      asdfOperate(load_op, intern("E-ON-CL.SOCKETS", "KEYWORD"))
     }
     def l__quasiParser {
       to valueMaker(t) {

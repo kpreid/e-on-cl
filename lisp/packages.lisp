@@ -56,11 +56,16 @@
     :function-arguments-range
     :function-responds-to
     
-    :backtrace-value))
+    :backtrace-value
+    
+    :+the-asdf-system+))
 
 ;;; 'early util' interlude
 (defmacro e.util:defglobals (&rest names)
   `(declaim (special ,@names)))
+
+(e.util:defglobals
+  e.util:+the-asdf-system+)
 
 (cl:defpackage :e.elib
   (:nicknames :elib)

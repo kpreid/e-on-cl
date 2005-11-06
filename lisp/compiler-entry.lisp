@@ -132,7 +132,7 @@
           (compile-file (merge-pathnames
                           #p"lisp/universal.lisp"
                           (asdf:component-pathname 
-                            (asdf:find-system :cl-e)))
+                            (asdf:find-system +the-asdf-system+)))
                         :output-file output-file)
         (declare (ignore truename warnings-p))
         (assert (not failure-p) () "Compilation for ~A failed." output-file)))))

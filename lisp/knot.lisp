@@ -397,14 +397,14 @@
 (defvar *emaker-search-list*
   (list (merge-pathnames
     (make-pathname :directory '(:relative "lib"))
-    (asdf:component-pathname (asdf:find-system :cl-e))))
+    (asdf:component-pathname +the-asdf-system+)))
   ; XXX we could test for this failure mode, or we could make load-emaker-without-cache always cache filesystem state (i.e. source code or not-found) to ensure a consistent view. (The "without-cache" part of the name refers to result-of-evaluation cache, which requires such things as DeepFrozen auditing.)
   "This variable is expected to be modified by startup code (such as via found-e-on-java-home), but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
 
 (defvar *emaker-fasl-path*
   (merge-pathnames
     (make-pathname :directory '(:relative "compiled-lib"))
-    (asdf:component-pathname (asdf:find-system :cl-e))))
+    (asdf:component-pathname +the-asdf-system+)))
 
 (defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
@@ -412,7 +412,7 @@
     (append *emaker-search-list*
       (handler-case
           (progn
-            (list (funcall (system-symbol "OPEN-JAR" :e.jar :cl-e.jar)
+            (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar)
               (merge-pathnames #p"e.jar" dir-pathname))))
         (error (c)
           (warn "Could not use e.jar because: ~A" c)
@@ -709,7 +709,7 @@ If a log message is produced, context-thunk is run to produce a string describin
           (:stamped +deep-frozen-stamp+)
         (:|run| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
     ("org.cubik.cle.io.makeSocket"
-      (symbol-value (system-symbol "+THE-MAKE-SOCKET+" :e.sockets :cl-e.sockets)))
+      (symbol-value (system-symbol "+THE-MAKE-SOCKET+" :e.sockets :e-on-cl.sockets)))
     ))
 
 (defun f+ (f1 f2)
@@ -905,7 +905,7 @@ If a log message is produced, context-thunk is run to produce a string describin
 (defglobal +eprops+
   (e. +the-make-const-map+ |fromPairs| 
     `#(#("e.home" ,(namestring (asdf:component-pathname 
-                                 (asdf:find-system :cl-e)))))))
+                                 +the-asdf-system+))))))
 
 (defun make-io-scope (&key (interp nil interp-supplied) ((:stdout out-cl-stream)) ((:stderr error-cl-stream)))
   (let ((vat-priv-scope
@@ -943,7 +943,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                              (e. (e-import "org.cubik.cle.IPAuthor")
                                  |run|
                                  +lisp+))))
-            ("&getSocketPeerRef"        ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :cl-e.sockets)))))
+            ("&getSocketPeerRef"        ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
             #||#)))))
 
 ;;; --- end ---

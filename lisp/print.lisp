@@ -298,7 +298,7 @@
                   (:|close| () nil)))
               (make-instance 'string-buffer :buffer buffer))))
   (:|run| (underlying autoflush)
-    "For Java-E compatibility. Returns the original stream, or its withAutoflush/0. CL-E provides TextWriters where Java-E provides Java streams, and in Java-E this would wrap a Java stream in a TextWriter."
+    "For Java-E compatibility. Returns the original stream, or its withAutoflush/0. E-on-CL provides TextWriters where Java-E provides Java streams, and in Java-E this would wrap a Java stream in a TextWriter."
     (if (e-is-true autoflush)
       (e. underlying |withAutoflush|)
       underlying))))

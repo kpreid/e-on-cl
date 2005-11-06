@@ -1,5 +1,5 @@
 # Copyright 2005 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-# This is Not Wrong because CL-E has no non-Exception throwables (since throwables are (currently) CONDITION objects and ejection is implemented by other means).
+# This is Not Wrong because E-on-CL has no non-Exception throwables (since throwables are (currently) CONDITION objects and ejection is implemented by other means).
 <type:java.lang.Throwable>

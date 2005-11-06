@@ -14,7 +14,7 @@ Miranda methods on E-implemented objects
   ? thing.__order("__getAllegedType", [])
   # value: [Thing, <thing>]
 
-Miranda methods on native (in CL-E, DEF-VTABLE-based) objects
+Miranda methods on native (in E-on-CL, DEF-VTABLE-based) objects
 
   ? def specimen := 44.0
   # value: 44.0
@@ -25,7 +25,7 @@ Miranda methods on native (in CL-E, DEF-VTABLE-based) objects
   ? specimen.__order("__getAllegedType", [])
   # value: [float64, 44.0]
 
-Miranda methods on CL-E E-LAMBDA-based objects
+Miranda methods on E-on-CL E-LAMBDA-based objects
 
   ? __loop.__getAllegedType()
   # value: Loop

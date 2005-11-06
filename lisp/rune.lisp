@@ -57,7 +57,7 @@
   (assert (null args))
   (let ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*)))
     (loop (with-simple-restart (abort "Return to E REPL.")
-      (princ "cl-e? ")
+      (princ "e-on-cl? ")
       (force-output)
       (let ((source (e.syntax:e-source-to-tree 
                       (or (read-line *standard-input* nil)
@@ -73,25 +73,25 @@
 
 (defun selftest-toplevel (args)
   (assert (= 0 (length args)))
-  (asdf:operate 'asdf:test-op :cl-e)
+  (asdf:operate 'asdf:test-op +the-asdf-system+)
   (force-output)
   (global-exit 0))
 
 (defun lisptest-toplevel (args)
   (assert (= 0 (length args)))
-  (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil (asdf:find-system :cl-e))
+  (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil +the-asdf-system+)
   (force-output)
   (global-exit 0))
 
 (defun updoc-toplevel (args)
   (establish-vat :label "rune updoc toplevel")
-  (apply (system-symbol "UPDOC-RUNE-ENTRY" "E.UPDOC" :cl-e.updoc) args)
+  (apply (system-symbol "UPDOC-RUNE-ENTRY" "E.UPDOC" :e-on-cl.updoc) args)
   (force-output)
   (global-exit 0))
 
 (defun irc-repl-toplevel (args)
   (establish-vat :label "rune irc toplevel")
-  (apply (system-symbol "START-IRC-REPL" :e.irc-repl :cl-e.irc-repl) args)
+  (apply (system-symbol "START-IRC-REPL" :e.irc-repl :e-on-cl.irc-repl) args)
   (vat-loop))
 
 (defun translate-toplevel (args)

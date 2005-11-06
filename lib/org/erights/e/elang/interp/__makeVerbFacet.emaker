@@ -2,7 +2,7 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 # kpreid 2005-04-28: copied from Java E version
-#   TextWriter guard on __printOn for CL-E compatibilty
+#   TextWriter guard on __printOn for E-on-CL compatibilty
 #   removed unused 'sendSpreader'
 #
 # I would like to see these changes merged back to Java E.

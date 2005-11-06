@@ -1,8 +1,8 @@
 ; Copyright 2005 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(defsystem cl-e
-  :name "cl-e"
+(defsystem e-on-cl
+  :name "E-on-CL" ; XXX what does this actually mean?
   :depends-on (:cl-ppcre :genhash :cl-fad)
   ; cl-ppcre dependency could be made lazy
   :components ((:module "lisp" :components
@@ -52,29 +52,28 @@
 
 ;;; --- Auxiliary systems ---
 
-(defsystem cl-e.jar
-  :name "cl-e.jar"
-  :depends-on (:zip)
+(defsystem e-on-cl.jar
+  :name "e-on-cl.jar"
+  :depends-on (:e-on-cl :zip)
   :components ((:module "lisp" :components
     ((:file "jar")))))
 
-(defsystem cl-e.updoc
-  :name "cl-e.updoc"
-  :depends-on (:cl-e)
+(defsystem e-on-cl.updoc
+  :name "e-on-cl.updoc"
+  :depends-on (:e-on-cl)
   :components ((:module "lisp" :components
     ((:file "updoc")))))
 
-(defsystem cl-e.irc-repl
-  :name "cl-e.irc-repl"
-  :depends-on (:cl-irc :cl-e)
+(defsystem e-on-cl.irc-repl
+  :name "e-on-cl.irc-repl"
+  :depends-on (:cl-irc :e-on-cl)
   :components ((:module "lisp" :components
     ((:file "irc-repl")))))
 
 ;; This is a separate system because I decided to lazily load the Lisp-side socket code, and so the relevant taming declarations cannot be loaded until the socket system is. -- kpreid 2005-04-30
-(defsystem cl-e.sockets
-  :name "cl-e.sockets"
-  :depends-on (#+sbcl :sb-bsd-sockets
-               #+clisp :split-sequence)
+(defsystem e-on-cl.sockets
+  :name "e-on-cl.sockets"
+  :depends-on (:e-on-cl #+sbcl :sb-bsd-sockets)
   :components ((:module "lisp" :components
     ((:file "sockets")
      (:file "sockets2"
@@ -93,9 +92,9 @@
 
 ;;; --- Testing ---
 
-(defmethod perform ((op test-op) (system (eql (find-system :cl-e))))
+(defmethod perform ((op test-op) (system (eql (find-system :e-on-cl))))
   (operate 'load-op :e-on-cl.lisp-test)
-  (operate 'load-op :cl-e.updoc)
+  (operate 'load-op :e-on-cl.updoc)
   (funcall (intern "SYSTEM-TEST" "E.LISP-TEST") op system)
   (funcall (intern "SYSTEM-TEST" "E.UPDOC")     op system))
 
@@ -106,7 +105,7 @@
     (pushnew :e.sb-rt *features*)))
 
 (defsystem e-on-cl.lisp-test
-  :depends-on (:cl-e
+  :depends-on (:e-on-cl
                #+e.sb-rt :sb-rt
                #-e.sb-rt :rt)
   :components ((:module "lisp" :components

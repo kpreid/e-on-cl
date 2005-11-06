@@ -79,9 +79,9 @@ fi
 if [ "$DO_USAGE" ]; then
   cat <<USAGE
 $0:
-  This is clrune, the startup script for CL-E. It searches for a Common 
-  Lisp implementation (using 'which') and calls it to load the Lisp 
-  code.
+  This is clrune, the startup script for E-on-Common-Lisp. It searches
+  for a Common Lisp implementation (using 'which') and instructs it to
+  load the rest of the system.
 
   Command line options:
     --lisp|-l <path> Specifies the path to the Common Lisp 
@@ -146,7 +146,7 @@ COMMON_INIT1='(progn
     (setf *compile-verbose* nil)
     (setf *load-verbose* nil))
   (pushnew "'"$QUOTED_HERE"'/" asdf:*central-registry*)
-  (asdf:operate (quote asdf:load-op) :cl-e :verbose (not '"$LOADQUIET"'))
+  (asdf:operate (quote asdf:load-op) :e-on-cl :verbose (not '"$LOADQUIET"'))
   (values))'
 
 COMMON_INIT2='(progn
@@ -216,7 +216,7 @@ case "$LISPTYPE" in
   ;;
   gcl)
     if [ "$LOADQUIET" = nil ]; then
-      echo "; $0: GNU Common Lisp was not sufficiently ANSI-compliant to run CL-E as of 2005-02-18. We'll try anyway:" >&2
+      echo "; $0: GNU Common Lisp was not sufficiently ANSI-compliant to run E-on-CL as of 2005-02-18. We'll try anyway:" >&2
     fi
     "$EXEC" "$LISP" -batch \
       "${LISP_EXTRA[@]}" \

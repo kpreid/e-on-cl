@@ -476,7 +476,7 @@ XXX make precedence values available as constants"
     "/usr/bin/env"
     (list "rune"
           "-J-XX:ThreadStackSize=10240"
-          "-cpa" (namestring (merge-pathnames #P"jlib/" (asdf:component-pathname (asdf:find-system :cl-e))))
+          "-cpa" (namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
           "-") 
