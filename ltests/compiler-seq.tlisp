@@ -35,7 +35,8 @@
 (defun ev (expr)
   (nth-value 0 (eval (e.compiler.seq::sequence-e-to-cl 
                        (n expr)
-                       *scope*))))
+                       *layout*
+                       `',*scope*))))
 
 (deftest eval.e.literal
   (ev '(|LiteralExpr| 1))

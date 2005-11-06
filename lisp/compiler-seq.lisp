@@ -125,12 +125,11 @@
 
 ;;; --- ---
 
-(defun sequence-e-to-cl (expr outer-scope)
-  (let ((layout (outer-scope-to-layout outer-scope))
-        (rv (gensym "EVAL-RESULT")))
+(defun sequence-e-to-cl (expr layout outer-scope-form)
+  (let ((rv (gensym "EVAL-RESULT")))
     (sequence-to-form
       (updating-sequence-expr expr layout rv)
-      `(values ,rv ,(delta-extract-outer-scope layout expr outer-scope)))))
+      `(values ,rv ,(delta-extract-outer-scope layout expr outer-scope-form)))))
 
 ;;; --- Expressions ---
 
@@ -309,20 +308,15 @@
 
 (define-sequence-expr |MetaContextExpr| (layout result)
   (values
-    (let ((prefix (scope-layout-fqn-prefix layout)))
-      `((,result 
-         ',(e-lambda "org.erights.e.elang.scope.StaticContext" ()
-              (:|__printOn| (tw)
-                (e-coercef tw +the-text-writer-guard+)
-                (e. tw |print| "<static context>"))
-              (:|getFQNPrefix| ()
-                prefix)))))
+    `((,result ',(make-instance 'static-context
+                   :fqn-prefix (scope-layout-fqn-prefix layout))))
     layout))
 
 (define-sequence-expr |MetaStateExpr| (layout result)
   (values
-    `((,result (e. ',+the-make-const-map+ |fromPairs|
-                 (vector ,@(scope-layout-meta-state-bindings layout)))))
+    `((,result (e. +the-make-const-map+
+                   |fromPairs|
+                   (vector ,@(scope-layout-meta-state-bindings layout)))))
     layout))
 
 (define-inline-expr |NounExpr| (layout noun)

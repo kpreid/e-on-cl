@@ -65,7 +65,7 @@
 
 (defmethod scope-layout-fqn-prefix ((scope-layout null))
   ;; XXX add a :if-unavailable (member :error :default nil) parameter?
-  "__unknown")
+  "__unknown$")
 
 (defmethod scope-layout-noun-is-local ((scope-layout null) noun-string)
   (declare (ignore noun-string))
@@ -362,6 +362,28 @@
 
 (defun %make-such-that-error (specimen test-expr)
   (make-condition 'such-that-error :specimen specimen :test-expr test-expr))
+
+;;; --- StaticContext ---
+
+;; This is a class so that instances may be written to a compiled file.
+(defclass static-context ()
+  ((fqn-prefix :initarg :fqn-prefix :initform (error "fqn-prefix not supplied")))
+  #| (:documentation XXX) |#)
+
+(defmethod make-load-form ((a static-context) &optional environment)
+  (make-load-form-saving-slots a :environment environment))
+(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen static-context))
+  t)
+  
+(def-vtable static-context
+  (:|__printOn| (this tw)
+    (declare (ignore this))
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| "<static context>"))
+  (:|getFQNPrefix| (this)
+    (slot-value this 'fqn-prefix)))
+
+
 
 ;;; --- ObjectExpr code generation ---
 

@@ -3,6 +3,16 @@
 
 (in-package :e.elang.compiler)
 
+(defvar *trace-loading* nil)
+
+(defmacro during ((fmt &rest fa) &body body)
+  `(prog2
+     (when *trace-loading*
+       (format *trace-output* ,(concatenate 'string "~&; begin " fmt "~%") ,@fa))
+     (progn ,@body)
+     (when *trace-loading*
+       (format *trace-output* ,(concatenate 'string "~&; end " fmt "~%") ,@fa))))
+
 ;; XXX stale?
 (defun extract-outer-scope (layout 
     &aux (table-sym (gensym))
@@ -21,7 +31,7 @@
         ,table-sym)
     :fqn-prefix ',(scope-layout-fqn-prefix layout)))
 
-(defun delta-extract-outer-scope (final-layout e-node initial-scope
+(defun delta-extract-outer-scope (final-layout e-node initial-scope-form
     &aux (rebound (e-coerce (e. (e. (e. e-node |staticScope|) |outNames|) |getKeys|) 'vector))
          (table-sym (gensym)))
   "Return a form which, when evaluated in the appropriate context for 'final-layout', returns the outer scope resulting from the evaluation of 'e-node', assuming that it has already been evaluated, and 'final-layout' is the resulting scope layout, and 'initial-scope' is the outer scope in which it was evaluated."
@@ -38,7 +48,7 @@
           ,table-sym)
       :fqn-prefix ',(scope-layout-fqn-prefix final-layout))
     |or|
-    ',initial-scope))
+    ,initial-scope-form))
 
 (defun outer-scope-to-layout (outer-scope)
   (make-instance 'prefix-scope-layout :fqn-prefix (e. outer-scope |getFQNPrefix|) :rest
@@ -50,12 +60,10 @@
           (push (cons (subseq k 1) (binding-for-slot v)) layout)))
         (nreverse layout)))))
 
-; XXX support COMPILEing of the CL code when appropriate - SBCL isn't the world
-#-(and)
-(defun e-to-cl (tree outer-scope)
+(defun e-to-cl (expr outer-scope)
   (e-coercef outer-scope 'e.knot:scope)
-  (let ((outer-layout (outer-scope-to-layout)))
-    (multiple-value-bind (local-vars end-layout form) (transform tree outer-layout)
+  (during ("e-to-cl")
+    (funcall (if *trace-loading* #'print #'identity)
       `(locally
         (declare (optimize (compilation-speed 3)
                            (debug 1)
@@ -63,26 +71,17 @@
                            (space 1)
                            (speed 1))
                  #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-        ,(make-lets local-vars `
-          (values 
-            ,form
-            ,(delta-extract-outer-scope end-layout tree outer-scope)))))))
+        ,(e.elang.compiler.seq:sequence-e-to-cl 
+           expr
+           (outer-scope-to-layout outer-scope)
+           `',outer-scope)))))
 
-#+(and)
-(defun e-to-cl (expr outer-scope)
-  (e-coercef outer-scope 'e.knot:scope)
-  `(locally
-    (declare (optimize (compilation-speed 3)
-                       (debug 1)
-                       (safety 3)
-                       (space 1)
-                       (speed 1))
-             #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-    ,(e.elang.compiler.seq:sequence-e-to-cl expr outer-scope)))
+;; XXX support COMPILEing of the CL code when appropriate - SBCL isn't the world
 
 (defun cl-to-lambda (form &key (name (gensym "cl-to-lambda-")))
-  "to show up in profiles"
-  (eval `(e.util:named-lambda ,name () ,form)))
+  "this is a separate function to show up distinctly in profiles"
+  (during ("CL eval")
+    (eval `(e.util:named-lambda ,name () ,form))))
 
 ; --- ---
 
@@ -100,3 +99,48 @@
     (e.elang.compiler.seq::sequence-expr expr '* 'return-value)
     'return-value))
 
+;;; --- Cached compilation ---
+
+(defvar *efasl-program*)
+(defvar *efasl-result*)
+
+(defun compile-e-to-file (expr output-file fqn-prefix)
+  "Compile an EEXpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would."
+  (let* ((nouns (coerce (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector) 'list))
+         (syms (mapcar #'make-symbol nouns))
+         (initial-scope-var (gensym "INITIAL-SCOPE"))
+         (layout
+           (make-instance 'prefix-scope-layout :fqn-prefix fqn-prefix
+                                               :rest
+             (scope-layout-nest
+               (mapcar #'cons nouns syms))))
+         (*efasl-program*
+           `(setf *efasl-result*
+                  (list
+                    ',nouns
+                    (lambda (,initial-scope-var ,@syms)
+                      ;; XXX we shouldn't need to reference the compiler
+                      ;; implementation here
+                      ,(e.elang.compiler.seq:sequence-e-to-cl
+                         expr 
+                         layout
+                         initial-scope-var))))))
+    ;; XXX instead of having to do this to handle nested cases,
+    ;; we should implement a-u-o with the macrolet/macroexpand trick
+    (let ((elib::*allow-unexternalizable-optimization* nil))
+      (multiple-value-bind (truename warnings-p failure-p)
+          (compile-file (merge-pathnames
+                          #p"lisp/universal.lisp"
+                          (asdf:component-pathname 
+                            (asdf:find-system :cl-e)))
+                        :output-file output-file)
+        (declare (ignore truename warnings-p))
+        (assert (not failure-p) () "Compilation for ~A failed." output-file)))))
+
+(defun load-compiled-e (file scope)
+  (let ((*efasl-result* nil))
+    (during ("CL load ~A" (file-namestring file))
+      (load file :verbose nil :print nil))
+    (during ("execute ~A" (file-namestring file))
+      (destructuring-bind (names function) *efasl-result*
+        (apply function scope (mapcar (lambda (n) (e. scope |getSlot| n)) names))))))

@@ -418,6 +418,8 @@
     :eject-code
     :opt-ejector-make-code
     
+    :static-context
+    
     :object-form
     :updating-fully-qualify-name
     
@@ -435,6 +437,8 @@
   (:export
     :sequence-e-to-cl))
 
+(declaim (ftype function
+  e.elang.compiler.seq:sequence-e-to-cl))
 
 (cl:defpackage :e.extern
   (:use :common-lisp :e.util :elib :elang)

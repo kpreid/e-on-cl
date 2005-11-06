@@ -241,8 +241,20 @@
 ; --- general definitions for nodes ---
 
 (defmethod print-object ((node |ENode|) stream)
-  (print-unreadable-object (node stream :type nil :identity nil)
-    (format stream "~A ~W" (type-of node) (node-elements node))))
+  ;; imitating SBCL's hash-table printing
+  (if (or (not *print-readably*) (not *read-eval*))
+    (print-unreadable-object (node stream :type nil :identity nil)
+      (format stream "~A ~W" (type-of node) (node-elements node)))
+    (with-standard-io-syntax
+          (format stream
+                  "#.~W"
+                  `(make-instance ',(class-name (class-of node))
+                                  :elements ',(node-elements node))))))
+
+(defmethod make-load-form ((node |ENode|) &optional environment)
+  (declare (ignore environment))
+  `(make-instance ',(class-name (class-of node))
+                  :elements ',(node-elements node)))
 
 ; --- constraints on nodes ---
 
@@ -412,6 +424,21 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
   (pattern-to-param-desc (first (node-elements patt))))
 
+;; This is a class so that instances may be written to a compiled file.
+(defclass false-guard ()
+  ((text :initarg :text :type string))
+  (:documentation "This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object."))
+
+(defmethod make-load-form ((a false-guard) &optional environment)
+  (make-load-form-saving-slots a :environment environment))
+(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen false-guard))
+  t)
+  
+(def-vtable false-guard
+  (:|__printOn| (this tw) 
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |write| (slot-value this 'text))))
+
 (defun opt-guard-expr-to-safe-opt-guard (opt-guard-expr
     &aux (opt-guard-string
            (if opt-guard-expr 
@@ -420,12 +447,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                (e. opt-guard-expr |getName|)
                (e-print opt-guard-expr)))))
   (if opt-guard-string
-    (e-lambda "org.erights.e.elang.FalseGuard"
-        (:stamped +deep-frozen-stamp+
-         :doc "This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object.")
-      (:|__printOn| (tw) 
-        (e-coercef tw +the-text-writer-guard+)
-        (e. tw |write| opt-guard-string)))))
+    (make-instance 'false-guard :text opt-guard-string)))
 
 ; --- static scopes ---
 

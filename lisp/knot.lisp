@@ -401,6 +401,11 @@
   ; XXX we could test for this failure mode, or we could make load-emaker-without-cache always cache filesystem state (i.e. source code or not-found) to ensure a consistent view. (The "without-cache" part of the name refers to result-of-evaluation cache, which requires such things as DeepFrozen auditing.)
   "This variable is expected to be modified by startup code (such as via found-e-on-java-home), but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
 
+(defvar *emaker-fasl-path*
+  (merge-pathnames
+    (make-pathname :directory '(:relative "compiled-lib"))
+    (asdf:component-pathname (asdf:find-system :cl-e))))
+
 (defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
   (setf *emaker-search-list* 
@@ -426,14 +431,51 @@
 (defun %try-root (root subpath)
   (typecase root
     (pathname
-      (let ((file (probe-file (merge-pathnames subpath root))))
-        (when file (e.extern:read-entire-file file))))
+      (probe-file (merge-pathnames subpath root)))
     (t
-      (let ((file (e. root |getOpt| (namestring subpath))))
-        (when file (e. file |getText|))))))
+      (e. root |getOpt| (namestring subpath)))))
+
+(defun opt-compile-target (file fqn)
+  (declare (ignore file))
+  (let* ((emaker-path (merge-pathnames (fqn-to-relative-pathname fqn) *emaker-fasl-path*))
+         (fasl-path
+          (make-pathname
+            :type (concatenate 'string 
+                               "emaker-"
+                               (pathname-type (compile-file-pathname emaker-path)))
+            :defaults emaker-path)))
+    (let ((*standard-output* *trace-output*))
+      (ensure-directories-exist fasl-path :verbose t))
+    fasl-path))
+
+(defun read-file (file)
+  (typecase file
+    (pathname (e.extern:read-entire-file file))
+    (t        (e. file |getText|))))
+
+(defun load-emaker-from-file (file fqn)
+  (let* ((fqn-prefix (concatenate 'string fqn "$"))
+         (compile-target (opt-compile-target file fqn))
+         (scope (e. (vat-safe-scope *vat*) |withPrefix| fqn-prefix)))
+    (if compile-target
+      (progn
+        (when (or (not (probe-file compile-target))
+                  ;; XXX assumption that non-pathnamed items will not
+                  ;; change - proper thing is to add file-write-date 
+                  ;; support to file objects and jar objects
+                  (and (pathnamep file)
+                       (> (file-write-date file)
+                          (file-write-date compile-target))))
+          (e.compiler::compile-e-to-file
+            (e.syntax:e-source-to-tree (read-file file))
+            compile-target
+            fqn-prefix))
+        (e.compiler::load-compiled-e compile-target scope))
+      (elang:eval-e (e.syntax:e-source-to-tree (read-file file))
+                    scope))))
 
 (defun load-emaker-without-cache (fqn absent-thunk)
-  (let* ((source
+  (let* ((file
            (loop with subpath = (fqn-to-relative-pathname fqn)
                  for root in *emaker-search-list*
                  thereis (%try-root root subpath)
@@ -444,9 +486,7 @@
     ;; If there is no emaker file, then we will not reach this point,
     ;; due to either return-from or the absent-thunk.
     (incf (gethash fqn *emaker-load-counts* 0))
-    (elang:eval-e (e.syntax:e-source-to-tree source)
-                  (e. (vat-safe-scope *vat*) |withPrefix|
-                      (concatenate 'string fqn "$")))))
+    (load-emaker-from-file file fqn)))
 
 ;;; this is here because it's closely related to emaker loading
 (defglobal +resource-importer+ (e-lambda "org.cubik.cle.prim.resource__uriGetter"
