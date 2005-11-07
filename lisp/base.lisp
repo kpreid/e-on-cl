@@ -155,7 +155,8 @@ This variable is deprecated and will be replaced by more fine-grained and well-d
   (defvar *%e-false* nil)
   
   (defun intern-boolean (value)
-    (declare (boolean value))
+    (declare (boolean value)
+             (notinline make-instance))
     (if value
       (or *%e-true*  (setf *%e-true*  (make-instance 'e-boolean)))
       (or *%e-false* (setf *%e-false* (make-instance 'e-boolean)))))

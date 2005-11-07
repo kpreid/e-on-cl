@@ -253,8 +253,12 @@
 
 (defmethod make-load-form ((node |ENode|) &optional environment)
   (declare (ignore environment))
-  `(make-instance ',(class-name (class-of node))
-                  :elements ',(node-elements node)))
+  `(locally (declare (notinline make-instance))
+     ;; Without this NOTINLINE, SBCL 0.9.6 (at least) will waste time
+     ;; and space generating an optimized constructor function for
+     ;; this set of constant class-and-initargs.
+     (make-instance ',(class-name (class-of node))
+                    :elements ',(node-elements node))))
 
 ; --- constraints on nodes ---
 

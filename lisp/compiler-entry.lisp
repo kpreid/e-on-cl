@@ -19,17 +19,18 @@
          (bindings (scope-layout-bindings layout)))
   "Given a scope layout, return a form which evaluates to the scope for that scope layout in its lexical environment."
   ; XXX call something on the Scope maker, don't make one directly
-  `(make-instance 'e.knot:scope
-    :slot-table
-      (let ((,table-sym (make-hash-table :test #'equal :size ',(length bindings))))
-        ,@(loop
-          with seen = (make-hash-table :test #'equal) 
-          for (k . v) in (scope-layout-bindings layout)
-          unless (gethash k seen)
-            do (setf (gethash k seen) t)
-            and collect `(setf (gethash ',k ,table-sym) ,(binding-get-slot-code v)))
-        ,table-sym)
-    :fqn-prefix ',(scope-layout-fqn-prefix layout)))
+  `(locally (declare (notinline make-instance))
+    (make-instance 'e.knot:scope
+      :slot-table
+        (let ((,table-sym (make-hash-table :test #'equal :size ',(length bindings))))
+          ,@(loop
+            with seen = (make-hash-table :test #'equal) 
+            for (k . v) in (scope-layout-bindings layout)
+            unless (gethash k seen)
+              do (setf (gethash k seen) t)
+              and collect `(setf (gethash ',k ,table-sym) ,(binding-get-slot-code v)))
+          ,table-sym)
+      :fqn-prefix ',(scope-layout-fqn-prefix layout))))
 
 (defun delta-extract-outer-scope (final-layout e-node initial-scope-form
     &aux (rebound (e-coerce (e. (e. (e. e-node |staticScope|) |outNames|) |getKeys|) 'vector))
@@ -37,16 +38,17 @@
   "Return a form which, when evaluated in the appropriate context for 'final-layout', returns the outer scope resulting from the evaluation of 'e-node', assuming that it has already been evaluated, and 'final-layout' is the resulting scope layout, and 'initial-scope' is the outer scope in which it was evaluated."
   `(e.
     ; XXX call something on the Scope maker, don't make one directly
-    (make-instance 'e.knot:scope
-      :slot-table
-        (let ((,table-sym (make-hash-table :test #'equal
-                                           :size ',(length rebound))))
-          ,@(loop for noun across rebound collect
-            `(setf (gethash ',noun ,table-sym)
-                   ,(binding-get-slot-code
-                     (scope-layout-noun-binding final-layout noun))))
-          ,table-sym)
-      :fqn-prefix ',(scope-layout-fqn-prefix final-layout))
+    (locally (declare (notinline make-instance))
+      (make-instance 'e.knot:scope
+        :slot-table
+          (let ((,table-sym (make-hash-table :test #'equal
+                                             :size ',(length rebound))))
+            ,@(loop for noun across rebound collect
+              `(setf (gethash ',noun ,table-sym)
+                     ,(binding-get-slot-code
+                       (scope-layout-noun-binding final-layout noun))))
+            ,table-sym)
+        :fqn-prefix ',(scope-layout-fqn-prefix final-layout)))
     |or|
     ,initial-scope-form))
 

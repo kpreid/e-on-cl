@@ -330,6 +330,7 @@
           ,rest-patt-code)))))
 
 (defun var-binding-impl (opt-guard-code body)
+  ;; xxx watch this for a SBCL ctor leak?
   (if opt-guard-code
     `(make-instance 'elib:e-guarded-slot :value ,body :guard ,opt-guard-code)
     `(make-instance 'elib:e-var-slot :value ,body)))
