@@ -26,7 +26,7 @@
     (call-next-method)))
 
 (defun inlinable (node)
-  (= (e. (e. (e. node |staticScope|) |outNames|) |size|) 0))
+  (zerop (e. (e. (e. node |staticScope|) |outNames|) |size|)))
 
 (defun safe-inline-expr (node layout)
   (unless (inlinable node)

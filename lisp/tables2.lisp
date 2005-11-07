@@ -147,7 +147,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     `#(,+the-make-const-map+ "fromColumns" ,(e. this |getPair|)))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (if (= 0 (e. this |size|))
+    (if (zerop (e. this |size|))
       (e. tw |print| "[].asMap()")
       (e. this |printOn| "[" " => " ", " "]" tw)))
   (:|keyType| (this) (declare (ignore this)) +the-any-guard+)
@@ -401,7 +401,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (e-coercef tw +the-text-writer-guard+)
     ; XXX call e-printer
     ; XXX this is duplicated code with simple-flex-map, because we expect to throw out most of the CL-written flex-map machinery
-    (if (= 0 (e. this |size|))
+    (if (zerop (e. this |size|))
       (e. tw |print| "[].asMap()")
       (e. (slot-value this 'self) |printOn| "[" " => " ", " "]" tw))
     (e. tw |print| ".diverge()"))

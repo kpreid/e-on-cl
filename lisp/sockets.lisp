@@ -65,7 +65,7 @@
   (e-coercef vector '(vector (unsigned-byte 8)))
   (multiple-value-bind (n errno)
       (sb-unix::unix-write (socket-file-descriptor target) vector start end)
-    (if (= 0 errno)
+    (if (zerop errno)
       n
       (eject-or-ethrow error-ejector (errno-to-condition errno)))))
 
@@ -350,7 +350,7 @@
     (let ((buf (make-array max-elements :element-type '(unsigned-byte 8) :fill-pointer t)))
       (setf (fill-pointer buf)
         (ext:read-byte-sequence buf stream :no-hang t))
-      (if (and (= 0 (fill-pointer buf))
+      (if (and (zerop (fill-pointer buf))
                (eq (socket-status (cons stream :input) 0) :eof))
         (eject-or-ethrow eof-ejector "stream EOF")
         buf)))

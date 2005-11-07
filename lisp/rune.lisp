@@ -31,7 +31,7 @@
     (extensions:quit)
   #+abcl
     (progn
-      (when (/= 0 status)
+      (unless (zerop status)
         (warn "discarding nonzero exit status ~A due to ABCL limitations" status))
       (ext:quit))
   (error "Don't know how to global-exit"))
@@ -72,13 +72,13 @@
           (setf scope new-scope)))))))
 
 (defun selftest-toplevel (args)
-  (assert (= 0 (length args)))
+  (assert (zerop (length args)))
   (asdf:operate 'asdf:test-op +the-asdf-system+)
   (force-output)
   (global-exit 0))
 
 (defun lisptest-toplevel (args)
-  (assert (= 0 (length args)))
+  (assert (zerop (length args)))
   (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil +the-asdf-system+)
   (force-output)
   (global-exit 0))

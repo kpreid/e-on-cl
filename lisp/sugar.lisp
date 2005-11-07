@@ -113,7 +113,7 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
                             ,(first default-cell) 
                             ,var))))
                 (,map-var  (e. ,pair-var |get| 1)))))
-    (unless (= 0 (e-coerce (e. ,map-var |size|) '(integer 0)))
+    (unless (zerop (e-coerce (e. ,map-var |size|) '(integer 0)))
       (error "unexpected map entries ~A" (e-quote ,map-var)))
     ,@body))
 

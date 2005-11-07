@@ -337,7 +337,7 @@
 
 NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced."
     (e-coercef args 'vector)
-    (if (= (length args) 0)
+    (if (zerop (length args))
       this
       (e. this |welcome|
           (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 

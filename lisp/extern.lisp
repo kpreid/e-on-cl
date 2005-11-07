@@ -68,7 +68,7 @@
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. tw |print| "<file://")
-          (if (/= 0 (length path-components))
+          (if (not (zerop (length path-components)))
             (loop for x across path-components do
               (e. tw |print| "/" x))
             (e. tw |print| "/"))
@@ -78,7 +78,7 @@
           (with-text-writer-to-string (tw)
             (loop for x across path-components do
                 (e. tw |print| "/" x))
-            (when (= 0 (length path-components))
+            (when (zerop (length path-components))
               ; must be the root
               ; xxx Java-E appends a / to the regular path iff the file exists and is a directory. should we do this?
               (e. tw |print| "/"))))
@@ -95,7 +95,7 @@
               (concatenate 'vector
                 path-components
                 (loop for component across splat
-                      when (/= 0 (length component))
+                      unless (zerop (length component))
                       collect component)))))
         (:|getOpt| (subpath)
           ;; XXX needs tests
@@ -213,7 +213,7 @@
                   (1+ (length reg-starts)))
                 (:|group| (index) 
                   (e-coercef index 'unsigned-byte)
-                  (if (= index 0)
+                  (if (zerop index)
                     (subseq input match-start match-end)
                     (let* ((cindex (1- index))
                            (rstart (aref reg-starts cindex))
