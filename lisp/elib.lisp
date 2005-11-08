@@ -138,14 +138,27 @@
 
 (define-condition synchronous-call-error (error message-condition)
   ()
-  (:documentation "Indicates an attempt to synchronously call an EVENTUAL ref (i.e. a promise or remote reference.).")
+  (:documentation "Indicates an attempt to synchronously call an EVENTUAL ref (i.e. a promise or remote reference).")
   (:report (lambda (condition stream)
              (format stream "not synchronously callable: ~A.~A(~{~A~^, ~})"
                (e-quote (message-condition-recipient condition))
                (unmangle-verb (message-condition-mverb condition)) 
-               (mapcar #'e-quote 
-                       (coerce (message-condition-args condition) 
-                               'list))))))
+               (map 'list #'e-quote (message-condition-args condition))))))
+
+(define-condition no-such-method-error (error message-condition)
+  ()
+  (:documentation "The recipient was called with a verb it does not have a method for.")
+  (:report (lambda (condition stream)
+             ;; xxx should report the args, since they're available
+             (format stream "no such method: ~A#~A"
+               (e-coerce
+                 (e. (e. (message-condition-recipient condition) 
+                         |__getAllegedType|) 
+                     |getFQName|)
+                 'string)
+               (message-condition-mverb condition)))))
+
+(declaim (ftype function no-such-method)) ; defined later
 
 (define-condition vicious-cycle-error (error) ()
   (:documentation "Indicates that a promise resolved to itself.")
@@ -184,16 +197,6 @@ The 'name slot gives a label for the value which was not settled, such as the na
              (format stream "not settled: ~A ~A"
                (not-settled-error-name condition)
                (e-quote (not-settled-error-value condition))))))
-
-(defmethod e-call-dispatch ((rec t) (mverb symbol) &rest args)
-  "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
-  (elib:miranda rec mverb args (lambda ()
-    (apply #'e-call-match rec mverb args))))
-
-(defmethod e-call-match ((rec t) mverb &rest args)
-  "Final case of E call dispatch - always fails."
-  (declare (ignore args))
-  (error "no such method: ~A#~A" (simplify-fq-name (cl-type-fq-name (observable-type-of rec))) mverb))
 
 ; --- defining some vat pieces early so that vat-checking does not come after local-resolver which subclasses it, which ABCL doesn't like ---
 
@@ -746,15 +749,13 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
             (otherwise 
               (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
                 ,(let ((fallthrough
-                        `(error "no such method: ~A#~A" 
-                                ',fqn ,mverb-sym)))
+                        `(no-such-method ,self-expr ,mverb-sym ,args-sym)))
                   (if opt-otherwise-body
                     (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
                     fallthrough))))))))
           ,self-expr))))
           
   ) ; end eval-when
-  
 
 (defmacro efun (method-first &body method-rest &environment env)
   (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "_") "" '() nil))

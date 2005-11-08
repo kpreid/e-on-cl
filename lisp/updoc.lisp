@@ -254,20 +254,22 @@
                       `(("updoc" ,runner)
                         ("interp" ,interp)
                         ("print"
-                         ,(e-lambda "$print" ()
-                            (otherwise (mverb &rest args)
-                              (if (string= (unmangle-verb mverb) "run")
-                                (loop for a in args do
-                                  (princ (e-print a) eval-out-stream))
-                                (error "no such method: <print>#~A ~S" mverb args)))))
+                         ,(with-result-promise (print)
+                            (e-lambda "$print" ()
+                              (otherwise (mverb &rest args)
+                                (if (mverb-verb= mverb "run")
+                                  (loop for a in args do
+                                    (princ (e-print a) eval-out-stream))
+                                  (no-such-method print mverb args))))))
                         ("println"
-                         ,(e-lambda "$println" ()
-                            (otherwise (mverb &rest args)
-                              (if (string= (unmangle-verb mverb) "run")
-                                (loop for a in args do
-                                  (princ (e-print a) eval-out-stream)
-                                  finally (terpri eval-out-stream))
-                                (error "no such method: <println>#~A ~S" mverb args))))))))
+                         ,(with-result-promise (println)
+                            (e-lambda "$println" ()
+                              (otherwise (mverb &rest args)
+                                (if (mverb-verb= mverb "run")
+                                  (loop for a in args do
+                                    (princ (e-print a) eval-out-stream)
+                                    finally (terpri eval-out-stream))
+                                  (no-such-method println mverb args)))))))))
                     (e. (e. (make-io-scope :stdout eval-out-stream 
                                            :stderr eval-err-stream
                                            :interp interp) 

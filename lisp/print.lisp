@@ -211,6 +211,9 @@
                     (assert (eql arity (length args))
                             ()
                             "Mismatch: Arity ~A, arglist ~W" arity args)
+                    ;; XXX if we ever write another cond like this,
+                    ;; extract it into a mverb-verb-case macro and put
+                    ;; it in util.lisp.
                     (cond
                       ((string= mv-string "print" :end1 slash)
                         (let ((tw (nest :syntax (e. syntax |asNotQuoting|))))
@@ -219,7 +222,7 @@
                         (let ((tw (nest :syntax (e. syntax |asQuoting|))))
                           (dolist (arg args) (e. tw |printSame| arg))))
                       (t
-                        (error "no such method: TextWriter#~A" mverb)))))))))
+                        (no-such-method tw mverb args)))))))))
     (spawn :syntax (let ((base (e. syntax |run| delegate)))
                      (if is-quoting
                        (e. base |asQuoting|)

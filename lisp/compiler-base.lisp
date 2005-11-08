@@ -444,7 +444,7 @@
     (otherwise 
       (elib:miranda #',self-fsym mverb args (lambda ()
         ,(matchers-body generators layout matchers 'mverb 'args
-          `(error "no such method: ~A#~A" ',qualified-name mverb)))))))
+          `(no-such-method #',self-fsym mverb args)))))))
 
 (defun default-print (args simple-name)
   (destructuring-bind (tw) args

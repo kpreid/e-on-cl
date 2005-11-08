@@ -388,30 +388,21 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
          (e. tw |quote| elem))
     (e. tw |print| right)))
 
-; XXX make this an e-lambda
-(defclass make-e-list () ())
-(defglobal +the-make-list+ (make-instance 'make-e-list))
-
-(def-vtable make-e-list
+(defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
+    (:stamped  +deep-frozen-stamp+)
   ; XXX write tests for this
-  (:|fromIteratableValues| (this iteratable) 
-    (declare (ignore this))
-    (let ((values))
+  (:|fromIteratableValues| (iteratable)
+    (let ((values '()))
       (e. iteratable |iterate| (efun (k v)
         (declare (ignore k))
         ; out-of-dynamic-extent calls are harmless
         (push v values)))
-      (coerce (nreverse values) 'vector))))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen make-e-list))
-  t)
-
-(defmethod e-call-match ((recip make-e-list) mverb &rest args)
-  ; XXX __respondsTo
-  (if (eq mverb (e-util:mangle-verb "run" (length args)))
-    (apply #'vector args)
-    (call-next-method)))
-
+      (coerce (nreverse values) 'vector)))
+  (otherwise (mverb &rest args)
+    ;; XXX __respondsTo, etc.
+    (if (mverb-verb= mverb "run")
+      (apply #'vector args)
+      (no-such-method +the-make-list+ mverb args)))))
 
 ; --- Number ---
 
@@ -666,7 +657,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e. tw |write| " doesn't coerce to ")
     (e. tw |print| (e-util:aan (e-quote (type-specifier-to-guard (type-error-expected-type this)))))))
 
-(def-vtable synchronous-call-error
+(def-vtable message-condition
   ; XXX should we really be doing this?
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)

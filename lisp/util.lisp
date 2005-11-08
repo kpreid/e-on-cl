@@ -115,7 +115,16 @@
     (assert slash)
     (values
       (subseq mv-string 0 slash)
-      (parse-integer mv-string :start (1+ slash)))))
+      (parse-integer mv-string :start (1+ slash))))
+
+  (declaim (inline mverb-verb)
+           (ftype (function (keyword string) t) mverb-verb))
+  (defun mverb-verb= (mverb verb)
+    "Return whether the verb of MVERB is equal to VERB."
+    (let ((mv-string (symbol-name mverb)))
+      (string= mv-string 
+               verb
+               :end1 (position #\/ mv-string :from-end t)))))
     
 (declaim (inline without-suffix)
          (ftype (function (string string) (or null string)) without-suffix))

@@ -41,6 +41,7 @@
     
     :mangle-verb
     :unmangle-verb
+    :mverb-verb=
     
     :without-suffix
     :without-prefix
@@ -79,6 +80,7 @@
     
     :vicious-cycle-error
     :synchronous-call-error
+    :no-such-method-error :no-such-method
   
     :+the-e+
     

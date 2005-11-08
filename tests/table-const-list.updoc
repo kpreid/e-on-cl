@@ -4,12 +4,8 @@
 ? [1, 2] + [3, 4]
 # value: [1, 2, 3, 4]
 
-XXX better print for the maker
-? __makeList
-# value: <a make-e-list>
-
 ? __makeList :DeepFrozen
-# value: <a make-e-list>
+# value: <makeConstList>
 
 ? [1, 2, 2].asMap()
 # value: [0 => 1, 1 => 2, 2 => 2]
@@ -32,7 +28,7 @@ asKeys/1
 # value: 3
 
 ? ["a", ['b'], 3].__optUncall()
-# value: [<a make-e-list>, "run", ["a", ['b'], 3]]
+# value: [<makeConstList>, "run", ["a", ['b'], 3]]
 
 coercion
   ? ['a', 'b'][def _ { to __conformTo(_) :any { return 1 }}]

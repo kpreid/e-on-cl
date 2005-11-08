@@ -10,7 +10,7 @@
   # value: <mapStream>
   
   ? def s := mapStream(List, [1, 2, 3].asStream(), __makeList)
-  # value: <-<a make-e-list>-[1, 2, 3, ...].asStream()
+  # value: <-<makeConstList>-[1, 2, 3, ...].asStream()
   
   ? s.getElementType()
   # value: List

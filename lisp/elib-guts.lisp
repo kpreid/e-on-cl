@@ -7,7 +7,23 @@
 
 ;;; Currently, this file is just defined as 'stuff moved from elib.lisp that doesn't actually need to be loaded before other files, so as to reduce dependencies requiring recompiling'.
 
-; --- reference shortening ---
+; --- reference mechanics ---
+
+(defun no-such-method (recipient mverb args)
+  (error 'no-such-method-error :recipient recipient 
+                               :mverb mverb
+                               :args args))
+
+(defmethod e-call-dispatch ((rec t) (mverb symbol) &rest args)
+  "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
+  (elib:miranda rec mverb args (lambda ()
+    (apply #'e-call-match rec mverb args))))
+
+(defmethod e-call-match ((rec t) mverb &rest args)
+  "Final case of E call dispatch - always fails."
+  (no-such-method rec mverb args))
+
+
 
 #+e.instrument.ref-shorten-uses 
   (defvar *instrument-ref-shorten-kinds* (make-hash-table))
