@@ -2,7 +2,6 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defsystem e-on-cl
-  :name "E-on-CL" ; XXX what does this actually mean?
   :depends-on (:cl-ppcre :genhash :cl-fad)
   ; cl-ppcre dependency could be made lazy
   :components ((:module "lisp" :components
@@ -53,26 +52,22 @@
 ;;; --- Auxiliary systems ---
 
 (defsystem e-on-cl.jar
-  :name "e-on-cl.jar"
   :depends-on (:e-on-cl :zip)
   :components ((:module "lisp" :components
     ((:file "jar")))))
 
 (defsystem e-on-cl.updoc
-  :name "e-on-cl.updoc"
   :depends-on (:e-on-cl)
   :components ((:module "lisp" :components
     ((:file "updoc")))))
 
 (defsystem e-on-cl.irc-repl
-  :name "e-on-cl.irc-repl"
   :depends-on (:cl-irc :e-on-cl)
   :components ((:module "lisp" :components
     ((:file "irc-repl")))))
 
 ;; This is a separate system because I decided to lazily load the Lisp-side socket code, and so the relevant taming declarations cannot be loaded until the socket system is. -- kpreid 2005-04-30
 (defsystem e-on-cl.sockets
-  :name "e-on-cl.sockets"
   :depends-on (:e-on-cl #+sbcl :sb-bsd-sockets)
   :components ((:module "lisp" :components
     ((:file "sockets")
@@ -82,7 +77,7 @@
 ;;; --- Gimmicks ---
 
 ; cl-ppcre, as of 1.0.0 to 1.2.1, causes SBCL to produce style-warnings while loading it. This muffles them.
-; XXX consider whether this should still exist in production
+;; XXX this should be done only if we're loading E-on-CL as standalone (via clrune)
 ; contributed by antifuchs of irc://irc.freenode.net/lisp -- http://paste.lisp.org/display/4831
 
 (dolist (component (asdf:module-components (find-system :cl-ppcre)))

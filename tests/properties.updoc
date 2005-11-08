@@ -44,9 +44,9 @@
 ? yy
 # value: 3.14
 
-XXX isFinal is being interpreted as 'cannot be set through this interface' by the miranda property slot impl - is that the intended definition of isFinal?
+isFinal means will not change, not not-changable-by-this-interface
 ? (&yy).isFinal()
-# value: true
+# value: false
 
 ? autoPropObj.__getPropertySlot(43)
 # problem: the int 43 doesn't coerce to a String

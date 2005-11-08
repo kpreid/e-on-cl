@@ -17,6 +17,11 @@
 
 ; --- String ---
 
+(def-class-opaque string)
+
+(defmethod eeq-is-transparent-selfless ((a string))
+  (declare (ignore a)) nil)
+
 (def-vtable string
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -170,6 +175,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; --- Character ---
 
+(def-class-opaque character)
+
 (declaim (inline char-nearby))
 (defun char-nearby (char delta)
   "Return the next or previous character after 'char', if possible."
@@ -220,6 +227,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- ConstList (vector) ---
 
 ; Just as in Java E arrays serve as ConstLists, so do vectors here, and we make the same assumption of non-mutation.
+
+(def-class-opaque vector)
+(defmethod eeq-is-transparent-selfless ((a vector))
+  (declare (ignore a)) t)
 
 ; XXX this should be move to some utility section somewhere, or the equality section of elib-guts
 ; xxx OPT memoize results since we're doing all this subtypeping?
@@ -528,6 +539,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (logior a b)))
 
 (def-fqn integer "org.cubik.cle.native.int")
+(def-class-opaque integer)
 
 (def-vtable float
   (:|__printOn| (this tw)

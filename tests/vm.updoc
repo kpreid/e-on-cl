@@ -255,7 +255,7 @@ MatchBindExpr containing guardless VarPattern (bug test: wouldn't compile becaus
 
 MetaContextExpr
 
-  ? meta.context()
+  ? meta.context() :DeepFrozen
   # value: <static context>
   
   ? meta.context().getFQNPrefix()

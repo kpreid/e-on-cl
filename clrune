@@ -131,9 +131,11 @@ fi
 
 QUOTED_HERE=`dirname $0 | perl -pe 's&(["\\\\])&\\$1&g'`
 
-# Arguments as a series of Lisp forms, for implementations which don't provide access to argv from within the Lisp environment.
-# XXX make this into a function so we don't invoke perl unless necessary
-QUOTED_ARGS=`perl -e 'print map {(my $x=$_) =~ s&(["\\\\])&\\$1&g; qq& "$x" &} @ARGV' -- "$@"`
+# Arguments as a string of Lisp expressions, for implementations which don't provide access to argv from within the Lisp environment.
+CLRUNE_PASS_ARGS="$@"
+function quote_args {
+  perl -e 'print map {(my $x=$_) =~ s&(["\\\\])&\\$1&g; qq& "$x" &} @ARGV' -- $CLRUNE_PASS_ARGS
+}
 
 JHOME=`rune -show | grep -- '^-De.home=' | cut -c 10-`
 QUOTED_JHOME=`echo "$JHOME/" | perl -pe 's&(["\\\\])&\\$1&g'`
@@ -177,7 +179,7 @@ case "$LISPTYPE" in
       -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
       -eval "$COMMON_INIT2" \
-      -eval "(e.rune:rune $QUOTED_ARGS)"
+      -eval "(e.rune:rune `quote_args`)"
   ;;
   openmcl)
     "$EXEC" "$LISP" \
@@ -185,7 +187,7 @@ case "$LISPTYPE" in
       -e '(require :asdf)' \
       -e "$COMMON_INIT1" \
       -e "$COMMON_INIT2" \
-      -e "(e.rune:rune $QUOTED_ARGS)"
+      -e "(e.rune:rune `quote_args`)"
   ;;
   clisp)
 
@@ -202,7 +204,7 @@ case "$LISPTYPE" in
     #  -x "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
     #     "$COMMON_INIT1" \
     #     "$COMMON_INIT2" \
-    #     "(e.rune:rune $QUOTED_ARGS)"
+    #     "(e.rune:rune `quote_args`)"
     # xxx Ick! We load .clisprc because using this form of clisp startup unconditionally disables the rc file, and we want the rc so that the user's ASDF configuration is available.
     "$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
       <(echo \
@@ -222,7 +224,7 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
        -eval "(require :asdf \"$QUOTED_HERE/asdf.lisp\")" \
        -eval "$COMMON_INIT1" "$COMMON_INIT2" \
-       -eval "(e.rune:rune $QUOTED_ARGS)"
+       -eval "(e.rune:rune `quote_args`)"
   ;;
   abcl)
     "$EXEC" java -cp "$LISP" org.armedbear.lisp.Main \
@@ -230,7 +232,7 @@ case "$LISPTYPE" in
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
       --eval "$COMMON_INIT2" \
-      --eval "(e.rune:rune $QUOTED_ARGS)"
+      --eval "(e.rune:rune `quote_args`)"
   ;;
   *)
     echo "$0: don't know how to start implementation type '$LISPTYPE' at $LISP" >&2

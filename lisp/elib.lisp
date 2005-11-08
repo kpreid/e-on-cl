@@ -662,11 +662,16 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                    finally (intern free :e.elib.vtable-methods))))
         `(named-lambda ,name-sym ,@body))))
 
-  (defun lambda-list-to-param-desc-vector (list arity prefix-arity)
-    ; XXX doesn't handle &rest, &optional or inappropriate lambda lists - particularly, it may return a too-short vector
+  (defun lambda-list-to-param-desc-vector (list arity prefix-arity
+      &aux (end (or (position '&aux list) (length list))))
+    (unless (= end (+ arity prefix-arity))
+      (error "arity ~A + prefix-arity ~A doesn't match lambda list ~S" arity prefix-arity list))
     (coerce (loop 
       for i below arity
       for sym in (nthcdr prefix-arity list)
+      do
+        (when (member sym lambda-list-keywords)
+          (error "constructing param-desc vector from lambda list ~S with keyword ~s not possible" list sym))
       collect 
         (make-instance 'param-desc :opt-name
           (with-standard-io-syntax
@@ -873,9 +878,7 @@ fqn may be NIL or a string."
           "E.call(target, `set$Property`, new); null"
           (e-call-dispatch self set-verb new)
           nil)
-        (:|isFinal| ()
-          ; XXX this is wrong - lack of setter does not mean claimed immutability.
-          (e. (e-coerce (e. self |__respondsTo| set-name 1) 'e-boolean) |not|)))))
+        (:|isFinal| () +e-false+))))
 
     (otherwise (mverb args)
       (declare (ignore mverb args))
@@ -1014,8 +1017,8 @@ fqn may be NIL or a string."
   
         (otherwise (call-next-method))))))
 
-; xxx should we have observable-class-of instead? probably not, since we use type specifiers everywhere
 (defgeneric observable-type-of (specimen)
+  ;; This should arguably be called observable-class-of.
   (:documentation "Given an object, return the narrowest type specifier which should visible (in its FQN form) to the E programmer. Usually specialized via the def-class-opaque macro."))
 
 (defmacro def-class-opaque (class-name &optional (visible-type class-name))
@@ -1184,12 +1187,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
              opt-ejector)))
 
 
-; XXX move these to more specific locations
-(def-class-opaque string)
-(def-class-opaque integer)
-(def-class-opaque vector)
-(def-class-opaque character)
-
 ; XXX thread-safety: make these all vat-local or remove super arg
 (defglobal +the-any-guard+    (make-instance 'cl-type-guard :type-specifier 't))
 (defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
@@ -1197,11 +1194,12 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 ; --- Equalizer ---
 
-; XXX OPT cache equalizer per-thread (in vat?)
-(defun eeq-is-same-yet     (a b)
-  (e-is-true (e. (make-equalizer) |sameYet| a b)))
-(defun eeq-is-same-ever    (a b)
-  (e-is-true (e. (make-equalizer) |sameEver| a b)))
+(defvar *the-equalizer*)
+
+(defun eeq-is-same-yet  (a b)
+  (e-is-true (e. *the-equalizer* |sameYet| a b)))
+(defun eeq-is-same-ever (a b)
+  (e-is-true (e. *the-equalizer* |sameEver| a b)))
 
 (defun eeq-is-settled (a)
   (eeq-sameness-fringe a nil))

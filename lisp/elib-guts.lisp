@@ -414,12 +414,6 @@
 (defmethod eeq-is-transparent-selfless ((a t))
   (e-audit-check-dispatch +selfless-stamp+ a))
 
-(defmethod eeq-is-transparent-selfless ((a vector))
-  (declare (ignore a)) t)
-
-(defmethod eeq-is-transparent-selfless ((a string))
-  (declare (ignore a)) nil)
-
 (defun spread-uncall (a)
   (let ((unspread (e. a |__optUncall|)))
     (assert unspread)
@@ -485,6 +479,8 @@
             (sxhash ,a))
      (setf ,a ,b 
            ,b ,a)))
+
+;; xxx *Currently*, the equalizer being returned from a maker function is left over from when equalizers used buffer vectors. Future changes, such as parameterization, might make the maker useful again later so I haven't bothered to change it.
 
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
   (defun make-equalizer () 
@@ -605,6 +601,8 @@
         
           (:|optSame| (left right)
             (opt-same left right '(() . ()))))))))
+
+(setf *the-equalizer* (make-equalizer))
 
 ; --- Type/FQN mapping miscellaneous ---
 

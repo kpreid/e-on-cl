@@ -153,6 +153,7 @@
     :audited-by-magic-verb
     :+deep-frozen-stamp+
     :+selfless-stamp+
+    :e-audit-check-dispatch
    
     :+e-false+ :+e-true+ :e-is-true :as-e-boolean :e-boolean
     
