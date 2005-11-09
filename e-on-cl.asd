@@ -30,8 +30,10 @@
             :depends-on ("elib"))
      (:file "extern"
             :depends-on ("elib"))
-     (:file "knot"
+     (:file "knot-base"
             :depends-on ("elib" "sugar"))
+     (:file "knot"
+            :depends-on ("knot-base"))
      (:file "elang-nodes"
             :depends-on ("elib" 
                          "util"
