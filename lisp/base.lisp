@@ -13,7 +13,18 @@ This variable is deprecated and will be replaced by more fine-grained and well-d
 (defvar *break-on-ejections* nil
   "Equivalent to CL:*BREAK-ON-SIGNALS*, but applies to ejection. When an ejector is invoked with a value whose type is a subtype of the type specified by this variable's value, (break) will be called.")
 
-(defvar *allow-unexternalizable-optimization* nil)
+
+(defun unexternalizable-optimization-p (environment)
+  "Whether it is OK for macros (or compiler macros, sb-c:deftransforms, etc) to insert unexternalizable objects such as functions in their expansions in the given environment."
+  (macroexpand '(%allow-unexternalizable-optimization) environment))
+
+(defmacro %allow-unexternalizable-optimization ()
+  nil)
+  
+(defmacro with-unexternalizable-optimization (&body body)
+  `(macrolet ((%allow-unexternalizable-optimization () t))
+     ,@body))
+
 
 ; xxx Assuming things about the implementation. Perhaps we should produce a warning if we don't know that the implementation uses these sizes.
 (deftype float64 () 'double-float) 

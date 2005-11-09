@@ -83,16 +83,16 @@
 (defun cl-to-lambda (form &key (name (gensym "cl-to-lambda-")))
   "this is a separate function to show up distinctly in profiles"
   (during ("CL eval")
-    (eval `(e.util:named-lambda ,name () ,form))))
+    (eval `(with-unexternalizable-optimization
+             (e.util:named-lambda ,name () ,form)))))
 
 ; --- ---
 
 ; Wrapper so that in profiling, time spent executing E code is separated from the time to compile it into CL
 (defun eval-e (tree scope)
-  (let ((elib::*allow-unexternalizable-optimization* t))
-    (funcall (cl-to-lambda (e-to-cl tree scope)
-                           ; using KEYWORD package because using something else might? trigger the sbcl leak
-                           :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD")))))
+  (funcall (cl-to-lambda (e-to-cl tree scope)
+                         ; using KEYWORD package because using something else might? trigger the sbcl leak
+                         :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD"))))
 
 (defun get-translation (expr)
   ; XXX document this - * means use |outer-&foo| for outer vars
@@ -129,15 +129,14 @@
                          initial-scope-var))))))
     ;; XXX instead of having to do this to handle nested cases,
     ;; we should implement a-u-o with the macrolet/macroexpand trick
-    (let ((elib::*allow-unexternalizable-optimization* nil))
-      (multiple-value-bind (truename warnings-p failure-p)
-          (compile-file (merge-pathnames
-                          #p"lisp/universal.lisp"
-                          (asdf:component-pathname 
-                            (asdf:find-system +the-asdf-system+)))
-                        :output-file output-file)
-        (declare (ignore truename warnings-p))
-        (assert (not failure-p) () "Compilation for ~A failed." output-file)))))
+    (multiple-value-bind (truename warnings-p failure-p)
+        (compile-file (merge-pathnames
+                        #p"lisp/universal.lisp"
+                        (asdf:component-pathname 
+                          (asdf:find-system +the-asdf-system+)))
+                      :output-file output-file)
+      (declare (ignore truename warnings-p))
+      (assert (not failure-p) () "Compilation for ~A failed." output-file))))
 
 (defun load-compiled-e (file scope)
   (let ((*efasl-result* nil))

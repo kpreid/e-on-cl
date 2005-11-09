@@ -76,6 +76,9 @@
     :*compatible-catch-leakage*
     :*break-on-ejections*
     
+    :unexternalizable-optimization-p
+    :with-unexternalizable-optimization
+    
     :get-fine-universal-time
     
     :vicious-cycle-error

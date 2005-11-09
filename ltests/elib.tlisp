@@ -2,7 +2,17 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defclass for-test () ())
-  
+
+(deftest unexternalizable-optimization.no
+  (macrolet ((x (&environment e) (unexternalizable-optimization-p e)))
+    (x))
+  nil)
+
+(deftest unexternalizable-optimization.yes
+  (macrolet ((x (&environment e) (unexternalizable-optimization-p e)))
+    (with-unexternalizable-optimization (x)))
+  t)
+
 (deftest vtable-prefix-enough 
   (princ-to-string (nth-value 1 (ignore-errors 
     (eval `(def-vtable for-test
