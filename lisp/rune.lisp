@@ -12,7 +12,8 @@
   (maphash #'(lambda (fqn times)
              (when (> times 1)
                (warn "note: ~A loaded ~A times" fqn times)))
-           e.knot::*emaker-load-counts*)
+           (e. e.knot::+default-fresh-emaker-loader+
+               |_getLoadCounts|))
   
   #+e.instrument.ref-shorten-uses
     (let ((entries (maphash #'list e.elib::*instrument-ref-shorten-kinds*)))

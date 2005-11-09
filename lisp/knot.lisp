@@ -94,7 +94,7 @@
           (merge-pathnames
             (make-pathname :directory '(:relative "lib"))
             (asdf:component-pathname +the-asdf-system+))))
-  ; XXX we could test for this failure mode, or we could make load-emaker-without-cache always cache filesystem state (i.e. source code or not-found) to ensure a consistent view. (The "without-cache" part of the name refers to result-of-evaluation cache, which requires such things as DeepFrozen auditing.)
+  ; XXX we could test for this failure mode, or we could make some piece of the loader stack always cache filesystem state (i.e. source code or not-found) to ensure a consistent view.
   "This variable is expected to be modified by startup code (such as via found-e-on-java-home), but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
 
 (defvar *emaker-fasl-path*
@@ -123,8 +123,8 @@
                    :name (subseq fqn (1+ pos))
                    :type "emaker")))
 
-; XXX threading: global state
-(defvar *emaker-load-counts* (make-hash-table :test #'equal))
+(defun fqn-to-slash-path (fqn)
+  (concatenate 'string (substitute #\/ #\. fqn) ".emaker"))
 
 (defun opt-compile-target (file fqn)
   (declare (ignore file))
@@ -139,10 +139,10 @@
       (ensure-directories-exist fasl-path :verbose t))
     fasl-path))
 
-(defun load-emaker-from-file (file fqn)
+(defun load-emaker-from-file (file fqn scope compile-target-fn)
   (let* ((fqn-prefix (concatenate 'string fqn "$"))
-         (compile-target (opt-compile-target file fqn))
-         (scope (e. (vat-safe-scope *vat*) |withPrefix| fqn-prefix)))
+         (compile-target (e-coerce (funcall compile-target-fn file fqn) '(or null pathname)))
+         (scope (e. scope |withPrefix| fqn-prefix)))
     (if compile-target
       (progn
         (when (or (not (probe-file compile-target))
@@ -150,6 +150,8 @@
                   (and (e-is-true (e. file |__respondsTo| "_clFileWriteDate" 0))
                        (> (e. file |_clFileWriteDate|)
                           (file-write-date compile-target))))
+          ;; If we have a compile-target, then we have the authority
+          ;; to write to it.
           (e.compiler:compile-e-to-file
             (e.syntax:e-source-to-tree (e. file |getTwine|))
             compile-target
@@ -158,20 +160,27 @@
       (elang:eval-e (e.syntax:e-source-to-tree (e. file |getTwine|))
                     scope))))
 
-(defun load-emaker-without-cache (fqn absent-thunk)
-  (let* ((file
-           (loop with subpath = (fqn-to-relative-pathname fqn)
-                 for root in *emaker-search-list*
-                 ;; XXX fqn-to-slash-path instead
-                 thereis (e. root |getOpt| (namestring subpath))
-                 finally 
-                   (return-from load-emaker-without-cache
-                     (e. absent-thunk |run|)))))
-    
-    ;; If there is no emaker file, then we will not reach this point,
-    ;; due to either return-from or the absent-thunk.
-    (incf (gethash fqn *emaker-load-counts* 0))
-    (load-emaker-from-file file fqn)))
+(defun make-emaker-loader (search-list-slot scope-fn compile-target-fn
+    &aux (load-counts (make-hash-table :test #'equal)))
+  (e-lambda "$emakerLoader" ()
+    (:|fetch| (fqn absent-thunk)
+      (block fetch
+        (let* ((file
+                 (loop with subpath = (fqn-to-slash-path fqn)
+                       for root in (e. search-list-slot |getValue|)
+                       thereis (e. root |getOpt| subpath)
+                       finally 
+                         (return-from fetch (e. absent-thunk |run|)))))
+          (incf (gethash fqn load-counts 0))
+          (load-emaker-from-file file fqn (funcall scope-fn) compile-target-fn))))
+    (:|_getLoadCounts| () load-counts)))
+
+;; XXX threading: has state
+(defglobal +default-fresh-emaker-loader+ 
+  (make-emaker-loader (e. (place-slot *emaker-search-list*)
+                          |readOnly|)
+                      (lambda () (vat-safe-scope *vat*)) 
+                      #'opt-compile-target))
 
 ;;; this is here because it's closely related to emaker loading
 (defglobal +resource-importer+ (e-lambda "org.cubik.cle.prim.resource__uriGetter"
@@ -244,7 +253,7 @@
     (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
-      (e. (load-emaker-without-cache "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
+      (e. (e. +default-fresh-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
           |run| 
           elib:+deep-frozen-stamp+
           elib:+the-make-traversal-key+))
@@ -401,7 +410,7 @@ If a log message is produced, context-thunk is run to produce a string describin
 
 ; XXX simplify the amount of wrapping this requires / make those of these primitives which are safe (all of them?) importable
 (defglobal +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
-  (e. (load-emaker-without-cache
+  (e. (e. +default-fresh-emaker-loader+ |fetch|
         "org.erights.e.elib.ref.RefAuthor" 
         (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
       |run|
@@ -442,7 +451,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                  (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
                    (if cache-present
                      cache-value
-                     (let ((result (load-emaker-without-cache fqn absent-thunk)))
+                     (let ((result (e. +default-fresh-emaker-loader+ |fetch| fqn absent-thunk)))
                        (when (e-is-true (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |isDeepFrozen| result))
                          (setf (gethash fqn deep-frozen-cache) result))
                        result))))))))
