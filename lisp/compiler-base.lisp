@@ -64,7 +64,7 @@
   nil)
 
 (defmethod scope-layout-fqn-prefix ((scope-layout null))
-  ;; XXX add a :if-unavailable (member :error :default nil) parameter?
+  ;; xxx add a :if-unavailable (member :error :default nil) parameter?
   "__unknown$")
 
 (defmethod scope-layout-noun-is-local ((scope-layout null) noun-string)

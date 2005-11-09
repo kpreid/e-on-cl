@@ -215,8 +215,10 @@ def makeInStreamShell implements DeepFrozen {
     
     bind backend {
       to setAvailable(new) { 
-        require(remaining == ALL || new <= remaining, `available must not exeed remaining ($remaining, attempted to set to $new)`) 
-        require(new == ALL || new >= implAvailable, `available must not decrease (was $implAvailable, attempted to set to $new)`)
+        require(remaining == ALL || new <= remaining, 
+                thunk{`available must not exeed remaining ($remaining, attempted to set to $new)`}) 
+        require(new == ALL || new >= implAvailable, 
+                thunk{`available must not decrease (was $implAvailable, attempted to set to $new)`})
         implAvailable := new
         triggerWaiters()
         updateAvailable()
@@ -224,7 +226,8 @@ def makeInStreamShell implements DeepFrozen {
       }
       
       to resolveRemaining(new :(int >= 0)) {
-        require(if (implAvailable == ALL) { new == ALL} else { new >= implAvailable}, `remaining ($new) must not be less than available ($implAvailable)`)
+        require(if (implAvailable == ALL) { new == ALL } else { new >= implAvailable},
+                thunk{`remaining ($new) must not be less than available ($implAvailable)`})
         setRemaining(new)
         triggerWaiters()
         triggerAvailable()

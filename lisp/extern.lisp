@@ -135,7 +135,7 @@
     #+ccl   (ccl:gc)
     #+clisp (ext:gc)
     #+allegro (excl:gc t nil) ; XXX untested
-    #+abcl  (ext:gc)        ; XXX untested
+    #+abcl  (ext:gc)
     (values))))
 
 ; --- Timer ---

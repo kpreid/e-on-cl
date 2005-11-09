@@ -934,7 +934,7 @@ quasi-substitution
 
 
 XXX maker tests for nodes that don't have them yet '
-    -- many makers have been indirectly tested by he current implementation of KernelECopyVisitor, but we should have proper tests including coercion checks
+    -- many makers have been indirectly tested by the current implementation of KernelECopyVisitor, but we should have proper tests including coercion checks
 XXX methods of individual nodes
     -- and now that we are using e-call-match for simple properties: check __respondsTo/getAllegedType correctness
 XXX well-formedness constraints tested before eval, but not at construction so we can build conveniently
@@ -943,8 +943,6 @@ XXX well-formedness constraints tested before eval, but not at construction so w
 XXX test quasi features (quasi expr/pattern allowed everywhere it should be)
 XXX SourceSpan preservation
 XXX nodes should be PassByCopy
-XXX StaticScope is currently not Selfless, but probably should be. What should its uncall look like?
-      must be Selfless before we can both cache static scopes and make nodes Selfless
 XXX eval/evalToPair must have ejector arguments to distinguish compile errors from eval errors
 XXX semirandom node builder/tester? use for:
   confirm that all nodes print parseably
