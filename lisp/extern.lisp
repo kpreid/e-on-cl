@@ -121,7 +121,10 @@
           (loop for subpath in (cl-fad:list-directory pathname)
             do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))
         (:|readOnly| ()
-          (e. (e-import "org.cubik.cle.file.makeReadOnlyFile") |run| file))))))
+          (e. (e-import "org.cubik.cle.file.makeReadOnlyFile") |run| file))
+        (:|_clFileWriteDate| ()
+          "XXX this interface needs changing. no tests. quick fix to support changes in emaker loading."
+          (file-write-date pathname))))))
 
 ; --- GC ---
 

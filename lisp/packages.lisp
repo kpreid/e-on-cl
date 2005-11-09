@@ -439,7 +439,10 @@
     :%make-such-that-error
     
     :delta-extract-outer-scope
-    :outer-scope-to-layout))
+    :outer-scope-to-layout
+    
+    :compile-e-to-file
+    :load-compiled-e))
 
 
 (cl:defpackage :e.elang.compiler.seq

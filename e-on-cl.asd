@@ -33,7 +33,7 @@
      (:file "knot-base"
             :depends-on ("elib" "sugar"))
      (:file "knot"
-            :depends-on ("knot-base"))
+            :depends-on ("knot-base" "extern"))
      (:file "elang-nodes"
             :depends-on ("elib" 
                          "util"

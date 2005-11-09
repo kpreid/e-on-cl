@@ -90,9 +90,10 @@
 ; --- emaker loading ---
 
 (defvar *emaker-search-list*
-  (list (merge-pathnames
-    (make-pathname :directory '(:relative "lib"))
-    (asdf:component-pathname +the-asdf-system+)))
+  (list (e.extern:pathname-to-file
+          (merge-pathnames
+            (make-pathname :directory '(:relative "lib"))
+            (asdf:component-pathname +the-asdf-system+))))
   ; XXX we could test for this failure mode, or we could make load-emaker-without-cache always cache filesystem state (i.e. source code or not-found) to ensure a consistent view. (The "without-cache" part of the name refers to result-of-evaluation cache, which requires such things as DeepFrozen auditing.)
   "This variable is expected to be modified by startup code (such as via found-e-on-java-home), but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
 
@@ -110,11 +111,10 @@
       (append *emaker-search-list*
         (handler-case
             (progn
-              (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar)
-                (merge-pathnames #p"e.jar" dir-pathname))))
+              (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) (merge-pathnames #p"e.jar" dir-pathname))))
           (error (c)
             (warn "Could not use e.jar because: ~A" c)
-            (list (merge-pathnames #p"src/esrc/" dir-pathname))))))))
+            (list (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname)))))))))
 
 (defun fqn-to-relative-pathname (fqn)
   (let* ((pos (or (position #\. fqn :from-end t) -1))
@@ -125,13 +125,6 @@
 
 ; XXX threading: global state
 (defvar *emaker-load-counts* (make-hash-table :test #'equal))
-
-(defun %try-root (root subpath)
-  (typecase root
-    (pathname
-      (probe-file (merge-pathnames subpath root)))
-    (t
-      (e. root |getOpt| (namestring subpath)))))
 
 (defun opt-compile-target (file fqn)
   (declare (ignore file))
@@ -146,11 +139,6 @@
       (ensure-directories-exist fasl-path :verbose t))
     fasl-path))
 
-(defun read-file (file)
-  (typecase file
-    (pathname (e.extern:read-entire-file file))
-    (t        (e. file |getText|))))
-
 (defun load-emaker-from-file (file fqn)
   (let* ((fqn-prefix (concatenate 'string fqn "$"))
          (compile-target (opt-compile-target file fqn))
@@ -158,25 +146,24 @@
     (if compile-target
       (progn
         (when (or (not (probe-file compile-target))
-                  ;; XXX assumption that non-pathnamed items will not
-                  ;; change - proper thing is to add file-write-date 
-                  ;; support to file objects and jar objects
-                  (and (pathnamep file)
-                       (> (file-write-date file)
+                  ;; XXX fix this interface and remove the respondsTo test
+                  (and (e-is-true (e. file |__respondsTo| "_clFileWriteDate" 0))
+                       (> (e. file |_clFileWriteDate|)
                           (file-write-date compile-target))))
-          (e.compiler::compile-e-to-file
-            (e.syntax:e-source-to-tree (read-file file))
+          (e.compiler:compile-e-to-file
+            (e.syntax:e-source-to-tree (e. file |getTwine|))
             compile-target
             fqn-prefix))
-        (e.compiler::load-compiled-e compile-target scope))
-      (elang:eval-e (e.syntax:e-source-to-tree (read-file file))
+        (e.compiler:load-compiled-e compile-target scope))
+      (elang:eval-e (e.syntax:e-source-to-tree (e. file |getTwine|))
                     scope))))
 
 (defun load-emaker-without-cache (fqn absent-thunk)
   (let* ((file
            (loop with subpath = (fqn-to-relative-pathname fqn)
                  for root in *emaker-search-list*
-                 thereis (%try-root root subpath)
+                 ;; XXX fqn-to-slash-path instead
+                 thereis (e. root |getOpt| (namestring subpath))
                  finally 
                    (return-from load-emaker-without-cache
                      (e. absent-thunk |run|)))))
