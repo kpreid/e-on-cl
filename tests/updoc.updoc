@@ -47,4 +47,7 @@ waitAtTop / timing tests:
   ? 3
   # value: 3
 
+Bug: promise for null not treated equivalently to null:
+
+  ? def p; bind p := null; p
   

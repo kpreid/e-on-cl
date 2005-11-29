@@ -176,7 +176,8 @@
                       (unless (string= s "") (push (list "stderr" s) new-answers))))
                    (finish-step ()
                     (nreverse-here new-answers)
-                    (if (not (tree-equal answers new-answers :test #'equal))
+                    (if (tree-equal answers new-answers :test #'equal)
+                      (make-instance 'result :failures 0 :steps 1)
                       (let ((*print-pretty* t)
                             (*package* #.*package*)
                             (*print-case* :downcase)
@@ -188,8 +189,7 @@
                                           (instead ,@new-answers)
                                           (opt-backtrace ,backtrace)))
                         (fresh-line)
-                        (make-instance 'result :failures 1 :steps 1))
-                      (make-instance 'result :failures 0 :steps 1))))
+                        (make-instance 'result :failures 1 :steps 1)))))
             ((lambda (f) (e<- f |run|)) (efun ()
               (block attempt
                 (handler-bind ((error #'(lambda (condition) 
@@ -203,7 +203,7 @@
                   (setf (values new-result scope)
                           (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
               (collect-streams)
-              (when new-result
+              (unless (eeq-is-same-yet new-result nil)
                 (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers)
                 (when print-steps
                   (format t "~&# ~A: ~A~%" (caar new-answers) (cadar new-answers))))
