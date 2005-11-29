@@ -4,6 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("dot-props")
+pragma.enable("verb-curry")
 
 def Range := EIO::Range
 def ALL := EIO::ALL
@@ -44,7 +45,11 @@ def makeInStreamShell implements DeepFrozen {
     def inStream
 
     def terminator
-    def [streamShell, &unclaimedAvailable, triggerAvailable] := makeStreamShell(Element, thunk { impl.terminate(terminator) })
+    def [streamShell, &unclaimedAvailable, triggerAvailable] := \
+      makeStreamShell(Element, 
+                      thunk { impl.terminate(terminator) }, 
+                      if (impl.__respondsTo("wants", 1)) {impl.wants} \
+                                                    else {def stubWants(_) {}})
 
     bind terminator := streamShell.terminates()
     
@@ -92,7 +97,7 @@ def makeInStreamShell implements DeepFrozen {
       }
 
       def r := trace.runAsTurn(thunk {
-        # xxx impl.tryAvailable(atMost)
+        # xxx should call impl.wants(atLeast)
         
         def taken := if (atMost == ALL) \
                        { implAvailable } \
@@ -195,6 +200,7 @@ def makeInStreamShell implements DeepFrozen {
             waitersFlex.push([def result, args])
             updateAvailable()
             triggerWaiters <- () # in case the request is immediately satisfiable
+            # XXX should do impl <- wants(atLeast)
             result
           }
           match _ { throw(`shouldn't happen: unrecognized schedule $schedule`) }

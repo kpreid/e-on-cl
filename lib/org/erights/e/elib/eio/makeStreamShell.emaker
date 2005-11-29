@@ -9,14 +9,15 @@ def Range := EIO::Range
 def ALL := EIO::ALL
 
 def makeStreamShell implements DeepFrozen {
-  to run(Element, terminationHook) {
+  # XXX revise interface to have a single object for terminationHook and wants
+  to run(Element, terminationHook, wants) {
   
     var available :Range := 0
     def [terminator, terminatorResolver] := Ref.promise()
     
     def noAvailableHandler {
       to requireNone() {}
-      to run() {}
+      to run() { return true }
     }
     
     var availableHandler := noAvailableHandler
@@ -59,11 +60,17 @@ def makeStreamShell implements DeepFrozen {
               availableHandler := noAvailableHandler
               # XXX more specific-case-informative exception 
               bind result := trace.runAsTurn(reactor, thunk { `whenAvailable handler ${E.toQuote(reactor)} registered on stream shell` })
+              return false
+            } else {
+              return true
             }
           }
         }
         
-        availableHandler() # handle immediate call if appropriate
+        if (availableHandler()  # handle immediate call if appropriate
+                              ) {
+          wants(minimum)
+        }
         
         return result
       }

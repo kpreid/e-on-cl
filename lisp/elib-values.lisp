@@ -313,7 +313,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                 (subseq vector position end)
                 (when (equal proceed "ADVANCE")
                   (setf position end)))))
-          (:|tryAvailable/1| (constantly nil))
           (:|terminate/1| (constantly nil))))
         "org.cubik.cle.prim.listStream"
         (lambda (tw)

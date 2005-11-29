@@ -4,6 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("dot-props")
+pragma.enable("verb-curry")
 
 def Range := EIO::Range
 def ALL := EIO::ALL
@@ -15,7 +16,11 @@ def makeOutStreamShell implements DeepFrozen {
 
     def terminator
   
-    def [streamShell, &available, triggerAvailable] := makeStreamShell(Element, thunk {impl.terminate(terminator)})
+    def [streamShell, &available, triggerAvailable] := \
+      makeStreamShell(Element,
+                      thunk {impl.terminate(terminator)},
+                      if (impl.__respondsTo("wants", 1)) {impl.wants} \
+                                                    else {def stubWants(_) {}})
     
     bind terminator := streamShell.terminates()
     

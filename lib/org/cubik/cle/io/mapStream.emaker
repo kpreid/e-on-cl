@@ -42,7 +42,7 @@ def chunkedMapStream implements DeepFrozen {
                }
       }
       
-      # to tryAvailable... -- XXX this seems to have been intended to exist but isn't actually used. figure out what was intended.
+      # to wants(minimum) ... XXX implement this
       
       to terminate(t) { terminate(sourceStream, t) }
     })

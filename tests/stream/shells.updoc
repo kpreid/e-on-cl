@@ -141,6 +141,7 @@ whenAvailable
   >   to write(elements) :void { print(elements) }
   >   to flush() :void { print("flush") }
   >   to terminate(_) :void {}
+  >   to wants(n) :void { print(`wants $n`) }
   > })
   # value: -><impl>
   
@@ -150,6 +151,8 @@ whenAvailable
   # value: '1'
   
   ? def wap2 := stream.whenAvailable(4, thunk { print("wa2"); '2' })
+  # stdout: wants 4
+  
   # value: <Promise>
 
   ? stream.whenAvailable(4, thunk { print("wa3"); '3' })
@@ -166,6 +169,8 @@ whenAvailable
   # value: '2'
 
   ? def wap4 := stream.whenAvailable(7, thunk { throw("blargh") })
+  # stdout: wants 7
+  
   # value: <Promise>
   
   ? streamBackend.setAvailable(7)
@@ -195,7 +200,7 @@ XXX ejectors for kinds of failure from write()
   > null
 
   read may return more elements than currently available
-  tryAvailable exists so that stream#whenAvailable can create suction if the stream is lazy
+  wants exists so that stream#whenAvailable can create suction if the stream is lazy
 
   ? def buffer := [].diverge(int)
   > pragma.enable("accumulator")
@@ -205,7 +210,7 @@ XXX ejectors for kinds of failure from write()
   >     if (proceed == ADVANCE) { buffer(0, n) := [] }
   >     return r
   >   }
-  >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }
+  >   to wants(minimum) :void { print(`wants $minimum`) }
   >   to terminate(_) :void {}
   > })
   # value: <-<impl>
@@ -227,6 +232,8 @@ Testing bad arguments to obtain:
 -- actual usage
 
   ? stream.whenAvailable(1, thunk { print("first inStream whenAvailable") })
+  # stdout: wants 1
+  
   # value: <Promise>
 
   ? stream.obtain(5, 15, NOW, ADVANCE, ELEMENTS)
@@ -278,6 +285,8 @@ XXX proper plurals
 This whenAvailable does not trigger immediately, even though there are 2 elements actually in the stream, because they have been claimed by the obtain for 3..6.
 
   ? stream.whenAvailable(2, thunk { print("whenAvailable from 17...") })
+  # stdout: wants 2
+  
   # value: <Promise>
   
   ? elementsVow
@@ -295,6 +304,8 @@ After enough elements are available, the promise will be resolved.
 Termination
 
   ? def pwA := stream.whenAvailable(100, thunk {print(`termination test whenAvailable -- ${stream.terminates()}`); 0})
+  # stdout: wants 100
+  
   # value: <Promise>
 
   ? def poAE := stream.obtain(50, 50, LATER, ADVANCE, ELEMENTS)
@@ -318,7 +329,6 @@ Termination
   >   to semiObtain(count, proceed, report) :any { 
   >     throw("SPLORK")
   >   }
-  >   to tryAvailable(minimum) :void { println(`tryAvailable $minimum`) }
   >   to terminate(_) :void {}
   > })
   # value: <-<impl>
