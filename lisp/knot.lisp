@@ -639,7 +639,10 @@ If a log message is produced, context-thunk is run to produce a string describin
                              (e. (e-import "org.cubik.cle.IPAuthor")
                                  |run|
                                  +lisp+))))
-            ("&getSocketPeerRef"        ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
+            ("&getSocketPeerRef"        
+             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
+            ("&getSocketLocalRef"
+             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-LOCAL-REF+" :e.sockets :e-on-cl.sockets)))))
             #||#)))))
 
 ;;; --- end ---

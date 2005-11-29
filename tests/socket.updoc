@@ -13,6 +13,8 @@ http://www.opengroup.org/onlinepubs/009695399/functions/xsh_chap02_10.html#tag_0
 
 [1] By "nearly", I mean that there shall be socket objects, and operations corresponding to the standard functions, etc; so the interface does not accidentally prevent one from, say, bind()ing a TCP socket. There will still be taming.
 
+  ? def ALL := EIO.getALL(); null
+
   ? def makeSocket := <import:org.cubik.cle.io.makeSocket>
   # value: <makeSocket>
   
@@ -84,4 +86,42 @@ In order to preserve E semantics by default:
   ? [ins.close(), outs.close()]
   # value: [true, true]
 
+--- Listening socket (incomplete)
+
+  ? pragma.enable("dot-props")
+  > def listener := makeSocket(makeSocket::internet, makeSocket::stream)
+  # value: <internet stream socket>
   
+  ? def local := getSocketLocalRef(null, "35037")
+  # value: <socket local null:35037>
+  
+  ? def loop := getSocketPeerRef("localhost", "35037")
+  # value: <socket peer localhost:35037>
+  
+  XXX unspecified-port local refs - and document that they reveal a port number
+  
+  XXX return value is null-or-broken - test and document
+  ? [def r := listener."bind"(local), listener]
+  # value: [<Promise>, <internet stream socket>]
+  
+  ? interp.waitAtTop(r)
+  ? [r, listener]
+  # value: [null, <internet stream socket on 0.0.0.0:35037>]
+  
+
+XXX listen() and accepting
+XXX bind()ing of connect sockets
+XXX errors:
+  name lookup failures
+  connect failures
+  address already bound
+XXX reuse-addr
+XXX general socket options interface
+XXX check that nothing exposes synchronous changes
+XXX consequences of getOut/getIn on a listening socket
+XXX listen on already listening/connected
+XXX bind on already bound
+XXX connect on already connected/listening
+XXX general support for null addr-info input
+XXX listen without bind must fail since no authority to recieve outside data has been given; support a totally-unspecific local ref to enable this
+XXX running out of sockets must kill the vat, since it's nondeterministic

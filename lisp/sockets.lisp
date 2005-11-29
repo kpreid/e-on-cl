@@ -171,6 +171,12 @@
   (make-instance 'deferred-socket :domain domain :type type))
 
 #+sbcl
+(defun foo-bind-socket (socket addr-info)
+  (socket-bind socket
+               (host-ent-address (addr-info-host-ent addr-info))
+               (addr-info-port addr-info)))
+
+#+sbcl
 (defun foo-connect-socket (socket addr-info)
   (socket-connect socket
                   (host-ent-address (addr-info-host-ent addr-info))
@@ -197,6 +203,12 @@
           :connect :active
           :remote-host (addr-info-ip-number addr-info)
           :remote-port (addr-info-port addr-info))))
+
+#+sbcl
+(defun foo-listen (socket opt-backlog)
+  ;; XXX proper backlog value
+  ;; XXX errors?
+  (socket-listen socket (or opt-backlog 64)))
 
 ; --- ---
 
@@ -323,7 +335,14 @@
   (e<- (efun () 
          (or 
           #+sbcl (make-instance 'pseudo-addr-info
-                   :host-ent (get-host-by-name host)
+                   :host-ent (if host
+                               (get-host-by-name host)
+                               ;; XXX this is probably all internal stuff
+                               (make-instance 'sb-bsd-sockets:host-ent
+                                 :name nil
+                                 :type sockint::af-inet ;; XXX internal
+                                 :aliases nil
+                                 :addresses (list #(0 0 0 0))))
                    :port (if service (parse-integer service) 0))
                              
           #+clisp (make-instance 'pseudo-addr-info
