@@ -21,6 +21,7 @@ def makeStreamShell implements DeepFrozen {
     }
     
     var availableHandler := noAvailableHandler
+    def moreReactors := [].diverge()
   
     /** common operation of #terminate and #fail */
     def terminate(value ? (Ref.isBroken(value) || value == true)) {
@@ -31,7 +32,7 @@ def makeStreamShell implements DeepFrozen {
         available := 0
         terminationHook() # xxx consider whether this is the proper synchronous ordering
       }
-      
+      # XXX does failure correctly cause whenAvailable to be immediately called?
       return terminator
     }
   
@@ -75,6 +76,11 @@ def makeStreamShell implements DeepFrozen {
         return result
       }
       
+      /** 'reactor' is called with no arguments the next time 'available' increases, after the whenAvailable reactor. */
+      to whenMoreAvailable(reactor) {
+        moreReactors.push(reactor)
+      }
+      
       # - properties -
       
       to getElementType() { return Element }
@@ -88,7 +94,13 @@ def makeStreamShell implements DeepFrozen {
       to fail(problem) { return terminate(Ref.broken(problem)) }
       
     }
-    return [streamShell, &available, thunk { availableHandler() }]
+    
+    def triggerAvailable() {
+      availableHandler()
+      for reactor in moreReactors.removeRun(0) { reactor() }
+    }
+    
+    return [streamShell, &available, triggerAvailable]
   }
 }
 

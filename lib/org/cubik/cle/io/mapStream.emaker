@@ -19,12 +19,7 @@ def terminate implements DeepFrozen { to run(stream, terminator) {
 
 def chunkedMapStream implements DeepFrozen {
   to run(outType :Guard, sourceStream, func, namer) :any {
-    def update
     
-    Ref.whenResolved(sourceStream.terminates(), def updateOnTerminate(_) {
-      update()
-    })
-  
     def ourStream := makeInStreamShell(outType, def backend, def mapStreamImpl {
       to __printOn(tw :TextWriter) {
         tw.print(namer)
@@ -34,7 +29,6 @@ def chunkedMapStream implements DeepFrozen {
       
       to semiObtain(count :EIO::Range, proceed, report) {
         def original := sourceStream.obtain(count, count, NOW, proceed, report)
-        update() # XXX side effects?
         return if (report == ELEMENTS) {
                  func(original)
                } else {
@@ -42,13 +36,10 @@ def chunkedMapStream implements DeepFrozen {
                }
       }
       
-      to wants(_) { update() }
-      
       to terminate(t) { terminate(sourceStream, t) }
     })
 
-    bind update() {
-      # XXX propagate remaining
+    def update() {
       backend.setAvailable(sourceStream.available())
       if ((def r := sourceStream.remaining()) != EIO::ALL) {
         backend.resolveRemaining(r)
@@ -56,6 +47,7 @@ def chunkedMapStream implements DeepFrozen {
       if (Ref.isResolved(def t := sourceStream.terminates())) {
         terminate(ourStream, t)
       }
+      sourceStream.whenMoreAvailable(update)
     }
     
     update()

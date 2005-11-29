@@ -28,22 +28,28 @@
   ? s.readAll()
   # value: [2, 3, 4]
 
-Bug: availability was not propagated sufficiently (and arguably still isn't) '
+Promptness of availability propagation
 
-  ? def [bo, bi] := EIO.pipe([].asMap()); null
-  ? def bm := mapStream(any, bi, __makeList); null
+  ? def [bo, bi] := EIO.pipe(["synchronous" => true])
+  > def bm := mapStream(any, bi, __makeList)
+  > null
   
-  ? bm.available()
-  # value: 0
+  ? bm.whenAvailable(2, thunk{print("got")})
+  # value: <Promise>
 
-  ? bo.write([1, 2, 3])
-
-  available has no effect (currently), but whenAvailable does
+  ? bo.write([1, 2, 3]); bm.available()
+  # stdout: got
   
-  ? bm.available()
-  # value: 0
-  
-  ? bm.whenAvailable(2, thunk{})
-  ? bm.available()
   # value: 3
+  
+Closure
 
+  ? def [bo, bi] := EIO.pipe(["synchronous" => true])
+  > def bm := mapStream(any, bi, __makeList)
+  > null
+  
+  ? bo.close()
+  # value: true
+  
+  ? bm.terminates()
+  # value: true

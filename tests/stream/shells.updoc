@@ -17,7 +17,10 @@
   ? stream.available()  
   # value: 0
   
+  ? def wmatest(i) :void { stream.whenMoreAvailable(thunk{ print(`more $i`); wmatest(i + 1) }) }; wmatest(1)
+  
   ? streamBackend.setAvailable(10)
+  # stdout: more 1
   
   ? stream.available()
   # value: 10
@@ -36,6 +39,7 @@ insufficient availability
 test ALL while writing
   
   ? streamBackend.setAvailable(ALL)
+  # stdout: more 2
   
   ? stream.available() == ALL
   # value: true
