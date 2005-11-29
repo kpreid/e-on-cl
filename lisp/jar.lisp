@@ -17,9 +17,13 @@
         (e-coercef subpath 'string)
         (let ((entry (get-zipfile-entry subpath zipfile)))
           (when entry
-            (e-lambda "$entry" ()
-              (:|getText| ()
-                ;; XXX merge this with whatever our overall encoding strategy turns out to be
-                (let ((data (zipfile-entry-contents entry)))
-                  #+sbcl (sb-ext:octets-to-string data :external-format :ascii)
-                  #-sbcl (zip::octets-to-string data :default))))))))))
+            (with-result-promise (eentry)
+              (e-lambda "$entry" ()
+                (:|getText| ()
+                  ;; XXX merge this with whatever our overall encoding strategy turns out to be
+                  (let ((data (zipfile-entry-contents entry)))
+                    #+sbcl (sb-ext:octets-to-string data :external-format :ascii)
+                    #-sbcl (zip::octets-to-string data :default)))
+                (:|getTwine| ()
+                  ;; XXX actual twine support
+                  (e. eentry |getText|))))))))))
