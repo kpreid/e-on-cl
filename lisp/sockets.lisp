@@ -28,6 +28,8 @@
 (def-vtable sb-bsd-sockets:socket
   ;; This vtable imitates a fd-ref as well as being a socket, because a SOCKET handles closing upon GC and so we need to keep it around.
 
+  (:|getFD/0| 'socket-file-descriptor)
+
   (:|connect| (this host port opt-ejector)
     (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
     (e-coercef port '(unsigned-byte 16))
@@ -198,8 +200,9 @@
 
 ; --- ---
 
-#+sbcl (defun %convert-handler-target (target)
-         (socket-file-descriptor target))
+#+sbcl 
+(defun %convert-handler-target (target)
+  (e. target |getFD|))
 #+clisp (defun %convert-handler-target (target)
           (socket-shorten target))
 
@@ -362,6 +365,19 @@
     (socket-options stream :so-rcvbuf)))
 
 ; --- ---
+
+(defgeneric stream-to-fd-ref (stream))
+
+(defmethod stream-to-fd-ref ((stream synonym-stream))
+  (stream-to-fd-ref (symbol-value (synonym-stream-symbol stream))))
+
+#+sbcl
+(defmethod stream-to-fd-ref ((stream sb-sys:fd-stream))
+  (make-fd-ref (sb-sys:fd-stream-fd stream)))
+  
+#+clisp
+(defmethod stream-to-fd-ref ((stream stream))
+  stream)
 
 ; XXX this should not be in sockets but in something more general
 (defun make-fd-ref (fd)

@@ -594,6 +594,7 @@ If a log message is produced, context-thunk is run to produce a string describin
           ; --- user/REPL ---
           ("&help"              ,(lazy-import "org.erights.e.elang.interp.help")))))))
 
+; XXX should use e-extern's pathname-to-E-style-path facilities
 (defglobal +eprops+
   (e. +the-make-const-map+ |fromPairs| 
     `#(#("e.home" ,(namestring (asdf:component-pathname 
@@ -617,7 +618,11 @@ If a log message is produced, context-thunk is run to produce a string describin
             ("file__uriGetter" ,(e.extern:make-file-getter '#()))
             ("gc"              ,e.extern:+gc+)
             ("makeWeakRef"     ,+the-make-weak-ref+)
-            ("stdin"      ,(e-lambda "fake-stdin" ()))
+            ("&stdin"     ,(make-lazy-apply-slot (lambda ()
+                             (break "making stdin")
+                             (e. (e. (e-import "org.cubik.cle.charsets") |get| e.extern:+standard-external-format-common-name+) |decode| (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
+                                 |run|
+                                 +lisp+) |run| (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input*) 4096) (e. #() |asMap|)))))
             ("stdout"     ,(make-text-writer-to-cl-stream
                             out-cl-stream
                             :autoflush t
@@ -627,7 +632,6 @@ If a log message is produced, context-thunk is run to produce a string describin
                             :autoflush t
                             :should-close-underlying nil))
             ("lisp"       ,+lisp+)
-                          ; XXX should use e-extern's pathname-to-E-style-path facilities
             ("props"      ,+eprops+)
             ,@(when interp-supplied
               `(("interp" ,interp)))
