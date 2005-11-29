@@ -42,7 +42,7 @@ def chunkedMapStream implements DeepFrozen {
                }
       }
       
-      # to wants(minimum) ... XXX implement this
+      to wants(_) { update() }
       
       to terminate(t) { terminate(sourceStream, t) }
     })
