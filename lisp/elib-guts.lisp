@@ -14,7 +14,7 @@
                                :mverb mverb
                                :args args))
 
-(defmethod e-call-dispatch ((rec t) (mverb symbol) &rest args)
+(defmethod e-call-dispatch ((rec t) mverb &rest args)
   "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
   (elib:miranda rec mverb args (lambda ()
     (apply #'e-call-match rec mverb args))))

@@ -1001,7 +1001,7 @@ fqn may be NIL or a string."
           (otherwise nil))))
     
     ; XXX gensymify 'args
-    (defmethod e-call-dispatch ((rec ,evaluated-specializer) (mverb symbol) &rest args)
+    (defmethod e-call-dispatch ((rec ,evaluated-specializer) mverb &rest args)
       (case mverb
         ,@(loop for desc in entries collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
