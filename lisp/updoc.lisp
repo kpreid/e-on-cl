@@ -371,19 +371,22 @@
 
 (defun updoc-rune-entry (&rest args
     &aux profiler print-steps confine)
-  (popping-equal-case args
-    (("--profile")
-      (assert args (args) "--profile requires an argument")
-      (setf profiler
-        (let ((*package* (find-package :keyword)))
-          (read-from-string (pop args))))
-      (assert (member profiler *profilers*) (profiler) "~S is not a known profiler." profiler))
-    (("--steps" "--print-steps")
-      (setf print-steps t))
-    (("--confine")
-      ;; XXX should probably be default
-      (setf confine t)))
-  
+  (loop while args do 
+    (popping-equal-case args
+      (("--profile")
+        (assert args (args) "--profile requires an argument")
+        (setf profiler
+          (let ((*package* (find-package :keyword)))
+            (read-from-string (pop args))))
+        (assert (member profiler *profilers*) (profiler) "~S is not a known profiler." profiler))
+      (("--steps" "--print-steps")
+        (setf print-steps t))
+      (("--confine")
+        ;; XXX should probably be default
+        (setf confine t))
+      (otherwise
+        (loop-finish))))
+    
   (standalone-when-resolved
       (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps :confine confine)
     (efun (result)
