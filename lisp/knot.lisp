@@ -220,6 +220,9 @@
   (lazy-value-scope ("org.cubik.cle.prim.primLoader" "org.cubik.cle.prim.")
     (:|loop|             +the-looper+)
     (:|throw|            +the-thrower+)
+
+    (:|makeException|    +the-make-exception+)
+    (:|StructureException| (make-instance 'cl-type-guard :type-specifier 'e-structure-exception))
   
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeVarSlot|      +the-make-var-slot+)

@@ -176,6 +176,72 @@
   (declare (ignore a))
   t)
 
+;;; --- structured classless exceptions ---
+
+;; xxx this section to be moved?
+
+(define-condition e-structure-exception (error)
+  ((types :initarg :types :reader se-types)
+   (properties :initarg :properties :reader se-properties)
+   (printer :initarg :printer :reader se-printer))
+  (:report (lambda (condition stream)
+             (let ((tw (make-text-writer-to-cl-stream stream
+                         :autoflush nil
+                         :should-close-underlying nil)))
+               (e. (se-printer condition)
+                   |run|
+                   tw)))))
+
+(defun property-name-to-get-verb (name)
+  (if (string= name "")
+    "get"
+    (concatenate 'string "get" 
+                         (string (aref name 0)) 
+                         (subseq name 1))))
+
+(def-vtable e-structure-exception
+  (:|__printOn| (condition tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |write| "problem: ")
+    (e. (se-printer condition) |run| tw))
+  (:|__getAllegedType| (condition)
+    (e. +the-make-type-desc+ |run|
+      "StructureException instance type" 
+      nil
+      (map 'vector
+           (lambda (type)
+             (e. +the-make-type-desc+ |run|
+               "StructureException autodefined supertype" type #() #() #()))
+           (se-types condition))
+      #()
+      (map 'vector
+           (lambda (name)
+             (e. +the-make-message-desc+ |run|
+               "" (property-name-to-get-verb name) #() nil))
+           (e. (se-properties condition) |getKeys|)))))
+
+(defmethod e-call-match ((rec e-structure-exception) mverb &rest args)
+  (let ((name (without-prefix (unmangle-verb mverb) "get")))
+    (if (and name (null args))
+      (let ((pname (concatenate 'string
+                     (string (char-downcase (aref name 0)))
+                     (subseq name 1))))
+        (e. (se-properties rec) |fetch| pname (efun () (return-from e-call-match (call-next-method)))))
+      (call-next-method))))
+
+(defglobal +the-make-exception+ (e-lambda "org.cubik.cle.prim.makeException" 
+    (:stamped +deep-frozen-stamp+)
+  (:|run| (types properties printer)
+    (setf types (map 'vector (lambda (x) (e-coercef x 'string)) (e-coerce types 'vector)))
+    (e-coercef properties +the-map-guard+)
+    (e-coercef printer (e. (vat-safe-scope *vat*) |get| "DeepFrozen"))
+    (make-condition
+      'e-structure-exception
+      :types types
+      :properties properties
+      :printer printer))))
+
+
 ; --- standard scope definitions ---
 
 (defglobal +the-looper+ (e-lambda "org.erights.e.elang.interp.loop" 

@@ -1,0 +1,38 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+def StructureException := <import:org.cubik.cle.prim.StructureException>
+def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+
+def defineExceptionGuard implements DeepFrozen {
+  to run(matchTypeIDs :List[String]) {
+    
+    def idSet := matchTypeIDs.asSet()
+
+    def exceptionGuard {
+      to __printOn(out :TextWriter) {
+        var sep := ""
+        for x in matchTypeIDs { 
+          out.print(sep, simplifyFQName(x))
+          sep := "|"
+        }
+      }
+    
+      to coerce(specimen, optEjector) {
+        def se := StructureException.coerce(specimen, optEjector)
+        def type := se.__getAllegedType()
+        if (accum false for super in type.getSupers() { _ | idSet.contains(super.getOptFQName()) }) {
+          return se
+        } else {
+          throw.eject(optEjector, `exception $se doesn't match types $matchTypeIDs`)
+        }
+      }
+    }
+  
+    return exceptionGuard
+  }
+}
