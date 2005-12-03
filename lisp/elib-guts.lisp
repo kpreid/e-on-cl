@@ -113,6 +113,12 @@
   ; NOTE: assuming that super behaves deep-frozen
   t)
 
+(defmethod make-load-form ((object cl-type-guard) &optional environment)
+  (declare (ignore environment))
+  ;; must be custom in order to ignore allow super and trivial-box being restored as nil
+  `(locally (declare (notinline make-instance))
+     (make-instance ',(class-name (class-of object))
+                    :type-specifier ',(cl-type-specifier object))))
 
 ; --- Auditing ---
 
@@ -230,7 +236,9 @@
 
 (defmethod eeq-is-transparent-selfless ((a e-simple-slot))
   (declare (ignore a)) t)
-  
+
+(defmethod make-load-form ((a e-simple-slot) &optional environment)
+  (make-load-form-saving-slots a :environment environment))  
 
 (defclass base-closure-slot (vat-checking)
   ((getter :initarg :getter
@@ -856,7 +864,30 @@
 
 ;;; If this code causes trouble in future SBCL versions, commenting it out should result in a working but possibly slower system.
 
-#+sbcl (sb-c:defknown e-call-dispatch (t t &rest t) t)
+#+sbcl
+(defun sbcl-derive-dispatch-result (call) 
+  (declare (type sb-c::combination call)
+           (optimize speed))
+  (let* ((dargs (sb-c::basic-combination-args call))
+         (verb-lvar (nth 1 dargs)))
+    (case (if (sb-c::constant-lvar-p verb-lvar)
+            (sb-c::lvar-value verb-lvar)
+            (return-from sbcl-derive-dispatch-result))
+      (:|coerce/2|
+        ;; once we know the mverb, we know the arg count
+        (destructuring-bind (guardl verb-lvar specimenl ejectorl) dargs
+          (declare (ignore verb-lvar specimenl ejectorl))
+          (when (sb-c::constant-lvar-p guardl)
+            (let ((guard (sb-c::lvar-value guardl)))
+              (when (typep guard 'cl-type-guard)
+                ;(format t "~&deriving guard call type ~S~%" (cl-type-specifier guard))
+                (sb-c::ir1-transform-specifier-type 
+                  (cl-type-specifier guard))))))))))
+
+#+sbcl 
+(sb-c:defknown e-call-dispatch (t t &rest t) t
+  (sb-c:any)
+  :derive-type #'sbcl-derive-dispatch-result)
 
 #+sbcl (sb-c:deftransform e-call-dispatch
     ((target mverb &rest args)

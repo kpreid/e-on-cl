@@ -155,7 +155,8 @@
           (e.compiler:compile-e-to-file
             (e.syntax:e-source-to-tree (e. file |getTwine|))
             compile-target
-            fqn-prefix))
+            fqn-prefix
+            scope))
         (e.compiler:load-compiled-e compile-target scope))
       (elang:eval-e (e.syntax:e-source-to-tree (e. file |getTwine|))
                     scope))))

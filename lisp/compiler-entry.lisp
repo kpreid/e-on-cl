@@ -106,29 +106,56 @@
 (defvar *efasl-program*)
 (defvar *efasl-result*)
 
-(defun compile-e-to-file (expr output-file fqn-prefix)
-  "Compile an EEXpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would."
-  (let* ((nouns (coerce (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector) 'list))
-         (syms (mapcar #'make-symbol nouns))
+(deftype externalizable-for-efasl ()
+  '(or null
+       number
+       string
+       bit-vector
+       character
+       keyword
+       pathname
+       cl-type-guard))
+
+(defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
+  "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope."
+  (let* ((all-nouns (coerce (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector) 'list))
+         (needed-nouns '())
+         (needed-syms '())
          (initial-scope-var (gensym "INITIAL-SCOPE"))
          (layout
            (make-instance 'prefix-scope-layout :fqn-prefix fqn-prefix
                                                :rest
              (scope-layout-nest
-               (mapcar #'cons nouns syms))))
+               (mapcar
+                 (lambda (noun)
+                   (escape-bind (fail)
+                       (let* ((slot (if opt-scope
+                                      (e. opt-scope |getSlot| noun)
+                                      (e. fail |run|)))
+                              (value (progn
+                                       (unless (typep slot 'e-simple-slot)
+                                         (e. fail |run|))
+                                       (ref-shorten (e. slot |getValue|)))))
+                         (unless (typep value 'externalizable-for-efasl)
+                           ;; xxx in principle, this can be extended to any externalizable value 
+                           (e. fail |run|))
+                         (cons noun (make-instance 'value-binding :value value)))
+                     (-unused-)
+                       (declare (ignore -unused-))
+                       (push noun needed-nouns)
+                       (cons noun (first (push (make-symbol noun) needed-syms)))))
+                 all-nouns))))
          (*efasl-program*
            `(setf *efasl-result*
                   (list
-                    ',nouns
-                    (lambda (,initial-scope-var ,@syms)
+                    ',needed-nouns
+                    (lambda (,initial-scope-var ,@needed-syms)
                       ;; XXX we shouldn't need to reference the compiler
                       ;; implementation here
                       ,(e.elang.compiler.seq:sequence-e-to-cl
                          expr 
                          layout
                          initial-scope-var))))))
-    ;; XXX instead of having to do this to handle nested cases,
-    ;; we should implement a-u-o with the macrolet/macroexpand trick
     (multiple-value-bind (truename warnings-p failure-p)
         (compile-file (merge-pathnames
                         #p"lisp/universal.lisp"
