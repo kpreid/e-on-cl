@@ -10,13 +10,16 @@ def defineException implements DeepFrozen {
   to run(typeIDs :List[String],
          printer :DeepFrozen) {
 
-    def exceptionDefinition {
+    def cprinter implements DeepFrozen { 
+      to run(tw :TextWriter, exception) {
+        printer(tw, exception._getProperties())
+    }}
+
+    def exceptionDefinition implements DeepFrozen {
       to run(properties :Map[String, any]) {
         return makeException(typeIDs, 
                              properties, 
-                             def cprinter implements DeepFrozen { 
-                               to run(tw :TextWriter) {
-                                 printer(tw, properties)}})
+                             cprinter)
       }
     }
   

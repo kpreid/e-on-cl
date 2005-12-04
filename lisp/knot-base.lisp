@@ -188,9 +188,7 @@
              (let ((tw (make-text-writer-to-cl-stream stream
                          :autoflush nil
                          :should-close-underlying nil)))
-               (e. (se-printer condition)
-                   |run|
-                   tw)))))
+               (e. (se-printer condition) |run| tw condition)))))
 
 (defun property-name-to-get-verb (name)
   (if (string= name "")
@@ -203,7 +201,7 @@
   (:|__printOn| (condition tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| "problem: ")
-    (e. (se-printer condition) |run| tw))
+    (e. (se-printer condition) |run| tw condition))
   (:|__getAllegedType| (condition)
     (e. +the-make-type-desc+ |run|
       "StructureException instance type" 
@@ -218,7 +216,8 @@
            (lambda (name)
              (e. +the-make-message-desc+ |run|
                "" (property-name-to-get-verb name) #() nil))
-           (e. (se-properties condition) |getKeys|)))))
+           (e. (se-properties condition) |getKeys|))))
+  (:|_getProperties/0| 'se-properties))
 
 (defmethod e-call-match ((rec e-structure-exception) mverb &rest args)
   (let ((name (without-prefix (unmangle-verb mverb) "get")))

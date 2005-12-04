@@ -32,8 +32,15 @@
   ? parser.parse([star, id, eq, star, star, id].asStream())
   # value: [[<star>, [[<id>]]], <eq>, [[<star>, [[<star>, [[<id>]]]]]]]
   
-  ? parser.parse([eq].asStream())
+  ? def broken := parser.parse([eq].asStream())
   # value: <ref broken by problem: parse error: expected one of [<id>, <star>], got <eq>>
+  
+  ? def ParseError := makeLALR1Parser.getParseError()
+  > def p :ParseError := Ref.optProblem(broken)
+  # value: problem: parse error: expected one of [<id>, <star>], got <eq>
+  
+  ? [p.getExpected(), p.getFound()]
+  # value: [[<id>, <star>].asSet(), <eq>]
 
 
 Actions
@@ -70,6 +77,12 @@ quasi-parser
   
   ? parser.parse(mapStream(any, [star, id, eq, star, star, id].asStream(), identityValues))
   # value: [[<star>, [[<id>]]], <eq>, [[<star>, [[<star>, [[<id>]]]]]]]
+
+  ? def p :ParseError := Ref.optProblem(parser.parse([[eq, eq]].asStream()))
+  # value: problem: parse error: expected one of [<id>, <star>], got <eq>
+
+  ? [p.getExpected(), p.getFound()]
+  # value: [[<id>, <star>].asSet(), <eq>]
 
 quasi-parser with actions
 

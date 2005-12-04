@@ -9,11 +9,25 @@ pragma.enable("accumulator")
 pragma.enable("trinary-define")
 
 def makeLALR1Parser := <import:org.cubik.cle.parser.makeLALR1Parser>
+def makeParseError := makeLALR1Parser::makeParseError
 
 def mapStream := <import:org.cubik.cle.io.mapStream>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
+def mapV implements DeepFrozen {
+  to run(f, coll) { return accum [] for v in coll {_.with(f(v))}}}
+
 def listAction implements DeepFrozen { to run(item, list) { return [item] + list }}
+
+def ToProblem implements DeepFrozen {
+  to coerce(specimen, optEjector) {
+    if (Ref.optProblem(specimen) =~ p :notNull) {
+      return p
+    } else {
+      throw.eject(optEjector, E.toQuote(specimen) + " is not broken")
+    }
+  }
+}
 
 def lex implements DeepFrozen { to run(textIn) {
   # XXX get a better lexer library/pattern
@@ -150,7 +164,15 @@ def metaparser := makeLALR1Parser(
                     return [terminalMap[sym], val]
                   }))
                 
-                return intermediate.run(args)
+                return \
+                  switch (intermediate) {
+                    match p :ToProblem {
+                      Ref.broken(makeParseError([
+                        "found" => args[p::found],
+                        "expected" => mapV(args.get, p::expected).asSet()]))
+                    }
+                    match good { good.run(args) }
+                  }
               }
             }
             
