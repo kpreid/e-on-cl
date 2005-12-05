@@ -42,6 +42,10 @@
   ? [p.getExpected(), p.getFound()]
   # value: [[<id>, <star>].asSet(), <eq>]
 
+EOF parse errors
+
+  ? def broken := makeLALR1Parser("_", 1, [2], [[1, [2]]], ["tokenFunction" => identityValues]).parse([2, 2].asStream())
+  # value: <ref broken by problem: parse error: expected one of [EOF], got 2>
 
 Actions
 
