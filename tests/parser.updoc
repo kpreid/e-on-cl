@@ -93,6 +93,10 @@ EOF parse errors from quasi-parser
   ? def broken := lalr1`"eoftest" := ${"x"}.`.parse([["x", null], ["x", null]].asStream())
   # value: <ref broken by problem: parse error: expected one of [EOF], got "x">
 
+bad terminal
+  ? lalr1`"_" := ${"x"}.`.parse([["y", null]].asStream())
+  # problem: "y" is not a terminal symbol in <_ quasi-defined LALR(1) parser>
+
 quasi-parser with actions
 
   ? def calls(verb) :any { def caller implements DeepFrozen { 

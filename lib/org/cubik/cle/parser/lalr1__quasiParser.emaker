@@ -166,7 +166,7 @@ def metaparser := makeLALR1Parser(
                 def intermediate := ePlainParser.parse(mapStream(any, stream,
                   def quasiParserSymbolizer(token) {
                     def [sym, val] := token
-                    return [terminalMap[sym], val]
+                    return [terminalMap.fetch(sym, thunk{throw(`${E.toQuote(sym)} is not a terminal symbol in $quasiResultParser`)}), val]
                   }))
                 
                 return \
