@@ -199,6 +199,9 @@ case "$LISPTYPE" in
     # XXX config option for -on-error mode, and similar for other lisps - check if we can control such from Lisp code
     lisp_extra_push "-on-error"
     lisp_extra_push "debug"
+    
+    # make toplevel option --nothing work the way we want
+    lisp_extra_push "-repl"
 
     #"$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
     #  -x "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
