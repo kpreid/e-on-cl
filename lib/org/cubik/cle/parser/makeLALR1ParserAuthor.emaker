@@ -68,14 +68,13 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
     def yaccMakeProduction := lisp["YACC", "MAKE-PRODUCTION"]::"function"
     def yaccParseWithLexer := lisp["YACC", "PARSE-WITH-LEXER"]::"function"
     def YaccParseErrorT := lisp.unsealingConditionGuard(l`yacc:yacc-parse-error`)
-    def UnboundVariableT := lisp.unsealingConditionGuard(l`cl:unbound-variable`)
        
     def ypeTerminal := lisp["YACC", "YACC-PARSE-ERROR-TERMINAL"]::"function"
     def ypeExpectedTerminals := lisp["YACC", "YACC-PARSE-ERROR-EXPECTED-TERMINALS"]::"function"
+    def EOF := l`yacc::eof` # XXX internal symbol
 
     def unmapSymbol(sym) {
-      return try { symbolValue(sym) } \
-             catch u :UnboundVariableT { makeSymbol("EOF") }
+      return if (sym == EOF) { sym } else { symbolValue(sym) }
     }
 
     def mapToSymbol(input, map) {
@@ -87,6 +86,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
     }
 
     def makeLALR1Parser implements DeepFrozenStamp {
+      to getEOF() { return EOF }
       to getParseError() { return ParseError }
       to getMakeParseError() { return makeParseError }
     

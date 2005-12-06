@@ -10,6 +10,7 @@ pragma.enable("trinary-define")
 
 def makeLALR1Parser := <import:org.cubik.cle.parser.makeLALR1Parser>
 def makeParseError := makeLALR1Parser::makeParseError
+def EOF := makeLALR1Parser::EOF
 
 def mapStream := <import:org.cubik.cle.io.mapStream>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
@@ -93,13 +94,17 @@ def metaparser := makeLALR1Parser(
       def _(name, _, start, _, qproductions) {
         
         def terminalSymbolsFlex := [].diverge()
+        if (start =~ startTerminal :int) {
+          terminalSymbolsFlex.push(startTerminal)
+        }
+
         def productions := 
           accum [] for [left, right] + actionList in qproductions {_.with(
             # collect the indexes of values resulting from terminals,
             # which have no actions and therefore don't have nor need
             # our qpIntermediate gimmick
             var leaves := [].asSet()
-            
+                        
             for argPosition => quasiSym :int in right {
               terminalSymbolsFlex.push(quasiSym)
               leaves with= argPosition
@@ -167,9 +172,12 @@ def metaparser := makeLALR1Parser(
                 return \
                   switch (intermediate) {
                     match p :ToProblem {
+                      def unmap(psym) {
+                        return if (psym == EOF) { psym } else { args[psym] }
+                      }
                       Ref.broken(makeParseError([
-                        "found" => args[p::found],
-                        "expected" => mapV(args.get, p::expected).asSet()]))
+                        "found" => unmap(p::found),
+                        "expected" => mapV(unmap, p::expected).asSet()]))
                     }
                     match good { good.run(args) }
                   }

@@ -88,6 +88,11 @@ quasi-parser
   ? [p.getExpected(), p.getFound()]
   # value: [[<id>, <star>].asSet(), <eq>]
 
+EOF parse errors from quasi-parser
+
+  ? def broken := lalr1`"eoftest" := ${"x"}.`.parse([["x", null], ["x", null]].asStream())
+  # value: <ref broken by problem: parse error: expected one of [EOF], got "x">
+
 quasi-parser with actions
 
   ? def calls(verb) :any { def caller implements DeepFrozen { 
