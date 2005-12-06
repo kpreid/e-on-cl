@@ -173,6 +173,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| (symbol-name this))))
 
+(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen symbol))
+  "Symbols are atomic to E. Their mutable properties are not accessible."
+  t)
+
 ; --- Character ---
 
 (def-class-opaque character)

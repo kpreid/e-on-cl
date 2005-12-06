@@ -8,7 +8,7 @@
   
   ? makeLALR1Parser :DeepFrozen
   # value: <makeLALR1Parser>
-  
+
   ? def s implements DeepFrozen {}; def l implements DeepFrozen {}; def r implements DeepFrozen {}; def id implements DeepFrozen {}; def star implements DeepFrozen {}; def eq implements DeepFrozen {}; null
   
   ? def mapStream := <import:org.cubik.cle.io.mapStream>; null
