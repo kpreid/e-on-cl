@@ -24,12 +24,27 @@
   ? makeTermParser(genericBuilder).parseText("foo".asStream())
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
 
-  ? makeTermParser(genericBuilder).parse([
-  >   ["Tag", [["Ident", "foo"]]],
-  >   ["("],
-  >   ["Tag", [["Ident", "foo"]]],
-  >   [")"]].asStream())
+--- Grammar
+
+  ? def p(tokens) :any { makeTermParser(genericBuilder).parse(tokens.asStream()) }; null
+
+  ? p([["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "foo"]]], [")"]])
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["term", ["tag", [["Ident", "foo"]]]]]]
+
+  ? p([["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [","], ["Tag", [["Ident", "baz"]]], [")"]])
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["seq", ["term", ["tag", [["Ident", "bar"]]]], ["term", ["tag", [["Ident", "baz"]]]]]]]
+
+  ? p([["["], ["Tag", [["Ident", "foo"]]], ["]"]])
+  # value: ["start", ["tuple", ["term", ["tag", [["Ident", "foo"]]]]]]
+
+  ? p([["{"], ["Tag", [["Ident", "foo"]]], ["}"]])
+  # value: ["start", ["bag", ["term", ["tag", [["Ident", "foo"]]]]]]
+
+  ? p([["Tag", [["Ident", "foo"]]], ["{"], ["Tag", [["Ident", "bar"]]], ["}"]])
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["bag", ["term", ["tag", [["Ident", "bar"]]]]]]]
+
+  ? p([["Tag", [["Ident", "foo"]]], [":"], ["Tag", [["Ident", "bar"]]]])
+  # value: ["start", ["attr", ["tag", [["Ident", "foo"]]], ["term", ["tag", [["Ident", "bar"]]]]]]
 
 --- Quasi and parsing
 

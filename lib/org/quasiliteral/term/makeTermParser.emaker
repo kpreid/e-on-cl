@@ -19,13 +19,26 @@ def makeTermParser implements DeepFrozen {
       "TermL" := start.
       start := term                         => ${b.start}.
       term := functor                       => ${b.term}.
-      term := functor ${"("} argList ${")"} => ${def _(f,_,a,_) {
-                                                   return b.term(f,a)}}.
+      term := functor ${"("} argList ${")"} => ${def _(f,_,a,_) { return \
+                                                  b.term(f,a)}}.
+      term := functor lbr argList rbr       => ${def _(f,_,a,_) { return \
+                                                  b.term(f,b.bag(a))}}.
+      term := lbr argList rbr               => ${def _(_,a,_) { return \
+                                                  b.bag(a)}}.
+      term := ${"["} argList ${"]"}         => ${def _(_,a,_) { return \
+                                                  b.tuple(a)}}.
+      term := functor ${":"} term           => ${def _(f,_,a) { return \
+                                                  b.attr(f,a)}}.
       argList := term                       => $__identityFunc.
-      argList := term ${","} argList        => ${b.seq}.
+      argList := term ${","} argList        => ${def _(l,_,r) { return \
+                                                  b.seq(l,r)}}.
       functor := tag                        => $__identityFunc.
       tag := ${"Tag"}                       => ${b.tag}.
+      
+      lbr := ${"{"}.
+      rbr := ${"}"}.
     `
+    # lbr and rbr are necessary only due to a current limitation in lalr1__quasiParser.
     
     def termParser {
       /** Parse the given stream of term-language text to a quasi-term tree. */
