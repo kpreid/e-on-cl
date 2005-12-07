@@ -28,23 +28,46 @@
 
   ? def p(tokens) :any { makeTermParser(genericBuilder).parse(tokens.asStream()) }; null
 
+foo(foo)
+
   ? p([["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "foo"]]], [")"]])
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["term", ["tag", [["Ident", "foo"]]]]]]
+
+foo(bar, baz)
 
   ? p([["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [","], ["Tag", [["Ident", "baz"]]], [")"]])
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["seq", ["term", ["tag", [["Ident", "bar"]]]], ["term", ["tag", [["Ident", "baz"]]]]]]]
 
+[foo]
+
   ? p([["["], ["Tag", [["Ident", "foo"]]], ["]"]])
   # value: ["start", ["tuple", ["term", ["tag", [["Ident", "foo"]]]]]]
+
+{foo}
 
   ? p([["{"], ["Tag", [["Ident", "foo"]]], ["}"]])
   # value: ["start", ["bag", ["term", ["tag", [["Ident", "foo"]]]]]]
 
+foo{bar}
+
   ? p([["Tag", [["Ident", "foo"]]], ["{"], ["Tag", [["Ident", "bar"]]], ["}"]])
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["bag", ["term", ["tag", [["Ident", "bar"]]]]]]]
 
+foo:bar
+
   ? p([["Tag", [["Ident", "foo"]]], [":"], ["Tag", [["Ident", "bar"]]]])
   # value: ["start", ["attr", ["tag", [["Ident", "foo"]]], ["term", ["tag", [["Ident", "bar"]]]]]]
+
+Literals
+
+  ? p([["Integer", 1]])
+  # value: ["start", ["term", ["leafInteger", 1]]]
+  ? p([["Float64", 1.0]])
+  # value: ["start", ["term", ["leafFloat64", 1.0]]]
+  ? p([["Char", 'a']])
+  # value: ["start", ["term", ["leafChar", 'a']]]
+  ? p([["String", "a"]])
+  # value: ["start", ["term", ["leafTwine", "a"]]]
 
 --- Quasi and parsing
 

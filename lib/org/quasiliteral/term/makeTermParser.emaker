@@ -29,11 +29,19 @@ def makeTermParser implements DeepFrozen {
                                                   b.tuple(a)}}.
       term := functor ${":"} term           => ${def _(f,_,a) { return \
                                                   b.attr(f,a)}}.
+
       argList := term                       => $__identityFunc.
       argList := term ${","} argList        => ${def _(l,_,r) { return \
                                                   b.seq(l,r)}}.
+
       functor := tag                        => $__identityFunc.
+      functor := literal                    => $__identityFunc.
       tag := ${"Tag"}                       => ${b.tag}.
+
+      literal := ${"Integer"}               => ${b.leafInteger}.
+      literal := ${"Float64"}               => ${b.leafFloat64}.
+      literal := ${"Char"}                  => ${b.leafChar}.
+      literal := ${"String"}                => ${b.leafTwine}.
       
       lbr := ${"{"}.
       rbr := ${"}"}.
