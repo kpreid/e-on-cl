@@ -38,10 +38,10 @@ def makeTermParser implements DeepFrozen {
       functor := literal                    => $__identityFunc.
       tag := ${"Tag"}                       => ${b.tag}.
 
-      literal := ${"Integer"}               => ${b.leafInteger}.
-      literal := ${"Float64"}               => ${b.leafFloat64}.
-      literal := ${"Char"}                  => ${b.leafChar}.
-      literal := ${"String"}                => ${b.leafTwine}.
+      literal := ${"Integer"}               => ${b.leafData}.
+      literal := ${"Float64"}               => ${b.leafData}.
+      literal := ${"Char"}                  => ${b.leafData}.
+      literal := ${"String"}                => ${b.leafData}.
       
       lbr := ${"{"}.
       rbr := ${"}"}.

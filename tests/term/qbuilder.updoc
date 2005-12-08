@@ -1,0 +1,32 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+--- Setup
+
+  ? def <qu> := <import:org.quasiliteral.*>; null
+  ? def makeTermBuilder := <qu:term.makeTermBuilder>; null
+  ? def termBuilder := makeTermBuilder(); null
+  ? def makeQBuilder := <qu:quasiterm.makeQBuilder>; null
+  ? def qb := makeQBuilder(termBuilder)
+  # value: <qBuilder>
+
+--- Terms
+XXX write these tests, in independent-of-TermParser form
+
+  ? def qt := qb.start(qb.term(qb.tag([["Ident", "foo"]])))
+  # value: qterm`foo`
+  
+  ? qt.substitute([])
+  # value: term`foo`
+
+--- Literals
+
+  ? def dqt := qb.start(qb.leafData(def d := "foo", null))
+  # value: qterm`"foo"`
+
+  ? def dt := dqt.substitute([])
+  # value: term`"foo"`
+  
+  ? [dt.getData(), dt.getData() == d]
+  # value: ["foo", true]
+  

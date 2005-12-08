@@ -22,6 +22,7 @@ def _make implements DeepFrozen { to run(astroBuilder) {
 
   def QTerm := any # XXX restrict
   def QFunctor := any # XXX restrict
+  def SourceSpan := any # XXX restrict
 
   def qBuilder { # implements AstroBuilder?, QuasiBuilder?
   
@@ -30,6 +31,23 @@ def _make implements DeepFrozen { to run(astroBuilder) {
     to start(top :QTerm) { return top }
     
     to term(functor :QFunctor) { return functor }
+    
+    to leafData(data, optSpan :nullOk[SourceSpan]) {
+      # XXX is this adequate?
+      return def quasiData { # implemens QFunctor
+        to substitute(args) {
+          return astroBuilder.leafData(data, optSpan)
+        }
+        
+        to termPrint(out :TextWriter) {
+          out.quote(data)
+        }
+
+        to __printOn(out) {
+          qtPrint(out, quasiData)
+        }
+      }
+    }
     
     to tag(tagPieces :List[Tuple[String, String]]) {
       def tagName := accum "" for [kind, text] in tagPieces { _ + text}

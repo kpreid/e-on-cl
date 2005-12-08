@@ -102,8 +102,14 @@ def makeTermAuthor(SelflessStamp) {
           
           tw.write(tw.isQuoting().pick("term`", ""))
           
-          tw.print(tag.getTagName()) # XXX inadequate: at least for data
-          if (data != null) { tw.quote(data) }
+          if (tag.getTagName() != `.${data.__getAllegedType().getFQName().split(".").last().split("$").last()}.`) {
+            # XXX ask *something* about whether this tag is the canonical tag (in what context?) for the data so that it may be printed if it isn't
+            tw.print(tag.getTagName())
+          }
+          if (data != null) { 
+            # XXX perhaps we should ask the tag to print the data
+            tw.quote(data)
+          }
           
           if (args.size() > 0) {
             tw.write("(")

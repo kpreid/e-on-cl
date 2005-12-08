@@ -3,15 +3,23 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
 
 def Term := any # XXX restrict
 def AstroTag := any # XXX restrict
 def AstroArg := any # XXX restrict
 
 def makeTerm := <import:org.quasiliteral.term.makeTerm>
+def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 
 def makeTermBuilder implements DeepFrozen {
   to run() { # XXX schema parameter
+
+    # XXX should be from schema
+    def dataTags := accum [] for guard in [int, float64, char, String] {
+      _.with(makeAstroTag(null, `.$guard.`, guard))
+    }
+
     def termBuilder {
       to empty() {
         return [] # XXX not like Java's ...
@@ -25,6 +33,17 @@ def makeTermBuilder implements DeepFrozen {
       to leafTag(tag :AstroTag, 
                  optSpan :nullOk) { # XXX SourceSpan
         return makeTerm(tag, null, optSpan, [])
+      }
+      
+      to leafData(data, optSpan :nullOk) {
+        def [tag, cdata] := escape found {
+          for tag ? (data =~ cdata :(tag.getDataGuard())) in dataTags {
+            found([tag, cdata])
+          }
+          throw(`no tag in schema for data: $data`)
+        }
+        
+        return makeTerm(tag, cdata, optSpan, [])
       }
     }
     return termBuilder

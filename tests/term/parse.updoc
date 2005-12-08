@@ -61,13 +61,13 @@ foo:bar
 Literals
 
   ? p([["Integer", 1]])
-  # value: ["start", ["term", ["leafInteger", 1]]]
+  # value: ["start", ["term", ["leafData", 1]]]
   ? p([["Float64", 1.0]])
-  # value: ["start", ["term", ["leafFloat64", 1.0]]]
+  # value: ["start", ["term", ["leafData", 1.0]]]
   ? p([["Char", 'a']])
-  # value: ["start", ["term", ["leafChar", 'a']]]
+  # value: ["start", ["term", ["leafData", 'a']]]
   ? p([["String", "a"]])
-  # value: ["start", ["term", ["leafTwine", "a"]]]
+  # value: ["start", ["term", ["leafData", "a"]]]
 
 --- Quasi and parsing
 
