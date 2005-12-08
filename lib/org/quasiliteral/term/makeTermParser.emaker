@@ -14,6 +14,7 @@ def makeTermParser implements DeepFrozen {
     def lalr1__quasiParser := <import:org.cubik.cle.parser.makeLALR1Parser>.getLalr1__quasiParser()
   
     def b := builder
+    def leafDataAction(data) { return b.leafData(data, null) } # XXX SourceSpan
     
     def lparser := lalr1`
       "TermL" := start.
@@ -38,10 +39,10 @@ def makeTermParser implements DeepFrozen {
       functor := literal                    => $__identityFunc.
       tag := ${"Tag"}                       => ${b.tag}.
 
-      literal := ${"Integer"}               => ${b.leafData}.
-      literal := ${"Float64"}               => ${b.leafData}.
-      literal := ${"Char"}                  => ${b.leafData}.
-      literal := ${"String"}                => ${b.leafData}.
+      literal := ${"Integer"}               => $leafDataAction.
+      literal := ${"Float64"}               => $leafDataAction.
+      literal := ${"Char"}                  => $leafDataAction.
+      literal := ${"String"}                => $leafDataAction.
       
       lbr := ${"{"}.
       rbr := ${"}"}.
