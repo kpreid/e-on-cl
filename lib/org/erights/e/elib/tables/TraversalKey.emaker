@@ -1,1 +1,2 @@
-<import:org.cubik.cle.prim.makeTraversalKey>
+pragma.enable("verb-curry")
+__equalizer.makeTraversalKey

@@ -49,8 +49,7 @@ def [=> NounExpr, => EExpr, => ENode, => FinalPattern, => IfExpr] := \
 #   }
 # }
 
-def DeepFrozenAuthor(DeepFrozenStamp, 
-                     key) { # makeTraversalKey
+def DeepFrozenAuthor(DeepFrozenStamp) {
 
   def DeepFrozen0
   def OptionallyDeepFrozen
@@ -75,7 +74,7 @@ def DeepFrozenAuthor(DeepFrozenStamp,
   # XXX sofar should be a set instead, but those aren't implemented yet
   def requireDeepFrozen(specimen, sofar, optEjector, root) :void {
     rtrace(thunk{ "requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root) })
-    def specimenKey := key(specimen)
+    def specimenKey := __equalizer.makeTraversalKey(specimen)
     if (sofar.maps(specimenKey)) {
       # recursion check
       return

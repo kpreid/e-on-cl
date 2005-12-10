@@ -239,7 +239,6 @@
     (:|makeStaticScope|  elang:+the-make-static-scope+)
     (:|makeSafeScope|    (wrap-function #'make-safe-scope))
     (:|makeTextWriter|   elib:+the-make-text-writer+)
-    (:|makeTraversalKey| elib:+the-make-traversal-key+)
     
     (:|makeTypeDesc|     +the-make-type-desc+)
     (:|makeMessageDesc|  +the-make-message-desc+)
@@ -259,8 +258,7 @@
     (:|DeepFrozen|
       (e. (e. +default-fresh-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
           |run| 
-          elib:+deep-frozen-stamp+
-          elib:+the-make-traversal-key+))
+          elib:+deep-frozen-stamp+))
     
     (:|makeBaseGuard|
       (e. (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 

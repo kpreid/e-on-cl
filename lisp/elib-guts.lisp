@@ -608,7 +608,9 @@
             (or (e. equalizer |optSame| left right) +e-false+))
         
           (:|optSame| (left right)
-            (opt-same left right '(() . ()))))))))
+            (opt-same left right '(() . ())))
+          
+          (:|makeTraversalKey/1| 'make-traversal-key))))))
 
 (setf *the-equalizer* (make-equalizer))
 

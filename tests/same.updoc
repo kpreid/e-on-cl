@@ -100,8 +100,8 @@ sameYet
 
 TraversalKey
 
-  ? def makeTraversalKey := <elib:tables.TraversalKey>
-  # value: <makeTraversalKey>
+  ? pragma.enable("verb-curry")
+  > def makeTraversalKey := __equalizer.makeTraversalKey; null
   
   ? def k83 := makeTraversalKey(83)
   # value: <key:83>

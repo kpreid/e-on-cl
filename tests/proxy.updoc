@@ -3,9 +3,6 @@
 
 EProxyResolver/EProxyHandler, or at least our version thereof
 
-  ? def tk := <elib:tables.makeTraversalKey>
-  # value: <makeTraversalKey>
-
 --- Far Ref
 
   ? var i := 0
@@ -37,7 +34,7 @@ The second argument to makeProxyResolver is the identity of the far reference, f
   > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remote])) }
   # value: [false, false, true, true, true, true, null]
 
-  ? def remoteKey := tk(remote)
+  ? def remoteKey := __equalizer.makeTraversalKey(remote)
   # value: <key:<Far ref>>
 
 -- Send on Far ref
@@ -71,7 +68,7 @@ XXX should breakage be not synchronously visible instead?
   # value: <ref broken by gone away>
 
   confirm sameness as best we can
-  ? tk(remote) == remoteKey
+  ? __equalizer.makeTraversalKey(remote) == remoteKey
   # value: true
 
 (The synchronous visibility of <- on a broken reference is a separate issue, and works the same way for Ref.broken/1)
