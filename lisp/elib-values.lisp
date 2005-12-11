@@ -181,7 +181,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (def-class-opaque character)
 
-(declaim (inline char-nearby))
+#| Disabling because making the delta inline triggers poor behavior from SBCL:
+   it derives that (char-nearby # 1), for example, can never produce #\Nul, 
+   and represents this in the fasl by a structure which is effectively
+   (MEMBER #\Soh #\Stx #\Etx ...). This greatly increases compilation and load
+   times and fasl file size. |#
+#-sbcl (declaim (inline char-nearby))
 (defun char-nearby (char delta)
   "Return the next or previous character after 'char', if possible."
   (declare (character char)
