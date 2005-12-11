@@ -116,7 +116,7 @@ def makeTermAuthor(SelflessStamp) {
             var sep := ""
             for arg in args { 
               tw.write(sep)
-              if (__auditedBy(arg, TermStamp)) {
+              if (__auditedBy(TermStamp, arg)) {
                 tw.print(arg)
               } else {
                 tw.quote(arg)

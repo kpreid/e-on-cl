@@ -31,6 +31,9 @@ XXX EoJ tags respond to isTagForData/1, op__cmp/1
   ? def term := makeTerm(tag, null, null, [])
   # value: term`foo`
 
+  ? def nestedTerm := makeTerm(makeAstroTag(null, "bar", nullOk), null, null, [term])
+  # value: term`bar(foo)`
+
 Term guard
 
   ? def Term := makeTerm.asType()
