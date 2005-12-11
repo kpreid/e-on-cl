@@ -9,7 +9,7 @@
   (labels ((f (k) (member k *features*)))
     (cond
       ((and (f :clisp) (f :unicode))
-        #+(and clisp unicode) 'charset:utf-8)
+        (ext:make-encoding :charset "UTF-8"))
       ((f :sb-unicode)
         :utf-8)
       (t 

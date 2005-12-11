@@ -44,34 +44,7 @@
     (coerce handler 'handler)
     (remhash handler *serve-event-handlers*)
     (change-class handler 'zombie-handler)
-    (values))
-  
-  #+clisp
-  (defun serve-event (&optional timeout)
-    #+e.serve-event-trace (format *trace-output* "~&; entering e serve-event ~A with ~A handlers~%" timeout (hash-table-count *serve-event-handlers*))
-    (let* ((status-input
-             (map-from-hash
-               'list
-               (lambda (handler stream)
-                 `(,stream ,(handler-direction handler) . ,handler))
-               *serve-event-handlers*))
-           (statuses
-            (if status-input
-              (progn
-                #+e.serve-event-trace (format *trace-output* "~&; entering socket-status")
-                (socket:socket-status
-                  (copy-tree status-input)
-                  timeout))
-              (if timeout
-                (progn
-                  #+e.serve-event-trace (format *trace-output* "~&; sleeping (no handlers)~%")
-                  (sleep timeout))
-                (break "Sleeping indefinitely: serve-event with no handlers and no timeout")))))
-      (loop for (stream nil . handler) in status-input
-            for (nil    nil . status)  in statuses
-            do #+e.serve-event-trace (format *trace-output* "~&; serve-event: calling handler ~S function ~S for ~S~%" handler (handler-function handler) stream)
-               (funcall (handler-function handler) stream)))
-  #+e.serve-event-trace (format *trace-output* "~&; exiting e serve-event~%")))
+    (values)))
 
 ;; Stub
 

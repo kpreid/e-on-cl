@@ -5,7 +5,7 @@ Major bugs:
   - The standard rune-in-E code doesn't work (at last try it runs the script then goes off into an infinite loop with something counting up)
   - if the mismatch printing in updoc fails, it won't be caught by the chainer, leaving us with Lost Signal
   - Auditors get more authority than they should: all the state of the audited object.
-  - Closing sockets is not supported at all. (notes for fixing: clisp offers socket:socket-stream-shutdown; sbcl has nothing; openmcl ???)
+  - Closing sockets is not supported at all.
 
 Minor bugs:
   
@@ -20,7 +20,6 @@ Internal bugs:
 Little features:
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
   - have updoc stop running a given script if a mismatch has occurred and a later step depends on a lexical binding made/shadowed by that step
-  - Recent CLISP contains a pcre interface. See if we can avoid requiring cl-ppcre.
 
 Big features:
   - more complete socket IO

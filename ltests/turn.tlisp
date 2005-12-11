@@ -27,7 +27,7 @@
 (defun stream-handler-target (stream)
   ;; XXX this belongs in e.util
   #+sbcl (sb-sys:fd-stream-fd stream)
-  #+clisp stream)
+  #-sbcl (error "not implemented"))
 
 #-(and) ;; XXX *TEMPORARILY* disabled because it leaks fds
 (deftest exclusive-io-handler-pound

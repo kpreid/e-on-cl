@@ -3,8 +3,7 @@
 
 (defpackage :e.sockets
   (:use :cl :e.util :elib 
-        #+sbcl :sb-bsd-sockets
-        #+clisp :socket)
+        #+sbcl :sb-bsd-sockets)
   #+openmcl (:import-from :openmcl-socket :socket-error)
   (:documentation "Taming the Lisp's socket interface, if it has one.")
   (:export
@@ -71,20 +70,7 @@
       n
       (eject-or-ethrow error-ejector (errno-to-condition errno)))))
 
-#+clisp
-(defun foo-write (target vector error-ejector &key (start 0) (end (length vector)))
-  (e-coercef vector '(vector (unsigned-byte 8)))
-  (when (typep target 'deferred-socket)
-    (setf target (deferred-socket-socket target)))
-  (handler-case
-    (multiple-value-bind (x n)
-        (ext:write-byte-sequence vector target :no-hang t :start start :end end)
-      (declare (ignore x))
-      n)
-    (error (c)
-      (eject-or-ethrow error-ejector c))))
-
-#-(or sbcl clisp)
+#-(or sbcl)
 (defun foo-write (target vector error-ejector)
   (error "foo-write not implemented"))
 
@@ -118,15 +104,6 @@
         (eject-or-ethrow opt-ejector condition)))
     socket))
 
-#+clisp
-(defun foo-connect-tcp (addr-info opt-ejector)
-  (e-coercef addr-info 'pseudo-addr-info)
-  (socket-connect (addr-info-port addr-info)
-                  (addr-info-unresolved-name addr-info)
-                  :element-type '(unsigned-byte 8) 
-                  :buffered nil 
-                  :timeout 0))
-
 ; --- ---
 
 (defgeneric socket-shorten (socket))
@@ -142,7 +119,7 @@
     :type     (ref-shorten type)
     :protocol 0))
 
-#+(or clisp openmcl) (progn
+#+(or openmcl) (progn
   (defclass deferred-socket ()
     ((domain :initarg :domain
              :reader foo-socket-domain
@@ -157,12 +134,6 @@
   (defmethod socket-shorten ((socket deferred-socket))
     (or (deferred-socket-socket socket)
         (error "~S is not yet a native socket" socket))))
-
-#+clisp    
-(defun foo-make-socket (domain type)
-  (check-type domain (member :internet))
-  (check-type type (member :stream))
-  (make-instance 'deferred-socket :domain domain :type type))
 
 #+openmcl 
 (defun foo-make-socket (domain type)
@@ -181,17 +152,6 @@
   (socket-connect socket
                   (host-ent-address (addr-info-host-ent addr-info))
                   (addr-info-port addr-info)))
-
-#+clisp
-(defun foo-connect-socket (socket addr-info)
-  (assert (not (deferred-socket-socket socket)))
-  (setf (deferred-socket-socket socket)
-        (socket-connect (addr-info-port addr-info)
-                        (addr-info-unresolved-name addr-info)
-                        :element-type '(unsigned-byte 8) 
-                        :buffered nil 
-                        :timeout 0))
-  (values))
 
 #+openmcl 
 (defun foo-connect-socket (socket addr-info)
@@ -215,8 +175,6 @@
 #+sbcl 
 (defun %convert-handler-target (target)
   (e. target |getFD|))
-#+clisp (defun %convert-handler-target (target)
-          (socket-shorten target))
 
 #+openmcl (defun %convert-handler-target (target)
             (socket-shorten target))
@@ -240,24 +198,16 @@
 (defun foo-sockopt-receive-buffer (impl-socket)
   (form-or
     #+sbcl (sockopt-receive-buffer impl-socket)
-    #+clisp (socket-options (socket-shorten impl-socket) :so-rcvbuf)
     #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-receive-buffer not implemented")))
 
 (defun foo-sockopt-send-buffer (impl-socket)
   (form-or
     #+sbcl (sockopt-send-buffer impl-socket)
-    #+clisp (socket-options (socket-shorten impl-socket) :so-sndbuf)
     #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-send-buffer not implemented")))
 
 ;; XXX name/peername need to return their results in terms of sockaddr-oid E-structures so they're not ipv4-tied
-
-#+clisp
-(defun convert-socket-address-return (fn socket)
-  (multiple-value-bind (host port) (funcall fn socket nil)
-    (values (coerce (split-sequence:split-sequence #\. (first (split-sequence:split-sequence #\Space host :count 1)) :count 4) 'vector)
-            port)))
 
 (defun foo-socket-name (socket)
   (setf socket (socket-shorten socket))
@@ -266,7 +216,6 @@
     #+openmcl (values (ip4-number-to-vector
                         (openmcl-socket:local-host socket))
                       (openmcl-socket:local-port socket))
-    #+clisp (convert-socket-address-return #'socket-stream-local socket)
     (error "foo-socket-name not implemented")))
 
 (defun foo-socket-peername (socket)
@@ -276,7 +225,6 @@
     #+openmcl (values (ip4-number-to-vector
                         (openmcl-socket:remote-host socket))
                       (openmcl-socket:remote-port socket))
-    #+clisp (convert-socket-address-return #'socket-stream-peer socket)
     (error "foo-socket-peername not implemented")))
 
 
@@ -289,15 +237,13 @@
             collect (logand x #xFF))) 
     'vector))
 
-#+(or sbcl clisp openmcl)
+#+(or sbcl openmcl)
 (progn 
   (defclass pseudo-addr-info ()
     (#+sbcl
      (host-ent :initarg :host-ent :accessor addr-info-host-ent :type host-ent)
      #+openmcl
      (ip-number :initarg :ip-number :accessor addr-info-ip-number :type (unsigned-byte 32))
-     #+clisp
-     (unresolved-name :initarg :unresolved-name :accessor addr-info-unresolved-name :type string)
      (port :initarg :port :accessor addr-info-port :type (unsigned-byte 16))))
   
   (def-vtable pseudo-addr-info
@@ -317,12 +263,6 @@
       (with-slots (ip-number port) this
         (e. tw |write| " ")
         (e. tw |print| (e. "." |rjoin| (ip4-number-to-vector ip-number)))
-        (e. tw |write| ":")
-        (e. tw |print| port))
-      #+clisp
-      (with-slots (unresolved-name port) this
-        (e. tw |write| "<network address ")
-        (e. tw |print| unresolved-name)
         (e. tw |write| ":")
         (e. tw |print| port))
       (e. tw |write| ">"))))
@@ -345,10 +285,6 @@
                                  :addresses (list #(0 0 0 0))))
                    :port (if service (parse-integer service) 0))
                              
-          #+clisp (make-instance 'pseudo-addr-info
-                    :unresolved-name host
-                    :port (if service (parse-integer service) 0))
-          
           #+openmcl 
           (make-instance 'pseudo-addr-info
             :ip-number (if host (openmcl-socket:lookup-hostname host) nil)
@@ -364,27 +300,6 @@
 
 ; --- ---
 
-; XXX this vtable should be in the main system: streams might be used for non-sockets purposes.
-(def-vtable stream
-  #+clisp
-  (:|read/3| (stream max-elements error-ejector eof-ejector)
-    "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
-    (let ((buf (make-array max-elements :element-type '(unsigned-byte 8) :fill-pointer t)))
-      (setf (fill-pointer buf)
-        (ext:read-byte-sequence buf stream :no-hang t))
-      (if (and (zerop (fill-pointer buf))
-               (eq (socket-status (cons stream :input) 0) :eof))
-        (eject-or-ethrow eof-ejector "stream EOF")
-        buf)))
-  #+clisp
-  (:|getSockoptSendBuffer/0| (stream)
-    (socket-options stream :so-sndbuf))
-  #+clisp
-  (:|getSockoptReceiveBuffer/0| (stream)
-    (socket-options stream :so-rcvbuf)))
-
-; --- ---
-
 (defgeneric stream-to-fd-ref (stream))
 
 (defmethod stream-to-fd-ref ((stream synonym-stream))
@@ -394,10 +309,6 @@
 (defmethod stream-to-fd-ref ((stream sb-sys:fd-stream))
   (make-fd-ref (sb-sys:fd-stream-fd stream)))
   
-#+clisp
-(defmethod stream-to-fd-ref ((stream stream))
-  stream)
-
 ; XXX this should not be in sockets but in something more general
 (defun make-fd-ref (fd)
   (e-lambda "org.cubik.cle.io.FDRef" ()
