@@ -92,10 +92,12 @@ def makeTermAuthor(SelflessStamp) {
           return [<import:org.quasiliteral.term.makeTerm>, "run", [tag, data, optSpan, args]]
         }
         
-        to getTag()      { return tag }
-        to getData()   { return data }
+        to getTag()     { return tag }
+        to getData()    { return data }
         to getOptSpan() { return optSpan }
-        to getArgs() { return args }
+        to getArgs()    { return args }
+        
+        to getTerms() { return [term] }
         
         to __printOn(tw :TextWriter) {
           # XXX this should probably be in some TermUnparser object

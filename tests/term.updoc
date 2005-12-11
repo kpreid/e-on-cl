@@ -81,6 +81,9 @@ Term guard
 
 XXX test tag restrictions
 
+  ? term.getTerms()
+  # value: [term`foo`]
+
 --- TermBuilder
 
   ? def makeTermBuilder := <qu:term.makeTermBuilder>

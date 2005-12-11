@@ -26,7 +26,11 @@ def makeTermBuilder implements DeepFrozen {
       }
       to term(functor :Term ? (functor.getArgs() == []), 
               args :AstroArg) { # XXX args guard?
-        return makeTerm(functor.getTag(), functor.getData(), null, args)
+        return makeTerm(functor.getTag(), 
+                        functor.getData(), 
+                        null, 
+                        switch (args) { match [] + l { l } 
+                                        match _ { args.getTerms() }})
       }
       
       # XXX partially belongs to BaseBuilder in the Java system

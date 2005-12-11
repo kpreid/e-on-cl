@@ -5,11 +5,17 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 def makeAstroTagAuthor(SelflessStamp) {
+
+  interface AstroTag guards AstroTagStamp {
+    # XXX ...
+  }
+
   def makeAstroTag implements DeepFrozen {
+    to asType() { return AstroTag }
     /** Unlike E-on-Java, lack of a tag code is here represented by null, rather than -1; and lack of a data type is given by use of the nullOk guard. */
     to run(optTagCode :nullOk[int >= 0], tagName :String, dataGuard :Guard) {
       /** An AstroTag, which in this E implementation serves only as the label on a Term. See E-on-Java for further information. */
-      def astroTag implements SelflessStamp { # , PassByCopyStamp, AstroTagStamp
+      def astroTag implements SelflessStamp, AstroTagStamp { # , PassByCopyStamp
         to __optUncall() {
           # indirect self-reference is to simplify DeepFrozen checking
           return [<import:org.quasiliteral.astro.makeAstroTag>, "run", [optTagCode, tagName, dataGuard]]

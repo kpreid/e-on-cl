@@ -11,8 +11,14 @@ pragma.enable("accumulator")
 
 def makeTermParser := <import:org.quasiliteral.term.makeTermParser>
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
+def AstroTag := makeAstroTag.asType()
 
-def qtPrint implements DeepFrozen { to run(tw :TextWriter, what) {
+interface QAstroArg guards QAstroArgStamp {}
+def QFunctor := QAstroArg # XXX restrict
+def QTerm := QAstroArg # XXX restrict
+def SourceSpan := any # XXX restrict
+
+def qtPrint implements DeepFrozen { to run(tw :TextWriter, what :QAstroArg) {
   tw.write("qterm`")
   what.termPrint(tw)
   tw.write("`")
@@ -20,21 +26,68 @@ def qtPrint implements DeepFrozen { to run(tw :TextWriter, what) {
 
 def _make implements DeepFrozen { to run(astroBuilder) {
 
-  def QTerm := any # XXX restrict
-  def QFunctor := any # XXX restrict
-  def SourceSpan := any # XXX restrict
+  def qBuilder
 
-  def qBuilder { # implements AstroBuilder?, QuasiBuilder?
+  /** XXX faked for now */
+  def schema {
+    to obtainTagForName(name) { return makeAstroTag(null, name, nullOk) }
+  }
+
+  def maybeBaseBuilder := { def self := qBuilder; 
+  /** BaseBuilder from E-on-Java - waiting on figuring out whether it's useful to us too to be split into its own emaker */
+  def maybeBaseBuilder {
+    to bag(args :QAstroArg) { # XXX proper guard?
+      return self.term(self.leafTag(schema.obtainTagForName(".bag."), null), args)
+    }
+    to tuple(args :QAstroArg) { # XXX proper guard?
+      return self.term(self.leafTag(schema.obtainTagForName(".tuple."), null), args)
+    }
+  }}
+
+  bind qBuilder := def "$qBuilder" extends maybeBaseBuilder { # implements AstroBuilder?, QuasiBuilder?
   
     to doesQuasis() { return true }
   
     to start(top :QTerm) { return top }
     
+    to empty() {
+      return def quasiEmpty implements QAstroArgStamp {
+        to termPrint(tw :TextWriter) {
+          # nothing
+        }
+        
+        to __printOn(tw) {
+          qtPrint(tw, quasiEmpty)
+        }
+      }
+    }
+    
     to term(functor :QFunctor) { return functor }
+
+    to term(functor :QFunctor, args :QAstroArg) { 
+      return def quasiTerm implements QAstroArgStamp {
+        to substitute(sargs) {
+          # XXX incomplete
+          return astroBuilder.term(functor.substitute(sargs), args.substitute(sargs))
+        }
+      
+        to termPrint(tw :TextWriter) {
+          # XXX incapable of cycle handling
+          functor.termPrint(tw)
+          tw.print("(")
+          args.termPrint(tw)
+          tw.print(")")
+        }
+        
+        to __printOn(tw) {
+          qtPrint(tw, quasiTerm)
+        }
+      }
+    }
     
     to leafData(data, optSpan :nullOk[SourceSpan]) {
       # XXX is this adequate?
-      return def quasiData { # implemens QFunctor
+      return def quasiData implements QAstroArgStamp { # implemens QFunctor
         to substitute(args) {
           return astroBuilder.leafData(data, optSpan)
         }
@@ -49,26 +102,29 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       }
     }
     
-    to tag(tagPieces :List[Tuple[String, String]]) {
-      def tagName := accum "" for [kind, text] in tagPieces { _ + text}
-      def trueTag := makeAstroTag(null, tagName, nullOk) # XXX correct?
-    
-      def quasiTermTag {
+    to leafTag(tag :AstroTag, optSpan :nullOk[SourceSpan]) {
+      def quasiFunctor implements QAstroArgStamp {
         to substitute(args) {
           # XXX for proper implementation see QFunctor.java
-          return astroBuilder.leafTag(trueTag, null)
+          return astroBuilder.leafTag(tag, null)
         }
       
         to termPrint(tw :TextWriter) {
           # XXX incorrect?
-          tw.print(tagName)
+          tw.print(tag.getTagName())
         }
         
         to __printOn(tw) {
-          qtPrint(tw, quasiTermTag)
+          qtPrint(tw, quasiFunctor)
         }
       }
-      return quasiTermTag
+      return quasiFunctor
+    }
+    
+    /** XXX this doesn't exist in the Java version and I forget whether it's temporary or not */
+    to tag(tagPieces :List[Tuple[String, String]]) {
+      def tagName := accum "" for [kind, text] in tagPieces { _ + text}
+      return qBuilder.leafTag(makeAstroTag(null, tagName, nullOk), null)
     }
   
     to valueMaker(template :String) {

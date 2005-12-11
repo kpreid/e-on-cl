@@ -19,6 +19,25 @@ XXX write these tests, in independent-of-TermParser form
   ? qt.substitute([])
   # value: term`foo`
 
+  ? def qet := qb.start(qb.term(qt, qb.empty()))
+  # value: qterm`foo()`
+
+  ? def qat := qb.start(qb.term(qt, qt))
+  # value: qterm`foo(foo)`
+  
+  ? qat.substitute([])
+  # value: term`foo(foo)`
+
+--- Special terms
+
+  ? def qtBag := qb.start(qb.bag(qt))
+  # value: qterm`.bag.(foo)`
+  XXX print should probably be {foo}
+
+  ? def qtTuple := qb.start(qb.tuple(qt))
+  # value: qterm`.tuple.(foo)`
+  XXX print should probably be [foo]
+
 --- Literals
 
   ? def dqt := qb.start(qb.leafData(def d := "foo", null))
@@ -29,4 +48,5 @@ XXX write these tests, in independent-of-TermParser form
   
   ? [dt.getData(), dt.getData() == d]
   # value: ["foo", true]
+
   
