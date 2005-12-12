@@ -1,0 +1,150 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+--- Setup
+
+  ? def <qu> := <import:org.quasiliteral.*>; null
+  ? def makeTerm := <qu:term.makeTerm>; null
+  ? def makeAstroTag := <qu:astro.makeAstroTag>; null
+
+  ? def t1 := makeTerm(makeAstroTag(44, "foo", nullOk), null, null, [])
+  # value: term`foo`
+
+  ? def t2 := makeTerm(makeAstroTag(45, "bar", nullOk), null, null, [])
+  # value: term`bar`
+
+  ? def makeTermBuilder := <qu:term.makeTermBuilder>
+  # value: <makeTermBuilder>
+  
+  ? def tb := makeTermBuilder()
+  # value: <termBuilder>
+
+XXX schema parameter
+XXX schemas for our kind of terms should include whether non-Term args and nonstandard data are allowed
+
+--- attr/2
+
+  ? def term := tb.attr(t1, t2)
+  # value: term`foo: bar`
+  
+  ? [term.getTag(), term.getArgs()]
+  # value: [<.attr.>, [term`foo(bar)`]]
+
+XXX argument checking
+
+--- bag/1
+
+  ? def term := tb.bag(t1)
+  # value: term`{foo}`
+  
+  ? [term.getTag(), term.getArgs()]
+  # value: [<.bag.>, [term`foo`]]
+
+  ? def term := tb.bag(tb.seq(t1, t2))
+  # value: term`{foo, bar}`
+  
+XXX argument checking
+
+x --- composite/3
+x 
+x   ? def term := tb.composite(t1.getTag(), "a", null)
+x   # value: term`foo("a")`
+x   
+x   ? term.getArgs()[0].getData() # check that this is term-data, not args
+x   # value: "a"
+x 
+x XXX argument checking
+x 
+--- empty/0
+
+  ? def term := tb.empty()
+  # value: termSeq`()`
+
+--- getSchema/0 XXX
+
+--- leafData/2
+
+  ? def term := tb.leafData(1, null)
+  # value: term`1`
+  
+  ? term.getTag()
+  # value: <.int.>
+  XXX per EoJ this should be <.int.:259:org.erights.e.meta.java.math.EInt>
+
+  ? tb.leafData("foo", null)
+  # value: term`"foo"`
+
+  ? tb.leafData(tb, null)
+  # problem: no tag in schema for data: <termBuilder>
+
+XXX support leafChar, leafFloat64, leafInteger, leafLong, leafString, leafTwine?
+
+--- leafTag/2
+
+  ? def term := tb.leafTag(t1.getTag(), null)
+  # value: term`foo`
+
+XXX argument checking
+
+--- seq/*
+
+  ? tb.seq()
+  # value: termSeq`()`
+  
+  ? [def seq := tb.seq(t1), seq == t1]
+  # value: [term`foo`, true]
+
+  ? def seq := tb.seq(t1, t2)
+  # value: termSeq`(foo, bar)`
+  
+  ? seq.getTerms()
+  # value: [term`foo`, term`bar`]
+  
+  ? tb.seq(t1, t2, t1)
+  # value: termSeq`(foo, bar, foo)`
+
+XXX argument checking
+  
+--- start/1
+
+  ? tb.start(t1) == t1
+  # value: true
+  
+XXX argument checking
+
+--- term/1 XXX
+
+  ? tb.term(t1)
+  # value: term`foo`
+    
+XXX argument checking
+    
+--- term/2 XXX
+
+  ? tb.term(t1, tb.empty())
+  # value: term`foo`
+
+  ? tb.term(t1, t2)
+  # value: term`foo(bar)`
+
+  ? tb.term(t1, tb.seq(t2, t1))
+  # value: term`foo(bar, foo)`
+
+XXX argument checking
+
+--- tuple/1 XXX
+
+  ? def term := tb.tuple(t1)
+  # value: term`[foo]`
+  
+  ? [term.getTag(), term.getArgs()]
+  # value: [<.tuple.>, [term`foo`]]
+
+  ? def term := tb.tuple(tb.seq(t1, t2))
+   # value: term`[foo, bar]`
+  
+XXX argument checking
+
+--- unpack/1 XXX
+
+XXX SourceSpans

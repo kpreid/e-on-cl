@@ -12,6 +12,7 @@ pragma.enable("accumulator")
 def makeTermParser := <import:org.quasiliteral.term.makeTermParser>
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 def AstroTag := makeAstroTag.asType()
+def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
 
 interface QAstroArg guards QAstroArgStamp {}
 def QFunctor := QAstroArg # XXX restrict
@@ -33,18 +34,12 @@ def _make implements DeepFrozen { to run(astroBuilder) {
     to obtainTagForName(name) { return makeAstroTag(null, name, nullOk) }
   }
 
-  def maybeBaseBuilder := { def self := qBuilder; 
-  /** BaseBuilder from E-on-Java - waiting on figuring out whether it's useful to us too to be split into its own emaker */
-  def maybeBaseBuilder {
-    to bag(args :QAstroArg) { # XXX proper guard?
-      return self.term(self.leafTag(schema.obtainTagForName(".bag."), null), args)
-    }
-    to tuple(args :QAstroArg) { # XXX proper guard?
-      return self.term(self.leafTag(schema.obtainTagForName(".tuple."), null), args)
-    }
-  }}
+  def baseBuilder := makeBaseAstroBuilder(qBuilder, 
+                                          schema,
+                                          ["BAstroArg" => QAstroArg,
+                                           ])
 
-  bind qBuilder := def "$qBuilder" extends maybeBaseBuilder { # implements AstroBuilder?, QuasiBuilder?
+  bind qBuilder := def "$qBuilder" extends baseBuilder { # implements AstroBuilder?, QuasiBuilder?
   
     to doesQuasis() { return true }
   

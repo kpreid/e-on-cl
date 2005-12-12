@@ -8,6 +8,7 @@ pragma.enable("accumulator")
 def Term := any # XXX restrict
 def AstroTag := any # XXX restrict
 def AstroArg := any # XXX restrict
+def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
 
 def makeTerm := <import:org.quasiliteral.term.makeTerm>
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
@@ -20,10 +21,20 @@ def makeTermBuilder implements DeepFrozen {
       _.with(makeAstroTag(null, `.$guard.`, guard))
     }
 
-    def termBuilder {
-      to empty() {
-        return [] # XXX not like Java's ...
-      }
+    /** XXX faked for now */
+    def schema {
+      to obtainTagForName(name) { return makeAstroTag(null, name, nullOk) }
+    }
+    
+    def termBuilder
+  
+    def baseBuilder := makeBaseAstroBuilder(termBuilder, 
+                                            schema,
+                                            ["BAstroArg" => AstroArg,
+                                             ])
+  
+    bind termBuilder := def "termBuilder" extends baseBuilder {
+      to empty() { return termBuilder.seq() }
       to term(functor :Term ? (functor.getArgs() == []), 
               args :AstroArg) { # XXX args guard?
         return makeTerm(functor.getTag(), 
@@ -48,6 +59,30 @@ def makeTermBuilder implements DeepFrozen {
         }
         
         return makeTerm(tag, cdata, optSpan, [])
+      }
+      
+      to seq(single :Term) { # XXX right guard?
+        return single
+      }
+      
+      match [=="seq", args] {
+        def termBuilderSeq {
+          to getTerms() { return args }
+          to __printOn(out :TextWriter) {
+            out.write("termSeq`(")
+            var sep := ""
+            for arg in args { 
+              out.write(sep)
+              if (arg =~ t :Term ? (t == arg)) {
+                out.print(arg)
+              } else {
+                out.quote(arg)
+              }
+              sep := ", "
+            }
+            out.write(")`")
+          }
+        }
       }
     }
     return termBuilder

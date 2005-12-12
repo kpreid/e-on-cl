@@ -1,0 +1,45 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
+def AstroTag := makeAstroTag.asType()
+
+def Pass := any # marker that the guarding is to be handled by another method
+
+def SourceSpan := any # XXX restrict
+
+def makeBaseAstroBuilder implements DeepFrozen { 
+  to run(self, 
+         schema, # :AstroSchema
+         [=> BAstroArg := any,
+          => BAstro := any]) {
+
+    def baseAstroBuilder { # implements EventuallyDeepFrozen, AstroBuilder
+      to attr(functor :Pass, value :Pass) {
+        return self.term(self.leafTag(schema.obtainTagForName(".attr."), null), self.term(functor, value))
+      }
+    
+      to bag(args :BAstroArg) {
+        return self.term(self.leafTag(schema.obtainTagForName(".bag."), null), args)
+      }
+      
+      #to composite(functor, data, optSpan :nullOk[SourceSpan]) {
+      #  # xxx ...
+      #}
+      
+      to start(root :BAstro) { return root }
+      
+      to term(functor :Pass) { return self.term(functor, self.empty()) }
+      
+      to tuple(args :BAstroArg) {
+        return self.term(self.leafTag(schema.obtainTagForName(".tuple."), null), args)
+      }
+    }
+  
+    return baseAstroBuilder
+  }
+}

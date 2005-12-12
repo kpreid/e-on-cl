@@ -84,34 +84,6 @@ XXX test tag restrictions
   ? term.getTerms()
   # value: [term`foo`]
 
---- TermBuilder
-
-  ? def makeTermBuilder := <qu:term.makeTermBuilder>
-  # value: <makeTermBuilder>
-  
-  ? def termBuilder := makeTermBuilder()
-  # value: <termBuilder>
-
-XXX schema parameter?
-
-  ? termBuilder.term(term, termBuilder.empty())
-  # value: term`foo`
-
-  ? def term := termBuilder.leafData(1, null)
-  # value: term`1`
-  
-  ? term.getTag()
-  # value: <.int.>
-  XXX check on proper printing of data-accepting tags
-
-  ? termBuilder.leafData("foo", null)
-  # value: term`"foo"`
-
-  ? termBuilder.leafData(termBuilder, null)
-  # problem: no tag in schema for data: <termBuilder>
-
-XXX all builder methods
-
 --- Lexer
 
   ? def makeTermLexer := <qu:term.makeTermLexer>; null
