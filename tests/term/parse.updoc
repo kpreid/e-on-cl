@@ -28,6 +28,11 @@
 
   ? def p(tokens) :any { makeTermParser(genericBuilder).parse(tokens.asStream()) }; null
 
+foo()
+
+  ? p([["Tag", [["Ident", "foo"]]], ["("], [")"]])
+  # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["empty"]]]
+
 foo(foo)
 
   ? p([["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "foo"]]], [")"]])
@@ -38,10 +43,13 @@ foo(bar, baz)
   ? p([["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [","], ["Tag", [["Ident", "baz"]]], [")"]])
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]], ["seq", ["term", ["tag", [["Ident", "bar"]]]], ["term", ["tag", [["Ident", "baz"]]]]]]]
 
-[foo]
+[foo], []
 
   ? p([["["], ["Tag", [["Ident", "foo"]]], ["]"]])
   # value: ["start", ["tuple", ["term", ["tag", [["Ident", "foo"]]]]]]
+
+  ? p([["["], ["]"]])
+  # value: ["start", ["tuple", ["empty"]]]
 
 {foo}
 
@@ -70,6 +78,20 @@ Literals
   # value: ["start", ["term", ["leafData", "a", null]]]
 
 XXX source span
+
+Holes
+
+  ? p([["Quasi$", 1]])
+  # value: ["start", ["term", ["valueHole", 1]]]
+
+  ? p([["Tag", [["Ident", "foo"]]], ["Quasi$", 1]])
+  # value: ["start", ["term", ["taggedHole", ["tag", [["Ident", "foo"]]], ["valueHole", 1]]]]
+
+  ? p([["Quasi$", 1], ["("], ["Quasi$", 2], [")"]])
+  # value: ["start", ["term", ["valueHole", 1], ["term", ["valueHole", 2]]]]
+
+  ? p([["Quasi@", 1], ["("], ["Quasi@", 2], [")"]])
+  # value: ["start", ["term", ["patternHole", 1], ["term", ["patternHole", 2]]]]
 
 --- Quasi and parsing
 

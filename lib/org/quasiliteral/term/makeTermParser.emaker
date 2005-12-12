@@ -20,7 +20,7 @@ def makeTermParser implements DeepFrozen {
       "TermL" := start.
       start := term                         => ${b.start}.
       term := functor                       => ${b.term}.
-      term := functor ${"("} argList ${")"} => ${def _(f,_,a,_) { return \
+      term := functor lpar argList rpar     => ${def _(f,_,a,_) { return \
                                                   b.term(f,a)}}.
       term := functor lbr argList rbr       => ${def _(f,_,a,_) { return \
                                                   b.term(f,b.bag(a))}}.
@@ -31,12 +31,19 @@ def makeTermParser implements DeepFrozen {
       term := functor ${":"} term           => ${def _(f,_,a) { return \
                                                   b.attr(f,a)}}.
 
+      argList :=                            => ${b.empty}.
       argList := term                       => $__identityFunc.
       argList := term ${","} argList        => ${def _(l,_,r) { return \
                                                   b.seq(l,r)}}.
 
       functor := tag                        => $__identityFunc.
       functor := literal                    => $__identityFunc.
+      functor := functorHole                => $__identityFunc.
+      functor := tag functorHole            => ${b.taggedHole}.
+
+      functorHole := ${"Quasi$"}            => ${b.valueHole}.
+      functorHole := ${"Quasi@"}            => ${b.patternHole}.
+
       tag := ${"Tag"}                       => ${b.tag}.
 
       literal := ${"Integer"}               => $leafDataAction.
@@ -46,6 +53,8 @@ def makeTermParser implements DeepFrozen {
       
       lbr := ${"{"}.
       rbr := ${"}"}.
+      lpar := ${"("}.
+      rpar := ${")"}.
     `
     # lbr and rbr are necessary only due to a current limitation in lalr1__quasiParser.
     
