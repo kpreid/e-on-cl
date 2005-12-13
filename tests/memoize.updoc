@@ -1,0 +1,66 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def memoize := <import:org.cubik.cle.memoize>
+  # value: <memoize>
+  
+  ? memoize(def _ {})
+  # problem: <_> is not DeepFrozen
+  
+  ? def f implements DeepFrozen {
+  >   to run(a, b) :any { return a + b }
+  >   # ...
+  > }
+  # value: <f>
+  
+  ? def g := memoize(f)
+  # value: <memoized:<f>>
+  
+  ? g(1, 2)
+  # value: 3
+
+  ? g(1, 2)
+  # value: 3
+  
+  ? var i := 0
+  > for _ in 1..2 {
+  >   println(g(def _ { to add(_) :any {return i += 1} }, ['a']))
+  > }
+  # stdout: 1
+  #         2
+  #         
+
+--- Non-DeepFrozen inputs are harmless
+  
+  ? def noticer { match msg { println(msg); E.callWithPair(1, msg) } }
+  # value: <noticer>
+  
+  ? g(noticer, 1)
+  # stdout: ["add", [1]]
+  #         
+
+  # value: 2
+
+  ? g(noticer, 1)
+  # stdout: ["add", [1]]
+  #         
+
+  # value: 2
+
+--- (DeepFrozen &! DeepPassByCopy) are not cached, because that would make the memoizer observably magical.
+
+  ? { def h implements DeepFrozen { to run() :any { return [def x {}] }}
+  >   [h(), h() == h()] }
+  # value: [[<x>], false]
+
+  ? { def h := memoize(def _ implements DeepFrozen { to run() :any { return [def x {}] }})
+  >   [h(), h() == h()] }
+  # value: [[<x>], false]
+  
+
+XXX memoization options:
+  Whether cache keys are weak:
+    * Yes, for Selfish keys
+    * No, for Selfless keys that are likely to recur
+    * Perhaps a default policy of keeping a weak and a non-weak map?
+  Maximum table size, and therefore discard policy

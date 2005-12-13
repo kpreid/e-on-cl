@@ -262,7 +262,11 @@
     
     (:|makeBaseGuard|
       (e. (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
-          |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))))
+          |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))
+    
+    (:|memoize|
+      (e. (e-import "org.cubik.cle.memoizeAuthor")
+          |run| elib:+deep-frozen-stamp+))))
 
 (defglobal +selfless-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"

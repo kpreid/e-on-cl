@@ -18,6 +18,7 @@ Internal bugs:
   - The standard makeBrand is (correctly) not DeepFrozen, so DeepFrozen special-cases its EventuallyDeepFrozen peekBrand.
 
 Little features:
+  - FlexSet
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
   - have updoc stop running a given script if a mismatch has occurred and a later step depends on a lexical binding made/shadowed by that step
 
@@ -34,7 +35,6 @@ Big features:
 
 Code cleanups not marked in the code:
   - reorganize: rename elib.lisp once it's been pared down to just the external macros and stuff
-  - reorganize: move stuff that isn't really about the root scopes out of knot.lisp
   - reorganize: rename tables2.lisp now that elib-tables.lisp is gone
   - make sure we have vm.updoc tests for rebinding boundaries' presence and absence
 

@@ -1,0 +1,48 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def memoizeAuthor(DeepFrozenStamp) {
+  def _memoize implements DeepFrozen {
+    to run(base :DeepFrozen, options :Map ? options.size().isZero()) {
+    
+      def cache := [].asMap().diverge()
+    
+      def memoized {
+        to __printOn(out :TextWriter) {
+          out.write("<memoized:")
+          out.quote(base)
+          out.write(">")
+        }
+        
+        match msg :DeepFrozen {
+          cache.fetch(msg, thunk {
+            # xxx optimization: we could cache thrown errors as well.
+            def result := E.callWithPair(base, msg)
+            if (result =~ dpbc :DeepPassByCopy) {
+              # If DeepPassByCopy coerces (I haven't determined whether it should), then we return the coercion, since doing so is safe (no non-DPBC objects escape)
+              cache[msg] := dpbc
+            } else {
+              result
+            }
+          })
+        }
+        
+        match msg {
+          E.callWithPair(base, msg)
+        }
+      }
+      return memoized
+    }
+  }
+
+  # must be separate to avoid cycles
+  def memoize implements DeepFrozen {
+    to run(base) { return _memoize(base, [].asMap()) }
+    to run(base, options) { return _memoize(base, options) }
+  }
+
+  return memoize
+}
