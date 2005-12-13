@@ -560,6 +560,10 @@ If a log message is produced, context-thunk is run to produce a string describin
           
           ; --- utility: reference conditions ---
           ("&PassByCopy" ,(lazy-import "org.erights.e.elib.serial.PassByCopy"))
+          ("&DeepPassByCopy" 
+                         ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
+          ("&Data" 
+                         ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
           ("&near"       ,(lazy-import "org.erights.e.elib.slot.near"))
           ("&vow"        ,(lazy-import "org.erights.e.elang.interp.vow"))
           ("&rcvr"       ,(lazy-import "org.erights.e.elang.interp.rcvr"))

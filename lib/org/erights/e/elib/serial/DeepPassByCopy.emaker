@@ -1,0 +1,36 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def DeepPassByCopy0 := 
+/** DeepPassByCopy: The object is PassByCopy and all of its components are DeepPassByCopy.
+
+This guard's result is always == to the specimen. */
+def "org.erights.e.elib.serial.DeepPassByCopy" implements DeepFrozen {
+  to coerce(specimen, optEjector) {
+    # XXX should be a FlexSet but they aren't implemented yet
+    def seen := [].asMap().diverge()
+    
+    def requireDPBC(x) {
+      if (!seen.maps(x)) {
+        seen.put(x, null)
+        switch (x) {
+          match list :List ? (x == list)  {
+            for sub in list { requireDPBC(sub) }
+          }
+          match _ {
+            if (!Ref.isPassByCopy(x)) {
+              throw.eject(optEjector, `$specimen is not DeepPassByCopy because $x is not`)
+            }
+            requireDPBC(x.__optUncall())
+          }
+        }
+      }
+    }
+    
+    requireDPBC(specimen)
+    return specimen
+  }
+}

@@ -1,0 +1,28 @@
+# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? [DeepPassByCopy, Data, DeepPassByCopy == Data]
+  # value: [<DeepPassByCopy>, <DeepPassByCopy>, true]
+  
+  ? 1 :DeepPassByCopy
+  # value: 1
+  
+  ? thunk {} :DeepPassByCopy
+  # problem: <_> is not DeepPassByCopy because <_> is not
+  
+  ? [1] :DeepPassByCopy
+  # value: [1]
+  
+  ? [thunk {}] :DeepPassByCopy
+  # problem: [<_>] is not DeepPassByCopy because <_> is not
+  
+  ? {def x := [1, x, 2]} :DeepPassByCopy
+  # value: [1, <***CYCLE***>, 2]
+  
+  ? {def x := [1, x, thunk {}]} :DeepPassByCopy
+  # problem: [1, <***CYCLE***>, <_>] is not DeepPassByCopy because <_> is not
+
+  ? {[def x := thunk {}, x]} :DeepPassByCopy
+  # problem: [<_>, <_>] is not DeepPassByCopy because <_> is not
+  
+  
