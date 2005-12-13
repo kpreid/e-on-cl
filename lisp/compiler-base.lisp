@@ -537,15 +537,26 @@ XXX This is an excessively large authority and will probably be replaced."
                :nouns (coerce (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|) 'list)
                :rest (make-instance 'prefix-scope-layout 
                        :fqn-prefix (concatenate 'string fqn "$")
-                       :rest layout))))
-      (let ((labels-fns
+                       :rest layout)))
+           (labels-fns
              `((,self-fsym (mverb &rest args)
+                 (when (eq mverb '.get-identity-token.)
+                   ;; Never actually happens. This is to prevent the CL
+                   ;; compiler from hoisting the closure, forcing it to generate
+                   ;; a fresh closure for each execution of this ObjectExpr.
+                   
+                   ;; xxx optimization: we could skip this token if the code is
+                   ;; known to close over something which varies sufficiently.
+                   (return-from ,self-fsym .identity-token.))
                  ,(funcall (if opt-methods
                              #'methodical-object-body
                              #'plumbing-object-body)
                   generators self-fsym inner-layout opt-methods matchers fqn checker-sym doc-comment)))))
+      (flet ((build-labels (post-forms)
+               `(let ((.identity-token. (cons nil nil)))
+                  (labels ,labels-fns ,@post-forms #',self-fsym))))
         (if (not has-auditors)
-          `(labels ,labels-fns #',self-fsym)
+          (build-labels '())
           (let ((witness-sym  (make-symbol "WITNESS"))
                 (finisher-sym (make-symbol "WITNESS-FINISH")))
             `(multiple-value-bind (,witness-sym ,finisher-sym ,checker-sym) 
@@ -555,9 +566,8 @@ XXX This is an excessively large authority and will probably be replaced."
                                 (make-instance '|MetaStateExpr| :elements '()) layout))
               ,@(loop for auditor-form in auditor-forms collect
                   `(funcall ,witness-sym :|ask/1| ,auditor-form))
-              (labels ,labels-fns
-                ;; This does not need to be in an unwind-protect, because in
-                ;; the event of a nonlocal exit the object reference will not
-                ;; be available, so its mutability is moot.
-                (funcall ,finisher-sym)
-                #',self-fsym))))))))
+              ,(build-labels
+                 ;; This does not need to be in an unwind-protect, because in
+                 ;; the event of a nonlocal exit the object reference will not
+                 ;; be available, so its mutability is moot.
+                 `((funcall ,finisher-sym))))))))))

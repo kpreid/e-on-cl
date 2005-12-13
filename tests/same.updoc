@@ -188,3 +188,9 @@ sameness of UnconnectedRefs
   should this be true?
   x ? p == "blip" :Exception
   x # value: true
+
+Bug: CL undefined closure equality was leaking into E when the objects were sufficiently trivial
+
+  ? { def x() :any { return def y {} }
+  >   x() == x() }
+  # value: false
