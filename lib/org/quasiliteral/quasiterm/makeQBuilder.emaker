@@ -80,6 +80,24 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       }
     }
     
+    to valueHole(key :int) {
+      return def quasiValueFunctorHole implements QAstroArgStamp { # XXX should be implements QFunctor?
+        to substitute(args :List) {
+          return args[key] # XXX restrict to Astro? AstroFunctor?
+        }
+      
+        to termPrint(tw :TextWriter) {
+          tw.write("${")
+          tw.print(key)
+          tw.write("}")
+        }
+        
+        to __printOn(tw) {
+          qtPrint(tw, quasiValueFunctorHole)
+        }
+      }
+    }
+    
     to leafData(data, optSpan :nullOk[SourceSpan]) {
       # XXX is this adequate?
       return def quasiData implements QAstroArgStamp { # implemens QFunctor

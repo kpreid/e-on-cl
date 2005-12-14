@@ -49,4 +49,10 @@ XXX write these tests, in independent-of-TermParser form
   ? [dt.getData(), dt.getData() == d]
   # value: ["foo", true]
 
+--- Holes
+
+  ? def hqt := qb.start(qb.valueHole(0))
+  # value: qterm`${0}`
   
+  ? hqt.substitute([term`foo`])
+  # value: term`foo`
