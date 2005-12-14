@@ -19,6 +19,9 @@ DeepFrozenStamp
   ? DeepFrozenStamp
   # value: <DeepFrozenStamp>
   
+  ? DeepFrozenStamp :DeepFrozen
+  # value: <DeepFrozenStamp>
+  
 SelflessStamp
 
   ? SelflessStamp

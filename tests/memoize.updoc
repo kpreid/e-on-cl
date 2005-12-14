@@ -13,7 +13,7 @@
   > }
   # value: <f>
   
-  ? def g := memoize(f)
+  ? def g :DeepFrozen := memoize(f)
   # value: <memoized:<f>>
   
   ? g(1, 2)

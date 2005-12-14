@@ -4,13 +4,17 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
+# XXX todo: add support for cheap memoization of thunks
+
 def memoizeAuthor(DeepFrozenStamp) {
   def _memoize implements DeepFrozen {
     to run(base :DeepFrozen, options :Map ? options.size().isZero()) {
     
+      # XXX add support for limited cache size
+    
       def cache := [].asMap().diverge()
     
-      def memoized {
+      def memoized implements DeepFrozenStamp {
         to __printOn(out :TextWriter) {
           out.write("<memoized:")
           out.quote(base)
@@ -46,3 +50,4 @@ def memoizeAuthor(DeepFrozenStamp) {
 
   return memoize
 }
+

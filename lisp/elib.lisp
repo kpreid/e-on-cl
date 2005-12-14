@@ -1055,6 +1055,10 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore object-expr witness))
     +e-true+)))
 
+(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) 
+                                   (specimen (eql +deep-frozen-stamp+)))
+  t)
+
 (defglobal +selfless-stamp+ (e-lambda
     "org.erights.e.elib.serial.SelflessStamp"
     (:doc "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
