@@ -94,6 +94,14 @@ Outer scope methods part 2, and checking that aScope has the expected contents.
   ? def p; bind p := safeScope; safeScope | p
   # value: <scope __safe$>
   
+ extract/2, optExtract/1
+ 
+  ? [aScope.optExtract("true"), aScope.optExtract("false")]
+  # value: [null, [false, <scope testScope$>]]
+
+  ? [aScope.extract("true", 1), aScope.extract("false", 1)]
+  # value: [[1, <scope testScope$>], [false, <scope testScope$>]]
+  
  selflessness
  
   ? aScope :PassByCopy

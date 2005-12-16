@@ -155,9 +155,14 @@
     "Same as ConstMap#optExtract/1. Added to support using Scopes in map-patterns."
     (block nil
       (vector
-        (e. this |fetch| key
-          (efun () (return nil)))
+        (e. this |fetch| key (efun () (return nil)))
         (e. this |without| key))))
+  (:|extract| (this key default)
+    "Same as ConstMap#extract/1. Added to support using Scopes in map-patterns."
+    (vector
+      (e. this |fetch| key (efun () default))
+      (e. this |without| key)))
+
   (:|without| (scope removed-noun)
     "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."
     (e-coercef removed-noun 'string)

@@ -48,7 +48,7 @@
             &aux (opt-problem (e. Ref |optProblem| outcome)))
           (if opt-problem
             (progn
-              (format *error-output* "# problem: ~A" (e-quote opt-problem)) ; xxx no indent on multiple lines
+              (format *error-output* "# problem: ~A" (e-quote (e-problem-unseal opt-problem))) ; xxx no indent on multiple lines
               (global-exit -1))
             (global-exit 0)))))
     (vat-loop)))

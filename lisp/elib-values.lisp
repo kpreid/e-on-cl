@@ -461,10 +461,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
               ((minusp a) |-Infinity|)))))
   (:|floorDivide| (a b) 
     (e-coercef b 'number)
-    (floor (/ a b)))
+    (floor a b))
   (:|truncDivide| (a b) 
     (e-coercef b 'number)
-    (truncate (/ a b)))
+    (truncate a b))
+  (:|floor/0| 'floor)
+  (:|ceil/0| 'ceiling) ; XXX name method ceiling/0?
   
   (:|mod| (a b) 
     (e-coercef b 'number)

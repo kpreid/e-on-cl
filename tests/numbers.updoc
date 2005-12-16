@@ -173,4 +173,19 @@ Integer coercion
   Bug: integer's __conformTo would infintely recurse given a typical non-native guard '
   ? List.coerce(1)
   # problem: the int 1 doesn't coerce to a ConstList
+
+floor, ceil
+
+  ? def fc(n) :any { return [n.floor(), n.ceil()] }; null
+
+  ? fc(1)
+  # value: [1, 1]
   
+  ? fc(1.0)
+  # value: [1, 1]
+  
+  ? fc(1.5)
+  # value: [1, 2]
+
+  ? fc(-1.5)
+  # value: [-2, -1]
