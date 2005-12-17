@@ -72,7 +72,6 @@
   (:nicknames :elib)
   (:use :cl :e.util)
   (:export 
-    :*java-e-compatible* ; XXX deprecated, to be removed and/or split into variables like the following one
     :*compatible-catch-leakage*
     :*break-on-ejections*
     

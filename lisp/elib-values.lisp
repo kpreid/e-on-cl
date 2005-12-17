@@ -452,9 +452,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|approxDivide| (a b) 
     (e-coercef b 'number)
     (handler-case
-      (if *java-e-compatible*
-        (coerce (/ a b) 'float64)
-        (/ a b))
+      (coerce (/ a b) 'float64)
       (division-by-zero ()
         (cond ((zerop a)  |NaN|)
               ((plusp a)  |Infinity|)

@@ -3,10 +3,6 @@
 
 (cl:in-package :e.elib)
 
-(defvar *java-e-compatible* t
-  "Deprecated. If true, changes minor behaviors (such as some print representations) to match the Java implementation.
-
-This variable is deprecated and will be replaced by more fine-grained and well-defined switches.")
 (defvar *compatible-catch-leakage* nil
   "If true, allows thrown exceptions to be caught unsealed, for compatibility with the Java implementation.")
 
