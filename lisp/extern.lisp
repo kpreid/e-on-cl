@@ -82,6 +82,12 @@
               ; must be the root
               ; xxx Java-E appends a / to the regular path iff the file exists and is a directory. should we do this?
               (e. tw |print| "/"))))
+        
+        (:|getPlatformPath| ()
+          ;; XXX E-on-Java has no documentation for this and treats at as
+          ;; equivalent to getPath. Find out what the intent is.
+          (namestring pathname))
+        
         (:|exists| () 
           "Return whether an actual file designated by this object currently exists."
           (as-e-boolean
@@ -124,7 +130,33 @@
           (e. (e-import "org.cubik.cle.file.makeReadOnlyFile") |run| file))
         (:|_clFileWriteDate| ()
           "XXX this interface needs changing. no tests. quick fix to support changes in emaker loading."
-          (file-write-date pathname))))))
+          (file-write-date pathname))
+        
+        (:|createNewFile| (opt-ejector)
+          "Creates the file, empty, if it does not already exist. Fails if it already exists as a directory."
+          (with-open-file (stream pathname
+                           :direction :output 
+                           :element-type '(unsigned-byte 8) ; XXX OK assumption?
+                           :if-exists nil
+                           :if-does-not-exist :create
+                           :external-format :default)))
+        (:|delete| (opt-ejector)
+          (handler-case
+              (progn (delete-file pathname)
+                     nil)
+            (file-error (condition)
+              (eject-or-ethrow opt-ejector condition))))
+        
+        (:|setText| (text) ; XXX ejector
+          "..."
+          (with-open-file (stream pathname
+                           :direction :output 
+                           :element-type 'character
+                           :if-exists :supersede
+                           :if-does-not-exist :create ; XXX correct?
+                           :external-format :default) ; XXX E-on-Java documents as UTF-8
+            (write-string text stream)
+            nil))))))
 
 ; --- GC ---
 

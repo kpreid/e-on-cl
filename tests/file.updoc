@@ -25,6 +25,9 @@
   ? runeScriptFile.getPath().replaceAll(homeFragment, "<home>")
   # value: "/<home>/clrune"
   
+  ? runeScriptFile.getPlatformPath().replaceAll(homeFragment, "<home>")
+  # value: "/<home>/clrune"
+  
   ? runeScriptFile.getTwine().split("\n")[0]
   # value: "#!/bin/bash"
 
@@ -65,12 +68,30 @@
   ? roHome.__respondsTo("setText", 1)
   # value: false
 
-XXX
-  basics: get subdirs, getText/getTwine of contents, iteration
+ createNewFile, setText
+  
+  safety: if this file does not exist, the rest cannot access it because the variable isn't bound '
+  ? def writable ? !writable.exists() := home[`fileAccessTestFile-${timer.now()}`]; null
+  
+  ? [writable.createNewFile(null), writable.exists(), writable.getText()]
+  # value: [null, true, ""]
+  
+  ? writable.setText("hi")
+  ? writable.getText()
+  # value: "hi"
+  
+  ? writable.delete(null)
+  ? writable.exists()
+  # value: false
+  
+  ? writable.setText("bye")
+  ? writable.getText()
+  # value: "bye"
+  
+  ? writable.delete(null)
 
+XXX
   all file operations
   all dir operations
   path construction is independent of current filesystem state
   readOnly is properly transitive
-
-XXX we need to test writing, but it'd be difficult to test in a harmless way - if it can't affect anything then it's not working with the 'real' filesystem interface code, unless we're on a cap-OS, which is unlikely '
