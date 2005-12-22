@@ -95,11 +95,11 @@ Brand/Sealer/Unsealer
   # value: <sealed by ACME Widget>
   
   ? help(box)
-  # value: interface "org.erights.e.elib.sealing.makeBrand$makeBrand__C$sealer__C$sealedBox__C" {
+  # value: interface "org.erights.e.elib.sealing.makeBrandAuthor$makeBrandAuthor__C$makeBrand__C$sealer__C$sealedBox__C" {
   #            /** Return the Brand of the Unsealer which can unseal this box. */
   #            to getBrand() :any
   #            /** An implementation detail. */
-  #            to _offerContent() :void
+  #            to _offerContent(k) :any
   #        }
 
   ? box.getBrand() == brand

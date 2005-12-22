@@ -264,6 +264,10 @@
       (e. (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
           |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))
     
+    (:|makeBrand|
+      (e. (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
+          |run| elib:+deep-frozen-stamp+))
+    
     (:|memoize|
       (e. (e-import "org.cubik.cle.memoizeAuthor")
           |run| elib:+deep-frozen-stamp+))))

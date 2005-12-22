@@ -1070,21 +1070,26 @@ While this is a process-wide object, its stamps should not be taken as significa
     +e-true+)))
 
 (defmethod e-audit-check-dispatch ((auditor t) (specimen (eql +selfless-stamp+)))
-  "Prevents an infinite recursion:
-      (eeq-is-transparent-selfless some-obj)
-   -> (e-audit-check-dispatch +selfless-stamp+ some-obj)
-   -> (eeq-is-same-ever +selfless-stamp+ some-approver-of-obj)
-   -> (eeq-is-transparent-selfless +selfless-stamp+)
-   -> (e-audit-check-dispatch +selfless-stamp+ +selfless-stamp+)
-   -> (eeq-is-same-ever +selfless-stamp+ +deep-frozen-stamp+)
-   -> repeat with +selfless-stamp+ in place of some-obj
-     
-Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
-
-This could instead be defined as an eeq-is-transparent-selfless method, but I expect to remove that generic function eventually to reduce the number of kinds of 'dispatch on e-ref'. -- kpreid 2005-03-16"
-  (if (eql (ref-shorten auditor) +selfless-stamp+)
-    nil
-    (call-next-method)))
+  (cond 
+    ((eql (ref-shorten auditor) +selfless-stamp+)
+      ;; Prevents an infinite recursion:
+      ;;       (eeq-is-transparent-selfless some-obj)
+      ;;    -> (e-audit-check-dispatch +selfless-stamp+ some-obj)
+      ;;    -> (eeq-is-same-ever +selfless-stamp+ some-approver-of-obj)
+      ;;    -> (eeq-is-transparent-selfless +selfless-stamp+)
+      ;;    -> (e-audit-check-dispatch +selfless-stamp+ +selfless-stamp+)
+      ;;    -> (eeq-is-same-ever +selfless-stamp+ +deep-frozen-stamp+)
+      ;;    -> repeat with +selfless-stamp+ in place of some-obj
+      ;;      
+      ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
+      ;; 
+      ;; This could instead be defined as an eeq-is-transparent-selfless method, but I expect to remove that generic function eventually to reduce the number of kinds of 'dispatch on e-ref'. -- kpreid 2005-03-16
+      nil)
+    ((eql (ref-shorten auditor) +deep-frozen-stamp+)
+      ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
+      t)
+    (t
+      (call-next-method))))
 
 ; --- utilities referenced below ---
 

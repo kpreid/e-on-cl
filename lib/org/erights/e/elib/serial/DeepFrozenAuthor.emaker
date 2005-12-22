@@ -120,21 +120,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         # The auditor ensures that this will not fail.
         def state := peekUnsealer.unseal(specimen.__optSealedDispatch(peekBrand))
         
-        # XXX should be lazy+cached
-        def acceptableSpecialCases :=
-          [__makeFinalSlot(peekBrand),
-           __makeFinalSlot(peekSealer)].asSet()
-        
         escape ejectorForTranslucent {
           # using optEjector in the recursion would lead to revealing to our client some contents of the object being checked
           for component in state.getValues() {
-            
-            # XXX nasty special case because Brands/Sealers are not (yet?) DeepFrozen and they end up in the meta.getState() - we should allow the specimen to not return them, either by &! or by a different semantics for meta.getState()
-            if (Ref.isSettled(component) \
-                && acceptableSpecialCases.contains(component)) {
-              continue
-            }
-            
             requireDeepFrozen(component, sofarther, ejectorForTranslucent, root)
           }
         } catch p {
