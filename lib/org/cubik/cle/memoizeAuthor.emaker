@@ -42,9 +42,12 @@ def memoizeAuthor(DeepFrozenStamp) {
     }
   }
 
-  # must be separate to avoid cycles
+  # must be separate to avoid cycles, for simple DeepFrozen auditing
+  /** Return a memoizing, yet DeepFrozen, version of a DeepFrozen function or other object. */
   def memoize implements DeepFrozen {
+    /** Memoize 'base' with default options. */
     to run(base) { return _memoize(base, [].asMap()) }
+    /** Memoize 'base' with options specified. There are no options defined yet. */
     to run(base, options) { return _memoize(base, options) }
   }
 
