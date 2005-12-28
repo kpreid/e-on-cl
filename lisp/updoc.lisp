@@ -279,11 +279,15 @@
            )
       (e. scope-slot |setValue| scope)
       (format t "~&~A" (enough-namestring file))
-      (chain #'result+
-             (make-instance 'result)
-             (lambda () script)
-             (lambda () (funcall stepper (pop script)))
-             (lambda (result) (format t " ~A~%" (result-step-count result)))))))
+      (let ((starting-time (get-universal-time)))
+        (chain #'result+
+               (make-instance 'result)
+               (lambda () script)
+               (lambda () (funcall stepper (pop script)))
+               (lambda (result) 
+                 (format t " ~A in ~As~%" 
+                         (result-step-count result)
+                         (- (get-universal-time) starting-time))))))))
 
 ; --- Profiling ---
 
