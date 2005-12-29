@@ -206,16 +206,12 @@ def metaparser := makeLALR1Parser(
    ["item", ["Quasi$"], __identityFunc]],
   ["tokenFunction" => __identityFunc])
 
-def cache := [].asMap().diverge(String, any)
-
-def lalr1__quasiParser { # not DeepFrozen
+<import:org.cubik.cle.memoize>(def lalr1__quasiParser implements DeepFrozen {
   to valueMaker(template :String) {
-    return cache.fetch(template, thunk {
-      cache[template] := metaparser.parse(lex(template.asStream()))
-    })
+    return metaparser.parse(lex(template.asStream()))
   }
   
   to matchMaker(_) {
     throw(`${<import>[meta.context().getFQNPrefix().split("$")[0]]} cannot be used in a pattern`)
   }
-}
+})

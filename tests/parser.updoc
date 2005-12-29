@@ -66,7 +66,7 @@ Actions
 quasi-parser
 
   ? def lalr1__quasiParser := makeLALR1Parser.getLalr1__quasiParser()
-  # value: <lalr1__quasiParser>
+  # value: <memoized:<lalr1__quasiParser>>
 
   ? def parser := lalr1`"quasi-form cl-yacc test 4-20" := s.
   >                     s := l $eq r.
