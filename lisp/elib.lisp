@@ -454,13 +454,6 @@ If there is no current vat at initialization time, captures the current vat at t
             (make-unconnected-ref (transform-condition-for-e-catch p)))))))
     promise))
 
-(defun run-vats ()
-  "Should not exist. Currently used by the repl in rune.lisp. XXX make the repl use proper async IO."
-  ; XXX missing a with-turn, but hasn't been proven so
-  (with-slots (sends) *vat*
-    (loop until (queue-null sends)
-          do    (funcall (dequeue sends)))))
-
 (defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
   (destructuring-bind (&optional qtime &rest qfunc)
       (sorted-queue-peek time-queue (lambda () nil))

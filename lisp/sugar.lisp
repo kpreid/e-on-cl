@@ -77,14 +77,26 @@
 (defmacro with-vat ((&rest initargs) &body start-forms)
   `(call-with-vat (lambda () ,@start-forms) ,@initargs))
 
+(defun call-when-resolved (ref ereactor)
+  "implemented here to avoid E-language dependencies - Ref.whenResolved is implemented in E code. XXX review whether Ref should be implemented in terms of this."
+  (multiple-value-bind (result result-resolver) (make-promise)
+    (let ((safe-reactor
+           (with-result-promise (safe-reactor)
+             (efun ()
+               (if (ref-is-resolved ref)
+                 (unless (e-is-true (e. result-resolver |isDone|))
+                   (e. result-resolver |resolve| (e<- ereactor |run| ref)))
+                 (e<- ref |__whenMoreResolved| safe-reactor))))))
+      (e. safe-reactor |run|)
+      result)))
+
 (defmacro when-resolved ((result-var) ref-form &body forms)
   "Execute the body forms when the value of ref-form becomes resolved. Returns a promise for the value of the last form.
 
 The syntax is imitative of cl:multiple-value-bind - suggestions for better syntax welcome."
-  `(e. (e. (vat-safe-scope *vat*) |get| "Ref") 
-       |whenResolved| ,ref-form 
-       (efun (,result-var)
-         ,@forms)))
+  `(call-when-resolved ,ref-form 
+                       (efun (,result-var)
+                         ,@forms)))
 
 (defmacro mapping-bind (map-form (&body entries) &body body
     &aux (map-var (gensym "MAP")))
@@ -126,3 +138,4 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
       |get|
       fqn))
 
+()

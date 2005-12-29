@@ -6,6 +6,7 @@
 (defvar *parse-cache-name* nil)
 
 (defun global-exit (status)
+  (check-type status (unsigned-byte 8))
   (when *parse-cache-name*
     (e.syntax:save-parse-cache-file *parse-cache-name*))
 
@@ -53,24 +54,18 @@
             (global-exit 0)))))
     (vat-loop)))
 
+(defun generic-toplevel (label starter)
+  (establish-vat :label label)
+  (call-when-resolved
+    (funcall starter)
+    (efun (result)
+      (global-exit (if (ref-opt-problem result) 255 0))))
+  (vat-loop))
+
 (defun repl-toplevel (args)
-  (establish-vat :label "rune repl toplevel")
   (assert (null args))
-  (let ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*)))
-    (loop (with-simple-restart (abort "Return to E REPL.")
-      (princ "e-on-cl? ")
-      (force-output)
-      (let ((source (e.syntax:e-source-to-tree 
-                      (or (read-line *standard-input* nil)
-                          (progn
-                            (fresh-line)
-                            (force-output)
-                            (global-exit 0))))))
-        (multiple-value-bind (result new-scope)
-            (time (elang:eval-e source scope))
-          (format t "~&# value: ~A~%~%" (elib:e-quote result))
-          (elib:run-vats)
-          (setf scope new-scope)))))))
+  (generic-toplevel "rune repl toplevel"
+                    (system-symbol "REPL-START" "E.UPDOC" :e-on-cl.updoc)))
 
 (defun selftest-toplevel (args)
   (assert (zerop (length args)))

@@ -91,7 +91,6 @@
     :vat-loop
     :with-turn
     :establish-vat
-    :run-vats  ; deprecated
     :vat-label
     :vat-safe-scope
     :vat-privileged-scope
@@ -216,7 +215,7 @@
     :e-slot-value :place-slot
     :def-shorten-methods
     :escape-bind
-    :with-vat :when-resolved
+    :with-vat :call-when-resolved :when-resolved
     :mapping-bind
     :e-import))
 

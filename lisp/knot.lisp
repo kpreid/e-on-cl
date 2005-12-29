@@ -633,7 +633,7 @@ If a log message is produced, context-thunk is run to produce a string describin
             ("gc"              ,e.extern:+gc+)
             ("makeWeakRef"     ,+the-make-weak-ref+)
             ("&stdin"     ,(make-lazy-apply-slot (lambda ()
-                             (break "making stdin")
+                             (warn "making stdin")
                              (e. (e. (e-import "org.cubik.cle.charsets") |get| e.extern:+standard-external-format-common-name+) |decode| (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
                                  |run|
                                  +lisp+) |run| (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input*) 4096) (e. #() |asMap|)))))

@@ -98,19 +98,6 @@
       (list (subseq s 0 colon) (subseq s (+ 2 colon) (length s)))
       (list "problem" s))))
 
-(defun standalone-when-resolved (ref ereactor)
-  "implemented here to avoid E-language dependencies"
-  (multiple-value-bind (result result-resolver) (make-promise)
-    (let ((safe-reactor
-           (with-result-promise (safe-reactor)
-             (efun ()
-               (if (ref-is-resolved ref)
-                 (unless (e-is-true (e. result-resolver |isDone|))
-                   (e. result-resolver |resolve| (e<- ereactor |run| ref)))
-                 (e<- ref |__whenMoreResolved| safe-reactor))))))
-      (e. safe-reactor |run|)
-      result)))
-
 (defun chain (combiner accumulator test getter finalizer)
   "Accumulate the eventual results of calling 'getter' into 'accumulator' using 'combiner' until 'test' returns false, then call 'finalizer' with the final value and return it."
   (multiple-value-bind (result-promise result-resolver) (make-promise)
@@ -118,7 +105,7 @@
               (handler-case-with-backtrace
                 (if (funcall test)
                   (let ((element-vow (funcall getter)))
-                    (standalone-when-resolved element-vow (efun (x)
+                    (call-when-resolved element-vow (efun (x)
                       (declare (ignore x))
                       (setf accumulator (funcall combiner accumulator element-vow))
                       (proceed))))
@@ -157,72 +144,117 @@
 
 ; --- Script running ---
 
-(defun make-stepper (file scope-slot wait-hook-slot eval-out-stream eval-err-stream &key print-steps)
-  (symbol-macrolet ((scope (e-slot-value scope-slot))
-                    (wait-hook (e-slot-value wait-hook-slot)))
-    (lambda (step
-        &aux new-answers new-result backtrace)
-      (destructuring-bind (expr answers) step
-        (multiple-value-bind (result-promise result-resolver) (make-promise)
-          (if print-steps
-            (format t "~&? ~A~%" expr)
-            (princ "."))
-          (force-output)
-          (setf new-answers nil)
-          (labels ((collect-streams ()
-                    (let ((s (get-output-stream-string eval-out-stream)))
-                      (unless (string= s "") (push (list "stdout" s) new-answers)))
-                    (let ((s (get-output-stream-string eval-err-stream)))
-                      (unless (string= s "") (push (list "stderr" s) new-answers))))
-                   (finish-step ()
-                    (nreverse-here new-answers)
-                    (if (tree-equal answers new-answers :test #'equal)
-                      (make-instance 'result :failures 0 :steps 1)
-                      (let ((*print-pretty* t)
-                            (*package* #.*package*)
-                            (*print-case* :downcase)
-                            (*print-level* 7)
-                            (*print-length* 20))
-                        (print `(mismatch (file ,file)
-                                          (source ,expr)
-                                          (expects ,@answers)
-                                          (instead ,@new-answers)
-                                          (opt-backtrace ,backtrace)))
-                        (fresh-line)
-                        (make-instance 'result :failures 1 :steps 1)))))
-            ((lambda (f) (e<- f |run|)) (efun ()
+(defun print-answer (answer)
+  (format t "~&# ~A: ~A~%" (first answer) (second answer)))
+
+(defun make-updoc-handler (&key file out err print-steps)
+  (let ((new-answers nil)
+        (step nil)
+        (backtrace nil))
+    (with-result-promise (handler)
+      (e-lambda "$updocHandler" ()
+        (:|begin| (nstep)
+          (destructuring-bind (expr answers) nstep
+            (declare (ignore answers))
+            (setf step nstep)
+            (setf new-answers nil)
+            (if print-steps
+              (format t "~&? ~A~%" expr)
+              (princ "."))))
+        (:|takeStreams| ()
+          (loop for stream in (list out err)
+                for label in '("stdout" "stderr")
+                for string = (get-output-stream-string stream)
+                unless (string= string "") 
+                  do (e. handler |answer| (list label string))))
+        (:|answer| (answer)
+          (push answer new-answers)
+          (when print-steps
+            (print-answer answer)))
+        (:|backtrace| (bt)
+          (setf backtrace bt))
+        (:|finish| ()
+          (nreverse-here new-answers)
+          (if (tree-equal (second step) new-answers :test #'equal)
+            (make-instance 'result :failures 0 :steps 1)
+            (let ((*print-pretty* t)
+                  (*package* #.*package*)
+                  (*print-case* :downcase)
+                  (*print-level* 7)
+                  (*print-length* 20))
+              (print `(mismatch (file ,file)
+                                (source ,(first step))
+                                (expects ,@(second step))
+                                (instead ,@new-answers)
+                                (opt-backtrace ,backtrace)))
+              (fresh-line)
+              (make-instance 'result :failures 1 :steps 1))))))))
+
+(defun make-stepper (&key gc props handler)
+  (let* ((scope-slot (make-instance 'elib:e-var-slot :value nil))
+         (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain")))
+    (symbol-macrolet ((scope (e-slot-value scope-slot))
+                      (wait-hook (e-slot-value wait-hook-slot)))
+      (values
+        (lambda (step)
+        (destructuring-bind (expr answers) step
+          (declare (ignore answers))
+          (multiple-value-bind (result-promise result-resolver) (make-promise)
+            (e. handler |begin| step)
+            (force-output)
+            ((lambda (f) (e<- f |run|)) (efun (&aux new-result)
               (block attempt
                 (handler-bind ((error #'(lambda (condition) 
-                                          (setf new-result nil)
-                                          (collect-streams)
-                                          (push (make-problem-answer condition) new-answers)
-                                          (setf backtrace (e.util:backtrace-value))
+                                          (e. handler |takeStreams|)
+                                          (e. handler |answer| (make-problem-answer condition))
+                                          (e. handler |backtrace| (e.util:backtrace-value))
                                           (return-from attempt)))
                                (warning #'muffle-warning)
                                #+sbcl (sb-ext:compiler-note #'muffle-warning))
                   (setf (values new-result scope)
                           (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
-              (collect-streams)
+              (e. handler |takeStreams|)
               (unless (eeq-is-same-yet new-result nil)
-                (push (list "value" (e. +the-e+ |toQuote| new-result)) new-answers)
-                (when print-steps
-                  (format t "~&# ~A: ~A~%" (caar new-answers) (cadar new-answers))))
-              (standalone-when-resolved wait-hook (efun (x)
+                (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
+              (call-when-resolved wait-hook (efun (x)
                 ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
                 (declare (ignore x))
-                (collect-streams)
-                (e. result-resolver |resolve| (finish-step)))))))
-          result-promise)))))
+                (e. handler |takeStreams|)
+                (e. result-resolver |resolve| (e. handler |finish|))))))
+            result-promise)))
+        scope-slot
+        (e-lambda "org.cubik.cle.updocInterp" ()
+          ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
+          (:|gc| () (e. gc |run|) nil)
+          (:|getProps| () props)
+          (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
+            (e. wait-hook-slot |setValue|
+              (call-when-resolved ref
+                (efun (ref)
+                  (declare (ignore ref))
+                  old-wait)))
+            nil))))))
+
+(defmacro multiple-value-let* ((&rest bindings) &body body)
+  (if bindings
+    `(multiple-value-bind ,(butlast (first bindings)) ,(first (last (first bindings)))
+       (multiple-value-let* ,(rest bindings) ,@body))
+    `(locally ,@body)))
 
 (defun updoc-file (file &key print-steps confine)
   (with-open-file (s file
       :external-format e.extern:+standard-external-format+)
-    (let* ((script (read-updoc s))
+    (multiple-value-let* 
+          ((script (read-updoc s))
            (eval-out-stream (make-string-output-stream))
            (eval-err-stream (make-string-output-stream))
-           (scope-slot (make-instance 'elib:e-var-slot :value nil))
-           (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain"))
-           (stepper (make-stepper file scope-slot wait-hook-slot eval-out-stream eval-err-stream :print-steps print-steps))
+           (stepper scope-slot interp 
+             (make-stepper :props e.knot::+eprops+ ;; XXX internal
+                           :gc e.extern:+gc+ 
+                           :handler (make-updoc-handler :out eval-out-stream 
+                                                        :err eval-err-stream
+                                                        :print-steps print-steps
+                                                        :file file)))
            (runner (e-lambda "org.cubik.cle.updoc.Runner" ()
               (:|__printOn| (tw)
                 (e-coercef tw +the-text-writer-guard+)
@@ -235,20 +267,6 @@
                             (map 'list #'(lambda (x) (coerce x 'list))
                                  answers-vector)) script)
                 nil)))
-           (interp (e-lambda "org.cubik.cle.updocInterp" ()
-             ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
-             (:|gc| () (e. e.extern:+gc+ |run|) nil)
-             (:|getProps| ()
-               (assert (not confine))
-               ; XXX internal symbol
-               e.knot::+eprops+)
-             (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
-               (e. wait-hook-slot |setValue|
-                 (standalone-when-resolved ref
-                   (efun (ref)
-                     (declare (ignore ref))
-                     old-wait)))
-               nil)))
            (scope (if confine
                     (e. (e. (vat-safe-scope *vat*) |withPrefix| "__main$") |or| (e.knot:make-scope "updocAdditions$"
                       `(("updoc" ,runner)
@@ -391,7 +409,7 @@
       (otherwise
         (loop-finish))))
     
-  (standalone-when-resolved
+  (call-when-resolved
       (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps :confine confine)
     (efun (result)
       (declare (ignore result))
@@ -409,7 +427,7 @@
     (let ((result
             (block test
               (with-vat (:label "updoc system-test")
-                (standalone-when-resolved
+                (call-when-resolved
                     (updoc-start
                       (list (merge-pathnames
                               (make-pathname :directory '(:relative "tests"))
@@ -420,4 +438,49 @@
         (cerror "Ignore failures." "Tests for ~A did not execute properly: ~A" system (ref-opt-problem result)))
       (when (> (result-failure-count result) 0)
         (cerror "Ignore failures." "Tests for ~A failed." system)))))
-  
+
+;;; --- Updoc-guts-based REPL ---
+
+(defun make-repl-handler ()
+  (e-lambda "$replHandler" ()
+    (:|begin| (step)
+      (declare (ignore step)))
+    (:|takeStreams| () nil)
+    (:|answer/1| #'print-answer)
+    (:|backtrace/1| (constantly nil))
+    (:|finish| () nil)
+    (:|answer| () nil)))
+
+(defun repl-start ()
+  (multiple-value-let* 
+      ((stepper scope-slot interp (make-stepper :gc e.extern:+gc+ :handler (make-repl-handler)))
+       (scope (e. (make-io-scope :stdout *standard-output*
+                                 :stderr *error-output*
+                                 :interp interp) 
+                  |withPrefix| "__main$")))
+    (e. scope-slot |setValue| scope)
+    (multiple-value-let* ((stdin (e. scope |get| "stdin"))
+                          (buf (make-array 0 :element-type 'character :adjustable t :fill-pointer 0))
+                          (result resolver (make-promise)))
+      ;; XXX this is assortedly bad
+      ;; not least, it should not implement its own line-buffer
+      (labels ((take ()
+                 (format t "~&e-on-cl? ")
+                 (force-output)
+                 (e. stdin |whenAvailable| 1 (efun ()
+                   (if (not (ref-is-resolved (e. stdin |terminates|)))
+                     (let ((ch (aref (e. stdin |read| 1 1 #|XXX ALL|#) 0)))
+                       (if (eql ch #\Newline)
+                         (progn
+                           (call-when-resolved
+                             (funcall stepper (list (copy-seq buf) nil))
+                             (efun (step-result)
+                               (declare (ignore step-result))
+                               (take)))
+                           (setf (fill-pointer buf) 0))
+                         (progn
+                           (vector-push-extend ch buf)
+                           (take))))
+                     (e. resolver |resolve| (e. stdin |terminates|)))))))
+        (take)
+        result))))
