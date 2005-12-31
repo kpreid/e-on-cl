@@ -99,6 +99,10 @@
                      (list (coerce (subseq elements ',normal-prop-count) 'vector))))
           `(node-elements node)))
       
+      (defmethod node-class-arity ((node-class (eql (find-class ',class-name))))
+        (values ',normal-prop-count
+                ',(if rest-slot nil normal-prop-count)))
+      
       (defmethod opt-node-property-getter 
           ((node ,class-name) 
            (field-keyword t))
@@ -261,6 +265,30 @@
                     :elements ',(node-elements node))))
 
 ; --- constraints on nodes ---
+
+(define-condition node-arity-error (error)
+  ((class :initarg :class :reader attempted-node-class)
+   ;(arity :initarg :arity :reader node-)
+   (elements :initarg :elements :reader attempted-node-elements))
+  (:report (lambda (condition stream &aux (*package* #.(find-package 
+                                                         :e.elang.vm-node)))
+             (multiple-value-call 
+               #'format 
+               stream 
+               "~@<Attempted to create a ~S with ~S children, instead of ~S-~S.~:> ~:_~@<This probably means you are using an incompatible version of E-on-Java, or haven't fixed the bug described at: ~:_<http://www.eros-os.org/pipermail/e-lang/2005-August/010959.html>~:>" 
+               (class-name (attempted-node-class condition))
+               (length (attempted-node-elements condition))
+               (node-class-arity (attempted-node-class condition))))))
+
+(defmethod shared-initialize :after ((node |ENode|) slot-names &key &allow-other-keys)
+  (declare (ignore slot-names))
+  (let ((arity (length (node-elements node))))
+    (multiple-value-bind (min max) (node-class-arity (class-of node))
+      (unless (and (>= arity min)
+                   (or (null max) (<= arity max)))
+        (error 'node-arity-error :class (class-of node)
+                                 :arity (list min max)
+                                 :elements (node-elements node))))))
 
 (defun usesp (defining using)
   "Return whether 'using' uses nouns defined by 'defining'."

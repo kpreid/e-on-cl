@@ -352,6 +352,7 @@
     :+the-make-static-scope+
     
     :node-elements ;; XXX shouldn't really be exported
+    :node-arity-error
     :opt-guard-expr-to-safe-opt-guard
     :pattern-opt-noun
     :pattern-to-param-desc
