@@ -1,0 +1,11 @@
+  ? def x := throw("oops")
+  # problem: will be "oops", not this
+  
+  ? x
+  # value: <won't happen>
+
+  ? def x := 1
+  # value: 1
+  
+  ? x
+  # value: 1

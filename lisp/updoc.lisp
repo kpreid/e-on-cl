@@ -129,38 +129,56 @@
    (step-count :type integer 
                :initarg :steps
                :initform 0
-               :reader result-step-count)))
+               :reader result-step-count)
+   (dead :type boolean
+         :initarg :dead
+         :initform nil
+         :reader result-dead)))
 
 (defgeneric result+ (a b))
 
 (defmethod result+ ((a result) (b result))
   (make-instance 'result 
     :failures (+ (result-failure-count a) (result-failure-count b))
-    :steps    (+ (result-step-count a)    (result-step-count b))))
+    :steps    (+ (result-step-count a)    (result-step-count b))
+    :dead     (or (result-dead a) (result-dead b))))
 
 (def-shorten-methods result+ 2)
 (def-shorten-methods result-failure-count 1)
 (def-shorten-methods result-step-count 1)
+(def-shorten-methods result-dead 1)
 
 ; --- Script running ---
 
 (defun print-answer (answer)
   (format t "~&# ~A: ~A~%" (first answer) (second answer)))
 
-(defun make-updoc-handler (&key file out err print-steps)
+(defun make-updoc-handler (&key file out err print-steps 
+                                (dead-names (e. #() |asMap|)))
+  ;; XXX too much state - ick
   (let ((new-answers nil)
         (step nil)
-        (backtrace nil))
+        (step-scope nil)
+        (backtrace nil)
+        (skipping nil))
     (with-result-promise (handler)
       (e-lambda "$updocHandler" ()
         (:|begin| (nstep)
           (destructuring-bind (expr answers) nstep
             (declare (ignore answers))
             (setf step nstep)
+            (setf step-scope (e. (e.syntax:e-source-to-tree expr) |staticScope|))
             (setf new-answers nil)
-            (if print-steps
-              (format t "~&? ~A~%" expr)
-              (princ "."))))
+            (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
+            (if skipping
+              (progn 
+                (princ "x") 
+                (load-time-value (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(0))))
+              (progn
+                (if print-steps
+                  (format t "~&? ~A~%" expr)
+                  (princ "."))
+                (e.syntax:e-source-to-tree expr)))))
         (:|takeStreams| ()
           (loop for stream in (list out err)
                 for label in '("stdout" "stderr")
@@ -175,20 +193,41 @@
           (setf backtrace bt))
         (:|finish| ()
           (nreverse-here new-answers)
-          (if (tree-equal (second step) new-answers :test #'equal)
-            (make-instance 'result :failures 0 :steps 1)
-            (let ((*print-pretty* t)
-                  (*package* #.*package*)
-                  (*print-case* :downcase)
-                  (*print-level* 7)
-                  (*print-length* 20))
-              (print `(mismatch (file ,file)
-                                (source ,(first step))
-                                (expects ,@(second step))
-                                (instead ,@new-answers)
-                                (opt-backtrace ,backtrace)))
-              (fresh-line)
-              (make-instance 'result :failures 1 :steps 1))))))))
+          (flet ((adjust-liveness (live)
+                   "updates whether names set by this step are guessed to not
+                    match the expectations of the updoc script"
+                   (setf dead-names 
+                     (e-call dead-names 
+                             (if live
+                               "butNot"
+                               "or")
+                             (list (e. step-scope |outNames|))))))
+            (cond
+              (skipping
+                (adjust-liveness nil)
+                (make-instance 'result :dead t))
+              ((tree-equal (second step) new-answers :test #'equal)
+                (adjust-liveness t)
+                (make-instance 'result :failures 0 :steps 1))
+              (t
+                (let ((*print-pretty* t)
+                      (*package* #.*package*)
+                      (*print-case* :downcase)
+                      (*print-level* 7)
+                      (*print-length* 20))
+                  (destructuring-bind (expr expected-answers) step
+                    (print `(mismatch (file ,file)
+                                      (source ,expr)
+                                      (expects ,@expected-answers)
+                                      (instead ,@new-answers)
+                                      (opt-backtrace ,backtrace)))
+                    (fresh-line)
+                    #| names bound by this step are now dead (assumed to not match
+                       future steps' expectations) iff this step had an unexpected
+                       problem |#
+                    (adjust-liveness (and (member "problem" new-answers :test #'equal :key #'first)
+                                      (not (member "problem" expected-answers :test #'equal :key #'first))))
+                    (make-instance 'result :failures 1 :steps 1)))))))))))
 
 (defun make-stepper (&key gc props handler)
   (let* ((scope-slot (make-instance 'elib:e-var-slot :value nil))
@@ -197,31 +236,30 @@
                       (wait-hook (e-slot-value wait-hook-slot)))
       (values
         (lambda (step)
-        (destructuring-bind (expr answers) step
-          (declare (ignore answers))
-          (multiple-value-bind (result-promise result-resolver) (make-promise)
-            (e. handler |begin| step)
-            (force-output)
-            ((lambda (f) (e<- f |run|)) (efun (&aux new-result)
-              (block attempt
-                (handler-bind ((error #'(lambda (condition) 
-                                          (e. handler |takeStreams|)
-                                          (e. handler |answer| (make-problem-answer condition))
-                                          (e. handler |backtrace| (e.util:backtrace-value))
-                                          (return-from attempt)))
-                               (warning #'muffle-warning)
-                               #+sbcl (sb-ext:compiler-note #'muffle-warning))
-                  (setf (values new-result scope)
-                          (elang:eval-e (e.syntax:e-source-to-tree expr) scope))))
-              (e. handler |takeStreams|)
-              (unless (eeq-is-same-yet new-result nil)
-                (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
-              (call-when-resolved wait-hook (efun (x)
-                ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
-                (declare (ignore x))
+          (let ((expr-node (e. handler |begin| step)))
+            (multiple-value-bind (result-promise result-resolver) (make-promise)
+                
+              (force-output)
+              ((lambda (f) (e<- f |run|)) (efun (&aux new-result)
+                (block attempt
+                  (handler-bind ((error #'(lambda (condition) 
+                                            (e. handler |takeStreams|)
+                                            (e. handler |answer| (make-problem-answer condition))
+                                            (e. handler |backtrace| (e.util:backtrace-value))
+                                            (return-from attempt)))
+                                 (warning #'muffle-warning)
+                                 #+sbcl (sb-ext:compiler-note #'muffle-warning))
+                    (setf (values new-result scope)
+                            (elang:eval-e expr-node scope))))
                 (e. handler |takeStreams|)
-                (e. result-resolver |resolve| (e. handler |finish|))))))
-            result-promise)))
+                (unless (eeq-is-same-yet new-result nil)
+                  (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
+                (call-when-resolved wait-hook (efun (x)
+                  ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
+                  (declare (ignore x))
+                  (e. handler |takeStreams|)
+                  (e. result-resolver |resolve| (e. handler |finish|))))))
+              result-promise)))
         scope-slot
         (e-lambda "org.cubik.cle.updocInterp" ()
           ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
@@ -436,7 +474,7 @@
                     (return-from test result)))))))
       (when (eql (ref-state result) 'broken)
         (cerror "Ignore failures." "Tests for ~A did not execute properly: ~A" system (ref-opt-problem result)))
-      (when (> (result-failure-count result) 0)
+      (when (plusp (result-failure-count result))
         (cerror "Ignore failures." "Tests for ~A failed." system)))))
 
 ;;; --- Updoc-guts-based REPL ---
@@ -444,7 +482,7 @@
 (defun make-repl-handler ()
   (e-lambda "$replHandler" ()
     (:|begin| (step)
-      (declare (ignore step)))
+      (e.syntax:e-source-to-tree step))
     (:|takeStreams| () nil)
     (:|answer/1| #'print-answer)
     (:|backtrace/1| (constantly nil))
@@ -473,7 +511,7 @@
                        (if (eql ch #\Newline)
                          (progn
                            (call-when-resolved
-                             (funcall stepper (list (copy-seq buf) nil))
+                             (funcall stepper (copy-seq buf))
                              (efun (step-result)
                                (declare (ignore step-result))
                                (take)))
