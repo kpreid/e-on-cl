@@ -134,12 +134,17 @@
         
         (:|createNewFile| (opt-ejector)
           "Creates the file, empty, if it does not already exist. Fails if it already exists as a directory."
-          (with-open-file (stream pathname
-                           :direction :output 
-                           :element-type '(unsigned-byte 8) ; XXX OK assumption?
-                           :if-exists nil
-                           :if-does-not-exist :create
-                           :external-format :default)))
+          (handler-case
+              (progn 
+                (with-open-file (stream pathname
+                                 :direction :output 
+                                 :element-type '(unsigned-byte 8) ; XXX OK assumption?
+                                 :if-exists nil
+                                 :if-does-not-exist :create
+                                 :external-format :default))
+                nil)
+            (file-error (condition)
+              (eject-or-ethrow opt-ejector condition))))
         (:|delete| (opt-ejector)
           (handler-case
               (progn (delete-file pathname)

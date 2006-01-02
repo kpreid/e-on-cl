@@ -856,7 +856,6 @@ fqn may be NIL or a string."
       (e-coercef prop-name 'string)
       ; XXX should we have a fqn derived from the original object? a print derived from its simple name?
       (let* ((cap-name (string-upcase prop-name :end (min 1 (length prop-name))))
-             (set-name (concatenate 'string "set" cap-name))
              (get-verb (e-util:mangle-verb (concatenate 'string "get" cap-name) 0))
              (set-verb (e-util:mangle-verb (concatenate 'string "set" cap-name) 1)))
       (e-lambda "org.cubik.cle.prim.DefaultPropertySlot"
