@@ -268,7 +268,6 @@
 
 (define-condition node-arity-error (error)
   ((class :initarg :class :reader attempted-node-class)
-   ;(arity :initarg :arity :reader node-)
    (elements :initarg :elements :reader attempted-node-elements))
   (:report (lambda (condition stream &aux (*package* #.(find-package 
                                                          :e.elang.vm-node)))
@@ -287,7 +286,6 @@
       (unless (and (>= arity min)
                    (or (null max) (<= arity max)))
         (error 'node-arity-error :class (class-of node)
-                                 :arity (list min max)
                                  :elements (node-elements node))))))
 
 (defun usesp (defining using)
