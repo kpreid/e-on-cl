@@ -161,24 +161,31 @@
         (step-scope nil)
         (backtrace nil)
         (skipping nil))
+    
     (with-result-promise (handler)
       (e-lambda "$updocHandler" ()
         (:|begin| (nstep)
           (destructuring-bind (expr answers) nstep
             (declare (ignore answers))
             (setf step nstep)
-            (setf step-scope (e. (e.syntax:e-source-to-tree expr) |staticScope|))
-            (setf new-answers nil)
-            (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
-            (if skipping
-              (progn 
-                (princ "x") 
-                (load-time-value (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(0))))
-              (progn
-                (if print-steps
-                  (format t "~&? ~A~%" expr)
-                  (princ "."))
-                (e.syntax:e-source-to-tree expr)))))
+            (setf new-answers nil
+                  skipping nil)
+            
+            ;; must happen after vars are set, in case of syntax errors 
+            (let ((node (e.syntax:e-source-to-tree expr)))
+              (setf step-scope (e. node |staticScope|))
+              (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
+              (unwind-protect
+                (if skipping
+                  (progn 
+                    (princ "x") 
+                    (load-time-value (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(0))))
+                  (progn
+                    (if print-steps
+                      (format t "~&? ~A~%" expr)
+                      (princ "."))
+                    node))
+                (force-output)))))
         (:|takeStreams| ()
           (loop for stream in (list out err)
                 for label in '("stdout" "stderr")
@@ -236,30 +243,28 @@
                       (wait-hook (e-slot-value wait-hook-slot)))
       (values
         (lambda (step)
-          (let ((expr-node (e. handler |begin| step)))
-            (multiple-value-bind (result-promise result-resolver) (make-promise)
+          (multiple-value-bind (result-promise result-resolver) (make-promise)
                 
-              (force-output)
-              ((lambda (f) (e<- f |run|)) (efun (&aux new-result)
-                (block attempt
-                  (handler-bind ((error #'(lambda (condition) 
-                                            (e. handler |takeStreams|)
-                                            (e. handler |answer| (make-problem-answer condition))
-                                            (e. handler |backtrace| (e.util:backtrace-value))
-                                            (return-from attempt)))
-                                 (warning #'muffle-warning)
-                                 #+sbcl (sb-ext:compiler-note #'muffle-warning))
-                    (setf (values new-result scope)
-                            (elang:eval-e expr-node scope))))
+            ((lambda (f) (e<- f |run|)) (efun (&aux new-result)
+              (block attempt
+                (handler-bind ((error #'(lambda (condition) 
+                                          (e. handler |takeStreams|)
+                                          (e. handler |answer| (make-problem-answer condition))
+                                          (e. handler |backtrace| (e.util:backtrace-value))
+                                          (return-from attempt)))
+                               (warning #'muffle-warning)
+                               #+sbcl (sb-ext:compiler-note #'muffle-warning))
+                  (setf (values new-result scope)
+                        (elang:eval-e (e. handler |begin| step) scope))))
+              (e. handler |takeStreams|)
+              (unless (eeq-is-same-yet new-result nil)
+                (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
+              (call-when-resolved wait-hook (efun (x)
+                ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
+                (declare (ignore x))
                 (e. handler |takeStreams|)
-                (unless (eeq-is-same-yet new-result nil)
-                  (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
-                (call-when-resolved wait-hook (efun (x)
-                  ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
-                  (declare (ignore x))
-                  (e. handler |takeStreams|)
-                  (e. result-resolver |resolve| (e. handler |finish|))))))
-              result-promise)))
+                (e. result-resolver |resolve| (e. handler |finish|))))))
+            result-promise))
         scope-slot
         (e-lambda "org.cubik.cle.updocInterp" ()
           ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
