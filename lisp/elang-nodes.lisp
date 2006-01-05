@@ -271,9 +271,10 @@
              (multiple-value-call 
                #'format 
                stream 
-               "~@<Attempted to create a ~S with ~S children, instead of ~S-~S.~:> ~:_~@<This probably means you are using an incompatible version of E-on-Java, or haven't fixed the bug described at: ~:_<http://www.eros-os.org/pipermail/e-lang/2005-August/010959.html>~:>" 
+               "~@<Attempted to create a ~S with ~S children, ~:_~S, ~:_instead of ~S-~S.~:> ~:_~@<This probably means you are using an incompatible version of E-on-Java, or haven't fixed the bug described at: ~:_<http://www.eros-os.org/pipermail/e-lang/2006-January/011049.html>~:>" 
                (class-name (attempted-node-class condition))
                (length (attempted-node-elements condition))
+               (attempted-node-elements condition)
                (node-class-arity (attempted-node-class condition))))))
 
 (defmethod shared-initialize :after ((node |ENode|) slot-names &key &allow-other-keys)

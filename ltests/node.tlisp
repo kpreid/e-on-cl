@@ -6,6 +6,8 @@
 (deftest node-arity.1
   (handler-case
     (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(1 2))
-    (e.elang:node-arity-error ()
-      't))
-  t)
+    (e.elang:node-arity-error (c)
+      (write-to-string c :readably nil :escape nil :pretty t :right-margin 80 :miser-width 70)))
+  "Attempted to create a |LiteralExpr| with 2 children, (1 2), instead of 1-1.
+This probably means you are using an incompatible version of E-on-Java, or haven't fixed the bug described at:
+<http://www.eros-os.org/pipermail/e-lang/2006-January/011049.html>")
