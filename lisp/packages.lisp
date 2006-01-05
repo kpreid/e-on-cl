@@ -158,7 +158,7 @@
    
     :+e-false+ :+e-true+ :e-is-true :as-e-boolean :e-boolean
     
-    :|NaN| :|Infinity| :float64 :float32
+    :|NaN| :|Infinity| :float64 :float32 :e-list
     
     :ejector
     :ejector-prethrow

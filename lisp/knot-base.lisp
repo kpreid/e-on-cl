@@ -50,7 +50,7 @@
                 (loop with (keys values) = (coerce (e. state |getPair|) 'list)
                       for key across keys
                       for value across values
-                      collect (list key value))))))
+                      collect (list (e-coerce key 'string) value))))))
 
 ; XXX have scopes use hash tables instead of alists
 ; XXX reduce code duplication among get/fetch methods
@@ -219,6 +219,7 @@
       #()
       (map 'vector
            (lambda (name)
+             (e-coercef name 'string)
              (e. +the-make-message-desc+ |run|
                "" (property-name-to-get-verb name) #() nil))
            (e. (se-properties condition) |getKeys|))))
@@ -364,6 +365,7 @@
                   (e. +the-make-const-map+ |fromPairs|
                     `#(#("&fetchpath" ,(make-instance 'e-simple-slot :value fetchpath))))))))
         (:|fetch| (fqn absent-thunk)
+          (e-coercef fqn 'string)
           (if (string= ".*" fqn :start2 (- (length fqn) 2))
             (e. (e-import "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
             (loop for sub across fetchpath

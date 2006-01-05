@@ -846,7 +846,10 @@ fqn may be NIL or a string."
     (:|__order| (nested-verb nested-args)
       ; XXX document further (original doc is Mozilla-licensed)
       "Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this."
-      (vector (e-call self nested-verb nested-args) self))
+      (vector (e-call self 
+                      (e-coercef nested-verb 'string) 
+                      (e-coercef nested-args 'vector)) 
+              self))
 
     (:|__reactToLostClient| (problem)
       (declare (ignore problem))
@@ -948,6 +951,12 @@ fqn may be NIL or a string."
     (setf (gethash type *vtable-message-types-cache*)
       (vtable-collect-message-types instance type))))
 
+(defvar *exercise-reffiness* nil
+  "Set this true to test for code which is inappropriately sensitive to the presence of forwarding refs, by placing them around each argument to DEF-VTABLE methods.")
+
+(defun reffify-args (args)
+  "See *EXERCISE-REFFINESS*."
+  (map-into args (lambda (x) (make-instance 'forwarding-ref :target x)) args))
 
 (defmacro def-vtable (type-spec &body entries
     &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))
@@ -994,6 +1003,8 @@ fqn may be NIL or a string."
     
     ; XXX gensymify 'args
     (defmethod e-call-dispatch ((rec ,evaluated-specializer) mverb &rest args)
+      (when *exercise-reffiness*
+        (reffify-args args))
       (case mverb
         ,@(loop for desc in entries collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
@@ -1085,6 +1096,12 @@ While this is a process-wide object, its stamps should not be taken as significa
 
 ; --- utilities referenced below ---
 
+(deftype e-list (element-type &aux (sym (gensym (princ-to-string element-type))))
+  (setf (symbol-function sym) 
+        (lambda (specimen)
+          (every (lambda (element) (typep element element-type)) specimen)))
+  `(and vector (satisfies ,sym)))
+
 (declaim (inline e-coerce))
 (defun e-coerce (object result-type &optional ejector)
   (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note)) ; due to inlined etypecase
@@ -1097,7 +1114,7 @@ While this is a process-wide object, its stamps should not be taken as significa
 (defun eject-or-ethrow (ejector condition)
   (setf condition (e-problem-to-condition condition))
   (e-coercef condition +the-exception-guard+)
-  (if ejector
+  (if (ref-shorten ejector)
     (let ((r (e. ejector |run| condition)))
       (error "optEjector ~A returned: ~A" (e-quote ejector) (e-quote r)))
     (error condition)))

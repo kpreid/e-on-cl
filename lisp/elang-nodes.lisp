@@ -5,13 +5,6 @@
 
 ; --- base ---
 
-;; XXX this should go elsewhere
-(deftype e-list (element-type &aux (sym (gensym (princ-to-string element-type))))
-  (setf (symbol-function sym) 
-        (lambda (specimen)
-          (every (lambda (element) (typep element element-type)) specimen)))
-  `(and vector (satisfies ,sym)))
-
 (defgeneric node-elements (node))
 (defgeneric compute-node-static-scope (node))
 (defgeneric opt-node-property-getter (node field-keyword))
@@ -42,7 +35,11 @@
         (assert (null ,jlayout-sym))
         ,@(loop for param in param-syms
                 for type in param-types
-                collect `(e-coercef ,param ',type))
+                ;; XXX half-baked fix for vector args
+                collect `(progn 
+                           (when (typep (setf ,param (ref-shorten ,param)) '(and vector (not string)))
+                             (setf ,param (map 'vector #'ref-shorten ,param)))
+                           (e-coercef ,param ',type)))
         (make-instance ',class-sym :elements
           ,(if rest-p
             `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))

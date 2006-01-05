@@ -423,8 +423,9 @@
   (e-audit-check-dispatch +selfless-stamp+ a))
 
 (defun spread-uncall (a)
+  "assumes the object produces a properly formed uncall"
   (let ((unspread (e. a |__optUncall|)))
-    (assert unspread)
+    (e-coercef unspread 'vector)
     (concatenate 'vector `#(,(aref unspread 0) ,(aref unspread 1)) (aref unspread 2))))
 
 (defmethod eeq-same-dispatch (left right)
