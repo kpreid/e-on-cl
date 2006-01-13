@@ -202,7 +202,7 @@
   (:|whenPast| (time thunk
       &aux (utime (java-to-cl-time time)))
     (multiple-value-bind (p r) (make-promise)
-      (vat-enqueue-timed utime (lambda ()
+      (enqueue-timed *vat* utime (lambda ()
         (e. r |resolve|
           (e. (e. (vat-safe-scope *vat*) |get| "trace") |runAsTurn|
             thunk

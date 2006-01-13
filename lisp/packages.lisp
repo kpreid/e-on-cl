@@ -86,19 +86,19 @@
   
     :+the-e+
     
-    :vat
-    :*vat*
-    :vat-loop
+    :label
+    :vat :*vat*
+    :runner *runner*
+    :runner-loop :top-loop
     :with-turn
     :establish-vat
-    :vat-label
     :vat-safe-scope
     :vat-privileged-scope
     :vat-checking
-    :vat-enqueue-turn
-    :vat-enqueue-timed
-    :vat-add-io-handler
-    :vat-remove-io-handler
+    :enqueue-turn
+    :enqueue-timed
+    :vr-add-io-handler
+    :vr-remove-io-handler
   
     :e-call :e-call-dispatch :e.
     :e-send :e-send-dispatch :e<-

@@ -180,8 +180,8 @@
             (socket-shorten target))
 
 (defun foo-add-receive-handler (target e-function)
-  ;; vat-add-io-handler takes care of establishing the turn
-  (vat-add-io-handler
+  ;; vr-add-io-handler takes care of establishing the turn
+  (vr-add-io-handler
     *vat*
     (%convert-handler-target target)
     :input
@@ -190,7 +190,7 @@
       (e. e-function |run|))))
 
 (defun foo-remove-receive-handler (handler)
-  (vat-remove-io-handler handler))
+  (vr-remove-io-handler handler))
 
 (defmacro form-or (&rest forms)
   (first forms))

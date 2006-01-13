@@ -458,7 +458,7 @@
       (declare (ignore result))
       (force-output)
       (return-from updoc-rune-entry)))
-  (vat-loop))
+  (top-loop))
 
 (defun system-test (op system)
   "Invoked by an implementation of asdf:test-op."

@@ -7,20 +7,20 @@
 
 
 (deftest vat-label.init
-  (vat-label (make-instance 'vat :label "aardvarks"))
+  (label (make-instance 'vat :label "aardvarks" :runner (make-instance 'runner)))
   "aardvarks")
 
 (deftest vat-label.establish-vat
   (prog2
     (establish-vat :label "initiative")
-    (vat-label *vat*)
-    (setf *vat* nil))
+    (label *vat*)
+    (setf *vat* nil *runner* nil))
   "initiative")
   
 (deftest vat-label.with-vat
   (block nil
     (with-vat (:label "potato")
-      (return (vat-label *vat*))))
+      (return (label *vat*))))
   "potato")
 
 
@@ -60,6 +60,6 @@
                      (return-from pound))
                    (e<- (e.knot::wrap-function #'task1) |run| (1+ i))))
           (task1 0)
-          (vat-loop)))
+          (top-loop)))
       (map nil #'remove-exclusive-io-handler handlers))
     (values)))

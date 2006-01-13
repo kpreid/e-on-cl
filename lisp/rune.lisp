@@ -52,7 +52,7 @@
               (format *error-output* "# problem: ~A" (e-quote (e-problem-unseal opt-problem))) ; xxx no indent on multiple lines
               (global-exit -1))
             (global-exit 0)))))
-    (vat-loop)))
+    (top-loop)))
 
 (defun generic-toplevel (label starter)
   (establish-vat :label label)
@@ -60,7 +60,7 @@
     (funcall starter)
     (efun (result)
       (global-exit (if (ref-opt-problem result) 255 0))))
-  (vat-loop))
+  (top-loop))
 
 (defun repl-toplevel (args)
   (assert (null args))
@@ -88,7 +88,7 @@
 (defun irc-repl-toplevel (args)
   (establish-vat :label "rune irc toplevel")
   (apply (system-symbol "START-IRC-REPL" :e.irc-repl :e-on-cl.irc-repl) args)
-  (vat-loop))
+  (top-loop))
 
 (defun translate-toplevel (args)
   (assert (= 1 (length args)))

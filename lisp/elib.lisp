@@ -201,6 +201,7 @@ The 'name slot gives a label for the value which was not settled, such as the na
 ; --- defining some vat pieces early so that vat-checking does not come after local-resolver which subclasses it, which ABCL doesn't like ---
 
 (defvar *vat* nil)
+(defvar *runner* nil)
 
 (defclass vat-checking () 
   ((expected-vat :initform *vat*
@@ -382,7 +383,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 ; - vat -
 
-(defun %with-turn (body vat)
+(defun call-with-turn (body vat)
   "Execute the 'body' thunk, as a turn in the given vat."
   (when (vat-in-turn vat)
     (error "~S is already executing a turn" vat))
@@ -397,53 +398,74 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmacro with-turn ((vat) &body body)
   "Execute the body, as a turn in the given vat."
-  `(%with-turn (lambda () ,@body) ,vat))
+  `(call-with-turn (lambda () ,@body) ,vat))
 
-(defclass vat ()
-  ((in-turn :initform nil
-            :accessor vat-in-turn
-            :type boolean
-            :documentation "Whether some type of top-level turn is currently being executed in this vat. Used for consistency checking.")
+(defclass runner ()
+  ((label :initarg :label
+          :initform nil
+          :type (or null string)
+          :reader label)
    (sends :type queue
           :initform (make-instance 'queue))
    (time-queue :type sorted-queue
                :initform (make-instance 'sorted-queue))
-   (safe-scope :initform (e.knot:make-safe-scope)
-               :accessor vat-safe-scope)
    (handler-group :type io-handler-exclusion-group
                   :initform (make-instance 'io-handler-exclusion-group)
-                  :reader vat-handler-group)
+                  :reader handler-exclusion-group)))
+
+(defclass vat ()
+  ((runner :initarg :runner
+           :initform (error "no runner specified in vat creation")
+           :accessor vat-runner
+           :type runner)
+   (in-turn :initform nil
+            :accessor vat-in-turn
+            :type boolean
+            :documentation "Whether some type of top-level turn is currently being executed in this vat. Used for consistency checking.")
+   (safe-scope :initform (e.knot:make-safe-scope)
+               :accessor vat-safe-scope)
    (label :initarg :label
           :initform nil
           :type (or null string)
-          :reader vat-label)))
+          :reader label)))
 
 (defmethod print-object ((vat vat) stream)
   (print-unreadable-object (vat stream :type t :identity t)
     (format stream "~S~:[~; (in turn)~]"
-      (vat-label vat)
+      (label vat)
       (vat-in-turn vat))))
 
-(defun vat-enqueue-turn (vat fun)
+(defmethod enqueue-turn ((runner runner) fun)
   ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
-  (enqueue (slot-value vat 'sends) fun))
+  (enqueue (slot-value runner 'sends) fun))
 
-(defun vat-add-io-handler (vat target direction function)
-  (setf vat (ref-shorten vat))
-  (add-exclusive-io-handler (vat-handler-group vat)
+(defmethod enqueue-turn ((vat vat) fun)
+  (enqueue-turn (vat-runner vat)
+                (lambda ()
+                  (call-with-turn fun vat))))
+
+(defmethod vr-add-io-handler ((runner runner) target direction function)
+  (add-exclusive-io-handler (handler-exclusion-group runner)
                             (ref-shorten target)
                             (ref-shorten direction)
-                            (lambda (target)
-                              (with-turn (vat)
-                                (funcall (ref-shorten function) target)))))
+                            function))
 
-(defun vat-remove-io-handler (handler)
+(defmethod vr-add-io-handler ((vat vat) target direction function)
+  (vr-add-io-handler (vat-runner vat)
+                     target
+                     direction
+                     (lambda (target*)
+                       (assert (eql target target*) () "buh?")
+                       (with-turn (vat) 
+                         (funcall (ref-shorten function) target*)))))
+
+(defun vr-remove-io-handler (handler)
   (remove-exclusive-io-handler (ref-shorten handler)))
 
 (defmethod e-send-dispatch (rec mverb &rest args)
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
   (multiple-value-bind (promise resolver) (make-promise)
-    (vat-enqueue-turn *vat* (lambda ()
+    (enqueue-turn *vat* (lambda ()
       ; XXX direct this into a configurable tracing system once we have one
       ;(format *trace-output* "~&; running ~A ~A <- ~A ~A~%" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)))
       (e. resolver |resolve| 
@@ -470,24 +492,31 @@ If there is no current vat at initialization time, captures the current vat at t
         (e-util:serve-event timeout)
         (e-util:serve-event)))))
 
-(defun vat-loop ()
-  (with-slots (sends time-queue) *vat*
+(defun runner-loop (runner)
+  (with-slots (sends time-queue) runner
     (loop
       (if (queue-null sends)
         (serve-event-with-time-queue time-queue sends)
         (progn
-          (with-turn (*vat*)
-            (funcall (dequeue sends)))
+          (funcall (dequeue sends))
           (serve-event-with-time-queue time-queue sends 0))))))
 
-(defun vat-enqueue-timed (time func)
-  "Arrange for 'func' to be called with no arguments outside of a turn at universal time 'time' in the current vat."
-  (with-slots (time-queue) *vat*
+(defmethod enqueue-timed ((runner runner) time func)
+  (with-slots (time-queue) runner
     (sorted-queue-put time-queue time func)))
+
+(defmethod enqueue-timed ((vat vat) time func)
+  (enqueue-timed (vat-runner vat) time (lambda ()
+                                         (call-with-turn func vat))))
 
 (defun establish-vat (&rest initargs)
   (assert (null *vat*))
-  (setf *vat* (apply #'make-instance 'vat initargs)))
+  (assert (null *runner*))
+  (setf *runner* (make-instance 'runner))
+  (setf *vat* (apply #'make-instance 'vat :runner *runner* initargs)))
+
+(defun top-loop ()
+  (runner-loop *runner*))
 
 ; --- Type description objects ---
 
