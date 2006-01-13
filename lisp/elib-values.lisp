@@ -457,8 +457,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef b 'number)
     (max a b))
 
-  (:|floor/0| 'floor)  
-  
   (:|approxDivide| (a b) 
     (e-coercef b 'number)
     (handler-case

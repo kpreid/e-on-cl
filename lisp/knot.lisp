@@ -126,6 +126,13 @@
 (defun fqn-to-slash-path (fqn)
   (concatenate 'string (substitute #\/ #\. fqn) ".emaker"))
 
+#+clisp
+(defun opt-compile-target (file fqn)
+  "CLISP has trouble with complex fasls - '*** - PRINT: not enough stack space for carrying out circularity analysis' - so we won't even try."
+  (declare (ignore file fqn))
+  nil)
+
+#-clisp
 (defun opt-compile-target (file fqn)
   (declare (ignore file))
   (let* ((emaker-path (merge-pathnames (fqn-to-relative-pathname fqn) *emaker-fasl-path*))
@@ -139,6 +146,7 @@
       (ensure-directories-exist fasl-path :verbose t))
     fasl-path))
 
+;;; XXX arrange to also fall back to eval-e if we fail to compile or to load
 (defun load-emaker-from-file (file fqn scope compile-target-fn)
   (let* ((fqn-prefix (concatenate 'string fqn "$"))
          (compile-target (e-coerce (funcall compile-target-fn file fqn) '(or null pathname)))
