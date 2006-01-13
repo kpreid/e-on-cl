@@ -169,7 +169,8 @@
             (declare (ignore answers))
             (setf step nstep)
             (setf new-answers nil
-                  skipping nil)
+                  skipping nil
+                  backtrace nil)
             
             ;; must happen after vars are set, in case of syntax errors 
             (let ((node (e.syntax:e-source-to-tree expr)))
