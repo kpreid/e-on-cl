@@ -15,7 +15,7 @@ def makeTermLexer implements DeepFrozen {
   #               builder);              # why?
 
   to run(quasi :boolean) {
-    def termLexer {
+    def termLexer implements DeepFrozen {
       to run(textIn) { # xx textIn :InStream
         # kpreid's Standard Cheap Ugly Lexer Style
         var text := textIn.obtain(def A := EIO.getALL(), A, EIO.getNOW(), EIO.getADVANCE(), EIO.getELEMENTS())

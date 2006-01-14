@@ -9,7 +9,7 @@ def makeIntersectionGuard implements DeepFrozen {
     def intersectionGuard extends __makeGuard(intersectionGuard) {
       to __printOn(out :TextWriter) {
         out.print("all")
-        out.quote(subGuards)
+        out.quote(subGuards) # pun
       }
       
       # XXX should/will the super documentation be inherited?

@@ -26,7 +26,7 @@ def makeConstSetAuthor(SelflessStamp) {
     }
   }
  
-  def makeConstSet {
+  def makeConstSet { # XXX implements DeepFrozen
     /** Return the guard for ConstSets. */
     to asType() {
       return ConstSet
@@ -34,7 +34,7 @@ def makeConstSetAuthor(SelflessStamp) {
     
     /** Return the empty ConstSet. */
     to getEmptySet() {
-      # XXX cache
+      # XXX memoize
       return makeConstSet.make([].asMap())
     }
     

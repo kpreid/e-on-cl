@@ -69,7 +69,7 @@
 
 (defun selftest-toplevel (args)
   (assert (zerop (length args)))
-  (asdf:operate 'asdf:test-op +the-asdf-system+)
+  (time (asdf:operate 'asdf:test-op +the-asdf-system+))
   (force-output)
   (global-exit 0))
 

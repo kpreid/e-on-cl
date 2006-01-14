@@ -6,6 +6,7 @@ pragma.disable("explicit-result-guard")
 
 def makeByte implements DeepFrozen {
   to getTYPE() {
+    # XXX perhaps we should have deprecation warnings
     return <type:java.lang.Byte>
   }
 }

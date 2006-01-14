@@ -52,7 +52,7 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
         /** guard[] should return a guard that coerces a ConstList to a ConstList
           * in which every element has been coerced by guard.
           */
-        to get() { return List[valueGuard] }
+        to get() { return List[valueGuard] } # XXX memoize
         
         /** Union type.
           * <p/>
@@ -82,7 +82,7 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
           *
           * @return
           */
-        to not() {
+        to not() { # XXX memoize
           # XXX this perhaps should be a separate emaker, but we don't need it yet.
           def negatedGuard extends __makeGuard(negatedGuard) {
             to __printOn(out :TextWriter) {
