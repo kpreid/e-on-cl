@@ -1,0 +1,17 @@
+; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.knot
+  (:use :cl :e.lisp-test :e.elib :e.knot))
+(in-package :e.lisp-test.knot)
+
+(deftest lazy.1
+  (let ((slot (e.knot::make-lazy-apply-slot (lambda () (error "biff")))))
+    (flet ((foo () (handler-case
+                       (e. slot |getValue|)
+                     (error (c)
+                       (princ-to-string c)))))
+      (values (foo)
+              (foo))))
+  "biff"
+  "biff")

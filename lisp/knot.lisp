@@ -396,7 +396,10 @@ If a log message is produced, context-thunk is run to produce a string describin
         (multiple-value-bind (promise resolver) (make-promise)
           ; XXX doesn't handle failure
           (setf value-box (list promise))
-          (e. resolver |resolve| (funcall maker))))
+          (unwind-protect
+            (e. resolver |resolve| (funcall maker))
+            (unless (ref-is-resolved promise)
+              (setf value-box nil)))))
       (car value-box))
     (:|isFinal| () elib:+e-true+)))
 
