@@ -189,6 +189,14 @@ case "$LISPTYPE" in
       -e "$COMMON_INIT2" \
       -e "(e.rune:rune `quote_args`)"
   ;;
+  ecl)
+    # xxx is there a quiet flag?
+    "$EXEC" "$LISP" \
+      -eval '(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")' \
+      -eval "$COMMON_INIT1" \
+      -eval "$COMMON_INIT2" \
+      -eval "(e.rune:rune $QUOTED_ARGS)"
+  ;;
   clisp)
 
     if [ "`uname`" = "Darwin" -a \! \( "$LANG" -o "$LC_ALL" -o "$LC_CTYPE" \) ]; then
