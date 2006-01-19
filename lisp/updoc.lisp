@@ -176,6 +176,7 @@
             (let ((node (e.syntax:e-source-to-tree expr)))
               (setf step-scope (e. node |staticScope|))
               (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
+              #+#:debug (print (e. dead-names |getKeys|))
               (unwind-protect
                 (if skipping
                   (progn 
@@ -204,6 +205,7 @@
           (flet ((adjust-liveness (live)
                    "updates whether names set by this step are guessed to not
                     match the expectations of the updoc script"
+                   #+#:debug (print `(adjusting-liveness ,live ,(e. (e. step-scope |outNames|) |getKeys|)))
                    (setf dead-names 
                      (e-call dead-names 
                              (if live
@@ -233,8 +235,11 @@
                     #| names bound by this step are now dead (assumed to not match
                        future steps' expectations) iff this step had an unexpected
                        problem |#
-                    (adjust-liveness (and (member "problem" new-answers :test #'equal :key #'first)
-                                      (not (member "problem" expected-answers :test #'equal :key #'first))))
+                    (flet ((has-problem (answers)
+                             (member "problem" answers :test #'equal 
+                                                       :key #'first)))
+                      (adjust-liveness (or (not (has-problem new-answers))
+                                           (has-problem expected-answers))))
                     (make-instance 'result :failures 1 :steps 1)))))))))))
 
 (defun make-stepper (&key gc props handler)
