@@ -10,7 +10,7 @@ def AstroTag := makeAstroTag.asType()
 
 def Pass := any # marker that the guarding is to be handled by another method
 
-def SourceSpan := any # XXX restrict
+def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
 def makeBaseAstroBuilder implements DeepFrozen { 
   to run(self, 

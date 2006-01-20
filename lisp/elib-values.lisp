@@ -144,6 +144,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (loop while (pick))
         result)))
   
+  ;; XXX all Twine methods: getOptSpan/0, getParts/0, ...
   (:|isBare| (this)
     "Return true, because this is an ordinary String."
     (declare (ignore this))

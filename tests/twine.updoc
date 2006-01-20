@@ -1,8 +1,107 @@
 # Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-? __makeTwine
-# value: <makeTwine>
+--- SourceSpan
 
-? __makeTwine.fromSequence('a'..'z')
-# value: "abcdefghijklmnopqrstuvwxyz"
+  ? def makeSourceSpan := <elib:base.makeSourceSpan>
+  # value: <makeSourceSpan>
+  
+  ? def span := makeSourceSpan("http://example.org/t", true, 1, 0, 1, 9)
+  # value: <http://example.org/t#:span::1:0::1:9>
+  
+  ? span :PassByCopy
+  # value: <http://example.org/t#:span::1:0::1:9>
+  
+  ? span :(makeSourceSpan.asType())
+  # value: <http://example.org/t#:span::1:0::1:9>
+  
+  ? 1 :(makeSourceSpan.asType())
+  # problem: the int 1 doesn't coerce to a SourceSpan
+  
+  ? span.__optUncall()
+  # value: [<makeSourceSpan>, "run", ["http://example.org/t", true, 1, 0, 1, 9]]
+  
+  ? span.getUri()
+  # value: "http://example.org/t"
+  
+  ? span.isOneToOne()
+  # value: true
+  
+  ? span.getStartCol()
+  # value: 0
+  
+  ? span.getEndCol()
+  # value: 9
+  
+  ? span.getStartLine()
+  # value: 1
+  
+  ? span.getEndLine()
+  # value: 1
+  
+  ? {[def x := span.notOneToOne(), x.__optUncall()]}
+  # value: [<http://example.org/t#:blob::1:0::1:9>, [<makeSourceSpan>, "run", ["http://example.org/t", false, 1, 0, 1, 9]]]
+
+  ? makeSourceSpan("a", true, 1, 0, 2, 7) 
+  # problem: one-to-one span must be on a single line
+
+--- Twine construction
+
+Twine that is a String
+
+  ? __makeTwine
+  # value: <makeTwine>
+
+  ? def twine := __makeTwine.fromSequence('a'..'z')
+  # value: "abcdefghijklmnopqrstuvwxyz"
+  
+  ? twine.isBare()
+  # value: true
+
+Complex Twine
+
+  ? def twine := __makeTwine.fromString("aardvark", span)
+  # problem: the source span, <http://example.org/t#:span::1:0::1:9>, must match the size of the string, 8, or be not one-to-one
+  
+  ? def twine := __makeTwine.fromString("/aardvark/", span)
+  # value: "/aardvark/"
+  
+  ? twine :String
+  # value: "/aardvark/"
+  
+  ? twine.isBare()
+  # value: false
+  
+  ? twine.getOptSpan()
+  # value: <http://example.org/t#:span::1:0::1:9>
+
+  ? twine.getParts() == [twine]
+  # value: true
+
+Non-homogenous composite twine  
+
+  ? def span2 := makeSourceSpan("http://example.org/u", true, 1, 0, 1, 9)
+  # value: <http://example.org/u#:span::1:0::1:9>
+  
+  ? def twine2 := __makeTwine.fromString("!aardvark!", span2)
+  # value: "!aardvark!"
+  
+  ? def multiTwine := twine + twine2
+  # value: "/aardvark/!aardvark!"
+  
+  ? [multiTwine.getOptSpan()]
+  # value: [null]
+
+  ? multiTwine.isBare()
+  # value: false
+
+  ? multiTwine.__optUncall()
+  # value: [<makeTwine>, "fromParts", [["/aardvark/", "!aardvark!"]]]
+  
+  ? multiTwine.getParts()
+  # value: ["/aardvark/", "!aardvark!"]
+
+Matching composite twine
+
+  ? (twine + __makeTwine.fromString("$aardvark$", makeSourceSpan("http://example.org/t", true, 1, 10, 1, 19))).getOptSpan()
+  # value: <http://example.org/t#:span::1:0::1:19>

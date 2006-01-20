@@ -8,17 +8,212 @@
 (with-simple-restart (continue "Skip hash function registration.")
   (register-hash-function 'eeq-is-same-ever #'eeq-same-yet-hash #'eeq-is-same-ever))
 
-; --- ... ---
+; --- SourceSpan for Twine ---
+
+(defclass source-span ()
+  ((uri        :initarg :uri        :type string      :reader span-uri)
+   (one-to-one :initarg :one-to-one :type boolean     :reader span-one-to-one-p)
+   (start-line :initarg :start-line :type (integer 1) :reader span-start-line)
+   (end-line   :initarg :end-line   :type (integer 1) :reader span-end-line)
+   (start-col  :initarg :start-col  :type (integer 0) :reader span-start-col)
+   (end-col    :initarg :end-col    :type (integer 0) :reader span-end-col)))
+
+(def-fqn source-span "org.erights.e.elib.base.SourceSpan")
+(defmethod eeq-is-transparent-selfless ((a source-span))
+  (declare (ignore a)) 
+  t)
+
+(def-vtable source-span
+  (:|__printOn/1| (span out)
+    (e-coercef out +the-text-writer-guard+)
+    (with-slots (uri one-to-one start-line end-line start-col end-col) span
+      (e. out |write| "<")
+      (e. out |print| uri)
+      (e. out |write| "#:")
+      (e. out |print| (if one-to-one "span" "blob"))
+      (e. out |write| "::")
+      (e. out |print| start-line)
+      (e. out |write| ":")
+      (e. out |print| start-col)
+      (e. out |write| "::")
+      (e. out |print| end-line)
+      (e. out |write| ":")
+      (e. out |print| end-col)
+      (e. out |write| ">")))
+  (:|__optUncall/0| (span)
+    (with-slots (uri one-to-one start-line end-line start-col end-col) span
+      (vector +the-make-source-span+ "run" (vector uri
+                                                   (as-e-boolean one-to-one)
+                                                   start-line
+                                                   start-col
+                                                   end-line 
+                                                   end-col))))
+  (:|getUri/0| 'span-uri)
+  (:|isOneToOne/0| (span) (as-e-boolean (span-one-to-one-p span)))
+  (:|getStartLine/0| 'span-start-line)
+  (:|getEndLine/0| 'span-end-line)
+  (:|getStartCol/0| 'span-start-col)
+  (:|getEndCol/0| 'span-end-col)
+  (:|notOneToOne/0| (span)
+    (with-slots (uri one-to-one start-line end-line start-col end-col) span
+      (make-instance 'source-span :uri uri
+                                  :one-to-one nil
+                                  :start-line start-line
+                                  :start-col start-col
+                                  :end-line end-line
+                                  :end-col end-col))))
+
+(defglobal +the-make-source-span+ (e-lambda "org.erights.e.elib.base.makeSourceSpan"
+    (:stamped +deep-frozen-stamp+)
+  (:|asType| () 
+    (type-specifier-to-guard 'source-span))
+  (:|run| (uri one-to-one start-line start-col end-line end-col) 
+    (unless (or (not one-to-one)
+                (= start-line end-line))
+      (error "one-to-one span must be on a single line"))
+    (e-coercef uri        'string)
+    (e-coercef one-to-one 'e-boolean)
+    (e-coercef start-line '(integer 1))
+    (e-coercef end-line   '(integer 1))
+    (e-coercef start-col  '(integer 0))
+    (e-coercef end-col    '(integer 0))
+    (make-instance 'source-span :uri uri
+                                :one-to-one (e-is-true one-to-one)
+                                :start-line start-line
+                                :end-line end-line
+                                :start-col start-col
+                                :end-col end-col))))
 
 ; --- Twine ---
 
-; minimal to make Twine guard work and be distinct
-; XXX actual twines
+(defgeneric twine-string (twine)
+  (:method ((string string)) string))
+
+(defclass %twine () ())
+
+(def-vtable %twine
+  (:|__printOn| (this out)
+    (e-coercef out +the-text-writer-guard+)
+    (e. out |printSame| (twine-string this)))
+  (:|__conformTo| (this guard)
+    (declare (ignore guard))
+    (twine-string this))
+  (:|isBare| (this) 
+    (declare (ignore this))
+    (error "twine type not implementing isBare"))
+  (:|getParts| (this) 
+    (declare (ignore this))
+    (error "twine type not implementing getParts"))
+  (:|getOptSpan| (this) 
+    (declare (ignore this))
+    (error "twine type not implementing getOptSpan"))
+  
+  ;; XXX Twine plus String
+  (:|add| (this other)
+    (e-coercef other 'twine)
+    (make-twine-from-parts (lambda (f) (e. (e. this |getParts|) |iterate| f)
+                                       (e. (e. other |getParts|) |iterate| f)))))
+
+(defmethod e-call-match ((rec %twine) mverb &rest args)
+  (apply #'e-call-dispatch (twine-string rec) mverb args))
 
 (deftype twine ()
-  'string)
+  '(or string %twine))
   
 (def-fqn twine "org.erights.e.elib.tables.Twine")
+
+
+(defun coalesce (t1 t2)
+  (flet ((strings () (concatenate 'string (twine-string t1)
+                                          (twine-string t2))))
+    (if (and (e-is-true (e. t1 |isBare|)) 
+             (e-is-true (e. t2 |isBare|)))
+      ;; plain strings
+      (strings)
+      ;; not plain
+      (let ((span1 (e. t1 |getOptSpan|))
+            (span2 (e. t2 |getOptSpan|)))
+        (if (and span1 span2
+                 (string= (e. span1 |getUri|) (e. span2 |getUri|))
+                 (eeq-is-same-ever (e. span1 |isOneToOne|)
+                                   (e. span2 |isOneToOne|)))
+          ;; compatible spans (same URI)
+          (if (e. span1 |isOneToOne|)
+            (if (and (= (e. span1 |getStartLine|)
+                        (e. span2 |getStartLine|))
+                     (= (e. span1 |getEndCol|)
+                        (1- (e. span2 |getStartCol|))))
+              ;; one-to-one and adjacent
+              (make-instance 'leaf-twine 
+                :string (strings)
+                :span (e. +the-make-source-span+ |run| 
+                        (e. span1 |getUri|)
+                        +e-true+
+                        (e. span1 |getStartLine|)
+                        (e. span1 |getStartCol|)
+                        (e. span2 |getEndLine|)
+                        (e. span2 |getEndCol|)))
+              ;; not adjacent
+              nil)
+            (if (eeq-is-same-ever span1 span2)
+              ;; blob and identical
+              (make-instance 'leaf-twine 
+                :string (strings)
+                :span span1)
+              ;; blob and not identical
+              nil))
+          ;; incompatible spans
+          nil)))))
+
+(defun make-twine-from-parts (iter)
+  (let ((parts '()))
+    (funcall iter
+      (efun (k part)
+        (if parts
+          (let ((coalesced (coalesce (first parts) part)))
+            (if coalesced
+              (setf (first parts) coalesced)
+              (push part parts)))
+          (push part parts))))
+    (nreverse-here parts)
+    (cond
+      ((null parts)
+       "")
+      ((null (rest parts))
+       (first parts))
+      (t
+       (make-instance 'composite-twine :parts parts)))))
+
+
+(defclass composite-twine (%twine)
+  ((parts :initarg :parts :type list)))
+
+(defmethod twine-string ((this composite-twine))
+  (apply #'concatenate 'string (mapcar #'twine-string (slot-value this 'parts))))
+
+(def-vtable composite-twine
+  (:|__optUncall| (this)
+    (with-slots (parts) this
+      (vector +the-make-twine+ "fromParts" (vector (coerce parts 'vector)))))
+  (:|isBare| (this) +e-false+)
+  (:|getOptSpan| (this) nil)
+  (:|getParts| (this) (coerce (slot-value this 'parts) 'vector)))
+
+
+(defclass leaf-twine (%twine)
+  ((string :initarg :string :type string :reader twine-string)
+   (span :initarg :span :type source-span)))
+
+(def-vtable leaf-twine
+  (:|__optUncall| (this)
+    (with-slots (string span) this
+      (vector +the-make-twine+ "fromString" (vector string span))))
+  (:|isBare| (this) 
+    (declare (ignore this))
+    +e-false+)
+  (:|getOptSpan| (this) (slot-value this 'span))
+  (:|getParts| (this) (vector this)))
+
 
 (defglobal +the-make-twine+ (e-lambda "org.erights.e.elib.tables.makeTwine"
     (:stamped +deep-frozen-stamp+)
@@ -33,7 +228,15 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
         (declare (ignore k))
         ; out-of-dynamic-extent calls are harmless
         (push v values)))
-      (coerce (nreverse values) 'string)))))
+      (coerce (nreverse values) 'string)))
+  (:|fromString| (string span)
+    (e-coercef string 'string)
+    (e-coercef span 'source-span)
+    (unless (or (not (span-one-to-one-p span))
+                (= (length string) (- (1+ (span-end-col span)) 
+                                      (span-start-col span))))
+      (error "the source span, ~A, must match the size of the string, ~S, or be not one-to-one" (e-quote span) (length string)))
+    (make-instance 'leaf-twine :string string :span span))))
 
 ; --- Primitive safe mutable array access ---
 

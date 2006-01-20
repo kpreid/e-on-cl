@@ -32,15 +32,19 @@ def makeKernelECopyVisitor implements DeepFrozen { # XXX write tests and documen
         def maker := <import>["org.erights.e.elang.evm." + kind]
         
         def subnodeFlags := maker.getParameterSubnodeFlags()
-        # XXX preserve source span and scope layout
+        
+        def left := [if (optOriginal != null) {optOriginal.getOptSpan()}]
+        # xxx preserve scope layout arg, if it ever becomes real
+        def right := [null]
+        
         E.call(maker, "run",
-          accum [null] for i => arg in args { _.with(
+          accum left for i => arg in args { _.with(
             if (subnodeFlags[i]) {
               self.run(arg)
             } else {
               arg
             }
-          )} + [null]
+          )} + right
         )
       }
     }

@@ -408,6 +408,17 @@ SuchThatPattern printing
 
   XXX move to syntax.updoc
 
+--- SourceSpans ---
+
+  ? def makeSourceSpan := <elib:base.makeSourceSpan>
+  # value: <makeSourceSpan>
+  
+  ? def node := makeNounExpr(makeSourceSpan("data:text/plain,foo", true, 1, 0, 1, 2), "foo", null)
+  # value: e`foo`
+
+  ? node.getOptSpan()
+  # value: <data:text/plain,foo#:span::1:0::1:2>
+
 --- Selflessness of nodes ---
 
   ? makeNounExpr(null, "aardvark", null).__optUncall()

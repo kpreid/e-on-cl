@@ -405,6 +405,9 @@ If a log message is produced, context-thunk is run to produce a string describin
 
 (defun make-safe-extern-loader ()
   (lazy-value-scope ("__cle_safe_extern" "")
+
+    ("org.erights.e.elib.base.makeSourceSpan" e.elib:+the-make-source-span+)
+
     ("org.apache.oro.text.regex.Perl5Compiler" e.extern:+rx-perl5-compiler+)
     ("org.apache.oro.text.regex.Perl5Matcher"  e.extern:+rx-perl5-matcher+)
     

@@ -17,7 +17,6 @@
          (param-syms (loop repeat (length param-types) collect (gensym))))
   `(setf 
     (get ',class-sym 'static-maker)
-    ; XXX don't ignore span-sym
     (e-lambda 
         ,(concatenate 'string "org.erights.e.elang.evm.make"
                               (symbol-name class-sym))
@@ -31,8 +30,8 @@
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
           (e-util:mangle-verb "run" (+ 2 (length param-types))))
         (,span-sym ,@param-syms ,jlayout-sym)
-        (declare (ignore ,span-sym))
         (assert (null ,jlayout-sym))
+        (e-coercef ,span-sym '(or null source-span))
         ,@(loop for param in param-syms
                 for type in param-types
                 ;; XXX half-baked fix for vector args
@@ -40,7 +39,9 @@
                            (when (typep (setf ,param (ref-shorten ,param)) '(and vector (not string)))
                              (setf ,param (map 'vector #'ref-shorten ,param)))
                            (e-coercef ,param ',type)))
-        (make-instance ',class-sym :elements
+        (make-instance ',class-sym 
+          'source-span ,span-sym
+          :elements
           ,(if rest-p
             `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))
             `(list ,@param-syms)))))))
@@ -116,7 +117,10 @@
               :accessor node-elements
               :type list)
    (static-scope :initform nil
-                 :type (or null function))))
+                 :type (or null function))
+   (source-span :initform nil
+                :type (or null source-span)
+                :initarg source-span)))
 
 (define-node-class |EExpr|   (|ENode|)
   ())
@@ -360,6 +364,8 @@
     (with-slots (static-scope) this
       (or static-scope
           (setf static-scope (compute-node-static-scope this)))))
+  (:|getOptSpan| (this)
+    (slot-value this 'source-span))
   (:|substitute| (this args)
     "Quasiliteral ValueMaker interface.
 

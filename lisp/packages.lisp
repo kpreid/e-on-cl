@@ -205,8 +205,8 @@
     :eeq-is-transparent-selfless
     :def-atomic-sameness
     
-    :twine
-    :+the-make-twine+
+    :source-span :+the-make-source-span+
+    :twine :+the-make-twine+
     
     :+the-make-weak-ref+
     
@@ -248,6 +248,9 @@
 
   elib:+the-audit-checker+
   elib:+deep-frozen-stamp+
+
+  elib:+the-make-source-span+
+  elib:+the-make-twine+
 
   elib:+the-make-weak-ref+
   elib:+the-make-traversal-key+

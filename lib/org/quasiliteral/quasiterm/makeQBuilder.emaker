@@ -17,7 +17,7 @@ def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
 interface QAstroArg guards QAstroArgStamp {}
 def QFunctor := QAstroArg # XXX restrict
 def QTerm := QAstroArg # XXX restrict
-def SourceSpan := any # XXX restrict
+def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
 def qtPrint implements DeepFrozen { to run(tw :TextWriter, what :QAstroArg) {
   tw.write("qterm`")
