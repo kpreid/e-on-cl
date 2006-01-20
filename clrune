@@ -125,8 +125,8 @@ LISPTYPE=`basename $LISP`
 if [ "$LISPTYPE" = lisp ]; then
   LISPTYPE=cmucl
 fi
-if [ "$LISPTYPE" = j.jar ]; then
-  LISPTYPE=abcl
+if [ "$LISPTYPE" = j.jar -o "$LISPTYPE" = abcl.jar ]; then
+  LISPTYPE=abcl-jar
 fi
 
 QUOTED_HERE=`dirname $0 | perl -pe 's&(["\\\\])&\\$1&g'`
@@ -237,8 +237,16 @@ case "$LISPTYPE" in
        -eval "$COMMON_INIT1" "$COMMON_INIT2" \
        -eval "(e.rune:rune `quote_args`)"
   ;;
-  abcl)
+  abcl-jar)
     "$EXEC" java -cp "$LISP" org.armedbear.lisp.Main \
+      "${LISP_EXTRA[@]}" \
+      --eval '(require :asdf)' \
+      --eval "$COMMON_INIT1" \
+      --eval "$COMMON_INIT2" \
+      --eval "(e.rune:rune `quote_args`)"
+  ;;
+  abcl)
+    "$EXEC" "$LISP" \
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
