@@ -36,23 +36,94 @@ def termToSExpression(term) {
   }
 }
 
-def parseEToSExpression(verb, args) {
-  return try { 
-    switch (verb) {
-      match =="run" {
-        def [source] := args
-        termToSExpression(convert(e__quasiParser(source)))
-      }
-      match =="isIdentifier" {
-        def [word] := args
-        if (<elang:syntax.ELexer>.isIdentifier(word)) {
-          "cl:t "
-        } else {
-          "cl:nil "
-        }
+# --- ---
+
+def author(<unsafe>) {
+
+
+
+
+  #def <eantlr> := <unsafe:org.erights.e.elang.syntax.antlr.*>
+  def <eantlr> := <unsafe>
+  def <antlr> := <unsafe:antlr.*>
+  def makeEParser := <eantlr:makeEParser>
+  def makeEALexer := <eantlr:makeEALexer>
+  def makeQuasiLexer := <eantlr:makeQuasiLexer>
+  def makeTokenMultiBuffer := <antlr:makeTokenMultiBuffer>
+  def makeTokenStreamSelector := <antlr:makeTokenStreamSelector>
+  def makeDumpASTVisitor := <antlr:makeDumpASTVisitor>
+  
+  def tokenSymbols := accum [] for tn in makeEParser.get_tokenNames() { _.with("e.grammar::|" + tn.replaceAll("\\", "\\\\").replaceAll("|", "\\|") + "|") }
+  
+  def antlrParse(fname, text) {
+    def elexer := makeEALexer(<import:java.io.StringReader>(text))
+    def qlexer := makeQuasiLexer(elexer.getInputState())
+    def tb := makeTokenMultiBuffer(["e", "quasi"], [elexer, qlexer])
+    elexer.setSelector(tb)
+    qlexer.setSelector(tb)
+    elexer.setFilename(fname)
+    qlexer.setFilename(fname)
+  
+    def parser := makeEParser(tb)
+    parser.setFilename(fname)
+    
+    parser.start()
+    def ast := parser.getAST()
+    
+    def [out, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+    
+    def parentheses(body) {
+      out.print("(")
+      body()
+      out.print(")")
+    }
+    
+    def printChain(var ast) {
+      while (ast != null) {
+        out.print(" ")
+        parentheses(thunk{
+          parentheses(thunk{
+            out.print(tokenSymbols[ast.getType()], " ")
+            out.quote(ast.getText())
+          })
+          printChain(ast.getFirstChild())
+        })
+        ast := ast.getNextSibling()
       }
     }
-  } catch p { 
-    `(ERROR ${clQuote(E.toQuote(p))})`
+    
+    out.print("(")
+    printChain(ast)
+    out.print(")")
+    return sb.snapshot()
   }
+
+
+
+
+  def parseEToSExpression(verb, args) {
+    return try { 
+      switch (verb) {
+        match =="antlrParse" {
+          def [source] := args
+          antlrParse("unknown", source)
+        }
+        match =="run" {
+          def [source] := args
+          termToSExpression(convert(e__quasiParser(source)))
+        }
+        match =="isIdentifier" {
+          def [word] := args
+          if (<elang:syntax.ELexer>.isIdentifier(word)) {
+            "cl:t "
+          } else {
+            "cl:nil "
+          }
+        }
+      }
+    } catch p { 
+      `(ERROR ${clQuote(E.toQuote(p))})`
+    }
+  }
+  return parseEToSExpression
 }

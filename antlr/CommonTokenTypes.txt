@@ -1,0 +1,12 @@
+// $ANTLR 2.7.4: quasi.g -> quasiTokenTypes.txt$
+Common // output token vocab name
+QUASIOPEN=4
+QUASICLOSE=5
+QUASIBODY=6
+QuasiContent=7
+RCURLY="}"=8
+DOLLARHOLE=9
+ATHOLE=10
+DOLLARCURLY=11
+ATCURLY=12
+DOLLARESC=13

@@ -8,6 +8,13 @@
 (defun is-identifier (text)
   (query-to-java "isIdentifier" text))
 
+(defun convention-uncapitalize (string)
+  (if (and (plusp (length string))
+           (string/= string (string-upcase string)))
+    (concatenate 'string (string (char-downcase (aref string 0))) 
+                         (subseq string 1))
+    string))
+
 ; --- Printing ---
 
 (defun print-escaped (tw chars specials
@@ -477,6 +484,7 @@ XXX make precedence values available as constants"
     (list "rune"
           "-J-XX:ThreadStackSize=10240"
           "-cpa" (namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
+          "-cpa" (namestring (merge-pathnames #P"antlr/" (asdf:component-pathname +the-asdf-system+)))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
           "-") 
@@ -485,7 +493,7 @@ XXX make precedence values available as constants"
     :error t
     :wait nil))
   (format (e.util:external-process-input-stream *parser-process*)
-        "def parseEToSExpression := <import:parseEToSExpression>~%")
+          "def parseEToSExpression := <import:parseEToSExpression>(<unsafe>)~%")
   (values))
 
 ; disabling this for now because starting the parser at load time introduces dependencies (particularly, e.extern:+standard-external-format-common-name+ being defined first)
@@ -596,14 +604,22 @@ XXX make precedence values available as constants"
           (format *trace-output* " done~%")
           answer))))))
 
+#+(or)
 (defun parse-to-expr (source)
   (query-to-java "run" source))
 
-(defun e-source-to-tree (source &key syntax-ejector
-    &aux (tree-expr (parse-to-expr source)))
-  (if (eql (first tree-expr) 'error)
-    (error-from-e-error-string syntax-ejector (second tree-expr))
-    (build-nodes tree-expr)))
+#+(or)
+(defun e-source-to-tree (source &key syntax-ejector)
+  (build-nodes (query-or-die syntax-ejector "run" source)))
+
+(defun query-or-die (ejector &rest msg)
+  (let ((result (apply #'query-to-java msg)))
+    (if (eql (first result) 'error)
+      (error-from-e-error-string ejector (second result))
+      result)))
+
+(defun e-source-to-tree (source &key syntax-ejector)
+  (antlr-root (query-or-die syntax-ejector "antlrParse" source)))
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
@@ -611,6 +627,368 @@ XXX make precedence values available as constants"
     (e-source-to-tree source :syntax-ejector syntax-ejector))
   (:|run| (source)
     (e-source-to-tree source))))
+
+;;; --- Antlr parser support ---
+
+(defun noun-to-resolver-noun (noun)
+  (make-instance '|NounExpr| :elements (list (concatenate 'string (first (node-elements noun)) "__Resolver"))))
+
+(defun mn (name &rest elements)
+  (make-instance name :elements elements))
+
+(defparameter *b* (e-lambda "$builder" ()
+  ;; xxx implements EBuilder
+  (:|assign| (l r) 
+    ;; XXX needs to expand some structures
+    (make-instance '|AssignExpr| :elements (list l r)))
+  (:|call| (r v a)
+    (e-coercef a 'vector)
+    (make-instance '|CallExpr| :elements (list* r v (coerce a 'list))))
+  (:|define| (l r ej) 
+    ;; XXX needs to expand cyclic defines
+    (make-instance '|DefineExpr| :elements (list l r ej)))
+  (:|escape| (ej-pattern body) 
+    (make-instance '|EscapeExpr| :elements (list ej-pattern body nil nil)))
+  (:|escape| (ej-pattern body catch-pattern catch-body) 
+    (make-instance '|EscapeExpr| :elements (list ej-pattern body catch-pattern catch-body)))
+  (:|finalPattern| (noun guard)
+    (make-instance '|FinalPattern| :elements (list noun guard)))
+  (:|varPattern| (noun guard)
+    (make-instance '|VarPattern| :elements (list noun guard)))
+  (:|slotPattern| (noun guard)
+    (make-instance '|SlotPattern| :elements (list noun guard)))
+  (:|_noun| (noun)
+    "XXX what should this really be?"
+    (make-instance '|NounExpr| :elements (list noun)))
+  (:|literal| (value)
+    "XXX interface doc says 'tokenOrData'"
+    (make-instance '|LiteralExpr| :elements (list value)))
+  (:|matchBind| (specimen pattern)
+    (make-instance '|MatchBindExpr| :elements (list specimen pattern)))
+  (:|sequence| (subs)
+    (e-coercef subs 'vector)
+    (make-instance '|SeqExpr| :elements (coerce subs 'list)))
+  (:|listPattern| (subs)
+    (e-coercef subs 'vector)
+    (make-instance '|ListPattern| :elements (coerce subs 'list)))
+  (:|suchThat| (pattern test)
+    (make-instance '|SuchThatPattern| :elements (list pattern test)))
+  (:|ignore| ()
+    (load-time-value (make-instance '|IgnorePattern| :elements '())))
+  (:|hide| (expr)
+    (make-instance '|HideExpr| :elements (list expr)))
+  (:|if| (test then)
+    ;; DIFFERENCE: existence of 2-arg form
+    (make-instance '|IfExpr| :elements (list test then (make-instance '|NounExpr| :elements '("null")))))
+  (:|if| (test then else)
+    ;; DIFFERENCE: "ifx"
+    (make-instance '|IfExpr| :elements (list test then else)))
+  (:|vTable| (opt-methods matchers)
+    ;; XXX "vTable" is a lousy name
+    (make-instance '|EScript| :elements (list opt-methods matchers)))
+  (:|object| (doc-comment qualified-name auditors script)
+    (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditors script)))
+  (:|doMeta| (keyword verb args)
+    (declare (ignorable args))
+    (ecase (intern keyword :keyword)
+      (:|meta|
+        (ecase (intern verb :keyword)
+          (:|context|
+            (mn '|MetaContextExpr|))
+          (:|getState|
+            (mn '|MetaStateExpr|))))
+      (:|pragma|
+        (make-instance '|NounExpr| :elements '("null")))))
+  
+  (:|null| ()
+    ;; DIFFERENCE: "getNULL"
+    (make-instance '|NounExpr| :elements '("null")))
+  (:|send| (r v a)
+    (e-coercef a 'vector)
+    (mn '|CallExpr|
+      (mn '|NounExpr| "E")
+      "send"
+      (make-instance '|CallExpr| :elements (list* (mn '|NounExpr| "__makeList") "run" r v (coerce a 'list)))))
+  (:|forward| (pattern) 
+    (e-coercef pattern '|FinalPattern|)
+    (assert (null (second (node-elements pattern))))
+    (let* ((noun (first (node-elements pattern)))
+           (resolver-noun (noun-to-resolver-noun noun)))
+      (make-instance '|SeqExpr| :elements (list
+        (make-instance '|DefineExpr| :elements (list 
+          (make-instance '|ListPattern| :elements (list 
+            (make-instance '|FinalPattern| :elements (list noun nil))
+            (make-instance '|FinalPattern| :elements (list resolver-noun nil))))
+          (load-time-value (make-instance '|CallExpr| :elements (list (make-instance '|NounExpr| :elements '("Ref")) "promise")))
+          (make-instance '|NounExpr| :elements '("null"))))
+        resolver-noun))))
+  (:|bindDefiner| (noun opt-guard)
+    ;; XXX *WRONG* temporary name - nondeterministic
+    (let ((temp (make-instance '|NounExpr| :elements (list (symbol-name (gensym))))))
+      (make-instance '|SuchThatPattern| :elements (list
+        (make-instance '|FinalPattern| :elements (list
+          temp
+          opt-guard))
+        (make-instance '|SeqExpr| :elements (list
+          (make-instance '|CallExpr| :elements (list
+            (noun-to-resolver-noun noun)
+            "resolve"
+            temp))
+          (make-instance '|NounExpr| :elements '("true"))))))))
+  (:|update| (l verb r)
+    (make-instance '|AssignExpr| :elements (list l (make-instance '|CallExpr| :elements (list l verb r)))))
+  (:|tuple| (elements)
+    (e-coercef elements 'vector)
+    (make-instance '|CallExpr| :elements (list*
+      (load-time-value (make-instance '|NounExpr| :elements '("__makeList")))
+      "run"
+      (coerce elements 'list))))
+  (:|uriExpr| (uri)
+    (e-coercef uri 'string)
+    (make-instance '|CallExpr| :elements (list
+      (make-instance '|NounExpr| :elements (list (concatenate 'string (subseq uri 0 (position #\: uri)) "__uriGetter")))
+      "get"
+      (make-instance '|LiteralExpr| :elements (list (subseq uri (1+ (position #\: uri))))))))
+  (:|cast| (expr guard)
+    (make-instance '|CallExpr| :elements (list
+      (make-instance '|CallExpr| :elements (list
+        (make-instance '|NounExpr| :elements '("ValueGuard"))
+        "coerce"
+        guard
+        (make-instance '|NounExpr| :elements '("null"))))
+      "coerce"
+      expr
+      (make-instance '|NounExpr| :elements '("null")))))
+  (:|till| (left right)
+    (make-instance '|CallExpr| :elements (list
+      (make-instance '|NounExpr| :elements '("__makeOrderedSpace"))
+      "op__till"
+      left
+      right)))
+  (:|thru| (left right)
+    (make-instance '|CallExpr| :elements (list
+      (make-instance '|NounExpr| :elements '("__makeOrderedSpace"))
+      "op__thru"
+      left
+      right)))
+  (:|same| (left right invert)
+    (if (e-is-true invert)
+      (mn '|CallExpr| (e. *b* |same| left right +e-false+) "not")
+      (mn '|CallExpr| (mn '|NounExpr| "__equalizer") "sameEver" left right)))
+  (:|return| (value)
+    (mn '|CallExpr| (mn '|NounExpr| "__return") "run" value))
+
+  (:|unaryVerb| (op)
+    (case (intern op :keyword)
+      (:! "not")
+      (:~ "complement")
+      (otherwise op)))
+  (:|binaryVerb| (op)
+    (case (intern op :keyword)
+      (:+ "add")
+      (:- "subtract")
+      (:* "multiply")
+      (:/ "approxDivide")
+      (:// "floorDivide")
+      (:% "mod")
+      (:%% "remainder")
+      (:& "and")
+      (:\| "or")
+      (otherwise op)))
+  (:|to| (doc msg-patt body)
+    ;; XXX entirely wrong
+    (e. *b* |method| doc msg-patt body))
+  (:|method| (doc msg-patt body)
+    (destructuring-bind (verb patterns opt-result-guard) msg-patt
+      (make-instance '|EMethod| :elements (list doc verb patterns opt-result-guard body))))
+  (:|methHead| (verb patterns opt-result-guard)
+    (list verb patterns opt-result-guard))
+  (:|flowAnd| (left right)
+    ;; XXX handle bindings
+    (mn '|IfExpr| left right (mn '|NounExpr| "false")))
+  (:|flowOr| (left right)
+    ;; XXX handle bindings
+    (mn '|IfExpr| left (mn '|NounExpr| "true") right))))
+
+(defun antlr-root (ast-nodes)
+  (e. *b* |sequence| (map 'vector #'build-antlr-nodes ast-nodes)))
+
+(defun unwrap-noun (noun)
+  (check-type noun |NounExpr|)
+  (first (node-elements noun)))
+
+(defun build-antlr-nodes (expr &key path)
+  (destructuring-bind ((tag text) &rest in-children) expr
+    (let* ((next-path (cons expr path))
+           (out-children (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
+                                 in-children)))
+      (case tag
+        ((e.grammar::|DOC_COMMENT|) (e. *b* |null|))
+        ;; GRUMBLE: nouns should be wrapped so that I can apply this to only nouns and not general identifiers (like verbs)
+        ((e.grammar::|IDENT|) (e. *b* |_noun| text))
+        ((e.grammar::|INT|) (e. *b* |literal| (read-from-string text)))
+        ((e.grammar::|FLOAT64|) (e. *b* |literal| (let ((*read-default-float-format* 'double-float)) (read-from-string text)) #| XXX implement actual E float syntax|#))
+        ((e.grammar::|STRING|)
+          (cond
+            ((eql (aref text 0) #\" #|"|#)
+              ;; XXX this is wrong; we need to use real E \ syntax
+              (e. *b* |literal| (read-from-string text)))
+            ((member text '("run" "get" "simple") :test #'string=) 
+              ;; GRUMBLE: the parser should produce STRING nodes that are either
+              ;; all quoted or all unquoted, not a mixture
+              text)
+            (t
+              (error "bad STRING: ~S" text))))
+        ((e.grammar::|CHAR_LITERAL|) 
+          (e. *b* |literal| (aref text (- (length text) 2))))
+        ((e.grammar::|LiteralPattern|)
+          ;; XXX the name LiteralPattern is utterly unrelated to reality: this is actually the FQN field in non-define-sugared ObjectExprs
+          text)
+        ((e.grammar::|"&"| e.grammar::|"-"| e.grammar::|"+"| e.grammar::|"*"| e.grammar::|"/"| e.grammar::|"//"| e.grammar::|"%"| e.grammar::|"%%"|) 
+          (e. *b* |binaryVerb| (subseq (symbol-name tag) 1 (1- (length (symbol-name tag))))))
+        ((e.grammar::|"!"|)
+          (e. *b* |unaryVerb| (subseq (symbol-name tag) 1 (1- (length (symbol-name tag))))))
+        ((e.grammar::|URI|) text)
+        ((e.grammar::|List|) out-children)
+        ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|) 
+          (assert (null out-children))
+          tag)
+        ((e.grammar::|"=~"| e.grammar::|"!~"| e.grammar::|"_"| e.grammar::|".."| e.grammar::|"=="| e.grammar::|"!="|) tag)
+        (e.grammar::|"catch"| 
+          (destructuring-bind (pattern body) out-children
+            (list pattern body)))
+        (e.grammar::|AssignExpr|
+          ;; GRUMBLE: updates should have a separate node type
+          (ecase (length out-children)
+          (2 (destructuring-bind (l r) out-children
+               (e. *b* |assign| l r)))
+          (3 (destructuring-bind (l op r) out-children
+               (e. *b* |update| 
+                 l 
+                 (etypecase op
+                   (string (subseq op (1- (length op))))
+                   (|NounExpr| (unwrap-noun op))) 
+                 r)))))
+        ((e.grammar::|CallExpr| e.grammar::|"."|)
+          ;; GRUMBLE: shouldn't need to match "."
+          ;; GRUMBLE: things like + == ..! should be reported as 'binary operator', not same as CallExpr
+          (destructuring-bind (r verboid &rest a) out-children
+            (let ((verb (etypecase verboid
+                          (|NounExpr|    (unwrap-noun verboid))
+                          (|LiteralExpr| (first (node-elements verboid)))
+                          (string        verboid)
+                          ((member e.grammar::|"=~"|
+                                   e.grammar::|"!~"|
+                                   e.grammar::|".."|
+                                   e.grammar::|"..!"|
+                                   e.grammar::|"=="|)
+                                         '#:meaningless))))
+              (cond 
+                ((member r '(e.grammar::|"meta"| e.grammar::|"pragma"|))
+                  (e. *b* |doMeta|
+                    (subseq (symbol-name r) 1 (1- (length (symbol-name r))))
+                    verb
+                    (coerce a 'vector)))
+                ((member verboid '(e.grammar::|"=~"|))
+                  (assert (= 1 (length a)))
+                  (e. *b* |matchBind| r (first a)))
+                ((member verboid '(e.grammar::|".."| e.grammar::|"..!"|))
+                  (assert (= 1 (length a)))
+                  (e-call *b* (case verboid
+                                (e.grammar::|".."| "thru")
+                                (e.grammar::|"..!"| "till")) 
+                              (list r (first a))))
+                ((member verboid '(e.grammar::|"=="| e.grammar::|"!="|))
+                  (assert (= 1 (length a)))
+                  (e. *b* |same| r (first a) (as-e-boolean (eql verboid 'e.grammar::|"!="|))))
+                (t
+                  (e. *b* |call| r 
+                                 verb
+                                 (coerce a 'vector)))))))
+        ((e.grammar::|SendExpr|)
+          (destructuring-bind (r verboid &rest a) out-children
+            (let ((verb (etypecase verboid
+                          (|NounExpr|    (unwrap-noun verboid))
+                          (|LiteralExpr| (first (node-elements verboid)))
+                          (string        verboid))))
+              (cond
+                (t
+                  (e. *b* |send| r 
+                                 verb
+                                 (coerce a 'vector)))))))
+        (e.grammar::|CoerceExpr|
+          (destructuring-bind (expr guard) out-children
+            (e. *b* |cast| expr guard)))
+        (e.grammar::|DefineExpr|
+          (if (= 1 (length out-children))
+            (destructuring-bind (pattern) out-children
+              (e. *b* |forward| pattern))
+            (destructuring-bind (l r &optional guard) out-children
+              (e. *b* |define| l r guard))))
+        (e.grammar::|EscapeExpr|
+          ;; GRUMBLE: an empty body makes the parser return only the pattern node - it should return an "empty-body node" or some such instead
+          (destructuring-bind (patt &optional (body (e. *b* |null|)) ((catch-patt catch-body) '(nil nil))) out-children
+            (e. *b* |escape| patt body catch-patt catch-body)))
+        (e.grammar::|HideExpr|
+          (destructuring-bind (sub) out-children
+            (e. *b* |hide| sub)))
+        (e.grammar::|IfExpr|
+          (e-call *b* "if" out-children))
+        (e.grammar::|TupleExpr|
+          (e. *b* |tuple| (coerce out-children 'vector)))
+        (e.grammar::|ReturnExpr|
+          (destructuring-bind (value-expr) out-children
+            (e. *b* |return| value-expr)))
+          
+        (e.grammar::|AndExpr|
+          (destructuring-bind (left right) out-children
+            (e. *b* |flowAnd| left right)))
+        (e.grammar::|OrExpr|
+          (destructuring-bind (left right) out-children
+            (e. *b* |flowOr| left right)))
+        
+        ((e.grammar::|BindPattern|)
+          (destructuring-bind (noun &optional guard) out-children
+            (e. *b* |bindDefiner| noun guard)))
+        ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern|)
+          (destructuring-bind (noun &optional guard) out-children
+            (e-call *b* (convention-uncapitalize (symbol-name tag)) (list noun guard))))
+        ((e.grammar::|IgnorePattern|)
+          (e. *b* |ignore|))
+        (e.grammar::|ListPattern|
+          (e. *b* |listPattern| (coerce out-children 'vector)))
+        ((e.grammar::|SuchThatPattern|)
+          (destructuring-bind (pattern test) out-children
+            (e. *b* |suchThat| pattern test)))
+        (e.grammar::|URIExpr| (e. *b* |uriExpr| (first out-children)))
+        (e.grammar::|SeqExpr| (e. *b* |sequence| (coerce out-children 'vector)))
+        ((e.grammar::|ObjectExpr|)
+          (destructuring-bind (qualified-name script) out-children
+            (e. *b* |object| "" qualified-name #() script)))
+        ((e.grammar::|EScript|)
+          (let ((todo out-children)
+                methods
+                matchers)
+            (loop while (typep (first todo) '|EMethod|) do
+              (push (pop todo) methods))
+            (loop while (typep (first todo) '|EMatcher|) do
+              (push (pop todo) matchers))
+            (when todo
+              (error "unexpected element type or misplaced method in EScript: ~S remaining (whole is ~S)" todo out-children))
+            (e. *b* |vTable| (coerce (nreverse methods) 'vector)
+                             (coerce (nreverse matchers) 'vector))))
+        ((e.grammar::|EMethod|)
+          (destructuring-bind (doc-comment verb-ident param-list return-guard body) out-children
+            (assert (member text '("to" "method") :test #'string=))
+            (e-call *b* text (list doc-comment
+                                   (e. *b* |methHead| (unwrap-noun verb-ident) (coerce param-list 'vector) return-guard)
+                                   body))))
+        (otherwise
+          (cond
+            ((and (string= (aref (symbol-name tag) 0) "\"") 
+                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 2)) "="))
+              (e. *b* |binaryVerb| text))
+            (t (error "don't know what to do with ~S <- ~S" expr path))))))))
 
 ; --- Parse cache files ---
  

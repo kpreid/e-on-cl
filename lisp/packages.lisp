@@ -295,8 +295,12 @@
   
 (cl:defvar e.knot:*emaker-search-list*)
 
+(cl:defpackage :e.grammar
+  (:documentation "Node types from the Antlr grammar.")
+  (:use))
+
 (cl:defpackage :e.elang.vm-node 
-  (:nicknames)
+  (:nicknames :e.node)
   (:documentation "All symbols in this package are the names of subclasses of ENode, eccept for null, error and .tuple..")
   ; XXX arrange so that null, error and .tuple. are not produced by parseEToSExpression?
   (:use)
