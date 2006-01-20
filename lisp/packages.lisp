@@ -34,6 +34,8 @@
     :add-exclusive-io-handler
     :remove-exclusive-io-handler
     :io-handler-exclusion-group
+    :call-with-io-handler-exclusion
+    :with-io-handler-exclusion
     
     :run-program
     :external-process-input-stream

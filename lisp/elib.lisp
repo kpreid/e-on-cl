@@ -383,22 +383,28 @@ If there is no current vat at initialization time, captures the current vat at t
 
 ; - vat -
 
-(defun call-with-turn (body vat)
+(defun call-with-turn (body vat &key exclude-io (label t))
   "Execute the 'body' thunk, as a turn in the given vat."
+  (assert label)
   (when (vat-in-turn vat)
-    (error "~S is already executing a turn" vat))
+    (error "~S is already executing a turn, ~S, so turn ~S may not execute" vat (vat-in-turn vat) label))
   (unless (or (null *vat*)
               (eq *vat* vat))
     (error "there is already a current vat, ~S, so ~S may not execute a turn" *vat* vat))
   (unwind-protect
     (let ((*vat* vat))
-      (setf (vat-in-turn vat) t)
-      (funcall body))
+      (setf (vat-in-turn vat) label)
+      (if (not exclude-io)
+        (funcall body)
+        (call-with-io-handler-exclusion 
+          body 
+          (handler-exclusion-group (vat-runner vat)) 
+          `(turn-in ,vat))))
     (setf (vat-in-turn vat) nil)))
 
-(defmacro with-turn ((vat) &body body)
+(defmacro with-turn ((&rest args) &body body)
   "Execute the body, as a turn in the given vat."
-  `(call-with-turn (lambda () ,@body) ,vat))
+  `(call-with-turn (lambda () ,@body) ,@args))
 
 (defclass runner ()
   ((label :initarg :label
@@ -456,7 +462,7 @@ If there is no current vat at initialization time, captures the current vat at t
                      direction
                      (lambda (target*)
                        (assert (eql target target*) () "buh?")
-                       (with-turn (vat) 
+                       (with-turn (vat :exclude-io nil) 
                          (funcall (ref-shorten function) target*)))))
 
 (defun vr-remove-io-handler (handler)

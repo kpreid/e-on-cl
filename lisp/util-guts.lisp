@@ -65,6 +65,22 @@
    (current-base :initform nil :accessor %eih-base)
    (installer :initarg :installer :accessor %eih-installer)))
 
+(defun call-with-io-handler-exclusion (body group &optional (marker t))
+  (assert marker)
+  (if (exclusion-group-active group)
+    (error "attempted to activate already-active IO handler exclusion group ~S" group)
+    (unwind-protect
+      (progn
+        (setf (exclusion-group-active group) marker)
+        (funcall body))
+      (setf (exclusion-group-active group) nil)
+      (loop for reinstaller = (pop (exclusion-group-excluded group))
+            while reinstaller
+            do (funcall reinstaller)))))
+
+(defmacro with-io-handler-exclusion ((group marker) &body body)
+  `(call-with-io-handler-exclusion (lambda () ,@body) ,group ,marker))
+
 (defun add-exclusive-io-handler (group target direction function)
   "Add a SERVE-EVENT handler which will not be invoked by recursive serve-event in the dynamic scope of another handler in its \"exclusion group\"."
   (let ((wrap-handler (make-instance 'exclusive-io-handler 
@@ -80,14 +96,8 @@
                            (push #'install (exclusion-group-excluded group))
                            (remove-io-handler (the (not null) current-base-handler))
                            (setf current-base-handler nil))
-                         (unwind-protect
-                           (progn
-                             (setf (exclusion-group-active group) wrap-handler)
-                             (funcall function target))
-                           (setf (exclusion-group-active group) nil)
-                           (loop for reinstaller = (pop (exclusion-group-excluded group))
-                                 while reinstaller
-                                 do (funcall reinstaller)))))))))
+                         (with-io-handler-exclusion (group wrap-handler)
+                           (funcall function target))))))))
         (setf (%eih-installer wrap-handler) #'install)
         (install)
         wrap-handler))))
