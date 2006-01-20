@@ -596,17 +596,17 @@
                         (equalizer-trace "exit opt-same via eeq-same-dispatch to come")
                         (as-e-boolean (eeq-same-dispatch left right))))))))
       
-      (with-result-promise (equalizer)
-        (e-lambda "org.erights.e.elib.tables.makeEqualizer$equalizer"
+      (nest-fq-name ("org.erights.e.elib.tables.makeEqualizer")
+        (e-lambda |equalizer|
             (:stamped +deep-frozen-stamp+)
           (:|sameEver| (left right)
-            (let ((result (e. equalizer |optSame| left right)))
+            (let ((result (e. |equalizer| |optSame| left right)))
               (if result
                 result
                 (error 'insufficiently-settled-error :values (list left right)))))
         
           (:|sameYet| (left right)
-            (or (e. equalizer |optSame| left right) +e-false+))
+            (or (e. |equalizer| |optSame| left right) +e-false+))
         
           (:|optSame| (left right)
             (opt-same left right '(() . ())))

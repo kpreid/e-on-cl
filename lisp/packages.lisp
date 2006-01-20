@@ -193,6 +193,7 @@
     
     :simplify-fq-name
     :join-fq-name
+    :nest-fq-name :environment-fqn-prefix
     
     :make-equalizer
     :eeq-is-settled

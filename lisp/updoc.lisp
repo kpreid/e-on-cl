@@ -162,85 +162,84 @@
         (backtrace nil)
         (skipping nil))
     
-    (with-result-promise (handler)
-      (e-lambda "$updocHandler" ()
-        (:|begin| (nstep)
-          (destructuring-bind (expr answers) nstep
-            (declare (ignore answers))
-            (setf step nstep)
-            (setf new-answers nil
-                  skipping nil
-                  backtrace nil)
-            
-            ;; must happen after vars are set, in case of syntax errors 
-            (let ((node (e.syntax:e-source-to-tree expr)))
-              (setf step-scope (e. node |staticScope|))
-              (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
-              #+#:debug (print (e. dead-names |getKeys|))
-              (unwind-protect
-                (if skipping
-                  (progn 
-                    (princ "x") 
-                    (load-time-value (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(0))))
-                  (progn
-                    (if print-steps
-                      (format t "~&? ~A~%" expr)
-                      (princ "."))
-                    node))
-                (force-output)))))
-        (:|takeStreams| ()
-          (loop for stream in (list out err)
-                for label in '("stdout" "stderr")
-                for string = (get-output-stream-string stream)
-                unless (string= string "") 
-                  do (e. handler |answer| (list label string))))
-        (:|answer| (answer)
-          (push answer new-answers)
-          (when print-steps
-            (print-answer answer)))
-        (:|backtrace| (bt)
-          (setf backtrace bt))
-        (:|finish| ()
-          (nreverse-here new-answers)
-          (flet ((adjust-liveness (live)
-                   "updates whether names set by this step are guessed to not
-                    match the expectations of the updoc script"
-                   #+#:debug (print `(adjusting-liveness ,live ,(e. (e. step-scope |outNames|) |getKeys|)))
-                   (setf dead-names 
-                     (e-call dead-names 
-                             (if live
-                               "butNot"
-                               "or")
-                             (list (e. step-scope |outNames|))))))
-            (cond
-              (skipping
-                (adjust-liveness nil)
-                (make-instance 'result :dead t))
-              ((tree-equal (second step) new-answers :test #'equal)
-                (adjust-liveness t)
-                (make-instance 'result :failures 0 :steps 1))
-              (t
-                (let ((*print-pretty* t)
-                      (*package* #.*package*)
-                      (*print-case* :downcase)
-                      (*print-level* 7)
-                      (*print-length* 20))
-                  (destructuring-bind (expr expected-answers) step
-                    (print `(mismatch (file ,file)
-                                      (source ,expr)
-                                      (expects ,@expected-answers)
-                                      (instead ,@new-answers)
-                                      (opt-backtrace ,backtrace)))
-                    (fresh-line)
-                    #| names bound by this step are now dead (assumed to not match
-                       future steps' expectations) iff this step had an unexpected
-                       problem |#
-                    (flet ((has-problem (answers)
-                             (member "problem" answers :test #'equal 
-                                                       :key #'first)))
-                      (adjust-liveness (or (not (has-problem new-answers))
-                                           (has-problem expected-answers))))
-                    (make-instance 'result :failures 1 :steps 1)))))))))))
+    (e-lambda |updocHandler| ()
+      (:|begin| (nstep)
+        (destructuring-bind (expr answers) nstep
+          (declare (ignore answers))
+          (setf step nstep)
+          (setf new-answers nil
+                skipping nil
+                backtrace nil)
+          
+          ;; must happen after vars are set, in case of syntax errors 
+          (let ((node (e.syntax:e-source-to-tree expr)))
+            (setf step-scope (e. node |staticScope|))
+            (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
+            #+#:debug (print (e. dead-names |getKeys|))
+            (unwind-protect
+              (if skipping
+                (progn 
+                  (princ "x") 
+                  (load-time-value (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(0))))
+                (progn
+                  (if print-steps
+                    (format t "~&? ~A~%" expr)
+                    (princ "."))
+                  node))
+              (force-output)))))
+      (:|takeStreams| ()
+        (loop for stream in (list out err)
+              for label in '("stdout" "stderr")
+              for string = (get-output-stream-string stream)
+              unless (string= string "") 
+                do (e. |updocHandler| |answer| (list label string))))
+      (:|answer| (answer)
+        (push answer new-answers)
+        (when print-steps
+          (print-answer answer)))
+      (:|backtrace| (bt)
+        (setf backtrace bt))
+      (:|finish| ()
+        (nreverse-here new-answers)
+        (flet ((adjust-liveness (live)
+                 "updates whether names set by this step are guessed to not
+                  match the expectations of the updoc script"
+                 #+#:debug (print `(adjusting-liveness ,live ,(e. (e. step-scope |outNames|) |getKeys|)))
+                 (setf dead-names 
+                   (e-call dead-names 
+                           (if live
+                             "butNot"
+                             "or")
+                           (list (e. step-scope |outNames|))))))
+          (cond
+            (skipping
+              (adjust-liveness nil)
+              (make-instance 'result :dead t))
+            ((tree-equal (second step) new-answers :test #'equal)
+              (adjust-liveness t)
+              (make-instance 'result :failures 0 :steps 1))
+            (t
+              (let ((*print-pretty* t)
+                    (*package* #.*package*)
+                    (*print-case* :downcase)
+                    (*print-level* 7)
+                    (*print-length* 20))
+                (destructuring-bind (expr expected-answers) step
+                  (print `(mismatch (file ,file)
+                                    (source ,expr)
+                                    (expects ,@expected-answers)
+                                    (instead ,@new-answers)
+                                    (opt-backtrace ,backtrace)))
+                  (fresh-line)
+                  #| names bound by this step are now dead (assumed to not match
+                     future steps' expectations) iff this step had an unexpected
+                     problem |#
+                  (flet ((has-problem (answers)
+                           (member "problem" answers :test #'equal 
+                                                     :key #'first)))
+                    (adjust-liveness (or (not (has-problem new-answers))
+                                         (has-problem expected-answers))))
+                  (make-instance 'result :failures 1 :steps 1))))))))))
 
 (defun make-stepper (&key gc props handler)
   (let* ((scope-slot (make-instance 'elib:e-var-slot :value nil))
@@ -321,22 +320,20 @@
                       `(("updoc" ,runner)
                         ("interp" ,interp)
                         ("print"
-                         ,(with-result-promise (print)
-                            (e-lambda "$print" ()
-                              (otherwise (mverb &rest args)
-                                (if (mverb-verb= mverb "run")
-                                  (loop for a in args do
-                                    (princ (e-print a) eval-out-stream))
-                                  (no-such-method print mverb args))))))
+                         ,(e-lambda |print| ()
+                            (otherwise (mverb &rest args)
+                              (if (mverb-verb= mverb "run")
+                                (loop for a in args do
+                                  (princ (e-print a) eval-out-stream))
+                                (no-such-method |print| mverb args)))))
                         ("println"
-                         ,(with-result-promise (println)
-                            (e-lambda "$println" ()
-                              (otherwise (mverb &rest args)
-                                (if (mverb-verb= mverb "run")
-                                  (loop for a in args do
-                                    (princ (e-print a) eval-out-stream)
-                                    finally (terpri eval-out-stream))
-                                  (no-such-method println mverb args)))))))))
+                         ,(e-lambda |println| ()
+                            (otherwise (mverb &rest args)
+                              (if (mverb-verb= mverb "run")
+                                (loop for a in args do
+                                  (princ (e-print a) eval-out-stream)
+                                  finally (terpri eval-out-stream))
+                                (no-such-method |println| mverb args))))))))
                     (e. (e. (make-io-scope :stdout eval-out-stream 
                                            :stderr eval-err-stream
                                            :interp interp) 

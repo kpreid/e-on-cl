@@ -347,42 +347,38 @@
       &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |eventually|)))
     (e-coercef name 'string)
     (e-coercef fetchpath 'vector)
-    (with-result-promise (loader)
-      (e-lambda "$loader" ()
-        ; :stamped (deep-frozen-if-every fetchpath)
-        #+eventually-frozen-path-loader :stamped
-        #+eventually-frozen-path-loader eventually-deep-frozen
-        (:|__printOn| (tw)
-          (e-coercef tw +the-text-writer-guard+)
-          (e. tw |print| "<" name ":*>")
-          nil)
-        #+eventually-frozen-path-loader (:|__optSealedDispatch| (brand)
-          ; XXX this implementation of the EventuallyDeepFrozen state check is not really *correct* per the auditor's rules, but will handle the correct cases, since we know that the parts of this which are not actually DeepFrozen 
-          (cond
-            ((eeq-is-same-ever brand (e. eventually-deep-frozen |getPeekBrand|))
-              (e. (e. eventually-deep-frozen |getPeekSealer|) 
-                  |seal|
-                  (e. +the-make-const-map+ |fromPairs|
-                    `#(#("&fetchpath" ,(make-instance 'e-simple-slot :value fetchpath))))))))
-        (:|fetch| (fqn absent-thunk)
-          (e-coercef fqn 'string)
-          (if (string= ".*" fqn :start2 (- (length fqn) 2))
-            (e. (e-import "org.erights.e.elang.interp.makePackageLoader") |run| loader (concatenate 'string name ":") fqn)
-            (loop for sub across fetchpath
-                  do (block continue (return (e. sub |fetch| fqn (e-lambda "$continueSearchThunk" () (:|run| () (return-from continue))))))
-                  finally (e. absent-thunk |run|))))
-        (:|get| (fqn) 
-          (e. loader |fetch| fqn 
-            (e-lambda "$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote loader) (e-quote fqn))))))
-        (:|optUncall| (specimen)
-          (loop for sub across fetchpath thereis
-            (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))
-                 (progn
-                   ;(format t "~&; ~A for optUnget of ~A querying sub ~A~%" (e-quote loader) (e-quote specimen) (e-quote sub))
-                   (unget-to-uncall loader (e. sub |optUnget| specimen))))))
-        (:|optUnget| (specimen)
-          ; xxx this is how Java-E does it, and claims a justification, but *what*?
-          (uncall-to-unget loader (e. loader |optUncall| specimen))))))))
-
-;;; --- miscellaneous ---
-
+    (e-lambda |loader| ()
+      ; :stamped (deep-frozen-if-every fetchpath)
+      #+eventually-frozen-path-loader :stamped
+      #+eventually-frozen-path-loader eventually-deep-frozen
+      (:|__printOn| (tw)
+        (e-coercef tw +the-text-writer-guard+)
+        (e. tw |print| "<" name ":*>")
+        nil)
+      #+eventually-frozen-path-loader (:|__optSealedDispatch| (brand)
+        ; XXX this implementation of the EventuallyDeepFrozen state check is not really *correct* per the auditor's rules, but will handle the correct cases, since we know that the parts of this which are not actually DeepFrozen 
+        (cond
+          ((eeq-is-same-ever brand (e. eventually-deep-frozen |getPeekBrand|))
+            (e. (e. eventually-deep-frozen |getPeekSealer|) 
+                |seal|
+                (e. +the-make-const-map+ |fromPairs|
+                  `#(#("&fetchpath" ,(make-instance 'e-simple-slot :value fetchpath))))))))
+      (:|fetch| (fqn absent-thunk)
+        (e-coercef fqn 'string)
+        (if (string= ".*" fqn :start2 (- (length fqn) 2))
+          (e. (e-import "org.erights.e.elang.interp.makePackageLoader") |run| |loader| (concatenate 'string name ":") fqn)
+          (loop for sub across fetchpath
+                do (block continue (return (e. sub |fetch| fqn (e-lambda "$continueSearchThunk" () (:|run| () (return-from continue))))))
+                finally (e. absent-thunk |run|))))
+      (:|get| (fqn) 
+        (e. |loader| |fetch| fqn 
+          (e-lambda "$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote |loader|) (e-quote fqn))))))
+      (:|optUncall| (specimen)
+        (loop for sub across fetchpath thereis
+          (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))
+               (progn
+                 ;(format t "~&; ~A for optUnget of ~A querying sub ~A~%" (e-quote |loader|) (e-quote specimen) (e-quote sub))
+                 (unget-to-uncall |loader| (e. sub |optUnget| specimen))))))
+      (:|optUnget| (specimen)
+        ; xxx this is how Java-E does it, and claims a justification, but *what*?
+        (uncall-to-unget |loader| (e. |loader| |optUncall| specimen)))))))

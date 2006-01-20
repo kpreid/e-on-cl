@@ -788,15 +788,19 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "_") "" '() nil))
 
 
-(defmacro e-lambda (fqn (&rest options) &body entries &environment env)
+(defmacro e-lambda (qname (&rest options) &body entries &environment env)
   "XXX document this
 
-fqn may be NIL or a string."
-  (let ((stamp-forms '())
+fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the object itself."
+  (check-type qname (or null string symbol))
+  (when (typep qname '(and symbol (not null)))
+    (return-from e-lambda 
+      `(with-result-promise (,qname)
+         (e-lambda ,(concatenate 'string "$" (symbol-name qname)) 
+                   (,@options) ,@entries))))
+  (let ((fqn (join-fq-name (environment-fqn-prefix env) (or qname "_")))
+        (stamp-forms '())
         (documentation ""))
-    ;; Normalize/check simple options
-    (check-type fqn (or null string))
-    (setf fqn (join-fq-name (environment-fqn-prefix env) (or fqn "_")))
     ;; Parse options
     (loop for (key value) on options by #'cddr do
       (case key
