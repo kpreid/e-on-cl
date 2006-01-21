@@ -172,9 +172,12 @@ private java.util.Properties myPocket = new java.util.Properties();
 // Grammar productions to avoid requiring implementation-language-specific
 // action code.
 
-warn[String msg]:    {reportWarning(msg);
-    if (false) {throw new RecognitionException("warn");} } ;
-pocket[String key]: {
+warn![String msg]: {
+    reportWarning(msg);
+    if (false) {throw new RecognitionException("warn");}
+} ;
+
+pocket![String key]: {
     String v = myPocket.getProperty(key, "disable");
     if ("warn".equals(v)) {
         reportWarning(key + " in pocket");
@@ -183,9 +186,11 @@ pocket[String key]: {
         throw new RecognitionException(key + " not allowed");
     }
 } ;
-setPocket[Token key, String value]: { myPocket.put(key.getText(), value);
+
+setPocket![Token key, String value]: {
+    myPocket.put(key.getText().substring(1, key.getText().length()-1), value);
     if (false) {throw new RecognitionException("warn");}
-    } ;
+} ;
 
 
 //;; GRUMBLE: nouns should be wrapped so that I can apply this to only
@@ -208,10 +213,10 @@ topSeq:     topExpr (((";"! | LINESEP!) (topExpr)?)+ {##=#([SeqExpr],##);}  )? ;
 
 topExpr:    eExpr | pragma ;
 
-pragma:     "pragma"^ "."!
-            ( "enable" "("! en:IDENT ")"!    setPocket[en, "enable"]!
-            | "disable" "("! dis:IDENT ")"!  setPocket[dis, "disable"]!
-            | "warn" "("! wn:IDENT ")"!      setPocket[wn, "warn"]!
+pragma!:     "pragma"^ "."!
+            ( "enable" "("! en:STRING ")"!    setPocket[en, "enable"]!
+            | "disable" "("! dis:STRING ")"!  setPocket[dis, "disable"]!
+            | "warn" "("! wn:STRING ")"!      setPocket[wn, "warn"]!
             | "syntax" pocket["syntax"]!  );
 
 metaExpr:  "meta"^ "."!
@@ -295,27 +300,12 @@ defExpr:    "def"^  (  (objectPredict)  => objName objectExpr
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! assign
                                                       {##.setType(DefineExpr);}
-                    |  noun {##.setType(DefineExpr);} //forward declaration?
+                    |  nounExpr {##.setType(DefineExpr);} //forward declaration?
                     )
-            | binder (   ":="! assign {##=#([DefineExpr],##);}
+            | (binder | varNamer)
+                    (   ":="! assign {##=#([DefineExpr],##);}
                     |   objectExpr  {##=#([ObjectExpr],##);}
                     )
-            | varNamer (   ":="! assign {##=#([DefineExpr],##);}
-                |   objectExpr            {##=#([ObjectExpr],##);}
-                )
-            ;
-
-bindExpr:       bindName //(":"! guard)?
-                (   ":="! assign {##.setType(DefineExpr);}
-                |   objectExpr                {##.setType(ObjectExpr);}
-                )
-            ;
-
-defPatt:        (nounExpr       {##.setType(FinalPattern);}
-                | "_"           {##.setType(IgnorePattern);}
-                | STRING        {##.setType(STRING);}  // TODO correct type?
-                | "var" nounExpr  {##.setType(VarPattern);}
-                | "bind" nounExpr {##.setType(BindPattern);}  )
             ;
 
 // minimize the look-ahead for objectExpr
@@ -328,13 +318,6 @@ objectExpr:     //(typeParams)?
                     script
                 |   params resultGuard body      // function
                 )
-            ;
-
-// The name pattern, or literal name, for an object definition
-bindName:   (   nounExpr         {##=#([FinalPattern],##);}
-                |   "&"^ nounExpr    {##.setType(SlotPattern);}
-                |   STRING           {##=#([LiteralPattern],##);})
-            (":"! guard)?
             ;
 
 objName:        nounExpr         {##=#([FinalPattern],##);}
