@@ -68,6 +68,7 @@ tokens {
     AssignExpr;
     CallExpr;
     DefineExpr;
+    ForwardExpr;
     EscapeExpr;
     HideExpr;
     IfExpr;
@@ -300,7 +301,7 @@ defExpr:    "def"^  (  (objectPredict)  => objName objectExpr
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! assign
                                                       {##.setType(DefineExpr);}
-                    |  nounExpr {##.setType(DefineExpr);} //forward declaration?
+                    |  nounExpr {##.setType(ForwardExpr);}
                     )
             | (binder | varNamer)
                     (   ":="! assign {##=#([DefineExpr],##);}
@@ -325,7 +326,7 @@ objName:        nounExpr         {##=#([FinalPattern],##);}
             |   "bind"^ noun     {##.setType(BindPattern);}
             |   "var"^ nounExpr  {##.setType(VarPattern);}
             |   "&"^ nounExpr    {##.setType(SlotPattern);}
-            |   STRING           {##=#([LiteralExpr],##);}
+            |   STRING
             ;
 
 //TODO MARK: what is typeParams for?  it appears to come right after "def name"
@@ -402,7 +403,7 @@ imethHead:           mtypes resultGuard
             ;
 
 // The current E grammar only let's you put these in a few places.
-doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;
+doco:       DOC_COMMENT | ; //{##=#([DOC_COMMENT]);} ;
 
 body:           "{"! (seq)? "}"! ;
 
@@ -568,9 +569,9 @@ prop:           IDENT | STRING  ;
 // a method selector
 verb:           IDENT | STRING  ;
 
-literal:    STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL  ;
+literal:    (STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL)
+            {##=#([LiteralExpr],##);} ;
 
-noun:       IDENT  |  "::"^ pocket["noun-string"]! (STRING | IDENT) ;
 
 // a valid guard is an identifier, and guard followed by [argList], or parenExpr
 guard:      (nounExpr | parenExpr)
@@ -621,8 +622,13 @@ namePatt:       nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
             |   slotNamer
             ; // STRING???
 
+noun:       IDENT                           {##=#([NounExpr],##);}
+            |  "::"^ pocket["noun-string"]!
+                (STRING | IDENT)            {##=#([NounExpr],##);}
+            |   URIGetter                   {##=#([NounExpr],##);}
+            ;
+
 nounExpr:       noun
-            |   URIGetter                    {##=#([URIExpr],##);}
             |   dollarHole                   {##.setType(QuasiLiteralPattern);}
             |   atHole                       {##.setType(QuasiPatternPattern);}
             ;
