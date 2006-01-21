@@ -105,6 +105,7 @@ tokens {
     BindPattern;
     SendExpr;
     CurryExpr;
+    BinaryExpr;
 
     FinalPattern;
     VarPattern;
@@ -126,6 +127,8 @@ tokens {
     EMatcher;
     List;
     WhenFn;
+    Implements;
+    Extends;
 
     //for lexer
     HEX;
@@ -246,8 +249,7 @@ forPatt:        pattern br
                 |   {##=#([ListPattern,"=>"], [IgnorePattern, ""], ##);})
             ;
 
-accumExpr:      "accum"^ call accumulator
-                                warn["Accumulator syntax is experimental"]! ;
+accumExpr:      "accum"^ call accumulator pocket["accumulator"]! ;
 
 accumulator:
         "for"^ forPatt "in"! logical accumBody
@@ -313,13 +315,20 @@ defExpr:    "def"^  (  (objectPredict)  => objName objectExpr
 objectPredict:    objName ("extends" | "implements" | "{"| "(" ) ;
 objectExpr:     //(typeParams)?
                 //(":"! guard)?
-                (   ("extends" br order)?
-                    ("implements" br order ("," order)*)?  // trailing comma
-                                            // would be ambiguous with HideExpr
-                    script
-                |   params resultGuard body      // function
-                )
-            ;
+            oExtends
+            oImplements
+            script  {##=#([EScript],##);}
+        |   params resultGuard body      // function
+            {##=#([EScript], ([Extends]), ([Implements]),
+            ([List], ([EMethod, "fn"], [IDENT, "run"], ##)));}
+    ;
+
+oExtends:    "extends"^ br order {##.setType(Extends);}
+             |                   {##=#([Extends],##);}  ;
+
+oImplements: "implements"^ br order (","! order)* {##.setType(Implements);}
+             | {##=#([Implements],##);} ;
+            // trailing comma would be ambiguous with HideExpr
 
 objName:        nounExpr         {##=#([FinalPattern],##);}
             |   "_"^             {##.setType(IgnorePattern);}
@@ -334,33 +343,25 @@ typeParams:     "[" typePatternList br "]" ; // should have a br before the "]"
 
 typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
 
-script:         "{"^ (method br)* (matcher br)* "}"!  {##.setType(EScript);} ;
+script:         "{"^ (method br)* (matcher br)* "}"!  {##.setType(List);} ;
 
-method:     doco (   "to"^ methHead body
-                |   "method"^ methHead body
-                |   "on"^ methHead body
-                //|   DEF field OpAss assign
-                //|   VAR field OpAss assign
+// TODO deal with doc comments
+method: doco!
+        ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
+        {##.setType(EMethod);}
+    ;
 
-                //|   TO field body
-                //|   TO field OpAss pattern body
-                //|   TO '&' field body
+optVerb:      verb | {##=#([IDENT,""]);} ;
 
-                //|   META parenExpr body
-                //|   META parenExpr MapsTo parenExpr
-                ) {##.setType(EMethod);}
-            ;
-
-methHead:            params resultGuard
-            |   verb params resultGuard
-            ;
-
-matcher:       "match"^ pattern body  {##.setType(EMatcher);} ;
+matcher:        "match"^ pattern body  {##.setType(EMatcher);} ;
 
 params:         "("! patternList br ")"!   {##=#([List],##);} ;
 patternList:    (pattern (","! patternList)?)? ;
 
-resultGuard:    (":"! guard)? ("throws" guardList)? ;
+// ("throws" guardList)? ;
+ //TODO what's the right default for a missing guard?
+resultGuard:    ":"! guard | {##=#([NounExpr]);} ;
+
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
 
@@ -403,7 +404,7 @@ imethHead:           mtypes resultGuard
             ;
 
 // The current E grammar only let's you put these in a few places.
-doco:       DOC_COMMENT | ; //{##=#([DOC_COMMENT]);} ;
+doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;
 
 body:           "{"! (seq)? "}"! ;
 
@@ -520,10 +521,6 @@ call:   p:prim
         |   "::" ("&")? prop
         )*
     ;
-
-//message:        v:verb (("(") => parenArgs
-//                       | {#v.setType(CurryExpr);})   // curry
-//            ;
 
 message:        verb (("(") => parenArgs
                       | {##.setType(CurryExpr);})   // curry

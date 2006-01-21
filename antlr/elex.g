@@ -182,7 +182,7 @@ DOC_COMMENT
         )*
         '*' '/'
         BR
-        {$setText("**comment hidden**");}
+        {$setText("**comment hidden**");}  // TODO: stop suppressing comments
         //{$setType(Token.SKIP);}
     ;
 
