@@ -87,6 +87,10 @@
             (eject-or-ethrow opt-ejector
               (format nil "~A is not a ~S, even unsealed" (e-quote specimen) class-name)))))))))
 
+;;; --- miscellaneous ---
+
+(defvar *antlr-jar*)
+
 ; --- emaker loading ---
 
 (defvar *emaker-search-list*
@@ -107,6 +111,7 @@
   ;; XXX treating the data from clrune as a Lisp namestring is wrong due
   ;; to the typical Lisp implementation's addition of wildcards, etc.
   (let ((dir-pathname (pathname dir-system-namestring)))
+    (setf *antlr-jar* (merge-pathnames #p"e.jar" dir-pathname))
     (setf *emaker-search-list* 
       (append *emaker-search-list*
         (handler-case

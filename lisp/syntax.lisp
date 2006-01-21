@@ -479,9 +479,8 @@ XXX make precedence values available as constants"
     :version nil
     :defaults (first (asdf:output-files (make-instance 'asdf:compile-op) 
                                         (asdf:find-component
-                                          (asdf:find-component
-                                            +the-asdf-system+
-                                            "antlr")
+                                          (asdf:find-system 
+                                              :e-on-cl.antlr-parser)
                                           "e")))))
 
 (defvar *parse-cache-hash* (make-hash-table :test #'equal))
@@ -492,6 +491,7 @@ XXX make precedence values available as constants"
   (assert (not (boundp '*parser-process*)))
   ; XXX pipe this through common tracing architecture
   (format *trace-output* "~&; starting Java-E parsing subprocess~%")
+  (asdf:operate 'asdf:compile-op :e-on-cl.antlr-parser)
   (setf *parser-process* (e.util:run-program
     "/usr/bin/env"
     (list "rune"
