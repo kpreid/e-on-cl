@@ -44,6 +44,8 @@ header {
 // anonymous lambda syntax
 // generate correct trees
 // meta and pragma
+// def "foo" {... "foo" is not a pattern
+// a string is not allowed after var and bind in a defining expression (defpatt)
 
 // TODO add doco for matcher?
 
@@ -144,10 +146,7 @@ tokens {
 }
 
 {
-private void warn(String msg) {
-    reportWarning(msg);
-}
-
+// overrides inherited warning method
 public void reportWarning(String s) {
     try {
         int line = LT(0).getLine();
@@ -164,31 +163,76 @@ public void reportWarning(String s) {
 }
 
 // pocket mechanisms: add a boolean, and test in the grammar with {foo}?
-private boolean pocketNounString = false;
-private boolean pocketDotProps = false;
+private java.util.Properties myPocket = new java.util.Properties();
+
 }
 
-start:      (pragma (";"! | LINESEP!) | LINESEP!)* (seq)? ;
 
-pragma:    "pragma"^ "."^ message ;
-metaExpr:  "meta"^ "."^ message ;
+// HELPER PRODUCTIONS
+// Grammar productions to avoid requiring implementation-language-specific
+// action code.
 
-br:             (LINESEP!)* ;
+warn[String msg]:    {reportWarning(msg);
+    if (false) {throw new RecognitionException("warn");} } ;
+pocket[String key]: {
+    String v = myPocket.getProperty(key, "disable");
+    if ("warn".equals(v)) {
+        reportWarning(key + " in pocket");
+    } else if (!v.equals("enable")) {
+        reportError(key + " not allowed");
+        throw new RecognitionException(key + " not allowed");
+    }
+} ;
+setPocket[Token key, String value]: { myPocket.put(key.getText(), value);
+    if (false) {throw new RecognitionException("warn");}
+    } ;
 
-seq:            eExpr (((";"! | LINESEP!) (eExpr)?)+ {##=#([SeqExpr],##);}  )? ;
 
-eExpr:          assign | ejector ;
+//;; GRUMBLE: nouns should be wrapped so that I can apply this to only
+// nouns and not general identifiers (like verbs)
 
-basic:          ifExpr | forExpr | whileExpr | switchExpr | tryExpr
+//that was what I told you before - NounExpr occurrences of identifiers
+// should be marked in the parse tree
+//;; GRUMBLE: an empty body makes the parser return only the pattern node
+// it should return an "empty-body node" or some such instead
+//
+//that's from parsing "escape foo {}"
+//;; GRUMBLE: updates should have a separate node type
+//about AssignExpr
+
+start:     br (topSeq)? ;
+//start:     (module (";"! | LINESEP!) | LINESEP!)* (topSeq)? ;
+//module: !;// placeholder for expressions that must be at the top of the file
+
+topSeq:     topExpr (((";"! | LINESEP!) (topExpr)?)+ {##=#([SeqExpr],##);}  )? ;
+
+topExpr:    eExpr | pragma ;
+
+pragma:     "pragma"^ "."!
+            ( "enable" "("! en:IDENT ")"!    setPocket[en, "enable"]!
+            | "disable" "("! dis:IDENT ")"!  setPocket[dis, "disable"]!
+            | "warn" "("! wn:IDENT ")"!      setPocket[wn, "warn"]!
+            | "syntax" pocket["syntax"]!  );
+
+metaExpr:  "meta"^ "."!
+            (("getState"! | "scope"!) {##=#([MetaStateExpr,"MetaScope"]);}
+             | "context"! {##=#([MetaContextExpr,"MetaContext"]);} ) "(" ")" ;
+
+br:         (LINESEP!)* ;
+
+seq:        eExpr (((";"! | LINESEP!) (eExpr)?)+ {##=#([SeqExpr],##);}  )? ;
+
+eExpr:      assign | ejector ;
+
+basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
             |   escapeExpr | whenExpr | metaExpr | accumExpr ;
 
-ifExpr:         "if"^ parenExpr br body  // MARK should BR before block be
-                                         // allowed?
-                ("else"! (ifExpr | body ))?              {##.setType(IfExpr);}
+ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
+            ("else"! (ifExpr | body ))?              {##.setType(IfExpr);}
             ;
 
-forExpr:        "for"^ forPatt "in"! br assign body (catcher)?
-                                                      {##.setType(ForExpr);}  ;
+forExpr:    "for"^ forPatt "in"! br assign body (catcher)?
+                                               {##.setType(ForExpr);}  ;
 // the first pattern is actually the optional one. If it is missing, include an
 // empty ignore pattern for it.
 forPatt:        pattern br
@@ -197,7 +241,7 @@ forPatt:        pattern br
             ;
 
 accumExpr:      "accum"^ call accumulator
-                                {warn("Accumulator syntax is experimental");} ;
+                                warn["Accumulator syntax is experimental"]! ;
 
 accumulator:
         "for"^ forPatt "in"! logical accumBody
@@ -243,14 +287,22 @@ slotNamer:      "&"^ nounExpr (":"! guard )?    {##.setType(SlotPattern);} ;
 // should forward declaration allow types?
 docoDef:    doco (defExpr | interfaceExpr | lambdaExpr) ;
 
+//so ObjectExpr(doc, fqn, auditors, script|method|matcher)
+//<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
+// var x := ... should produce a DefineExpr with a VarPattern
+// bind x := ... should produce a DefineExpr with a BindPattern
 defExpr:    "def"^  (  (objectPredict)  => objName objectExpr
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! assign
                                                       {##.setType(DefineExpr);}
-                    |  bindName {##.setType(DefineExpr);} //forward declaration
+                    |  noun {##.setType(DefineExpr);} //forward declaration?
                     )
-            |   "bind"! bindExpr
-            |   "var"! bindExpr
+            | binder (   ":="! assign {##=#([DefineExpr],##);}
+                    |   objectExpr  {##=#([ObjectExpr],##);}
+                    )
+            | varNamer (   ":="! assign {##=#([DefineExpr],##);}
+                |   objectExpr            {##=#([ObjectExpr],##);}
+                )
             ;
 
 bindExpr:       bindName //(":"! guard)?
@@ -259,10 +311,11 @@ bindExpr:       bindName //(":"! guard)?
                 )
             ;
 
-defPatt:        (         {##.setType(FinalPattern);}
-                | "var"   {##.setType(VarPattern);}
-                | "bind"  {##.setType(BindPattern);}  )
-                (nounExpr | "_" | STRING)
+defPatt:        (nounExpr       {##.setType(FinalPattern);}
+                | "_"           {##.setType(IgnorePattern);}
+                | STRING        {##.setType(STRING);}  // TODO correct type?
+                | "var" nounExpr  {##.setType(VarPattern);}
+                | "bind" nounExpr {##.setType(BindPattern);}  )
             ;
 
 // minimize the look-ahead for objectExpr
@@ -289,7 +342,7 @@ objName:        nounExpr         {##=#([FinalPattern],##);}
             |   "bind"^ noun     {##.setType(BindPattern);}
             |   "var"^ nounExpr  {##.setType(VarPattern);}
             |   "&"^ nounExpr    {##.setType(SlotPattern);}
-            |   STRING           {##=#([LiteralPattern],##);}
+            |   STRING           {##=#([LiteralExpr],##);}
             ;
 
 //TODO MARK: what is typeParams for?  it appears to come right after "def name"
@@ -387,7 +440,7 @@ assign:         cond
                 |   assignOp assign               {##=#([AssignExpr], ##);}
                 |   verb "="!   // deal with deprecated single case
                     ( ("(")=> parenArgs
-                     | assign {warn("Parentheses expected on verb= argument");})
+                     | assign warn["Parentheses expected on verb= argument"]!)
                     {##=#([AssignExpr], ##);}
                 )?
             |   docoDef
@@ -402,8 +455,8 @@ ejector:        (   "break"^         {##.setType(BreakExpr);}
                 |   "continue"^      {##.setType(ContinueExpr);}
                 |   "return"^        {##.setType(ReturnExpr);}
                 ) (("(" ")") => "(" ")" | assign | )
-            |   "^"^ assign          {##.setType(ReturnExpr);
-                                      warn("Smalltalk-style '^' deprecated");}
+            |   "^"^ assign          {##.setType(ReturnExpr);}
+                                     warn["Smalltalk-style '^' deprecated"]!
             ;
 
 // || is don't-care associative
@@ -507,14 +560,14 @@ prim:           literal
             |   quasiString              {##=#([QuasiLiteralExpr,"simple"],
                                                [STRING,"simple"],##);}
             |   URI                      {##=#([URIExpr],##);}
-            |   URIStart add ">"!        {##=#([URIExpr],##);
-                                          warn("computed URIExpr is deprecated");}
+            |   URIStart add ">"!        {##=#([URIExpr],##);}
+                                         warn["computed URIExpr is deprecated"]!
             //|   "<"^ nounExpr (":"! add)? ">"! {##.setType(URIExpr);}
             |   "["^
                 (   (eExpr br "=>") => mapList  {##.setType(MapExpr);}
                 |   argList                     {##.setType(TupleExpr);}
                 )  "]"!
-            |   body          {##=#([HideExpr],##);} {warn("hide deprecated");}
+            |   body          {##=#([HideExpr],##);} warn["hide deprecated"]!
             ;
 
 mapList:    (map br (","! mapList)?)?   ;
@@ -534,7 +587,7 @@ verb:           IDENT | STRING  ;
 
 literal:    STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL  ;
 
-noun:       IDENT  |  "::"^ {pocketNounString}? (STRING | IDENT) ;
+noun:       IDENT  |  "::"^ pocket["noun-string"]! (STRING | IDENT) ;
 
 // a valid guard is an identifier, and guard followed by [argList], or parenExpr
 guard:      (nounExpr | parenExpr)
