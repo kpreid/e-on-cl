@@ -471,6 +471,19 @@ XXX make precedence values available as constants"
 
 ; --- Parsing ---
 
+(defun compute-antlr-class-location ()
+  ;; xxx look into making this cleaner
+  (make-pathname
+    :name nil
+    :type nil
+    :version nil
+    :defaults (first (asdf:output-files (make-instance 'asdf:compile-op) 
+                                        (asdf:find-component
+                                          (asdf:find-component
+                                            +the-asdf-system+
+                                            "antlr")
+                                          "e")))))
+
 (defvar *parse-cache-hash* (make-hash-table :test #'equal))
 
 (defvar *parser-process*)
@@ -484,7 +497,7 @@ XXX make precedence values available as constants"
     (list "rune"
           "-J-XX:ThreadStackSize=10240"
           "-cpa" (namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
-          "-cpa" (namestring (merge-pathnames #P"antlr/" (asdf:component-pathname +the-asdf-system+)))
+          "-cpa" (namestring (compute-antlr-class-location))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
           "-") 
@@ -814,6 +827,7 @@ XXX make precedence values available as constants"
   (e. *b* |sequence| (map 'vector #'build-antlr-nodes ast-nodes)))
 
 (defun unwrap-noun (noun)
+  "uses of this are places where there are IDENTs that aren't NounExprs"
   (check-type noun |NounExpr|)
   (first (node-elements noun)))
 
