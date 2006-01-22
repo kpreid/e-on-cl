@@ -74,9 +74,11 @@ tokens {
     IfExpr;
     ForExpr;
     WhenExpr;
-    AndExpr;
-    OrExpr;
     CoerceExpr;
+    CompareExpr;
+    SameExpr;
+    ConditionalExpr;
+    PrefixExpr;
     LiteralExpr;
     MatchBindExpr;
     NounExpr;
@@ -164,6 +166,10 @@ public void reportWarning(String s) {
     } catch (TokenStreamException t) {
         System.err.println("warning: " + s);
     }
+}
+public void reportError(RecognitionException ex) {
+    super.reportError(ex);
+    throw new RuntimeException(ex);
 }
 
 // pocket mechanisms: add a boolean, and test in the grammar with {foo}?
@@ -406,7 +412,7 @@ imethHead:           mtypes resultGuard
 // The current E grammar only let's you put these in a few places.
 doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;
 
-body:           "{"! (seq)? "}"! ;
+body:       "{"! (seq)? "}"! ;
 
 // rules for expressions follow the pattern:
 //   thisLevelExpression :  nextHigherPrecedenceExpression
@@ -445,31 +451,32 @@ ejector:        (   "break"^         {##.setType(BreakExpr);}
             ;
 
 // || is don't-care associative
-cond:           condAnd ("||"^ condAnd  {##.setType(OrExpr);})*
+cond:           condAnd ("||"^ condAnd  {##.setType(ConditionalExpr);})*
             ;
 // && is don't-care associative
-condAnd:        logical ("&&"^ logical  {##.setType(AndExpr);})*
+condAnd:        logical ("&&"^ logical  {##.setType(ConditionalExpr);})*
             ;
 
 // ==, !=, &, |, ^, =~, and !~ are all non associative with each
 // other.  & and |, normally used for associative operations, are each
 // made associative with themselves. None of the others even associate
 // with themselves. Perhaps ^ should?
+// SameExpr, BinaryExpr, CompareExpr, CoerceExpr
 logical:        order
-                (   (   "==" order
-                    |   "!=" order
-                    |   "&!" order
-                    |   "=~" pattern
-                    |   "!~" pattern
-                    ) {##=#([CallExpr],##);}
-                |   ({##=#([CallExpr],##);}  "^" order)+
-                |   ({##=#([CallExpr],##);}  "&" order)+
-                |   ({##=#([CallExpr],##);}  "|" order)+
+                (   "=="^ order      {##.setType(SameExpr);}
+                |   "!="^ order      {##.setType(SameExpr);}
+                |   "&!"^ order      {##.setType(BinaryExpr);}
+                |   "=~"^ pattern    {##.setType(MatchBindExpr);}
+                |   "!~"^ pattern    {##.setType(MatchBindExpr);}
+                |   ("^"^ {##.setType(BinaryExpr);} order)+
+                |   ("&"^ {##.setType(BinaryExpr);} order)+
+                |   ("|"^ {##.setType(BinaryExpr);} order)+
                 )?   //optional
             ;
 
 order:          interval
-                (   compareOp interval {##=#([CallExpr], ##);}
+                (   o:compareOp! interval
+                      {##=#(o, ##);}{##.setType(CompareExpr);}
                 |   ":"^ guard      {##.setType(CoerceExpr);}
                 |   )  // empty
             ;
@@ -479,19 +486,20 @@ order:          interval
 compareOp:        "<" | "<=" | "<=>" | ">=" | ">" br ;
 
 // .. and ..! are both non-associative (no plural form)
-interval:       shift ({##=#([CallExpr],##);}   (".." | "..!") shift)?  ;
+interval:       shift ((".."^ | "..!"^) {##.setType(BinaryExpr);} shift)?  ;
 
 // << and >> are left-associative (no plural form)
-shift:          add ({##=#([CallExpr],##);}     ("<<" | ">>") add)*   ;
+shift:          add (("<<"^ | ">>"^) {##.setType(BinaryExpr);} add)*   ;
 
 //+ and - are left associative
-add:            mult ({##=#([CallExpr],##);}    ("+" | "-") mult)*   ;
+add:            mult (("+"^ | "-"^) {##.setType(BinaryExpr);} mult)*   ;
 
 // *, /, //, %, and %% are left associative
-mult:           pow ({##=#([CallExpr],##);} ("*" | "/" | "//" | "%" | "%%") pow)* ;
+mult:           pow (("*"^ | "/"^ | "//"^ | "%"^ | "%%"^) pow
+                    {##.setType(BinaryExpr);}   )* ;
 
 // ** is non-associative
-pow:            prefix ("**" prefix     {##=#([CallExpr], ##);}    )?  ;
+pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;
 
 // Unary prefix !, ~, &, *, and - are non-associative.
 // Unary prefix !, ~, &, and * bind less tightly than unary postfix.
@@ -503,8 +511,8 @@ pow:            prefix ("**" prefix     {##=#([CallExpr], ##);}    )?  ;
 //      (-3).pow(2)  or -(3.pow(2))
 // to disambiguate which you mean.
 prefix:         postfix
-            |!  op:prefixOp  a:postfix          {##=#([CallExpr],a,op);}
-            |!  neg:"-" b:prim                  {##=#([CallExpr],b,neg);}
+            |!  prefixOp  postfix   {##=#([PrefixExpr],##);}
+            |!  "-" prim            {##=#([PrefixExpr],##);}
             ;
 
 prefixOp:     ("!" | "~" | "&" | "*" | "+") ;
@@ -572,13 +580,13 @@ literal:    (STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL)
 
 // a valid guard is an identifier, and guard followed by [argList], or parenExpr
 guard:      (nounExpr | parenExpr)
-                    ("["
-                        // TODO straighten out this map reference
-                      ( (eExpr "=>") => eExpr "=>" eExpr br {##.setType(MapExpr);}
-                        |   ("=>") => "=>" eExpr br         {##.setType(MapExpr);}
-                        |   argList                         {##.setType(TupleExpr);}
-                      ) "]"!)*
-            ;
+            ("["
+                // TODO straighten out this map reference
+              ( (eExpr "=>") => eExpr "=>" eExpr br {##.setType(MapExpr);}
+                |   ("=>") => "=>" eExpr br         {##.setType(MapExpr);}
+                |   argList                         {##.setType(TupleExpr);}
+              ) "]"!)*
+    ;
 
 catcher:        "catch"^ pattern body ;
 
@@ -617,7 +625,7 @@ namePatt:       nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
             |   binder
             |   varNamer
             |   slotNamer
-            ; // STRING???
+            ;
 
 noun:       IDENT                           {##=#([NounExpr],##);}
             |  "::"^ pocket["noun-string"]!
