@@ -511,11 +511,11 @@ pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;
 //      (-3).pow(2)  or -(3.pow(2))
 // to disambiguate which you mean.
 prefix:         postfix
-            |!  prefixOp  postfix   {##=#([PrefixExpr],##);}
-            |!  "-" prim            {##=#([PrefixExpr],##);}
+            |  "&"!  postfix                        {##=#([SlotExpr],##);}
+            |  ("!" | "~" | "*" | "+")  postfix    {##=#([PrefixExpr],##);}
+            |  "-" prim                            {##=#([PrefixExpr],##);}
             ;
 
-prefixOp:     ("!" | "~" | "&" | "*" | "+") ;
 // Calls and sends are left associative.
 postfix:        call
             // TODO deal with properties
