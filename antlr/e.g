@@ -131,6 +131,7 @@ tokens {
     WhenFn;
     Implements;
     Extends;
+    Absent;
 
     //for lexer
     HEX;
@@ -366,7 +367,7 @@ patternList:    (pattern (","! patternList)?)? ;
 
 // ("throws" guardList)? ;
  //TODO what's the right default for a missing guard?
-resultGuard:    ":"! guard | {##=#([NounExpr]);} ;
+resultGuard:    ":"! guard | {##=#([Absent]);} ;
 
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
