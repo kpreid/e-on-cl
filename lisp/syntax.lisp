@@ -699,7 +699,8 @@ XXX make precedence values available as constants"
   (:|vTable| (opt-methods matchers)
     ;; XXX "vTable" is a lousy name
     (make-instance '|EScript| :elements (list opt-methods matchers)))
-  (:|object| (doc-comment qualified-name auditors script)
+  (:|object| (doc-comment qualified-name parent auditors script)
+    (assert (null parent))
     (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditors script)))
   (:|doMeta| (keyword verb args)
     (declare (ignorable args))
@@ -721,11 +722,9 @@ XXX make precedence values available as constants"
     (mn '|CallExpr|
       (mn '|NounExpr| "E")
       "send"
-      (make-instance '|CallExpr| :elements (list* (mn '|NounExpr| "__makeList") "run" r v (coerce a 'list)))))
-  (:|forward| (pattern) 
-    (e-coercef pattern '|FinalPattern|)
-    (assert (null (second (node-elements pattern))))
-    (let* ((noun (first (node-elements pattern)))
+      (make-instance '|CallExpr| :elements (list* (mn '|NounExpr| "__makeList") "run" r (mn '|LiteralExpr| v) (coerce a 'list)))))
+  (:|forward| (noun-string) 
+    (let* ((noun (mn '|NounExpr| noun-string))
            (resolver-noun (noun-to-resolver-noun noun)))
       (make-instance '|SeqExpr| :elements (list
         (make-instance '|DefineExpr| :elements (list 
@@ -823,9 +822,20 @@ XXX make precedence values available as constants"
     ;; XXX handle bindings
     (mn '|IfExpr| left (mn '|NounExpr| "true") right))))
 
-(defun antlr-root (ast-nodes)
-  (e. *b* |sequence| (map 'vector #'build-antlr-nodes ast-nodes)))
+(defun is-an-expr (expr)
+  ;; XXX in the presence of arbitrary builders this isn't actually always expected
+  (if (typep expr '|EExpr|)
+    expr
+    (error "Non-expression ~S leaked out of antlr builder" expr)))
 
+(defun antlr-root (ast-nodes)
+  (e. *b* |sequence| (map 'vector #'is-an-expr (map 'vector #'build-antlr-nodes ast-nodes))))
+
+(defun unwrap-noun (string) 
+  "defunct stub"
+  string)
+
+#+(or)
 (defun unwrap-noun (noun)
   "uses of this are places where there are IDENTs that aren't NounExprs"
   (check-type noun |NounExpr|)
@@ -839,14 +849,14 @@ XXX make precedence values available as constants"
       (case tag
         ((e.grammar::|DOC_COMMENT|) (e. *b* |null|))
         ;; GRUMBLE: nouns should be wrapped so that I can apply this to only nouns and not general identifiers (like verbs)
-        ((e.grammar::|IDENT|) (e. *b* |_noun| text))
-        ((e.grammar::|INT|) (e. *b* |literal| (read-from-string text)))
-        ((e.grammar::|FLOAT64|) (e. *b* |literal| (let ((*read-default-float-format* 'double-float)) (read-from-string text)) #| XXX implement actual E float syntax|#))
+        ((e.grammar::|IDENT|) text)
+        ((e.grammar::|INT|) (read-from-string text))
+        ((e.grammar::|FLOAT64|) (let ((*read-default-float-format* 'double-float)) (read-from-string text) #| XXX implement actual E float syntax|#))
         ((e.grammar::|STRING|)
           (cond
             ((eql (aref text 0) #\" #|"|#)
               ;; XXX this is wrong; we need to use real E \ syntax
-              (e. *b* |literal| (read-from-string text)))
+              (read-from-string text))
             ((member text '("run" "get" "simple") :test #'string=) 
               ;; GRUMBLE: the parser should produce STRING nodes that are either
               ;; all quoted or all unquoted, not a mixture
@@ -854,7 +864,7 @@ XXX make precedence values available as constants"
             (t
               (error "bad STRING: ~S" text))))
         ((e.grammar::|CHAR_LITERAL|) 
-          (e. *b* |literal| (aref text (- (length text) 2))))
+          (aref text (- (length text) 2)))
         ((e.grammar::|LiteralPattern|)
           ;; XXX the name LiteralPattern is utterly unrelated to reality: this is actually the FQN field in non-define-sugared ObjectExprs
           text)
@@ -863,14 +873,30 @@ XXX make precedence values available as constants"
         ((e.grammar::|"!"|)
           (e. *b* |unaryVerb| (subseq (symbol-name tag) 1 (1- (length (symbol-name tag))))))
         ((e.grammar::|URI|) text)
-        ((e.grammar::|List|) out-children)
-        ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|) 
+        ((e.grammar::|List| e.grammar::|Extends| e.grammar::|Implements|) out-children)
+        ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|)
+          ;; XXX review these nodes; some of them are not being generated any more 
           (assert (null out-children))
           tag)
-        ((e.grammar::|"=~"| e.grammar::|"!~"| e.grammar::|"_"| e.grammar::|".."| e.grammar::|"=="| e.grammar::|"!="|) tag)
+        ((e.grammar::|"=~"| e.grammar::|"!~"| e.grammar::|"_"| e.grammar::|".."| e.grammar::|"=="| e.grammar::|"!="| e.grammar::|"<=>"|  e.grammar::|"<"| e.grammar::|"<="| e.grammar::|">"| e.grammar::|">="| e.grammar::|"=>"|) 
+          (assert (null out-children))
+          tag)
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
             (list pattern body)))
+        
+        (e.grammar::|"interface"|
+          (e. *b* |interface| #|...|#))
+        (e.grammar::|"for"|
+          (e. *b* |for| #|...|#))
+        
+        (e.grammar::|LiteralExpr|
+          (destructuring-bind (sub) out-children
+            (e. *b* |literal| sub)))
+        (e.grammar::|NounExpr|
+          (destructuring-bind (sub) out-children
+            (e. *b* |_noun| sub)))
+        
         (e.grammar::|AssignExpr|
           ;; GRUMBLE: updates should have a separate node type
           (ecase (length out-children)
@@ -895,7 +921,8 @@ XXX make precedence values available as constants"
                                    e.grammar::|"!~"|
                                    e.grammar::|".."|
                                    e.grammar::|"..!"|
-                                   e.grammar::|"=="|)
+                                   e.grammar::|"=="|
+                                   e.grammar::|"!="|)
                                          '#:meaningless))))
               (cond 
                 ((member r '(e.grammar::|"meta"| e.grammar::|"pragma"|))
@@ -934,18 +961,22 @@ XXX make precedence values available as constants"
           (destructuring-bind (expr guard) out-children
             (e. *b* |cast| expr guard)))
         (e.grammar::|DefineExpr|
-          (if (= 1 (length out-children))
-            (destructuring-bind (pattern) out-children
-              (e. *b* |forward| pattern))
-            (destructuring-bind (l r &optional guard) out-children
-              (e. *b* |define| l r guard))))
+          (destructuring-bind (l r &optional guard) out-children
+            (e. *b* |define| l r guard)))
         (e.grammar::|EscapeExpr|
           ;; GRUMBLE: an empty body makes the parser return only the pattern node - it should return an "empty-body node" or some such instead
           (destructuring-bind (patt &optional (body (e. *b* |null|)) ((catch-patt catch-body) '(nil nil))) out-children
             (e. *b* |escape| patt body catch-patt catch-body)))
+        (e.grammar::|ForwardExpr|
+          (destructuring-bind (noun-expr) out-children
+            (e. *b* |forward| (first (node-elements noun-expr)))))
         (e.grammar::|HideExpr|
           (destructuring-bind (sub) out-children
             (e. *b* |hide| sub)))
+        (e.grammar::|MetaContextExpr|
+          (e. *b* |doMeta| "meta" "context" #()))
+        (e.grammar::|MetaStateExpr|
+          (e. *b* |doMeta| "meta" "getState" #()))
         (e.grammar::|IfExpr|
           (e-call *b* "if" out-children))
         (e.grammar::|TupleExpr|
@@ -977,26 +1008,39 @@ XXX make precedence values available as constants"
         (e.grammar::|URIExpr| (e. *b* |uriExpr| (first out-children)))
         (e.grammar::|SeqExpr| (e. *b* |sequence| (coerce out-children 'vector)))
         ((e.grammar::|ObjectExpr|)
-          (destructuring-bind (qualified-name script) out-children
-            (e. *b* |object| "" qualified-name #() script)))
+          (ecase (length out-children)
+            (2 (destructuring-bind (qualified-name (extends implements script)) out-children
+                 (e. *b* |object| "" qualified-name extends (coerce implements 'list) script)))
+            (4 (destructuring-bind (qname-thing params result-guard body) out-children
+                 ;; GRUMBLE: this should either be a separate node type, or a *method* node should take the place of the script node
+                 (e. *b* |object| "" qname-thing #() (e. *b* |vTable| (vector (e. *b* |to| "" (e. *b* |methHead| "run" (coerce params 'vector) result-guard) body)) #()))))))
         ((e.grammar::|EScript|)
-          (let ((todo out-children)
-                methods
-                matchers)
-            (loop while (typep (first todo) '|EMethod|) do
-              (push (pop todo) methods))
-            (loop while (typep (first todo) '|EMatcher|) do
-              (push (pop todo) matchers))
-            (when todo
-              (error "unexpected element type or misplaced method in EScript: ~S remaining (whole is ~S)" todo out-children))
-            (e. *b* |vTable| (coerce (nreverse methods) 'vector)
-                             (coerce (nreverse matchers) 'vector))))
+          (destructuring-bind (extends implements todo) out-children
+            (let ((methods '())
+                  (matchers '()))
+              (loop while (typep (first todo) '|EMethod|) do
+                (push (pop todo) methods))
+              (loop while (typep (first todo) '|EMatcher|) do
+                (push (pop todo) matchers))
+              (when todo
+                (error "unexpected element type or misplaced method in EScript: ~S remaining (whole is ~S)" todo out-children))
+              (list extends
+                    implements
+                    (e. *b* |vTable| (coerce (nreverse methods) 'vector)
+                                     (coerce (nreverse matchers) 'vector))))))
         ((e.grammar::|EMethod|)
-          (destructuring-bind (doc-comment verb-ident param-list return-guard body) out-children
-            (assert (member text '("to" "method") :test #'string=))
-            (e-call *b* text (list doc-comment
-                                   (e. *b* |methHead| (unwrap-noun verb-ident) (coerce param-list 'vector) return-guard)
-                                   body))))
+          (let ((doc-comment ""))
+            (when (eql (caaar in-children) '|DOC_COMMENT|)
+              ;; ick
+              (setf doc-comment (cadar (pop in-children))))
+            (destructuring-bind (verb-ident param-list return-guard body) out-children
+              (when (string= text "fn")
+                ;; xxx crude
+                (setf text "to"))
+              (assert (member text '("to" "method") :test #'string=))
+              (e-call *b* text (list doc-comment
+                                     (e. *b* |methHead| (unwrap-noun verb-ident) (coerce param-list 'vector) return-guard)
+                                     body)))))
         (otherwise
           (cond
             ((and (string= (aref (symbol-name tag) 0) "\"") 
