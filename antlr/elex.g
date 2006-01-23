@@ -52,6 +52,12 @@ tokens {
         super.newline();
     }
     //public void traceIn(String rname) throws CharStreamException {    }
+    private String unicodeChar(Token s) {
+        return String.valueOf((char) Integer.parseInt(s.getText(), 16));
+    }
+    private String octalChar(Token s) {
+        return String.valueOf((char) Integer.parseInt(s.getText(), 8));
+    }
 }
 
 // OPERATORS
@@ -136,7 +142,7 @@ GT:                  '>'    ( // {isFirstInLine}? SKIPLINE
 
 LT:                  ('<'  IDENT ('>' | ':')) =>
                       '<'! IDENT ( '>'! {$setType(URIGetter);}
-                                 | ':' (    (ANYWS)=> BR {$setType(URIStart);}
+                                 | ':'! (    (ANYWS)=> BR {$setType(URIStart);}
                                        |   URI '>'!  {$setType(URI);}))
                 |    '<' BR ;
 
@@ -188,13 +194,13 @@ DOC_COMMENT
 
 
 // character literals
-CHAR_LITERAL    :    '\'' ( ESC | ~('\''|'\n'|'\r'|'\\') ) '\''   ;
+CHAR_LITERAL:    '\''! ( ESC | ~('\''|'\n'|'\r'|'\\') ) '\''!   ;
 
 // string literals
-STRING: '"' (   ESC
+STRING: '"'! (   ESC
             |   EOL
             |    ~('"'|'\\'|'\n'|'\r')
-        )* '"'  ;
+        )* '"'!  ;
 
 // escape sequence -- note that this is protected; it can only be called
 //   from another lexer rule -- it will not ever directly return a token to
@@ -205,43 +211,42 @@ STRING: '"' (   ESC
 // right thing by matching immediately; hence, it's ok to shut off
 // the FOLLOW ambig warnings.
 protected
-ESC     {int ifWhitespace = text.length();} // to ignore escaped whitespace
-    :   '\\'
-        (    'n'
-        |    'r'
-        |    't'
-        |    'b'
-        |    'f'
-        |    '"'
-        |    '?'
-        |    '\''
-        |    '\\'
-        |    ('u')+ HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
-        |    '0'..'3'
-            (
-                options {
-                    warnWhenFollowAmbig = false;
-                }
-            :    '0'..'7'
-                (
-                    options {
-                        warnWhenFollowAmbig = false;
-                    }
-                :    '0'..'7'
-                )?
-            )?
-        |    '4'..'7'
-            (
-                options {
-                    warnWhenFollowAmbig = false;
-                }
-            :    '0'..'7'
-            )?
-        | (' '|'\t'|'\f')* EOL
-            ({text.setLength(ifWhitespace);}:)//ignores the ecaped whitespace
+ESC:   '\\'!
+        (  (!    'n'        {$setText("\n");}
+            |    'r'        {$setText("\r");}
+            |    't'        {$setText("\t");}
+            |    'b'        {$setText("\b");}
+            |    'f'        {$setText("\f");}
+            |    '"'        {$setText("\"");}
+            |    '?'        {$setText("?");}
+            |    '\''       {$setText("'");}
+            |    '\\'       {$setText("\\");}
+            )
+        |!  u:ESC_UNICODE   {$setText(unicodeChar(u));}
+        |   o:ESC_OCTAL     {$setText(octalChar(o));}
+        |! (' '|'\t'|'\f')* EOL
         )
 ;
 
+protected
+ESC_UNICODE:    ('u')+! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT ;
+
+protected
+ESC_OCTAL:  '0'..'3'
+                ( options { warnWhenFollowAmbig = false; }
+                :    '0'..'7'
+                    (
+                        options {
+                            warnWhenFollowAmbig = false;
+                        }
+                    :    '0'..'7'
+                    )?
+                )?
+            |   '4'..'7'
+                ( options { warnWhenFollowAmbig = false; }
+                :    '0'..'7'
+                )?
+            ;
 
 // hexadecimal digit
 protected
@@ -255,8 +260,8 @@ IDENT       options {testLiterals=true;}
             ;
 
 // a numeric literal
-INT:            ("0x") => "0x" (HEX_DIGIT)+ { $setType(HEX); }
-            |   ('0' ('0'..'9')) => ('0'..'7')+  { $setType(OCTAL); }
+INT:            ("0x") => "0x"! (HEX_DIGIT)+ { $setType(HEX); }
+            |   ('0' ('0'..'9')) => '0'! ('0'..'7')+  { $setType(OCTAL); }
             |   (FLOAT64) => FLOAT64  { $setType(FLOAT64); }
             |   POSINT
             ;

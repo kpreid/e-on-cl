@@ -199,7 +199,8 @@ pocket![String key]: {
 } ;
 
 setPocket![Token key, String value]: {
-    myPocket.put(key.getText().substring(1, key.getText().length()-1), value);
+    //myPocket.put(key.getText().substring(1, key.getText().length()-1), value);
+    myPocket.put(key.getText(), value);
     if (false) {throw new RecognitionException("warn");}
 } ;
 
