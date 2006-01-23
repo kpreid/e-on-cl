@@ -211,7 +211,16 @@
                (declare (ignorable ,catch-value-var))
                ,(sequence-to-form 
                   (with-nested-scope-layout (layout)
-                    (append (updating-sequence-patt opt-catch-pattern layout catch-value-var nil)
+                    (append (updating-sequence-patt 
+                              opt-catch-pattern 
+                              layout
+                              catch-value-var
+                              `(eject-function 
+                                 ',(format nil "~A catch block pattern" 
+                                               (pattern-opt-noun ejector-patt)) 
+                                 (lambda (v) 
+                                   (declare (ignore v))
+                                   (return-from ,outer-block ,catch-value-var))))
                             (updating-sequence-expr opt-catch-body layout result)))
                   result))
              (body-form outer-block))))))

@@ -174,6 +174,16 @@ EscapeExpr
   ? escape ej {print(ej)}
   # stdout: <ej ejector>
 
+ catch pattern's failure behavior '
+  ? escape x { x(1) } catch y :nullOk { [y] }
+  # value: 1
+  
+ catch pattern executes after unwinding
+  ? escape x { try { x(1) } finally { print("bye!") } } catch y ? (print("hi!"); true) { [y] }
+  # stdout: bye!hi!
+  
+  # value: [1]
+
 EscapeExpr with catch
 
   ? escape x { 50 } catch v { v + 51 }
