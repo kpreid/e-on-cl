@@ -169,6 +169,7 @@
   (let ((parts '()))
     (funcall iter
       (efun (k part)
+        (declare (ignore k))
         (if parts
           (let ((coalesced (coalesce (first parts) part)))
             (if coalesced
@@ -195,8 +196,12 @@
   (:|__optUncall| (this)
     (with-slots (parts) this
       (vector +the-make-twine+ "fromParts" (vector (coerce parts 'vector)))))
-  (:|isBare| (this) +e-false+)
-  (:|getOptSpan| (this) nil)
+  (:|isBare| (this) 
+    (declare (ignore this))
+    +e-false+)
+  (:|getOptSpan| (this) 
+    (declare (ignore this))
+    nil)
   (:|getParts| (this) (coerce (slot-value this 'parts) 'vector)))
 
 

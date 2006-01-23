@@ -441,14 +441,18 @@ If there is no current vat at initialization time, captures the current vat at t
       (label vat)
       (vat-in-turn vat))))
 
-(defmethod enqueue-turn ((runner runner) fun)
-  ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
-  (enqueue (slot-value runner 'sends) fun))
+(defgeneric enqueue-turn (context function))
 
-(defmethod enqueue-turn ((vat vat) fun)
+(defmethod enqueue-turn ((runner runner) function)
+  ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
+  (enqueue (slot-value runner 'sends) function))
+
+(defmethod enqueue-turn ((vat vat) function)
   (enqueue-turn (vat-runner vat)
                 (lambda ()
-                  (call-with-turn fun vat))))
+                  (call-with-turn function vat))))
+
+(defgeneric vr-add-io-handler (context target direction function))
 
 (defmethod vr-add-io-handler ((runner runner) target direction function)
   (add-exclusive-io-handler (handler-exclusion-group runner)
@@ -506,6 +510,8 @@ If there is no current vat at initialization time, captures the current vat at t
         (progn
           (funcall (dequeue sends))
           (serve-event-with-time-queue time-queue sends 0))))))
+
+(defgeneric enqueue-timed (context time func))
 
 (defmethod enqueue-timed ((runner runner) time func)
   (with-slots (time-queue) runner
@@ -1261,3 +1267,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (defun eeq-is-settled (a)
   (eeq-sameness-fringe a nil))
 
+;;; --- functions that might be referenced before they're defined in the elib package ---
+
+(declaim (ftype (function (t) t) type-specifier-to-guard))

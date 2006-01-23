@@ -9,6 +9,7 @@
 (defgeneric compute-node-static-scope (node))
 (defgeneric opt-node-property-getter (node field-keyword))
 (defgeneric node-visitor-arguments (node))
+(defgeneric node-class-arity (node-class))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
 (defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
