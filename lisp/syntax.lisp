@@ -676,8 +676,10 @@ XXX make precedence values available as constants"
   (:|literal| (value)
     "XXX interface doc says 'tokenOrData'"
     (make-instance '|LiteralExpr| :elements (list value)))
-  (:|matchBind| (specimen pattern)
-    (make-instance '|MatchBindExpr| :elements (list specimen pattern)))
+  (:|matchBind| (specimen pattern invert)
+     (if (e-is-true invert)
+      (mn '|CallExpr| (e. *b* |matchBind| specimen pattern +e-false+) "not")
+      (make-instance '|MatchBindExpr| :elements (list specimen pattern))))
   (:|sequence| (subs)
     (e-coercef subs 'vector)
     (make-instance '|SeqExpr| :elements (coerce subs 'list)))
@@ -701,7 +703,12 @@ XXX make precedence values available as constants"
     (make-instance '|EScript| :elements (list opt-methods matchers)))
   (:|object| (doc-comment qualified-name parent auditors script)
     (assert (null parent))
-    (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditors script)))
+    (etypecase (ref-shorten qualified-name)
+      (string
+        (mn '|ObjectExpr| doc-comment qualified-name auditors script))
+      (|Pattern|
+        ;; non-kernel
+        (mn '|DefineExpr| qualified-name (mn '|ObjectExpr| doc-comment (concatenate 'string "$" (or (pattern-opt-noun qualified-name) "_")) auditors script) nil))))
   (:|doMeta| (keyword verb args)
     (declare (ignorable args))
     (ecase (intern keyword :keyword)
@@ -787,16 +794,18 @@ XXX make precedence values available as constants"
     (if (e-is-true invert)
       (mn '|CallExpr| (e. *b* |same| left right +e-false+) "not")
       (mn '|CallExpr| (mn '|NounExpr| "__equalizer") "sameEver" left right)))
+  (:|compare| (op left right)
+    (mn '|CallExpr| (mn '|NounExpr| "__comparer") op left right))
   (:|return| (value)
     (mn '|CallExpr| (mn '|NounExpr| "__return") "run" value))
 
   (:|unaryVerb| (op)
-    (case (intern op :keyword)
+    (case (find-symbol op :keyword)
       (:! "not")
       (:~ "complement")
       (otherwise op)))
   (:|binaryVerb| (op)
-    (case (intern op :keyword)
+    (case (find-symbol op :keyword)
       (:+ "add")
       (:- "subtract")
       (:* "multiply")
@@ -806,6 +815,14 @@ XXX make precedence values available as constants"
       (:%% "remainder")
       (:& "and")
       (:\| "or")
+      (otherwise op)))
+  (:|compareVerb| (op)
+    (case (find-symbol op :keyword)
+      (:<=> "asBigAs")
+      (:< "lessThan")
+      (:<= "ltEq")
+      (:> "greaterThan")
+      (:>= "gtEq")
       (otherwise op)))
   (:|to| (doc msg-patt body)
     ;; XXX entirely wrong
@@ -853,27 +870,24 @@ XXX make precedence values available as constants"
         ((e.grammar::|INT|) (read-from-string text))
         ((e.grammar::|FLOAT64|) (let ((*read-default-float-format* 'double-float)) (read-from-string text) #| XXX implement actual E float syntax|#))
         ((e.grammar::|STRING|)
-          (cond
-            ((eql (aref text 0) #\" #|"|#)
-              ;; XXX this is wrong; we need to use real E \ syntax
-              (read-from-string text))
-            ((member text '("run" "get" "simple") :test #'string=) 
-              ;; GRUMBLE: the parser should produce STRING nodes that are either
-              ;; all quoted or all unquoted, not a mixture
-              text)
-            (t
-              (error "bad STRING: ~S" text))))
+          (assert (null out-children))
+          text)
         ((e.grammar::|CHAR_LITERAL|) 
-          (aref text (- (length text) 2)))
+          (assert (null out-children))
+          (destructuring-bind (character) (coerce text 'list)
+            character))
         ((e.grammar::|LiteralPattern|)
           ;; XXX the name LiteralPattern is utterly unrelated to reality: this is actually the FQN field in non-define-sugared ObjectExprs
           text)
         ((e.grammar::|"&"| e.grammar::|"-"| e.grammar::|"+"| e.grammar::|"*"| e.grammar::|"/"| e.grammar::|"//"| e.grammar::|"%"| e.grammar::|"%%"|) 
           (e. *b* |binaryVerb| (subseq (symbol-name tag) 1 (1- (length (symbol-name tag))))))
-        ((e.grammar::|"!"|)
-          (e. *b* |unaryVerb| (subseq (symbol-name tag) 1 (1- (length (symbol-name tag))))))
+        ((e.grammar::|"!"| e.grammar::|"~"|)
+          (assert (null out-children))
+          (symbol-name tag))
         ((e.grammar::|URI|) text)
         ((e.grammar::|List| e.grammar::|Extends| e.grammar::|Implements|) out-children)
+        (e.grammar::|Absent|
+          nil)
         ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|)
           ;; XXX review these nodes; some of them are not being generated any more 
           (assert (null out-children))
@@ -909,6 +923,20 @@ XXX make precedence values available as constants"
                    (string (subseq op (1- (length op))))
                    (|NounExpr| (unwrap-noun op))) 
                  r)))))
+                 
+        ((e.grammar::|BinaryExpr|)
+          (destructuring-bind (left &rest rights) out-children
+            (e. *b* |call| left (e. *b* |binaryVerb| text) (coerce rights 'vector))))
+        ((e.grammar::|CompareExpr|)
+          (destructuring-bind (left right) out-children
+            (e. *b* |compare| (e. *b* |compareVerb| text) left right)))
+
+        ((e.grammar::|SameExpr|)
+          (destructuring-bind (left right) out-children
+            (e. *b* |same| left right (ecase (find-symbol text :keyword)
+                                        (:!= +e-true+)
+                                        (:== +e-false+)))))
+            
         ((e.grammar::|CallExpr| e.grammar::|"."|)
           ;; GRUMBLE: shouldn't need to match "."
           ;; GRUMBLE: things like + == ..! should be reported as 'binary operator', not same as CallExpr
@@ -917,12 +945,8 @@ XXX make precedence values available as constants"
                           (|NounExpr|    (unwrap-noun verboid))
                           (|LiteralExpr| (first (node-elements verboid)))
                           (string        verboid)
-                          ((member e.grammar::|"=~"|
-                                   e.grammar::|"!~"|
-                                   e.grammar::|".."|
-                                   e.grammar::|"..!"|
-                                   e.grammar::|"=="|
-                                   e.grammar::|"!="|)
+                          ((member e.grammar::|".."|
+                                   e.grammar::|"..!"|)
                                          '#:meaningless))))
               (cond 
                 ((member r '(e.grammar::|"meta"| e.grammar::|"pragma"|))
@@ -930,18 +954,12 @@ XXX make precedence values available as constants"
                     (subseq (symbol-name r) 1 (1- (length (symbol-name r))))
                     verb
                     (coerce a 'vector)))
-                ((member verboid '(e.grammar::|"=~"|))
-                  (assert (= 1 (length a)))
-                  (e. *b* |matchBind| r (first a)))
                 ((member verboid '(e.grammar::|".."| e.grammar::|"..!"|))
                   (assert (= 1 (length a)))
                   (e-call *b* (case verboid
                                 (e.grammar::|".."| "thru")
                                 (e.grammar::|"..!"| "till")) 
                               (list r (first a))))
-                ((member verboid '(e.grammar::|"=="| e.grammar::|"!="|))
-                  (assert (= 1 (length a)))
-                  (e. *b* |same| r (first a) (as-e-boolean (eql verboid 'e.grammar::|"!="|))))
                 (t
                   (e. *b* |call| r 
                                  verb
@@ -973,24 +991,32 @@ XXX make precedence values available as constants"
         (e.grammar::|HideExpr|
           (destructuring-bind (sub) out-children
             (e. *b* |hide| sub)))
+        (e.grammar::|IfExpr|
+          (e-call *b* "if" out-children))
+        (e.grammar::|MatchBindExpr|
+          (destructuring-bind (specimen pattern) out-children
+            (e. *b* |matchBind| specimen pattern (ecase (find-symbol text :keyword)
+                                                   (:!~ +e-true+)
+                                                   (:=~ +e-false+)))))
         (e.grammar::|MetaContextExpr|
           (e. *b* |doMeta| "meta" "context" #()))
         (e.grammar::|MetaStateExpr|
           (e. *b* |doMeta| "meta" "getState" #()))
-        (e.grammar::|IfExpr|
-          (e-call *b* "if" out-children))
+        (e.grammar::|PrefixExpr|
+          (destructuring-bind (operator operand) out-children
+            (e. *b* |call| operand (e. *b* |unaryVerb| operator) #())))
         (e.grammar::|TupleExpr|
           (e. *b* |tuple| (coerce out-children 'vector)))
         (e.grammar::|ReturnExpr|
           (destructuring-bind (value-expr) out-children
             (e. *b* |return| value-expr)))
           
-        (e.grammar::|AndExpr|
+        (e.grammar::|ConditionalExpr|
           (destructuring-bind (left right) out-children
-            (e. *b* |flowAnd| left right)))
-        (e.grammar::|OrExpr|
-          (destructuring-bind (left right) out-children
-            (e. *b* |flowOr| left right)))
+            (e-call *b* (ecase (find-symbol text :keyword)
+                          (:&& "flowAnd")
+                          (:|| "flowOr"))
+                        (list left right))))
         
         ((e.grammar::|BindPattern|)
           (destructuring-bind (noun &optional guard) out-children
@@ -1010,10 +1036,10 @@ XXX make precedence values available as constants"
         ((e.grammar::|ObjectExpr|)
           (ecase (length out-children)
             (2 (destructuring-bind (qualified-name (extends implements script)) out-children
-                 (e. *b* |object| "" qualified-name extends (coerce implements 'list) script)))
+                 (e. *b* |object| "" qualified-name extends (coerce implements 'vector) script)))
             (4 (destructuring-bind (qname-thing params result-guard body) out-children
                  ;; GRUMBLE: this should either be a separate node type, or a *method* node should take the place of the script node
-                 (e. *b* |object| "" qname-thing #() (e. *b* |vTable| (vector (e. *b* |to| "" (e. *b* |methHead| "run" (coerce params 'vector) result-guard) body)) #()))))))
+                 (e. *b* |object| "" qname-thing nil #() (e. *b* |vTable| (vector (e. *b* |to| "" (e. *b* |methHead| "run" (coerce params 'vector) result-guard) body)) #()))))))
         ((e.grammar::|EScript|)
           (destructuring-bind (extends implements todo) out-children
             (let ((methods '())
@@ -1046,7 +1072,7 @@ XXX make precedence values available as constants"
             ((and (string= (aref (symbol-name tag) 0) "\"") 
                   (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 2)) "="))
               (e. *b* |binaryVerb| text))
-            (t (error "don't know what to do with ~S <- ~S" expr path))))))))
+            (t (error "don't know what to do with ~S <- ~A" expr (write-to-string path :length 5)))))))))
 
 ; --- Parse cache files ---
  
