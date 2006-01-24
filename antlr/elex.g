@@ -142,7 +142,7 @@ GT:                  '>'    ( // {isFirstInLine}? SKIPLINE
 
 LT:                  ('<'  IDENT ('>' | ':')) =>
                       '<'! IDENT ( '>'! {$setType(URIGetter);}
-                                 | ':'! (    (ANYWS)=> BR {$setType(URIStart);}
+                                 | ':' (    (ANYWS)=> BR {$setType(URIStart);}
                                        |   URI '>'!  {$setType(URI);}))
                 |    '<' BR ;
 
