@@ -312,7 +312,7 @@ docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
 // var x := ... should produce a DefineExpr with a VarPattern
 // bind x := ... should produce a DefineExpr with a BindPattern
 defExpr:    //doco
-            "def"^  (  (objectPredict)  => doco objName objectExpr
+            "def"^  (  (objectPredict) => doco objName objectExpr
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! assign
                                                       {##.setType(DefineExpr);}
@@ -330,7 +330,7 @@ objectExpr:     //(typeParams)?
                 //(":"! guard)?
             oExtends
             oImplements
-            script  {##=#([EScript],##);}
+            script {##=#([EScript],##);}
         |   params resultGuard body      // function
             {##=#([EScript], ([Extends]), ([Implements]),
             ([List], ([EMethod, "fn"], [IDENT, "run"], ##)));}
@@ -356,16 +356,18 @@ typeParams:     "[" typePatternList br "]" ; // should have a br before the "]"
 
 typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
 
-script:         "{"^ (method br)* (matcher br)* "}"!  {##.setType(List);} ;
+//script:  "{"^ (method br)* (matcher br)* "}"!  {##.setType(List);} ;
+script:  "{"^ methods  "}"! {##.setType(List);} ;
 
-method: doco
-        ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
-        {##.setType(EMethod);}
+methods: (methodPredict) => method br methods | (matcher br )* ;
+methodPredict: doco ("to"|"method"|"on") ;
+method: doco  ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
+                {##.setType(EMethod);}
     ;
 
 optVerb:      verb | {##=#([IDENT,""]);} ;
 
-matcher:        "match"^ pattern body  {##.setType(EMatcher);} ;
+matcher:      doco "match"^ pattern body  {##.setType(EMatcher);} ;
 
 params:         "("! patternList br ")"!   {##=#([List],##);} ;
 patternList:    (pattern (","! patternList)?)? ;
@@ -404,7 +406,7 @@ mtypes:     "("! typeList br ")"!   {##=#([List],##);} ;
 // The current E grammar only let's you put these in a few places.
 doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;
 
-body:       "{"! (seq)? "}"! ;
+body:       "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 
 // rules for expressions follow the pattern:
 //   thisLevelExpression :  nextHigherPrecedenceExpression
