@@ -23,7 +23,7 @@ class EALexer extends Lexer("antlr.SwitchingLexer");
 options {
     importVocab=E;
     exportVocab=EALexer;
-    //testLiterals=false;    // don't automatically test for literals
+    testLiterals=false;    // don't automatically test for literals
     k=3;                   // four characters of lookahead
     charVocabulary='\3'..'\377';
     //charVocabulary='\u0003'..'\u7FFE';
@@ -62,86 +62,85 @@ tokens {
 }
 
 // OPERATORS
-QUASIOPEN:        '`' {selector.push("quasi");}  ;
-LPAREN:              '('    BR ;
-RPAREN:              ')'    ;
-LBRACK:              '['    BR ;
-RBRACK:              ']'    ;
-LCURLY:              '{'    BR  {selector.enterBrace();} ;
-RCURLY:              '}'    {selector.exitBrace();} ;
-AT:                  '@'    ;
-ATCURLY:             "@{"   ;
-DOLLARCURLY:         "${"   ;
-// a question at the beginning of a line indicates an updoc line, and the line
-// is ignored.
-QUESTION:            '?'    ({isFirstInLine}? UPDOC {$setType(Token.SKIP);}
-                          | BR) ;
-COLON:               ':'    BR ;
-COMMA:               ','    BR ;
-DOT:                 '.'    BR ;
-THRU:                ".."   BR ;
-TILL:                "..!"  BR ;
-SAME:                "=="   BR ;
-EQ:                  '='    BR ;
-LNOT:                '!'    BR ;
-BNOT:                '~'    BR ;
-NOTSAME:             "!="   BR ;
-DIV:                 '/'    BR ;
-FLOORDIV:            "//"   BR ;
-PLUS:                '+'    BR ;
-MINUS:               '-'    BR ;
-INC:                 "++"   ;
-DEC:                 "--"   ;
-STAR:                '*'    BR ;
-REM:                 '%'    BR ;
-MOD:                 "%%"   BR ;
-SL:                  "<<"   BR ;
-LE:                  "<="   BR ;
-ABA:                 "<=>"  BR ;
-BXOR:                '^'    BR ;
-BOR:                 '|'    BR ;
-LOR:                 "||"   BR ;
-BAND:                '&'    BR ;
-BUTNOT:              "&!"   BR ;
-LAND:                "&&"   BR ;
-SEMI:                ';'    ;
-POW:                 "**"   BR ;
 
-ASSIGN:              ":="   BR ;
-FLOORDIV_ASSIGN:     "//="  BR ;
-DIV_ASSIGN:          "/="   BR ;
-PLUS_ASSIGN:         "+="   BR ;
-MINUS_ASSIGN:        "-="   BR ;
-STAR_ASSIGN:         "*="   BR ;
-REM_ASSIGN:          "%="   BR ;
-MOD_ASSIGN:          "%%="  BR ;
-POW_ASSIGN:          "**="  BR ;
-SL_ASSIGN:           "<<="  BR ;
-BXOR_ASSIGN:         "^="   BR ;
-BOR_ASSIGN:          "|="   BR ;
-BAND_ASSIGN:         "&="   BR ;
-
-// Other tokes
-SEND:                "<-"   BR ;
-WHEN:                "->"   BR ;
-MAPSTO:              "=>"   BR ;
-MATCHBIND:           "=~"   BR ;
-MISMATCH:            "!~"   BR ;
-SCOPE:               "::"   BR ;
-SCOPESLOT:           "::&"  BR ;
-
-//SR:                  ">>"   BR ;
-//GE:                  ">="   BR ;
-//SR_ASSIGN       :    ">>="  BR ;
-GT:                  '>'    ( // {isFirstInLine}? SKIPLINE
+OPERATOR options {testLiterals=true;} :
+        '`' {selector.push("quasi");}
+    |   '('    BR
+    |   ')'
+    |   '['    BR
+    |   ']'
+    |   '{'    BR  {selector.enterBrace();}
+    |   '}'    {selector.exitBrace();}
+    |   '@'
+    |   "@{"
+    |   "${"
+	// a question at the beginning of a line indicates an updoc line, and the line
+    // is ignored.
+    |   '?'    ({isFirstInLine}? UPDOC {$setType(Token.SKIP);} | BR)
+    |   ':'    BR
+    |   ','    BR
+    |   '.'    BR
+    |   ".."   BR
+    |   "..!"  BR
+    |   "=="   BR
+    |   '='    BR
+    |   '!'    BR
+    |   '~'    BR
+    |   "!="   BR
+    |   '/'    BR
+    |   "//"   BR
+    |   '+'    BR
+    |   '-'    BR
+    |   "++"
+    |   "--"
+    |   '*'    BR
+    |   '%'    BR
+    |   "%%"   BR
+    |   "<<"   BR
+    |   "<="   BR
+    |   "<=>"  BR
+    |   '^'    BR
+    |   '|'    BR
+    |   "||"   BR
+    |   '&'    BR
+    |   "&!"   BR
+    |   "&&"   BR
+    |   ';'
+    |   "**"   BR
+    // Assign
+    |   ":="   BR
+    |   "//="  BR
+    |   "/="   BR
+    |   "+="   BR
+    |   "-="   BR
+    |   "*="   BR
+    |   "%="   BR
+    |   "%%="  BR
+    |   "**="  BR
+    |   "<<="  BR
+    |   "^="   BR
+    |   "|="   BR
+    |   "&="   BR
+// Other tokens
+    |   DOC_COMMENT        {$setType(DOC_COMMENT);}
+    |   "<-"   BR
+    |   "->"   BR
+    |   "=>"   BR
+    |   "=~"   BR
+    |   "!~"   BR
+    |   "::"   BR
+    |   "::&"  BR
+    //SR:                  ">>"   BR
+	//GE:                  ">="   BR
+	//SR_ASSIGN       :    ">>="  BR
+    |   '>'    ( // {isFirstInLine}? SKIPLINE
                               // {$setType(Token.SKIP);} |
                               '>'  BR {$setType(SR);}
                             | '='  BR {$setType(GE);}
                             | ">=" BR {$setType(SR_ASSIGN);}
-                            | ); // should have BR, except for terminating a
+                            | ) // should have BR, except for terminating a
                                  // URI
-
-LT:                  ('<'  IDENT ('>' | ':')) =>
+    |   ('<'  IDENT ('>' | ':')) =>
                       '<'! IDENT ( '>'! {$setType(URIGetter);}
                                  | ':' (    (ANYWS)=> BR {$setType(URIStart);}
                                        |   URI '>'!  {$setType(URI);}))
@@ -172,6 +171,7 @@ UPDOC :         (~('\n'|'\r'))* (EOL // must be optional to deal with EOF
                     |   EOL )* )?;
 
 // multiple-line comments
+protected
 DOC_COMMENT
     :    "/**"
         (    //    '\r' '\n' can be matched in one alternative or by matching
@@ -190,7 +190,6 @@ DOC_COMMENT
         '*' '/'
         BR
         {$setText("**comment hidden**");}  // TODO: stop suppressing comments
-        //{$setType(Token.SKIP);}
     ;
 
 
