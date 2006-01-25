@@ -122,7 +122,7 @@ tokens {
     URIStart;
     URIGetter;
     URIExpr;
-    LambdaExpr;
+    ThunkExpr;
 
     EScript;
     EMethod;
@@ -132,6 +132,7 @@ tokens {
     Implements;
     Extends;
     Absent;
+    DocComment;
 
     //for lexer
     HEX;
@@ -233,7 +234,7 @@ pragma!:     "pragma"^ "."!
 
 metaExpr:  "meta"^ "."!
             (("getState"! | "scope"!) {##=#([MetaStateExpr,"MetaScope"]);}
-             | "context"! {##=#([MetaContextExpr,"MetaContext"]);} ) "(" ")" ;
+             | "context"! {##=#([MetaContextExpr,"MetaContext"]);} ) "("! ")"! ;
 
 br:         (LINESEP!)* ;
 
@@ -283,7 +284,8 @@ whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
 
 escapeExpr:     "escape"^ pattern body (catcher)?   {##.setType(EscapeExpr);} ;
 
-lambdaExpr:     "thunk"^ body    {##.setType(LambdaExpr);}  ;
+thunkExpr:     //doco
+                "thunk"^ doco body    {##.setType(ThunkExpr);}  ;
 
 switchExpr:     "switch"^ parenExpr
                 "{"! (matcher br)* "}"!    {##.setType(SwitchExpr);}
@@ -301,13 +303,16 @@ varNamer:       "var"^ nounExpr (":"! guard)?   {##.setType(VarPattern);}  ;
 slotNamer:      "&"^ nounExpr (":"! guard )?    {##.setType(SlotPattern);} ;
 
 // should forward declaration allow types?
-docoDef:    doco (defExpr | interfaceExpr | lambdaExpr) ;
+//docoDef:    doco (defExpr | interfaceExpr | thunkExpr) ;
+docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
+            defExpr | interfaceExpr | thunkExpr ;
 
 //so ObjectExpr(doc, fqn, auditors, script|method|matcher)
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
 // var x := ... should produce a DefineExpr with a VarPattern
 // bind x := ... should produce a DefineExpr with a BindPattern
-defExpr:    "def"^  (  (objectPredict)  => objName objectExpr
+defExpr:    //doco
+            "def"^  (  (objectPredict)  => doco objName objectExpr
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! assign
                                                       {##.setType(DefineExpr);}
@@ -353,8 +358,7 @@ typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
 
 script:         "{"^ (method br)* (matcher br)* "}"!  {##.setType(List);} ;
 
-// TODO deal with doc comments
-method: doco!
+method: doco
         ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
         {##.setType(EMethod);}
     ;
@@ -373,7 +377,8 @@ resultGuard:    ":"! guard | {##=#([Absent]);} ;
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
 
-interfaceExpr:  "interface"^  objName
+interfaceExpr:  //doco
+                "interface"^  doco objName
                 //(":"! guard)?
                 (   ("guards" pattern)?
                     ("extends" br order ("," order)*)?     // trailing comma
@@ -386,19 +391,8 @@ interfaceExpr:  "interface"^  objName
                 {##.setType(InterfaceExpr);}
             ;
 
-imethod:    doco (   "to"^ imethHead //(body)?
-                |   "method"^ imethHead //(body)?
-                |   "on"^ imethHead //(body)?
-                //|   DEF field OpAss assign
-                //|   VAR field OpAss assign
-
-                //|   TO field body
-                //|   TO field OpAss pattern body
-                //|   TO '&' field body
-
-                //|   META parenExpr body
-                //|   META parenExpr MapsTo parenExpr
-                ) {##.setType(EMethod);}
+imethod:    doco ("to"^ | "method"^ | "on"^) optVerb mtypes resultGuard
+                 {##.setType(EMethod);}
             ;
 
 ptype:      nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
@@ -406,10 +400,6 @@ ptype:      nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
             ;
 typeList:   (ptype (","! typeList)?)? ;
 mtypes:     "("! typeList br ")"!   {##=#([List],##);} ;
-
-imethHead:           mtypes resultGuard
-            |   verb mtypes resultGuard
-            ;
 
 // The current E grammar only let's you put these in a few places.
 doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;

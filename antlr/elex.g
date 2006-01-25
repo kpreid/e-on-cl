@@ -12,6 +12,7 @@ header {
 // updoc in the midst of quasi or string
 // support doubled '`'
 // make keywords (literals) case insensitive
+// only do literal resolution for IDENT and funky punctuation
 
 //----------------------------------------------------------------------------
 // The E Lexer
@@ -194,10 +195,12 @@ DOC_COMMENT
 
 
 // character literals
-CHAR_LITERAL:    '\''! ( ESC | ~('\''|'\n'|'\r'|'\\') ) '\''!   ;
+CHAR_LITERAL options {testLiterals=false;} :
+        '\''! ( ESC | ~('\''|'\n'|'\r'|'\\') ) '\''!   ;
 
 // string literals
-STRING: '"'! (   ESC
+STRING options {testLiterals=false;} :
+        '"'! (   ESC
             |   EOL
             |    ~('"'|'\\'|'\n'|'\r')
         )* '"'!  ;
