@@ -40,12 +40,9 @@ header {
 // all updoc test case are ignored before E lexing.  See the lexer for details.
 
 // TODO:
+// plumbing?
 // . plurals
 // anonymous lambda syntax
-// generate correct trees
-// meta and pragma
-// def "foo" {... "foo" is not a pattern
-// a string is not allowed after var and bind in a defining expression (defpatt)
 
 // TODO add doco for matcher?
 
@@ -113,7 +110,7 @@ tokens {
     VarPattern;
     SlotPattern;
     ListPattern;
-    CdrPattern;
+    TailPattern;
     IgnorePattern;
     SuchThatPattern;
     QuasiLiteralPattern;
@@ -369,8 +366,8 @@ optVerb:      verb | {##=#([IDENT,""]);} ;
 
 matcher:      doco "match"^ pattern body  {##.setType(EMatcher);} ;
 
-params:         "("! patternList br ")"!   {##=#([List],##);} ;
-patternList:    (pattern (","! patternList)?)? ;
+params:         "("! patterns br ")"!  {##=#([List],##);} ;
+patterns:    (pattern (","! patterns)?)? ;
 
 // ("throws" guardList)? ;
  //TODO what's the right default for a missing guard?
@@ -587,13 +584,16 @@ catcher:        "catch"^ pattern body ;
 // Patterns
 pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )?   ;
 
-listPatt:       eqPatt
-            |   "["^
-                (   ((key br)? "=>") => mapPattList br "]"! ("|" listPatt)?
-                                                         {##.setType(MapPattern);}
-                |   patternList br "]"! ("+"! listPatt)? {##.setType(ListPattern);}
-                )
-            ;
+listPatt:
+    eqPatt
+    |   "["^
+        (   ((key br)? "=>") => mapPatts br "]"! {##.setType(MapPattern);}
+            ("|"^ listPatt {##.setType(TailPattern);} )?
+
+        |   patterns br "]"! {##.setType(ListPattern);}
+             ("+"^  listPatt {##.setType(TailPattern);} )?
+        )
+    ;
 
 eqPatt:         nounExpr
                 (   (":"! guard)?       {##=#([FinalPattern],##);}
@@ -646,7 +646,8 @@ key:            parenExpr | literal  ;
 parenExpr:      "("! seq ")"!  ;
 //args        :   "("! br seq ")"!  ;
 
-mapPattList:    (mapPattern (","! mapPattList)?)? ;
+//mapPattList:    mapPatts {##=#([List],##);} ;
+mapPatts:       (mapPattern (","! mapPatts)?)? ;
 
 mapPattern:     key br "=>"^ pattern (":=" order)?
             |   "=>"^ namePatt (":=" order)? // BLECH
