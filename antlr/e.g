@@ -99,7 +99,7 @@ tokens {
     TryExpr;
     MapPattern;
     LiteralPattern;
-    TupleExpr;
+    ListExpr;
     MapExpr;
     BindPattern;
     SendExpr;
@@ -545,7 +545,7 @@ prim:           literal
             //|   "<"^ nounExpr (":"! add)? ">"! {##.setType(URIExpr);}
             |   "["^
                 (   (eExpr br "=>") => mapList  {##.setType(MapExpr);}
-                |   argList                     {##.setType(TupleExpr);}
+                |   argList                     {##.setType(ListExpr);}
                 )  "]"!
             |   body          {##=#([HideExpr],##);} warn["hide deprecated"]!
             ;
@@ -569,14 +569,10 @@ literal:    (STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL)
             {##=#([LiteralExpr],##);} ;
 
 
-// a valid guard is an identifier, and guard followed by [argList], or parenExpr
-guard:      (nounExpr | parenExpr)
-            ("["
-                // TODO straighten out this map reference
-              ( (eExpr "=>") => eExpr "=>" eExpr br {##.setType(MapExpr);}
-                |   ("=>") => "=>" eExpr br         {##.setType(MapExpr);}
-                |   argList                         {##.setType(TupleExpr);}
-              ) "]"!)*
+// a valid guard is a nounExpr or parenExpr, optionally followed by [argList]*
+guard:
+    (nounExpr | parenExpr)
+    ("["! {##=#([CallExpr,"get"], ##, [STRING,"get"]);} argList "]"! )*
     ;
 
 catcher:        "catch"^ pattern body ;
