@@ -7,15 +7,16 @@
   (:nicknames :e-util) ; XXX remove use of this nickname
   (:use :cl)
   
-  #.(cl:let ((cl:package (cl:or 
+  #.(cl:let ((cl:package (cl:some #'cl:find-package '( 
                #+(or allegro clisp lispworks) :clos
-               #+(or cmu) :mop
+               #+(or cmu abcl) :mop
                #+sbcl :sb-mop
-               #+abcl :system ; XXX possibly ABCL bug that it isn't in MOP:
                #+openmcl :openmcl-mop
-               #+ccl :ccl)))
+               #+ccl :ccl
+               :mop
+               :clos))))
     (cl:when cl:package
-      `(:import-from ,cl:package
+      `(:import-from ,(cl:package-name cl:package)
          :class-precedence-list)))
   
   (:export
