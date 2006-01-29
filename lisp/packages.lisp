@@ -299,8 +299,9 @@
   (:documentation "Node types from the Antlr grammar.")
   (:use))
 
-(cl:defpackage :e.elang.vm-node 
-  (:nicknames :e.node)
+(cl:defpackage :e.kernel
+  ;; XXX plan-of-the-moment is to deprecate the names other than e.kernel
+  (:nicknames :e.node :e.elang.vm-node)
   (:documentation "All symbols in this package are the names of subclasses of ENode, eccept for null, error and .tuple..")
   ; XXX arrange so that null, error and .tuple. are not produced by parseEToSExpression?
   (:use)
@@ -352,12 +353,17 @@
     :|VarPattern|)
   #+sbcl (:lock t))
 
+;; XXX for now, e.nonkernel.* packages are defined in nonkernel.lisp
+
 (cl:defpackage :e.elang
   (:nicknames :elang)
   (:use :cl :e.util :elib :e.elang.vm-node)
   (:export
+    :define-node-class
+  
     :eval-e
     :get-translation
+    :require-kernel-e
     
     :+the-make-static-scope+
     

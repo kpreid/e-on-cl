@@ -806,7 +806,7 @@ Miscellaneous scoping
   ? { def x := 1; [{ def x := 2; x }, x] }
   # value: [2, 1]
   
-  ? { def x := 1; [def x := 2; x, x] }
+  ? { def x := 1; [( def x := 2; x ), x] }
   # problem: "x" already in scope
   
   ? { notOuterDefined + 1; def notOuterDefined := 2 }

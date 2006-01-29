@@ -90,6 +90,7 @@
 
 ; Wrapper so that in profiling, time spent executing E code is separated from the time to compile it into CL
 (defun eval-e (tree scope)
+  (require-kernel-e tree nil)
   (funcall (cl-to-lambda (e-to-cl tree scope)
                          ; using KEYWORD package because using something else might? trigger the sbcl leak
                          :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD"))))

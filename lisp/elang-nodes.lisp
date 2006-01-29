@@ -9,6 +9,8 @@
 (defgeneric compute-node-static-scope (node))
 (defgeneric opt-node-property-getter (node field-keyword))
 (defgeneric node-visitor-arguments (node))
+(defgeneric node-class-arity (node-class))
+(defgeneric node-class-element-types (node-class))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
 (defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
@@ -100,6 +102,15 @@
       (defmethod node-class-arity ((node-class (eql (find-class ',class-name))))
         (values ',normal-prop-count
                 ',(if rest-slot nil normal-prop-count)))
+      (defmethod node-class-element-types ((node-class (eql (find-class ',class-name))))
+        "Returns the possibly-circular list of type specifiers for the type constraints of the elements of a node of this class."
+        ',(if rest-slot
+            (let* ((rest-types (list (destructuring-bind (type) (last dnm-types)
+                                       (assert (typep type '(cons (eql e-list))))
+                                       (second type)))))
+              (setf (rest rest-types) rest-types)
+              (nconc (butlast dnm-types) rest-types))
+            dnm-types))
       
       (defmethod opt-node-property-getter 
           ((node ,class-name) 
@@ -249,12 +260,16 @@
   ;; imitating SBCL's hash-table printing
   (if (or (not *print-readably*) (not *read-eval*))
     (print-unreadable-object (node stream :type nil :identity nil)
-      (format stream "~A ~W" (type-of node) (node-elements node)))
+      (format stream "~A ~W" (type-of node) 
+                             (if (slot-boundp node 'elements)
+                               (node-elements node)
+                               '.undefined-elements.)))
     (with-standard-io-syntax
           (format stream
                   "#.~W"
                   `(make-instance ',(class-name (class-of node))
-                                  :elements ',(node-elements node))))))
+                                  ,(if (slot-boundp node 'elements)
+                                     `(:elements ',(node-elements node))))))))
 
 (defmethod make-load-form ((node |ENode|) &optional environment)
   (declare (ignore environment))
@@ -280,6 +295,13 @@
                (length (attempted-node-elements condition))
                (attempted-node-elements condition)
                (node-class-arity (attempted-node-class condition))))))
+
+(defmethod shared-initialize ((node |ENode|) slot-names &rest initargs &key elements &allow-other-keys)
+  (apply #'call-next-method node slot-names
+    :elements (loop for element in elements
+                    for type in (node-class-element-types (class-of node))
+                    collect (e-coerce element type))
+    initargs))
 
 (defmethod shared-initialize :after ((node |ENode|) slot-names &key &allow-other-keys)
   (declare (ignore slot-names))
@@ -319,17 +341,6 @@
   (unless (or methods (> (length matchers) 0))
       (error "EScript must have methods or at least one matcher")))
     
-(defmethod shared-initialize :after ((node |DefineExpr|) slot-names &key &allow-other-keys
-    &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
-         (r-value (funcall (opt-node-property-getter node :|pattern|)))
-         (opt-ejector-expr (funcall (opt-node-property-getter node :|optEjectorExpr|))))
-  (declare (ignore slot-names))
-  (when (usesp r-value pattern)
-    (error "define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
-  (when (and opt-ejector-expr
-             (usesp opt-ejector-expr pattern))
-    (error "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
-
 ;; XXX reject NounPatterns that use their noun in the guard
 
 ; --- E-level methods ---
@@ -723,3 +734,45 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |EScript|
   (seq (flatten :|optMethods|)
        (flatten :|matchers|)))
+
+;;; --- Kernel-E checking ---
+
+;; utility, to be moved
+(defun to-condition (defaulted-type datum &rest arguments)
+  "Implements CLHS 9.1.2.1."
+  (etypecase datum
+    (symbol
+      (apply #'make-condition datum arguments))
+    ((or string function)
+      (make-condition defaulted-type :format-control datum :format-arguments arguments))
+    (condition
+      datum)))
+(defun ejerror (ejector &rest args)
+  (eject-or-ethrow ejector (apply #'to-condition 'simple-error args)))
+
+(defgeneric require-kernel-e (node ejector)
+  (:documentation "Verify that the node is a valid Kernel-E tree.")
+  (:method-combination progn))
+
+(defmethod require-kernel-e progn ((node null) ejector)
+  nil)
+
+(defmethod require-kernel-e progn ((node vector) ejector)
+  (map nil (lambda (sub) (require-kernel-e sub ejector)) node))
+
+(defmethod require-kernel-e progn ((node |ENode|) ejector)
+  (loop with maker = (get (class-name (class-of node)) 'static-maker)
+        for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+        for maybe-subnode in (node-visitor-arguments node)
+        when (e-is-true subnode-flag)
+          do (require-kernel-e maybe-subnode ejector)))
+
+(defmethod require-kernel-e progn ((node |DefineExpr|) ejector
+    &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
+         (r-value (funcall (opt-node-property-getter node :|pattern|)))
+         (opt-ejector-expr (funcall (opt-node-property-getter node :|optEjectorExpr|))))
+  (when (usesp r-value pattern)
+    (ejerror ejector "define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
+  (when (and opt-ejector-expr
+             (usesp opt-ejector-expr pattern))
+    (ejerror ejector "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))

@@ -40,8 +40,10 @@
                          "sugar" 
                          "elib-values"
                          "tables2"))
+     (:file "nonkernel"
+            :depends-on ("elang-nodes"))
      (:file "syntax"
-            :depends-on ("packages" "elang-nodes"))
+            :depends-on ("packages" "elang-nodes" "nonkernel"))
      (:file "compiler-base"
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-seq"

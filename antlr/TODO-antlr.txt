@@ -1,0 +1,8 @@
+necessary:
+trinary-define
+one-method-object
+plumbing expression
+map-tail in calls
+
+nice:
+letting pragma-enable information out for persistence across REPL inputs
