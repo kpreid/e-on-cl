@@ -697,17 +697,22 @@ XXX make precedence values available as constants"
         ((e.grammar::|DocComment|) 
           ;; XXX capture and pass downward
           (destructuring-bind (comment body) out-children
+            (declare (ignore comment))
             body))
         ((e.grammar::|IDENT|) 
           (assert (null out-children))
           text)
         ((e.grammar::|INT|) 
           (assert (null out-children))
-          (read-from-string text))
+          (let ((*read-eval* nil)) 
+            (read-from-string text)))
         ((e.grammar::|FLOAT64|) 
           (assert (null out-children))
-          (let ((*read-default-float-format* 'double-float)) 
-            (read-from-string text) #| XXX implement actual E float syntax|#))
+          (let ((*read-default-float-format* 'double-float)
+                (*read-eval* nil)) 
+            ;; this should be safe because the parser's already checked it for float syntax
+            ;; XXX implement actual E float syntax
+            (read-from-string text)))
         ((e.grammar::|STRING|)
           (assert (null out-children))
           text)
@@ -715,11 +720,8 @@ XXX make precedence values available as constants"
           (assert (null out-children))
           (destructuring-bind (character) (coerce text 'list)
             character))
-        ((e.grammar::|"&"| e.grammar::|"-"| e.grammar::|"+"| e.grammar::|"*"| e.grammar::|"/"| e.grammar::|"//"| e.grammar::|"%"| e.grammar::|"%%"|) 
-          (subseq (symbol-name tag) 1 (1- (length (symbol-name tag)))))
-        ((e.grammar::|"!"| e.grammar::|"~"|)
-          (assert (null out-children))
-          (symbol-name tag))
+        
+        
         ((e.grammar::|URI|) 
           (assert (null out-children))
           text)
@@ -731,9 +733,6 @@ XXX make precedence values available as constants"
           nil)
         ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|)
           ;; XXX review these nodes; some of them are not being generated any more 
-          (assert (null out-children))
-          tag)
-        ((e.grammar::|"=~"| e.grammar::|"!~"| e.grammar::|"_"| e.grammar::|".."| e.grammar::|"=="| e.grammar::|"!="| e.grammar::|"<=>"|  e.grammar::|"<"| e.grammar::|"<="| e.grammar::|">"| e.grammar::|">="| e.grammar::|"=>"|) 
           (assert (null out-children))
           tag)
         (e.grammar::|"catch"| 
@@ -766,22 +765,10 @@ XXX make precedence values available as constants"
             
         ((e.grammar::|CallExpr| e.grammar::|"."|)
           ;; GRUMBLE: shouldn't need to match "."
-          ;; GRUMBLE: things like + == ..! should be reported as 'binary operator', not same as CallExpr
-          (destructuring-bind (r verboid &rest a) out-children
-            (let ((verb (etypecase verboid
-                          (|NounExpr|    (unwrap-noun verboid))
-                          (|LiteralExpr| (first (node-elements verboid)))
-                          (string        verboid))))
-              (cond 
-                (t
-                  (apply #'mn '|CallExpr| r verb a))))))
+          (apply #'mn '|CallExpr| out-children))
         ((e.grammar::|SendExpr|)
-          (destructuring-bind (r verboid &rest a) out-children
-            (let ((verb (etypecase verboid
-                          (|NounExpr|    (unwrap-noun verboid))
-                          (|LiteralExpr| (first (node-elements verboid)))
-                          (string        verboid))))
-              (mn '|SendExpr| r verb (coerce a 'vector)))))
+          (destructuring-bind (r verb &rest a) out-children
+            (mn '|SendExpr| r verb (coerce a 'vector))))
         (e.grammar::|DefineExpr|
           (destructuring-bind (l r &optional guard) out-children
             (mn '|DefrecExpr| l r guard)))
@@ -807,6 +794,11 @@ XXX make precedence values available as constants"
               (string (mn '|NounExpr| noun))
               ((cons (eql e.grammar::|URIGetter|) t)
                 (mn '|URISchemeExpr| (cdr noun))))))
+        
+        (e.grammar::|PrefixExpr|
+          (destructuring-bind (op arg) out-children
+            (check-type op (cons (eql op) string))
+            (mn '|PrefixExpr| (cdr op) arg)))
           
         ((e.grammar::|CoerceExpr|
           e.grammar::|ForwardExpr| 
@@ -816,7 +808,6 @@ XXX make precedence values available as constants"
           e.grammar::|MetaContextExpr|
           e.grammar::|MetaStateExpr|
           e.grammar::|NounExpr|
-          e.grammar::|PrefixExpr|
           e.grammar::|ReturnExpr|
           e.grammar::|SlotExpr|
           e.grammar::|ThunkExpr|
