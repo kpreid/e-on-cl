@@ -289,7 +289,7 @@
   (mn '|NounExpr| (format nil "~A__uriGetter" |scheme|)))
 
 (defemacro |BindPattern| (|Pattern|) ((|noun| t |NounExpr|)
-                                      (|optGuard| t |EExpr|))
+                                      (|optGuard| t (or null |EExpr|)))
                                      ()
   ;; XXX *WRONG* temporary name - nondeterministic and possibly colliding
   (let ((temp (mn '|NounExpr| (symbol-name (gensym)))))
@@ -309,12 +309,13 @@
                                      ()
   (mn '|CdrPattern| |fixedPatt| |tailPatt|))
 
-(defemacro |ETo| (|ENode|) ((|docComment| nil string)
-                            (|verb| nil string)
-                            (|patterns| t (e-list |Pattern|))
-                            (|optResultGuard| t (or null |EExpr|))
-                            (|body| t |EExpr|))
-                           ()
+(defemacro |ETo| (elang::|EMethodoid|) 
+    ((|docComment| nil string)
+     (|verb| nil string)
+     (|patterns| t (e-list |Pattern|))
+     (|optResultGuard| t (or null |EExpr|))
+     (|body| t |EExpr|))
+    ()
   (mn '|EMethod| |docComment| |verb| |patterns| |optResultGuard| 
                  (mn '|EscapeExpr| 
                    (mn '|FinalPattern| (mn '|NounExpr| "__return") nil) 

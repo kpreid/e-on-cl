@@ -11,6 +11,7 @@
 (defgeneric node-visitor-arguments (node))
 (defgeneric node-class-arity (node-class))
 (defgeneric node-class-element-types (node-class))
+(defgeneric node-class-element-names (node-class))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
 (defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
@@ -41,40 +42,70 @@
                            (when (typep (setf ,param (ref-shorten ,param)) '(and vector (not string)))
                              (setf ,param (map 'vector #'ref-shorten ,param)))
                            (e-coercef ,param ',type)))
-        (make-instance ',class-sym 
-          'source-span ,span-sym
+        (make-instance ',class-sym
+          :source-span ,span-sym
           :elements
           ,(if rest-p
             `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))
             `(list ,@param-syms)))))))
 
-(defun %setup-node-class (node-type)
-  (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
+(defun %setup-node-class (node-type rest-slot property-names dnm-types normal-prop-count)
+  (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type)))
+        (element-types (make-element-attribute-list
+                          dnm-types rest-slot
+                          (lambda (last-type)
+                            (assert (typep last-type '(cons (eql e-list))))
+                            (second last-type))))
+        (element-names
+          (make-element-attribute-list
+            property-names rest-slot
+            (lambda (last-name)
+              `(member-of ,last-name)))))
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
-      fqn)))
+      fqn)
+    
+    (defmethod node-class-arity ((node-class (eql (find-class node-type))))
+      (values normal-prop-count
+              (if rest-slot nil normal-prop-count)))
+    (defmethod node-class-element-types ((node-class (eql (find-class node-type))))
+      "Returns the possibly-circular list of type specifiers for the type constraints of the elements of a node of this class."
+      element-types)
+    (defmethod node-class-element-names ((node-class (eql (find-class node-type))))
+      "Returns the possibly-circular list of names of the elements of a node of this class."
+      element-names)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-element-attribute-list (property-attribute-list rest-slot last-modifier)
+    (if rest-slot
+        (let ((rest-attrs (list (funcall last-modifier (first (last property-attribute-list))))))
+          (setf (rest rest-attrs) rest-attrs)
+          (nconc (butlast property-attribute-list) rest-attrs))
+        property-attribute-list)))
 
 (defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key rest-slot)
   (let ((normal-prop-count (- (length property-defs) (if rest-slot 1 0)))
+        property-names
         subnode-flags 
         dnm-types)
     (loop for pd in property-defs do
       (destructuring-bind (property-name subnode-flag type &key) pd
-        (declare (ignore property-name))
+        (push property-name property-names)
         (push subnode-flag subnode-flags)
         (push type dnm-types)))
+    (nreverse-here property-names)
     (nreverse-here subnode-flags)
     (nreverse-here dnm-types)
     `(progn
       (defclass ,class-name ,superclasses ())
       
-      (%setup-node-class ',class-name)
+      (%setup-node-class ',class-name ',rest-slot ',property-names ',dnm-types ',normal-prop-count)
       
       (%def-node-maker ,class-name
         ,subnode-flags
         ,dnm-types
         ,rest-slot)
       
-      ,@(loop for (property-name) in property-defs
+      ,@(loop for property-name in property-names
               for i below normal-prop-count
               collect
                  `(defmethod opt-node-property-getter 
@@ -99,19 +130,6 @@
                      (list (coerce (subseq elements ',normal-prop-count) 'vector))))
           `(node-elements node)))
       
-      (defmethod node-class-arity ((node-class (eql (find-class ',class-name))))
-        (values ',normal-prop-count
-                ',(if rest-slot nil normal-prop-count)))
-      (defmethod node-class-element-types ((node-class (eql (find-class ',class-name))))
-        "Returns the possibly-circular list of type specifiers for the type constraints of the elements of a node of this class."
-        ',(if rest-slot
-            (let* ((rest-types (list (destructuring-bind (type) (last dnm-types)
-                                       (assert (typep type '(cons (eql e-list))))
-                                       (second type)))))
-              (setf (rest rest-types) rest-types)
-              (nconc (butlast dnm-types) rest-types))
-            dnm-types))
-      
       (defmethod opt-node-property-getter 
           ((node ,class-name) 
            (field-keyword t))
@@ -131,7 +149,7 @@
                  :type (or null function))
    (source-span :initform nil
                 :type (or null source-span)
-                :initarg source-span)))
+                :initarg :source-span)))
 
 (define-node-class |EExpr|   (|ENode|)
   ())
@@ -191,7 +209,8 @@
 (define-node-class |SlotExpr|        (|EExpr|)
   ((:|noun| t (or |NounExpr| |QuasiExpr|))))
 
-(define-node-class |EMethod|         (|ENode|)
+(defclass |EMethodoid| (|ENode|) ()) ;; to support "to"
+(define-node-class |EMethod|         (|EMethodoid|)
   ((:|docComment| nil string)
    (:|verb| nil string)
    (:|patterns| t (e-list |Pattern|))
@@ -201,7 +220,7 @@
   ((:|pattern| t |Pattern|) 
    (:|body| t |EExpr|)))
 (define-node-class |EScript|         (|ENode|)
-  ((:|optMethods| t (or null (e-list |EMethod|)))
+  ((:|optMethods| t (or null (e-list |EMethodoid|)))
    (:|matchers| t (e-list |EMatcher|))))
                                
 (define-node-class |CdrPattern|      (|Pattern|)
@@ -220,13 +239,13 @@
   ())
 
 (define-node-class |FinalPattern|    (|NounPattern|)
-  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+  ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 (define-node-class |SlotPattern|     (|NounPattern|)
-  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+  ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 (define-node-class |VarPattern|      (|NounPattern|)
-  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+  ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 
 (define-node-class |QuasiNode| (|ENode|)
@@ -299,8 +318,11 @@
 (defmethod shared-initialize ((node |ENode|) slot-names &rest initargs &key elements &allow-other-keys)
   (apply #'call-next-method node slot-names
     :elements (loop for element in elements
+                    for name in (node-class-element-names (class-of node))
                     for type in (node-class-element-types (class-of node))
-                    collect (e-coerce element type))
+                    collect (e-coerce element type
+                                      (efun (condition-ref)
+                                        (error "the ~S of a ~S must be a ~S (~A)" name (class-name (class-of node)) type condition-ref))))
     initargs))
 
 (defmethod shared-initialize :after ((node |ENode|) slot-names &key &allow-other-keys)
@@ -750,6 +772,18 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defun ejerror (ejector &rest args)
   (eject-or-ethrow ejector (apply #'to-condition 'simple-error args)))
 
+(defun unmagical-typep (value type)
+  "awful hack: E-LIST type can't work if expanded into a compiled file due to using (satisfies #:uninterned-symbol) so we ensure that TYPEP isn't optimized by indirecting through a redefinable function"
+  (typep value type))
+
+(defmacro define-kernel-e-type-constraints (node-class &rest rules)
+  `(defmethod require-kernel-e progn ((node ,node-class) ejector)
+    ,@(loop for (property ptype) in rules collect
+      `(let ((value (funcall (opt-node-property-getter node ',property))))
+         (unless (unmagical-typep value ',ptype)
+           (ejerror ejector "~S ~S must have ~S of type ~S, but had ~S" 
+                            ',node-class node ',property ',ptype value))))))
+
 (defgeneric require-kernel-e (node ejector)
   (:documentation "Verify that the node is a valid Kernel-E tree.")
   (:method-combination progn))
@@ -776,3 +810,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (when (and opt-ejector-expr
              (usesp opt-ejector-expr pattern))
     (ejerror ejector "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
+
+(define-kernel-e-type-constraints |NounPattern|
+  (:|noun| |NounExpr|))
+
+(define-kernel-e-type-constraints |EScript|
+  (:|optMethods| (e-list |EMethod|))
+  (:|matchers| (e-list |EMatcher|)))
