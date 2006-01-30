@@ -153,21 +153,100 @@
     (:&&   (mn '|IfExpr| |left| |right| (mn '|NounExpr| "false")))
     (:\|\| (mn '|IfExpr| |left| (mn '|NounExpr| "true") |right|))))
 
+;; internal
+(defemacro |PromiseVarExpr| (|EExpr|) ((|promiseNoun| t |NounExpr|)
+                                       (|resolverNoun| t |NounExpr|))
+                                      ()
+  (make-instance '|DefrecExpr| :elements (list 
+    (make-instance '|ListPattern| :elements (list 
+      (make-instance '|FinalPattern| :elements (list |promiseNoun| nil))
+      (make-instance '|FinalPattern| :elements (list |resolverNoun| nil))))
+    (load-time-value (make-instance '|CallExpr| :elements (list (make-instance '|NounExpr| :elements '("Ref")) "promise")))
+    (make-instance '|NounExpr| :elements '("null")))))
+
+(defun gennoun (prefix)
+  (mn '|NounExpr| (symbol-name (gensym prefix))))
+
+(defun make-noun-substitute-visitor (map)
+  "requires originals"
+  (e-lambda noun-substitute-visitor ()
+    (:|run| (what)
+      (setf what (ref-shorten what))
+      (etypecase what
+        (null nil)
+        (vector (map 'vector (lambda (x) (e. noun-substitute-visitor |run| x)) what))
+        (|ENode| (e. what |welcome| noun-substitute-visitor))))
+    (:|visitNounExpr| (opt-original name)
+      (declare (ignore name))
+      (e. map |fetch| opt-original (efun () opt-original)))
+    (otherwise (mverb opt-original &rest args)
+      (declare (ignore mverb))
+      ;; XXX need to update the visitor protocol to consider nonkernel nodes -
+      ;; this isn't even really a visitor because of that
+      (let ((maker (get (class-name (class-of opt-original)) 'static-maker)))
+        (e-call maker "run"
+          ((lambda (args) `(nil ,@args nil))
+            (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+                  for sub in args
+                  collect (if (e-is-true subnode-flag)
+                            (e. noun-substitute-visitor |run| sub)
+                            sub))))))))
+
 (defemacro |DefrecExpr| (|EExpr|) ((|pattern| t |Pattern|)
                                    (|rValue| t |EExpr|)
                                    (|optEjectorExpr| t (or null |EExpr|)))
                                   ()
-  (mn '|DefineExpr| |pattern| |rValue| |optEjectorExpr|))
+  (let* ((kernel-pattern (e-macroexpand-all |pattern|))
+         (kernel-r-value (e-macroexpand-all |rValue|))
+         (kernel-ejector (e-macroexpand-all |optEjectorExpr|))
+         (left-scope (e. kernel-pattern |staticScope|))
+         (right-scope (e. (e. kernel-r-value |staticScope|)
+                          |add|
+                          (if kernel-ejector
+                            (e. kernel-ejector |staticScope|)
+                            elang::+empty-static-scope+)))
+         (common-names
+           (e. (e. (e. left-scope |outNames|) |and| (e. right-scope |namesUsed|)) |getKeys|)))
+    (if (plusp (length common-names))
+      (let* ((result-noun (gennoun "result"))
+             (common-nouns (map 'vector (lambda (n) (mn '|NounExpr| n)) common-names))
+             resolver-nouns
+             replacement-nouns
+             forward-exprs)
+        (loop for name across common-names 
+              for resolver-noun = (gennoun (format nil "~AR" name))
+              for replacement-noun = (gennoun name)
+              do
+          (push resolver-noun resolver-nouns)
+          (push replacement-noun replacement-nouns)
+          (push (mn '|PromiseVarExpr| replacement-noun resolver-noun) forward-exprs))
+        (nreverse-here resolver-nouns)
+        (nreverse-here replacement-nouns)
+        (flet ((substitute-recursions (expr)
+                 (e. (make-noun-substitute-visitor
+                       (e. +the-make-const-map+ |fromColumns|
+                         common-nouns
+                         (coerce replacement-nouns 'vector)))
+                     |run| expr)))
+          (apply #'mn '|SeqExpr|
+            `(,@forward-exprs
+              ,(mn '|DefineExpr| (mn '|FinalPattern| result-noun nil)
+                 (mn '|DefineExpr| kernel-pattern 
+                                   (substitute-recursions
+                                     kernel-r-value) 
+                                   (substitute-recursions
+                                     kernel-ejector))
+                 nil)
+              ,@(loop for vn across common-nouns 
+                      for rn in resolver-nouns
+                      collect (mn '|CallExpr| rn "resolve" vn))
+              ,result-noun))))
+      (mn '|DefineExpr| kernel-pattern kernel-r-value kernel-ejector))))
 
 (defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |NounExpr|)) ()
   (let* ((resolver-noun (noun-to-resolver-noun |noun|)))
       (make-instance '|SeqExpr| :elements (list
-        (make-instance '|DefrecExpr| :elements (list 
-          (make-instance '|ListPattern| :elements (list 
-            (make-instance '|FinalPattern| :elements (list |noun| nil))
-            (make-instance '|FinalPattern| :elements (list resolver-noun nil))))
-          (load-time-value (make-instance '|CallExpr| :elements (list (make-instance '|NounExpr| :elements '("Ref")) "promise")))
-          (make-instance '|NounExpr| :elements '("null"))))
+        (mn '|PromiseVarExpr| |noun| resolver-noun)
         resolver-noun))))
         
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
@@ -292,7 +371,7 @@
                                       (|optGuard| t (or null |EExpr|)))
                                      ()
   ;; XXX *WRONG* temporary name - nondeterministic and possibly colliding
-  (let ((temp (mn '|NounExpr| (symbol-name (gensym)))))
+  (let ((temp (gennoun (e. |noun| |getName|))))
     (make-instance '|SuchThatPattern| :elements (list
       (make-instance '|FinalPattern| :elements (list
         temp
