@@ -64,6 +64,7 @@
 
 (defun e-to-cl (expr outer-scope)
   (e-coercef outer-scope 'e.knot:scope)
+  (require-kernel-e expr nil)
   (during ("e-to-cl")
     (funcall (if *trace-loading* #'print #'identity)
       `(locally
@@ -90,7 +91,6 @@
 
 ; Wrapper so that in profiling, time spent executing E code is separated from the time to compile it into CL
 (defun eval-e (tree scope)
-  (require-kernel-e tree nil)
   (funcall (cl-to-lambda (e-to-cl tree scope)
                          ; using KEYWORD package because using something else might? trigger the sbcl leak
                          :name (intern (format nil "e-eval in scope ~A" (e. scope |getFQNPrefix|)) "KEYWORD"))))
@@ -119,6 +119,7 @@
 
 (defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
   "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope."
+  (require-kernel-e expr nil)
   (let* ((all-nouns (coerce (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector) 'list))
          (needed-nouns '())
          (needed-syms '())

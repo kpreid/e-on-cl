@@ -584,13 +584,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (defglobal +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
     (:|run| (sn rn dn vn hms)
       "General StaticScope constructor. Currently provided only to make StaticScopes selfless."
-      (warn "using inefficient makeStaticScope#run")
-      (let ((map-guard (e-import "org.erights.e.elib.slot.Map"))
-            (string-guard (type-specifier-to-guard 'string)))
-        (e-coercef sn (e. map-guard |get| string-guard (type-specifier-to-guard '|NounExpr|)))
-        (e-coercef rn (e. map-guard |get| string-guard (type-specifier-to-guard '(or |NounExpr| |SlotExpr|))))
-        (e-coercef dn (e. map-guard |get| string-guard (type-specifier-to-guard '|FinalPattern|)))
-        (e-coercef vn (e. map-guard |get| string-guard (type-specifier-to-guard '(or |VarPattern| |SlotPattern|)))))
+      (let ((map-guard (e. (e-import "org.erights.e.elib.slot.Map")
+                           |get|
+                           (type-specifier-to-guard 'string)
+                           (type-specifier-to-guard '|ENode|))))
+        ;; XXX arrange to not be re-constructing the map guard on every
+        ;; invocation (cache per vat)
+        
+        ;; this is rather loose, but it shouldn't matter, as a StaticScope
+        ;; is only worth as much as what you got it from
+        (e-coercef sn map-guard)
+        (e-coercef rn map-guard)
+        (e-coercef dn map-guard)
+        (e-coercef vn map-guard))
       (e-coercef sn 'boolean)
       (make-static-scope :set-names sn
                          :read-names rn
@@ -598,19 +604,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                          :var-names vn
                          :has-meta-state-expr hms))
     (:|scopeAssign| (node)
-      (e-coercef node '|NounExpr|)
+      (e-coercef node '|ENode|)
       (make node :set-names (e. node |getName|)))
     (:|scopeDef| (node)
-      (e-coercef node '|FinalPattern|)
+      (e-coercef node '|ENode|)
       (make node :def-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeRead| (node)
-      (e-coercef node '(or |NounExpr| |SlotExpr|))
+      (e-coercef node '|ENode|)
       (make node :read-names (e. node |getName|)))
     (:|scopeVar| (node)
-      (e-coercef node '|VarPattern|)
+      (e-coercef node '|ENode|)
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeSlot| (node)
-      (e-coercef node '|SlotPattern|)
+      (e-coercef node '|ENode|)
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
     (:|getEmptyScope| () +empty-static-scope+))))

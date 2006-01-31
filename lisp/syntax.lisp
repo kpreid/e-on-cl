@@ -648,7 +648,8 @@ XXX make precedence values available as constants"
       result)))
 
 (defun e-source-to-tree (source &key syntax-ejector)
-  (e.nonkernel.impl::e-macroexpand-all
+  ;; XXX this isn't really the relevant package
+  (e.nonkernel.impl:kernelize
     (antlr-root (query-or-die syntax-ejector "antlrParse" source))))
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
