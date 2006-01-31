@@ -850,15 +850,24 @@ XXX make precedence values available as constants"
         (e.grammar::|URIGetter| 
           (assert (null out-children))
           (cons tag text))
+          
         ((e.grammar::|ObjectExpr|)
-          (ecase (length out-children)
-            (3 (destructuring-bind (doc-comment qualified-name (extends implements script)) out-children
-                 (mn '|NKObjectExpr| doc-comment qualified-name extends (coerce implements 'vector) script)))
-            (5 (destructuring-bind (doc-comment qname-thing params result-guard body) out-children
-                 ;; GRUMBLE: this should either be a separate node type, or a *method* node should take the place of the script node
-                 (mn '|NKObjectExpr| doc-comment qname-thing nil #() (mn '|EScript| (vector (mn '|ETo| "" "run" (coerce params 'vector) result-guard body)) #()))))))
+          (destructuring-bind (doc-comment qualified-name (extends implements script)) out-children
+            (mn '|NKObjectExpr| doc-comment qualified-name extends (coerce implements 'vector) script)))
+        ((e.grammar::|MethodObject|)
+          (destructuring-bind (extends implements script) out-children
+            (list extends implements script)))
+        ((e.grammar::|FunctionObject| e.grammar::|MethodObject|)
+          (destructuring-bind (parameters result-guard body) out-children
+            (list nil nil (mn '|FunctionScript| (coerce parameters 'vector) 
+                                                result-guard body))))
+        ((e.grammar::|PlumbingObject|)
+          (destructuring-bind (implements matcher) out-children
+            (list nil implements (mn '|EScript| nil (vector matcher)))))
+
+                 
         ((e.grammar::|EScript|)
-          (destructuring-bind (extends implements todo) out-children
+          (let ((todo out-children))
             (let ((methods '())
                   (matchers '()))
               (loop while (typep (first todo) '(or |ETo| |EMethod|)) do
@@ -867,10 +876,8 @@ XXX make precedence values available as constants"
                 (push (pop todo) matchers))
               (when todo
                 (error "unexpected element type or misplaced method in EScript: ~S remaining (whole is ~S)" todo out-children))
-              (list extends
-                    implements
-                    (mn '|EScript| (coerce (nreverse methods) 'vector)
-                                   (coerce (nreverse matchers) 'vector))))))
+              (mn '|EScript| (coerce (nreverse methods) 'vector)
+                             (coerce (nreverse matchers) 'vector)))))
         ((e.grammar::|EMethod|)
           (let ((doc-comment ""))
             (when (eql (caaar in-children) 'e.grammar::|DOC_COMMENT|)

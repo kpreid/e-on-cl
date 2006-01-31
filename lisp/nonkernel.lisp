@@ -25,6 +25,7 @@
     :|URISchemeExpr|
     :|TailPattern|
     :|BindPattern|
+    :|FunctionScript|
     :|ETo|))
 
 (cl:defpackage :e.nonkernel.impl
@@ -319,7 +320,7 @@
                                      (|name| nil (or |Pattern| string))
                                      (|parent| t (or null |EExpr|))
                                      (|auditors| t (e-list |EExpr|))
-                                     (|script| t |EScript|))
+                                     (|script| t e.elang::|EScriptoid|))
                                     ()
   (etypecase |name|
     (|Pattern|
@@ -443,7 +444,16 @@
                                      ()
   (mn '|CdrPattern| |fixedPatt| |tailPatt|))
 
-(defemacro |ETo| (elang::|EMethodoid|) 
+(defemacro |FunctionScript| (|EScriptoid|) 
+    ((|patterns| t (e-list |Pattern|))
+     (|optResultGuard| t (or null |EExpr|))
+     (|body| t |EExpr|))
+    ()
+  (mn '|EScript| 
+    (vector (mn '|ETo| "" "run" |patterns| |optResultGuard| |body|))
+    #()))
+
+(defemacro |ETo| (|EMethodoid|) 
     ((|docComment| nil string)
      (|verb| nil string)
      (|patterns| t (e-list |Pattern|))

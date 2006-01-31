@@ -66,6 +66,7 @@ def author(<unsafe>) {
   
     def parser := makeEParser(tb)
     parser.setFilename(fname)
+    parser.setPocket(<antlr:CommonToken>(-1, "plumbing"), "enable")
     
     parser.start()
     def ast := parser.getAST()

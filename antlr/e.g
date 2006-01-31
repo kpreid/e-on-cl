@@ -40,7 +40,6 @@ header {
 // all updoc test case are ignored before E lexing.  See the lexer for details.
 
 // TODO:
-// plumbing?
 // . plurals
 // anonymous lambda syntax
 
@@ -124,6 +123,9 @@ tokens {
     EScript;
     EMethod;
     EMatcher;
+    MethodObject;
+    PlumbingObject;
+    FunctionObject;
     List;
     WhenFn;
     Implements;
@@ -203,11 +205,6 @@ setPocket![Token key, String value]: {
 } ;
 
 
-//;; GRUMBLE: nouns should be wrapped so that I can apply this to only
-// nouns and not general identifiers (like verbs)
-
-//that was what I told you before - NounExpr occurrences of identifiers
-// should be marked in the parse tree
 //;; GRUMBLE: an empty body makes the parser return only the pattern node
 // it should return an "empty-body node" or some such instead
 //
@@ -309,7 +306,7 @@ docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
 // var x := ... should produce a DefineExpr with a VarPattern
 // bind x := ... should produce a DefineExpr with a BindPattern
 defExpr:    //doco
-            "def"^  (  (objectPredict) => doco objName objectExpr
+            "def"^  (  (objectPredict) => doco objName objectTail
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! defRightSide
                                                       {##.setType(DefineExpr);}
@@ -317,7 +314,7 @@ defExpr:    //doco
                     )
             | (binder | varNamer)
                     (   ":="! defRightSide {##=#([DefineExpr],##);}
-                    |   objectExpr  {##=#([ObjectExpr],##);}
+                    |   objectTail  {##=#([ObjectExpr],##);}
                     )
             ;
 
@@ -327,16 +324,18 @@ defRightSide:  ( "("! eExpr ","! ) =>
                | assign
                ;
 
-// minimize the look-ahead for objectExpr
-objectPredict:    objName ("extends" | "implements" | "{"| "(" ) ;
-objectExpr:     //(typeParams)?
+// minimize the look-ahead for objectTail
+objectPredict:    objName ("extends" | "implements" | "match" | "{"| "(" ) ;
+objectTail:     //(typeParams)?
                 //(":"! guard)?
             oExtends
             oImplements
-            script {##=#([EScript],##);}
+            script {##=#([MethodObject],##);}
         |   params resultGuard body      // function
-            {##=#([EScript], ([Extends]), ([Implements]),
-            ([List], ([EMethod, "fn"], [IDENT, "run"], ##)));}
+            {##=#([FunctionObject], ##);}
+        |   // oImplements // XXX: doesn't work, and I don't know why -- kpreid
+            matcher pocket["plumbing"]!
+            {##=#([PlumbingObject], #([Absent]), ##);}
     ;
 
 oExtends:    "extends"^ br order {##.setType(Extends);}
@@ -360,7 +359,7 @@ typeParams:     "[" typePatternList br "]" ; // should have a br before the "]"
 typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
 
 //script:  "{"^ (method br)* (matcher br)* "}"!  {##.setType(List);} ;
-script:  "{"^ methods  "}"! {##.setType(List);} ;
+script:  "{"^ methods  "}"! {##.setType(EScript);} ;
 
 methods: (methodPredict) => method br methods | (matcher br )* ;
 methodPredict: doco ("to"|"method"|"on") ;

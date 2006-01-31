@@ -322,8 +322,10 @@
     :|EExpr|
     :|EMatcher|
     :|EMethod|
+    :|EMethodoid|
     :|ENode|
     :|EScript|
+    :|EScriptoid|
     :|EscapeExpr|
     :|FinalPattern|
     :|FinallyExpr|

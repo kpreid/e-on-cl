@@ -376,6 +376,21 @@ Plumbing
   ? one.__conformTo(any) == 1
   # value: true
 
+  Plumbing expressions can have auditors
+  XXX not implemented yet 
+  x ? def x implements def auditor {method audit(_,_):any{true}} match msg { E.callWithPair("x", msg) }
+  x # value: "x"
+  x 
+  x ? __auditedBy(auditor, x)
+  x # value: true
+  x 
+  x ? __auditedBy(DeepFrozen, x)
+  x # value: false
+  x 
+  x Plumbing expressions can't have super '
+  x ? def x extends y match msg {}
+  x # syntax error: ...
+
 Alleged type
 
   ? /** object doc */

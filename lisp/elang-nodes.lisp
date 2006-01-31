@@ -202,7 +202,7 @@
   ((:|docComment| nil string)
    (:|qualifiedName| nil string) 
    (:|auditorExprs| t (e-list |EExpr|)) 
-   (:|script| t |EScript|)))
+   (:|script| t |EScriptoid|)))
 (define-node-class |SeqExpr|         (|EExpr|)
   ((:|subs| t (e-list |EExpr|)))
   :rest-slot t)
@@ -219,7 +219,9 @@
 (define-node-class |EMatcher|        (|ENode|)
   ((:|pattern| t |Pattern|) 
    (:|body| t |EExpr|)))
-(define-node-class |EScript|         (|ENode|)
+
+(defclass |EScriptoid| (|ENode|) ())
+(define-node-class |EScript|         (|EScriptoid|)
   ((:|optMethods| t (or null (e-list |EMethodoid|)))
    (:|matchers| t (e-list |EMatcher|))))
                                
@@ -820,6 +822,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (define-kernel-e-type-constraints |NounPattern|
   (:|noun| |NounExpr|))
 
+(define-kernel-e-type-constraints |ObjectExpr|
+  (:|script| |EScript|))
+
 (define-kernel-e-type-constraints |EScript|
-  (:|optMethods| (e-list |EMethod|))
+  (:|optMethods| (or null (e-list |EMethod|)))
   (:|matchers| (e-list |EMatcher|)))
