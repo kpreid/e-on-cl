@@ -771,8 +771,8 @@ XXX make precedence values available as constants"
           (destructuring-bind (r verb &rest a) out-children
             (mn '|SendExpr| r verb (coerce a 'vector))))
         (e.grammar::|DefineExpr|
-          (destructuring-bind (l r &optional guard) out-children
-            (mn '|DefrecExpr| l r guard)))
+          (destructuring-bind (l r &optional ejector) out-children
+            (mn '|DefrecExpr| l r ejector)))
         (e.grammar::|EscapeExpr|
           ;; GRUMBLE: an empty body makes the parser return only the pattern node - it should return an "empty-body node" or some such instead
           (destructuring-bind (patt &optional (body (mn '|NullExpr|)) ((catch-marker catch-patt catch-body) '(nil nil nil))) out-children

@@ -311,15 +311,21 @@ docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
 defExpr:    //doco
             "def"^  (  (objectPredict) => doco objName objectExpr
                                                       {##.setType(ObjectExpr);}
-                    |  (pattern ":=") => pattern ":="! assign
+                    |  (pattern ":=") => pattern ":="! defRightSide
                                                       {##.setType(DefineExpr);}
                     |  nounExpr {##.setType(ForwardExpr);}
                     )
             | (binder | varNamer)
-                    (   ":="! assign {##=#([DefineExpr],##);}
+                    (   ":="! defRightSide {##=#([DefineExpr],##);}
                     |   objectExpr  {##=#([ObjectExpr],##);}
                     )
             ;
+
+// trinary-define support
+defRightSide:  ( "("! eExpr ","! ) =>
+                 "("! eExpr ","! eExpr ")"! pocket["trinary-define"]! 
+               | assign
+               ;
 
 // minimize the look-ahead for objectExpr
 objectPredict:    objName ("extends" | "implements" | "{"| "(" ) ;
