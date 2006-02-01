@@ -4,7 +4,6 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
-pragma.enable("one-method-object")
 
 /** Non-coercing guard wrapper. */
 def Really {
@@ -63,9 +62,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     kit
   }
   
-  def &peekSealer := def _.getValue() { return getPeekBrandKit().getSealer() }
-  def &peekUnsealer := def _.getValue() { return getPeekBrandKit().getUnsealer() }
-  def &peekBrand := def _.getValue() { return getPeekBrandKit().getBrand() }
+  def &peekSealer := def _{to getValue() { return getPeekBrandKit().getSealer() } }
+  def &peekUnsealer := def _{ to getValue() { return getPeekBrandKit().getUnsealer() } }
+  def &peekBrand := def _{ to getValue() { return getPeekBrandKit().getBrand() } }
 
   def rtrace(msgThunk) {
     #traceln(if (msgThunk =~ msg :String) {msg} else {msgThunk()})
