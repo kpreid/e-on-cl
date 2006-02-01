@@ -111,6 +111,7 @@ tokens {
     ListPattern;
     TailPattern;
     IgnorePattern;
+    SamePattern;
     SuchThatPattern;
     QuasiLiteralPattern;
     QuasiPatternPattern;
@@ -606,8 +607,8 @@ eqPatt:         nounExpr
                                                        // was IDENT quasiString
                 )
             |   "_"^ (":"! guard)?      {##=#([IgnorePattern],##);}
-            |   "=="^ prim
-            |   "!="^ prim
+            |   "=="^ prim              {##.setType(SamePattern);}
+            |   "!="^ prim              {##.setType(SamePattern);}
             |   compareOp prim
             |   quasiString             {##=#([QuasiLiteralPattern,"simple"],
                                               [STRING,"simple"],##);}

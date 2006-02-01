@@ -19,12 +19,14 @@
     :|ReturnExpr|
     :|SameExpr|
     :|SendExpr|
+    :|SwitchExpr|
     :|ThunkExpr|
     :|UpdateExpr|
     :|URIExpr|
     :|URISchemeExpr|
-    :|TailPattern|
     :|BindPattern|
+    :|SamePattern|
+    :|TailPattern|
     :|FunctionScript|
     :|ETo|))
 
@@ -396,6 +398,29 @@
     "send"
     (make-instance '|CallExpr| :elements (list* (mn '|NounExpr| "__makeList") "run" |recipient| (mn '|LiteralExpr| |verb|) (coerce |args| 'list)))))
 
+(defemacro |SwitchExpr| (|EExpr|) ((|specimen| t |EExpr|)
+                                   (|matchers| nil (e-list |EMatcher|)))
+                                  (:rest-slot t)
+  (let ((specimen-var (gennoun "specimen")))
+    ;; NOTE: I briefly got confused. Even if |specimen| turns out to be a
+    ;; NounExpr, we can't skip employing a temporary var, because the noun
+    ;; might be for a special slot.
+    (mn '|HideExpr|
+      (mn '|SeqExpr|
+        (mn '|DefineExpr| (mn '|FinalPattern| specimen-var nil) |specimen| nil)
+        (labels ((match-chain (list) 
+                  (if list
+                    (let ((matcher (first list)))
+                      (mn '|IfExpr|
+                        (mn '|MatchBindExpr| specimen-var
+                                             (e. matcher |getPattern|))
+                        (e. matcher |getBody|)
+                        (match-chain (rest list))))
+                    (mn '|CallExpr| (mn '|NounExpr| "throw") "run"
+                      (mn '|CallExpr| (mn '|LiteralExpr| "no match") "add"
+                        specimen-var)))))
+          (match-chain (coerce |matchers| 'list)))))))
+
 (defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil string)
                                   (|body| t |EExpr|))
                                  ()
@@ -439,9 +464,17 @@
           temp))
         (make-instance '|NounExpr| :elements '("true"))))))))
 
+(defemacro |SamePattern| (|Pattern|) ((|value| t |EExpr|)
+                                      (|invert| nil e-boolean))
+                                     ()
+  (let ((temp (gennoun "")))
+    (mn '|SuchThatPattern| (mn '|FinalPattern| temp nil) 
+                           (mn '|SameExpr| temp |value| |invert|))))
+
 (defemacro |TailPattern| (|Pattern|) ((|fixedPatt| t |Pattern|)
                                       (|tailPatt| t |Pattern|))
                                      ()
+  ;; will be less trivial once we support map patterns
   (mn '|CdrPattern| |fixedPatt| |tailPatt|))
 
 (defemacro |FunctionScript| (|EScriptoid|) 

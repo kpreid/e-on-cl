@@ -55,7 +55,7 @@ def author(<unsafe>) {
   
   def tokenSymbols := accum [] for tn in makeEParser.get_tokenNames() { _.with("e.grammar::|" + tn.replaceAll("\\", "\\\\").replaceAll("|", "\\|") + "|") }
   
-  def antlrParse(fname, text) {
+  def antlrParse(fname, text, isPattern, isQuasi) {
     def elexer := makeEALexer(<import:java.io.StringReader>(text))
     def qlexer := makeQuasiLexer(elexer.getInputState())
     def tb := makeTokenMultiBuffer(["e", "quasi"], [elexer, qlexer])
@@ -68,7 +68,11 @@ def author(<unsafe>) {
     parser.setFilename(fname)
     parser.setPocket(<antlr:CommonToken>(-1, "plumbing"), "enable")
     
-    parser.start()
+    if (isPattern) {
+      parser.pattern()
+    } else {
+      parser.start()
+    }
     def ast := parser.getAST()
     
     def [out, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
@@ -106,8 +110,7 @@ def author(<unsafe>) {
     return try { 
       switch (verb) {
         match =="antlrParse" {
-          def [source] := args
-          antlrParse("unknown", source)
+          E.call(antlrParse, "run", args)
         }
         match =="run" {
           def [source] := args

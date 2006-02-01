@@ -479,6 +479,7 @@ XXX make precedence values available as constants"
                     for sub in args
                     do (e. tw |write| sep)
                        (if (e-is-true subnode-flag)
+                         ;; XXX subprint doesn't handle nil/vector subnodes
                          (subprint sub nil)
                          (e. tw |quote| sub)))
               (e. tw |write| ">$")))))))
@@ -610,23 +611,26 @@ XXX make precedence values available as constants"
         (progn
           (call-to-java verb args :trying-again t))))))
 
-(defun query-to-java (verb arg)
+(defun query-to-java (verb &rest args)
   "Memoized version of call-to-java"
-  ; XXX multiple arg support eventually
-
-  (e-coercef arg 'string) ; XXX Twine
   
   ; Ensure that the source string is printable under *print-readably*, and therefore won't hose the parse cache. (simple-base-strings are not, in SBCL.)
   ; XXX check if this works on implementations other than SBCL 
-  (setf arg (coerce arg '(vector character)))
+  (setf args (mapcar (lambda (arg)
+                       (e-coercef arg '(or twine e-boolean))
+                       (if (stringp arg)
+                         (coerce arg '(vector character))
+                         arg))
+                     args))
   
-  (let* ((args (list arg))
-         (key (list verb args)))
+  (let* ((key (list verb args)))
     (multiple-value-bind (cached present-p) (gethash key *parse-cache-hash*)
     (if present-p
       cached
       (progn
-        (format *trace-output* "~&; query-to-java: ~A(~A...)" verb (subseq arg 0 (position #\Newline arg)))
+        (format *trace-output* "~&; query-to-java: ~A(~{~A...~^, ~})" 
+          verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg)) 
+                       args))
         (force-output *trace-output*)
         (let ((answer (call-to-java verb args)))
           (setf (gethash key *parse-cache-hash*) answer)
@@ -647,31 +651,37 @@ XXX make precedence values available as constants"
       (error-from-e-error-string ejector (second result))
       result)))
 
-(defun e-source-to-tree (source &key syntax-ejector)
+(defun e-source-to-tree (source &key syntax-ejector pattern)
   ;; XXX this isn't really the relevant package
   (e.nonkernel.impl:kernelize
-    (antlr-root (query-or-die syntax-ejector "antlrParse" source))))
+    (antlr-root (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) +e-false+))))
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
   (:|run| (source syntax-ejector)
     (e-source-to-tree source :syntax-ejector syntax-ejector))
   (:|run| (source)
-    (e-source-to-tree source))))
+    (e-source-to-tree source))
+  (:|pattern| (source syntax-ejector)
+    (e-source-to-tree source :syntax-ejector syntax-ejector :pattern t))))
 
 ;;; --- Antlr parser support ---
 
 (defun mn (name &rest elements)
   (make-instance name :elements elements))
 
-(defun is-an-expr (expr)
-  ;; XXX in the presence of arbitrary builders this isn't actually always expected
-  (if (typep expr '|EExpr|)
-    expr
-    (error "Non-expression ~S leaked out of antlr builder" expr)))
+(defun is-legitimate-toplevel-node (node)
+  (if (typep node '(or |EExpr| |Pattern|))
+    node
+    (error "Non-expression/pattern ~S leaked out of antlr builder" node)))
 
 (defun antlr-root (ast-nodes)
-  (apply #'mn '|SeqExpr| (map 'list #'is-an-expr (map 'vector #'build-antlr-nodes ast-nodes))))
+  (let ((enodes (map 'list #'is-legitimate-toplevel-node (map 'vector #'build-antlr-nodes ast-nodes))))
+    (etypecase (length enodes)
+      ((integer 1 1)
+        (first enodes))
+      ((integer 2)  
+        (apply #'mn '|SeqExpr| enodes)))))
 
 (defun unwrap-noun (string) 
   "defunct stub"
@@ -758,11 +768,6 @@ XXX make precedence values available as constants"
           (destructuring-bind (left right) out-children
             (mn '|CompareExpr| text left right)))
 
-        ((e.grammar::|SameExpr|)
-          (destructuring-bind (left right) out-children
-            (mn '|SameExpr| left right (ecase (find-symbol text :keyword)
-                                         (:!= +e-true+)
-                                         (:== +e-false+)))))
             
         ((e.grammar::|CallExpr| e.grammar::|"."|)
           ;; GRUMBLE: shouldn't need to match "."
@@ -782,6 +787,19 @@ XXX make precedence values available as constants"
           (ecase (length out-children)
             (2 (mn '|IfExpr| (first out-children) (second out-children) (mn '|NullExpr|)))
             (3 (pass))))
+            
+            
+        ;; -- negated variants --
+        ((e.grammar::|SameExpr|)
+          (destructuring-bind (left right) out-children
+            (mn '|SameExpr| left right (ecase (find-symbol text :keyword)
+                                         (:!= +e-true+)
+                                         (:== +e-false+)))))
+        ((e.grammar::|SamePattern|)
+          (destructuring-bind (value) out-children
+            (mn '|SamePattern| value (ecase (find-symbol text :keyword)
+                                       (:!= +e-true+)
+                                       (:== +e-false+)))))
         (e.grammar::|MatchBindExpr|
           (destructuring-bind (specimen pattern) out-children
             (mn (ecase (find-symbol text :keyword)
@@ -811,6 +829,7 @@ XXX make precedence values available as constants"
           e.grammar::|NounExpr|
           e.grammar::|ReturnExpr|
           e.grammar::|SlotExpr|
+          e.grammar::|SwitchExpr|
           e.grammar::|ThunkExpr|
           e.grammar::|URIExpr|
           e.grammar::|ListPattern|
@@ -912,8 +931,7 @@ XXX make precedence values available as constants"
   (loop
     for (source tree) in
       (with-standard-io-syntax
-        (let ((*package* (find-package :e.elang.vm-node))
-              (*read-eval* nil)) 
+        (let ((*package* (find-package :e.elang.vm-node))) 
           (read stream)))
     do (setf (gethash source *parse-cache-hash*) tree))
   (format *trace-output* "done~%")
