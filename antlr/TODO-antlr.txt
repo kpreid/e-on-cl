@@ -1,8 +1,13 @@
-necessary:
-trinary-define
-one-method-object
-plumbing expression
-map-tail in calls
+Parsing bugs:
 
-nice:
-letting pragma-enable information out for persistence across REPL inputs
+  Fails to parse:
+    Interface expressions (unexpected token "interface")
+    Quasi expressions (tagged`` and untagged `` forms) (unexpected token: ["`",<290>,line=229,col=63])
+    Object expressions (def and thunk) followed by guards (unexpected token: [":",<126>,line=1,col=10])
+
+  Bad parse trees:  
+    x::y expression - parses as three siblings
+    Any type of CallExpr followed by [] indexing, e.g. x()[0] or even x[0][1] - produces a tree like (x "get" 0 "get" 1) instead of ((x "get" 0) "get" 1)
+
+Meta:
+  Allow retrieving pragma change information, or have a state object which holds it, for persistence across REPL inputs as E-on-Java does

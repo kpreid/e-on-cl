@@ -333,7 +333,7 @@ objectTail:     //(typeParams)?
             script {##=#([MethodObject],##);}
         |   params resultGuard body      // function
             {##=#([FunctionObject], ##);}
-        |   // oImplements // XXX: doesn't work, and I don't know why -- kpreid
+        |   // oImplements // XXX needs rearrangement of the grammar to work
             matcher pocket["plumbing"]!
             {##=#([PlumbingObject], #([Absent]), ##);}
     ;

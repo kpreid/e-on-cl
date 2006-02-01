@@ -189,7 +189,6 @@ DOC_COMMENT
         )*
         '*' '/'
         BR
-        {$setText("**comment hidden**");}  // TODO: stop suppressing comments
     ;
 
 
