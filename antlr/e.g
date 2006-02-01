@@ -334,9 +334,9 @@ objectTail:     //(typeParams)?
             oImplements
             script {##=#([MethodObject],##);}
         |   oImplements
-            (   script {##=#([MethodObject],##);}
+            (   script {##=#([MethodObject], #([Extends]), ##);}
             |   matcher pocket["plumbing"]!
-                {##=#([PlumbingObject], #([Absent]), ##);}
+                {##=#([PlumbingObject], ##);}
             )
         |   params resultGuard body      // function
             {##=#([FunctionObject], ##);}
