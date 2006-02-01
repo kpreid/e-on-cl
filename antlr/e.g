@@ -119,6 +119,7 @@ tokens {
     URIGetter;
     URIExpr;
     ThunkExpr;
+    IndexExpr;
 
     EScript;
     EMethod;
@@ -320,7 +321,7 @@ defExpr:    //doco
 
 // trinary-define support
 defRightSide:  ( "("! eExpr ","! ) =>
-                 "("! eExpr ","! eExpr ")"! pocket["trinary-define"]! 
+                 "("! eExpr ","! eExpr ")"! pocket["trinary-define"]!
                | assign
                ;
 
@@ -328,17 +329,20 @@ defRightSide:  ( "("! eExpr ","! ) =>
 objectPredict:    objName ("extends" | "implements" | "match" | "{"| "(" ) ;
 objectTail:     //(typeParams)?
                 //(":"! guard)?
-            oExtends
+            extender
             oImplements
             script {##=#([MethodObject],##);}
+        |   oImplements
+            (   script {##=#([MethodObject],##);}
+            |   matcher pocket["plumbing"]!
+                {##=#([PlumbingObject], #([Absent]), ##);}
+            )
         |   params resultGuard body      // function
             {##=#([FunctionObject], ##);}
-        |   // oImplements // XXX needs rearrangement of the grammar to work
-            matcher pocket["plumbing"]!
-            {##=#([PlumbingObject], #([Absent]), ##);}
     ;
 
-oExtends:    "extends"^ br order {##.setType(Extends);}
+extender:    "extends"^ br order {##.setType(Extends);} ;
+oExtends:    extender
              |                   {##=#([Extends],##);}  ;
 
 oImplements: "implements"^ br order (","! order)* {##.setType(Implements);}
@@ -381,7 +385,7 @@ resultGuard:    ":"! guard | {##=#([Absent]);} ;
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
 
-interfaceExpr:  //doco
+interfaceExpr:  //doco below is a hack.  it should be here...
                 "interface"^  doco objName
                 //(":"! guard)?
                 (   ("guards" pattern)?
