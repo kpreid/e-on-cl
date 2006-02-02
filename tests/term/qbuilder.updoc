@@ -6,8 +6,10 @@
   ? def <qu> := <import:org.quasiliteral.*>; null
   ? def makeTermBuilder := <qu:term.makeTermBuilder>; null
   ? def termBuilder := makeTermBuilder(); null
-  ? def makeQBuilder := <qu:quasiterm.makeQBuilder>; null
-  ? def qb := makeQBuilder(termBuilder)
+  
+  ? def makeQBuilder :DeepFrozen := <qu:quasiterm.makeQBuilder>; null
+  
+  ? def qb :DeepFrozen := makeQBuilder(termBuilder)
   # value: <qBuilder>
 
 --- Terms

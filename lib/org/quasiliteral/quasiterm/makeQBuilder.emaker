@@ -19,6 +19,9 @@ def QFunctor := QAstroArg # XXX restrict
 def QTerm := QAstroArg # XXX restrict
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
+def memoize := <import:org.cubik.cle.memoize>
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
 def qtPrint implements DeepFrozen { to run(tw :TextWriter, what :QAstroArg) {
   tw.write("qterm`")
   what.termPrint(tw)
@@ -30,16 +33,22 @@ def _make implements DeepFrozen { to run(astroBuilder) {
   def qBuilder
 
   /** XXX faked for now */
-  def schema {
+  def schema implements DeepFrozen {
     to obtainTagForName(name) { return makeAstroTag(null, name, nullOk) }
   }
-
+  
   def baseBuilder := makeBaseAstroBuilder(qBuilder, 
                                           schema,
                                           ["BAstroArg" => QAstroArg,
                                            ])
 
-  bind qBuilder := def "$qBuilder" extends baseBuilder { # implements AstroBuilder?, QuasiBuilder?
+  bind qBuilder := def "$qBuilder" extends baseBuilder implements EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
+    method __optSealedDispatch(brand) :any {
+      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+      }
+    }
+    
   
     to doesQuasis() { return true }
   
@@ -83,7 +92,16 @@ def _make implements DeepFrozen { to run(astroBuilder) {
     to valueHole(key :int) {
       return def quasiValueFunctorHole implements QAstroArgStamp { # XXX should be implements QFunctor?
         to substitute(args :List) {
-          return args[key] # XXX restrict to Astro? AstroFunctor?
+          def holeValue := args[key]
+          return switch (holeValue) {
+            # XXX review this for correctness
+            match data :any[int, float64, char] { 
+              astroBuilder.leafData(data, null) }
+            match name :String {
+              # XXX ask astroBuilder to make us a tag-with-given-name instead
+              astroBuilder.leafTag(makeAstroTag(null, name, nullOk), null) }
+            match x { x }
+          }
         }
       
         to termPrint(tw :TextWriter) {
@@ -139,18 +157,56 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       def tagName := accum "" for [kind, text] in tagPieces { _ + text}
       return qBuilder.leafTag(makeAstroTag(null, tagName, nullOk), null)
     }
-  
-    to valueMaker(template :String) {
-      # XXX cache
-      return makeTermParser(qBuilder).parseText(template.asStream())
+    
+     to seq(single :QTerm) {
+      return single
     }
+    
+    match [=="seq", args :List[QTerm]] {
+      def qBuilderSeq implements QAstroArgStamp {
+        to getTerms() { return args }
+        
+        to substitute(sargs) {
+          return E.call(astroBuilder, "seq",  accum [] for arg in args { _.with(arg.substitute(sargs)) })
+        }
+        
+        to __printOn(out :TextWriter) {
+          out.write("qtermSeq`(")
+          var sep := ""
+          for arg in args { 
+            out.write(sep)
+            out.print(arg)
+            sep := ", "
+          }
+          out.write(")`")
+        }
+      }
+    }
+
   }
+  
+  
   return qBuilder
 }}
 
 def makeQBuilder implements DeepFrozen {
   to getTerm__quasiParser() {
-    return _make(<import:org.quasiliteral.term.makeTermBuilder>())
+    def qBuilder := _make(<import:org.quasiliteral.term.makeTermBuilder>())
+    def qparse := memoize({
+      def "$qparse" implements DeepFrozen { to run(template :String) {
+        return makeTermParser(qBuilder).parseText(template.asStream())
+      }}
+    })
+    
+    return def "$term__quasiParser" implements DeepFrozen {
+      to valueMaker(template :String) {
+        return qparse(template)
+      }
+  
+      to matchMaker(template :String) {
+        return qparse(template)
+      }
+    }
   }
   
   to run(abuilder) {
