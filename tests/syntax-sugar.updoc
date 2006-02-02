@@ -1,0 +1,317 @@
+# Copyright 2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+These are tests specifically of the text->Kernel-E stages, skipping evaluation and the intermediate unexpanded form; however, the intent is primarily to test expansion, not the parser.
+
+  ? def t := <import:org.cubik.cle.prim.parser>; null
+  ? def tp(pat) :any { return t.pattern(pat, null) }; null
+
+Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
+
+'BinaryExpr'
+
+  ? t("a + b")
+  # value: e`a.add(b)`
+  
+  ? t("a + (b, c)")
+  # value: e`a.add(b, c)`
+  
+  ? t("a..b")
+  # value: e`__makeOrderedSpace.op__thru(a, b)`
+
+  ? t("a..!b")
+  # value: e`__makeOrderedSpace.op__till(a, b)`
+  
+  XXX test all binary ops for correct matching verbs
+
+'CoerceExpr'
+
+  ? t("a :b")
+  # value: e`ValueGuard.coerce(b, null).coerce(a, null)`
+
+  XXX order of evaluation reversal
+
+'CompareExpr'
+
+  ? t("a < b")
+  # value: e`__comparer.lessThan(a, b)`
+
+'ConditionalExpr'
+
+  ? t("(def a := b) || (def c := d)")
+  # value: e`{
+  #            if (def a := b) {
+  #                null =~ [&c]
+  #                __makeList.run(&c, &a)
+  #            } else {
+  #                if (def c := d) {
+  #                    null =~ [&a]
+  #                    __makeList.run(&c, &a)
+  #                } else {
+  #                    null
+  #                }
+  #            }
+  #        } =~ [&c, &a]`
+  
+  ? t("(def a := b) && (def c := d)")
+  # value: e`{
+  #            if (def a := b) {
+  #                if (def c := d) {
+  #                    __makeList.run(&c, &a)
+  #                } else {
+  #                    null
+  #                }
+  #            } else {
+  #                null
+  #            }
+  #        } =~ [&c, &a]`
+  
+  XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
+
+'DefrecExpr'
+
+  ? t("def a := b")
+  # value: e`def a := b`
+
+  ? t("def [a, b] := [b, c]")
+  # value: e`def [b__1, bR__2] := Ref.promise()
+  #        def value__3 := def [a, b] := __makeList.run(b__1, c)
+  #        bR__2.resolve(b)
+  #        value__3`
+
+'ListExpr'
+
+  ? t("[]")
+  # value: e`__makeList.run()`
+
+  ? t("[a, b]")
+  # value: e`__makeList.run(a, b)`
+
+'MismatchExpr'
+
+  ? t("a !~ b")
+  # value: e`(a =~ b).not()`
+
+'NKObjectExpr'
+
+  base case
+  ? t("def \"a\" {}")
+  # value: e`def "a" {
+  #        }`
+  
+  named
+  ? t("def a {}")
+  # value: e`def a := def "$a__C" {
+  #        }`
+  
+  named with recursion (implemented by DefrecExpr)
+  ? t("def a { method run() :any { a } }")
+  # value: e`def [a__1, aR__2] := Ref.promise()
+  #        def value__3 := def a := def "$a__C" {
+  #            
+  #            method run() :any {
+  #                a__1
+  #            }
+  #        }
+  #        aR__2.resolve(a)
+  #        value__3`
+  
+  parent
+  ? t("def \"a\" extends b {}")
+  # value: e`{
+  #            def super := b
+  #            def "a" {
+  #                match message__1 {
+  #                    E.callWithPair(super, message__1)
+  #                }
+  #            }
+  #        }`
+
+  parent with reference to name
+  ? t("def a extends b(a) {}")
+  # value: e`def [a__1, aR__2] := Ref.promise()
+  #        def value__3 := def a := {
+  #            def super := b.run(a__1)
+  #            def "$a__C" {
+  #                match message__4 {
+  #                    E.callWithPair(super, message__4)
+  #                }
+  #            }
+  #        }
+  #        aR__2.resolve(a)
+  #        value__3`
+  
+'NullExpr'
+
+  ? t("{}")
+  # value: e`{
+  #            null
+  #        }`
+
+'PrefixExpr'
+
+  ? t("!a")
+  # value: e`a.not()`
+
+'RangeExpr': see 'BinaryExpr' for now
+
+'ReturnExpr'
+
+  ? t("return")
+  # value: e`__return.run()`
+
+  ? t("return a")
+  # value: e`__return.run(a)`
+
+'SameExpr'
+  
+  ? t("a == b")
+  # value: e`__equalizer.sameEver(a, b)`
+  
+  ? t("a != b")
+  # value: e`__equalizer.sameEver(a, b).not()`
+
+'SendExpr'
+
+  ? t("a <- b(c)")
+  # value: e`E.send(a, "b", __makeList.run(c))`
+
+  ? t("a <- "b"(c)")
+  # value: e`E.send(a, "b", __makeList.run(c))`
+
+  ? t("a <- (b)")
+  # value: e`E.send(a, "run", __makeList.run(b))`
+
+'SwitchExpr'
+  
+  ? t("switch (x) { match [a] { b } match c { d } }")
+  # value: e`{
+  #            def specimen__1 := x
+  #            if (specimen__1 =~ [a]) {
+  #                b
+  #            } else {
+  #                if (specimen__1 =~ c) {
+  #                    d
+  #                } else {
+  #                    throw.run("no match: ".add(specimen__1))
+  #                }
+  #            }
+  #        }`
+  
+  XXX should be throw.run(__switchMatchError(...)) or similar, so that we're not stringifying the specimen '
+  
+'ThunkExpr'
+
+  ? t("thunk {}")
+  # value: e`def _ {
+  #            
+  #            method run() {
+  #                null
+  #            }
+  #        }`
+  
+  ? t("thunk { a }")
+  # value: e`def _ {
+  #            
+  #            method run() {
+  #                a
+  #            }
+  #        }`
+  
+  x ? t("thunk implements a { b }")
+  x # syntax error: 
+  
+  ? t("/** foo */ thunk { b }")
+  # value: e`def _ {
+  #            
+  #            /** foo */
+  #            method run() {
+  #                b
+  #            }
+  #        }`
+
+'UpdateExpr'
+
+  ? t("a += b")
+  # value: e`a := a.add(b)`
+  
+  ? t("a += (b, c)")
+  # value: e`a := a.add(b, c)`
+  
+  ? t("a b= c")
+  # value: e`a := a.b(c)`
+  
+  ? t("a b= (c)")
+  # value: e`a := a.b(c)`
+  
+  ? t("a b= (c, d)")
+  # value: e`a := a.b(c, d)`
+  
+  ? t("a b= a")
+  # value: e`a := a.b(a)`
+  
+  XXX these syntax-level tests don't test the result of arbitrary children to UpdateExpr '
+
+'URIExpr'
+
+  ? t("<a:b>")
+  # value: e`a__uriGetter.get("b")`
+  
+  ? t("<ab:c>")
+  # value: e`ab__uriGetter.get("c")`
+
+  ? t("<ab:c:d>")
+  # value: e`ab__uriGetter.get("c:d")`
+
+'URISchemeExpr'
+
+  ? t("<a>")
+  # value: e`a__uriGetter`
+
+  ? t("<svn+ssh>")
+  # value: e`::"svn+ssh__uriGetter"`
+
+'BindPattern'  
+
+  ? tp("bind a")
+  # value: epatt`a__1 ? (a__Resolver.resolve(a__1)
+  #        true)`
+
+  ? tp("bind a :b")
+  # value: epatt`a__1 :b ? (a__Resolver.resolve(a__1)
+  #        true)`
+
+'SamePattern'
+
+  ? tp("==x")
+  # value: epatt`__1 ? __equalizer.sameEver(__1, x)`
+
+'TailPattern': not testable
+
+'FunctionScript'
+
+  ? t("/** a */ def b() :c { d }")
+  # value: e`def b := def "$b__C" {
+  #            
+  #            /** a */
+  #            method run() :c {
+  #                escape __return {
+  #                    d
+  #                }
+  #            }
+  #        }`
+
+'ETo'
+
+  ? t("def a { to b() :c { d } }")
+  # value: e`def a := def "$a__C" {
+  #            
+  #            method b() :c {
+  #                escape __return {
+  #                    d
+  #                }
+  #            }
+  #        }`
+  
+XXX test temporary name rules
+XXX do node-based tests for FunctionScript, TailPattern, UpdateExpr since those aren't quite fully tested just from syntax '

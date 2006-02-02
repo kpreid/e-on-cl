@@ -288,7 +288,7 @@ XXX make precedence values available as constants"
                   (e. tw |print| "(")
                   (subprint specimen +precedence-outer+)
                   (e. tw |print| ", ")
-                  (subprint specimen +precedence-outer+)
+                  (subprint opt-ejector +precedence-outer+)
                   (e. tw |print| ")"))
                 (subprint specimen +precedence-define-right+))))
           
@@ -750,15 +750,12 @@ XXX make precedence values available as constants"
           (destructuring-bind (pattern body) out-children
             (list 'e.grammar::|"catch"| pattern body)))
                 
-        (e.grammar::|AssignExpr|
-          ;; GRUMBLE: updates should have a separate node type
-          (ecase (length out-children)
-            (2 (apply #'mn '|AssignExpr| out-children))
-            (3 (mn '|UpdateExpr| 
-                 (destructuring-bind (target verboid &rest args) out-children
-                   (etypecase verboid
-                     ((cons (eql update-op)) (mn '|BinaryExpr| (cdr verboid) target (coerce args 'vector)))
-                     (string (mn '|CallExpr| target verboid (coerce args 'vector)))))))))
+        (e.grammar::|UpdateExpr|
+          (mn '|UpdateExpr| 
+            (destructuring-bind (target verboid &rest args) out-children
+              (etypecase verboid
+                ((cons (eql update-op)) (mn '|BinaryExpr| (cdr verboid) target (coerce args 'vector)))
+                (string (apply #'mn '|CallExpr| target verboid args))))))
                  
         ((e.grammar::|BinaryExpr|)
           (destructuring-bind (left &rest rights) out-children
@@ -787,8 +784,8 @@ XXX make precedence values available as constants"
           (ecase (length out-children)
             (2 (mn '|IfExpr| (first out-children) (second out-children) (mn '|NullExpr|)))
             (3 (pass))))
-            
-            
+
+
         ;; -- negated variants --
         ((e.grammar::|SameExpr|)
           (destructuring-bind (left right) out-children
@@ -819,7 +816,8 @@ XXX make precedence values available as constants"
             (check-type op (cons (eql op) string))
             (mn '|PrefixExpr| (cdr op) arg)))
           
-        ((e.grammar::|CoerceExpr|
+        ((e.grammar::|AssignExpr|
+          e.grammar::|CoerceExpr|
           e.grammar::|ForwardExpr| 
           e.grammar::|HideExpr|
           e.grammar::|ListExpr|
@@ -919,7 +917,7 @@ XXX make precedence values available as constants"
               (cons 'update-op (subseq text 0 (1- (length text)))))
             ((and (string= (aref (symbol-name tag) 0) "\"") 
                   (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 1)) "\""))
-              (cons 'op (subseq text 0 (1- (length text)))))
+              (cons 'op text))
             (t (error "don't know what to do with ~S <- ~A" expr (write-to-string path :length 5))))))))))
 
 ; --- Parse cache files ---

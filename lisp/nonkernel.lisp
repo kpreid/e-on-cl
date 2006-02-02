@@ -63,29 +63,39 @@
                      (find-names sub)
                      '())))))
     
-(defun reify-temporaries (node &optional (names (e. (coerce (find-names node) 'vector) |asMap|))
-                                         (index-cell (cons 1 nil)))
+(defun reify-temporaries (node 
+    &aux (names (e. (coerce (find-names node) 'vector) |asMap|))
+         (seen (make-hash-table))
+         (index 0))
   "Replace all TemporaryExprs in the node tree with NounExprs."
-  (etypecase node
-    (null nil)
-    (vector (map 'vector (lambda (x) (reify-temporaries x names index-cell)) node))
-    (|TemporaryExpr| 
-      (mn '|NounExpr| 
-        (loop with label = (symbol-name (e. node |getName|))
-              for name = (format nil "~A__~A" label (car index-cell))
-              while (e-is-true (e. names |maps| name))
-              do (incf (car index-cell))
-              finally (return name))))
-    (|ENode| 
-      ;; XXX duplicated code
-      (let ((maker (get (class-name (class-of node)) 'static-maker)))
-        (e-call maker "run"
-          ((lambda (args) `(nil ,@args nil))
-            (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
-                  for sub in (elang::node-visitor-arguments node)
-                  collect (if (e-is-true subnode-flag)
-                            (reify-temporaries sub names index-cell)
-                            sub))))))))
+  (labels ((substitution (node)
+    (etypecase node
+      (null nil)
+      (vector (map 'vector #'substitution node))
+      (|TemporaryExpr| 
+        (let ((symbol (e. node |getName|)))
+          (or 
+            (gethash symbol seen)
+            (setf (gethash symbol seen)
+              (progn
+                (incf index)
+                (mn '|NounExpr| 
+                  (loop with label = (symbol-name symbol)
+                        for name = (format nil "~A__~A" label index)
+                        while (e-is-true (e. names |maps| name))
+                        do (incf index)
+                        finally (return name))))))))
+      (|ENode| 
+        ;; XXX duplicated code
+        (let ((maker (get (class-name (class-of node)) 'static-maker)))
+          (e-call maker "run"
+            ((lambda (args) `(nil ,@args nil))
+              (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+                    for sub in (elang::node-visitor-arguments node)
+                    collect (if (e-is-true subnode-flag)
+                              (substitution sub)
+                              sub)))))))))
+    (substitution node)))
 
 (defun kernelize (node)
   "Convert a general E node tree to Kernel-E."
@@ -217,12 +227,12 @@
 (defemacro |PromiseVarExpr| (|EExpr|) ((|promiseNoun| t |EExpr|)
                                        (|resolverNoun| t |EExpr|))
                                       ()
-  (make-instance '|DefrecExpr| :elements (list 
-    (make-instance '|ListPattern| :elements (list 
-      (make-instance '|FinalPattern| :elements (list |promiseNoun| nil))
-      (make-instance '|FinalPattern| :elements (list |resolverNoun| nil))))
-    (load-time-value (make-instance '|CallExpr| :elements (list (make-instance '|NounExpr| :elements '("Ref")) "promise")))
-    (make-instance '|NounExpr| :elements '("null")))))
+  (mn '|DefrecExpr|
+    (mn '|ListPattern|
+      (mn '|FinalPattern| |promiseNoun| nil)
+      (mn '|FinalPattern| |resolverNoun| nil))
+    (load-time-value (mn '|CallExpr| (mn '|NounExpr| "Ref") "promise"))
+    nil))
 
 
 (defun make-noun-substitute-visitor (map)
@@ -266,7 +276,7 @@
          (common-names
            (e. (e. (e. left-scope |outNames|) |and| (e. right-scope |namesUsed|)) |getKeys|)))
     (if (plusp (length common-names))
-      (let* ((result-noun (gennoun "result"))
+      (let* ((result-noun (gennoun "value"))
              (common-nouns (map 'vector (lambda (n) (mn '|NounExpr| n)) common-names))
              resolver-nouns
              replacement-nouns
@@ -319,7 +329,7 @@
   (mn '|CallExpr| (mn '|MatchBindExpr| |specimen| |pattern|) "not"))
 
 (defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil string)
-                                     (|name| nil (or |Pattern| string))
+                                     (|name| nil (or null |Pattern| string))
                                      (|parent| t (or null |EExpr|))
                                      (|auditors| t (e-list |EExpr|))
                                      (|script| t e.elang::|EScriptoid|))
@@ -336,23 +346,26 @@
           |auditors|
           |script|) 
         nil))
-    (string
+    ((or nil string)
       (if |parent|
-        (mn '|SeqExpr|
-          (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
-                            |parent|
-                            nil)
-          (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
-                              (mn '|EScript|
-                                (e. |script| |getOptMethods|)
-                                (e. (e. |script| |getMatchers|) |with|
-                                  (mn '|EMatcher|
-                                    (mn '|FinalPattern| (mn '|NounExpr| "msg") nil)
-                                    (mn '|CallExpr| (mn '|NounExpr| "E")
-                                                    "callWithPair"
-                                                    (mn '|NounExpr| "super")
-                                                    (mn '|NounExpr| "msg")))))))
-        (mn '|ObjectExpr| |docComment| |name| |auditors| |script|)))))
+        (mn '|HideExpr|
+          (mn '|SeqExpr|
+            (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
+                              |parent|
+                              nil)
+            (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
+                                (mn '|EScript|
+                                  (e. |script| |getOptMethods|)
+                                  (e. (e. |script| |getMatchers|) |with|
+                                    (let ((msg-noun (gennoun "message")))
+                                      (mn '|EMatcher|
+                                        (mn '|FinalPattern| msg-noun nil)
+                                        (mn '|CallExpr| (mn '|NounExpr| "E")
+                                                        "callWithPair"
+                                                        (mn '|NounExpr| "super")
+                                                        msg-noun))))))))
+        ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
+        (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))
 
 (defemacro |NullExpr| (|EExpr|) () ()
   (load-time-value (mn '|NounExpr| "null")))
@@ -378,8 +391,10 @@
       |start|
       |end|))
 
-(defemacro |ReturnExpr| (|EExpr|) ((|value| t |EExpr|)) ()
-  (mn '|CallExpr| (mn '|NounExpr| "__return") "run" |value|))
+(defemacro |ReturnExpr| (|EExpr|) ((|value| t (or null |EExpr|))) ()
+  (apply #'mn '|CallExpr| (mn '|NounExpr| "__return") 
+                          "run" 
+                          (when |value| (list |value|))))
 
 (defemacro |SameExpr| (|EExpr|) ((|left| t |EExpr|)
                                  (|right| t |EExpr|)
@@ -396,7 +411,9 @@
   (mn '|CallExpr|
     (mn '|NounExpr| "E")
     "send"
-    (make-instance '|CallExpr| :elements (list* (mn '|NounExpr| "__makeList") "run" |recipient| (mn '|LiteralExpr| |verb|) (coerce |args| 'list)))))
+    |recipient| 
+    (mn '|LiteralExpr| |verb|)
+    (apply #'mn '|CallExpr| (mn '|NounExpr| "__makeList") "run" (coerce |args| 'list))))
 
 (defemacro |SwitchExpr| (|EExpr|) ((|specimen| t |EExpr|)
                                    (|matchers| nil (e-list |EMatcher|)))
@@ -425,10 +442,10 @@
                                   (|body| t |EExpr|))
                                  ()
   (mn '|ObjectExpr|
-      |docComment|
+      ""
       "_"
       #()
-      (mn '|EScript| (vector (mn '|EMethod| "" "run" #() nil |body|)) 
+      (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
                              #())))
 
 (defemacro |UpdateExpr| (|EExpr|) ((|call| t (or |CallExpr| |BinaryExpr|)))

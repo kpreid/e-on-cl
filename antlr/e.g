@@ -62,6 +62,7 @@ options {
 
 tokens {
     AssignExpr;
+    UpdateExpr;
     CallExpr;
     DefineExpr;
     ForwardExpr;
@@ -429,11 +430,11 @@ body:       "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 // Based on the above patterns, only nounExpr, nounExpr
 assign:         cond
                 (   ":="^ assign                  {##.setType(AssignExpr);}
-                |   assignOp assign               {##=#([AssignExpr], ##);}
+                |   assignOp assign               {##=#([UpdateExpr], ##);}
                 |   verb "="!   // deal with deprecated single case
                     ( ("(")=> parenArgs
                      | assign warn["Parentheses expected on verb= argument"]!)
-                    {##=#([AssignExpr], ##);}
+                    {##=#([UpdateExpr], ##);}
                 )?
             |   docoDef
             ;
@@ -446,9 +447,14 @@ assignOp:       "//=" | "+=" | "-=" | "*=" | "/="
 ejector:        (   "break"^         {##.setType(BreakExpr);}
                 |   "continue"^      {##.setType(ContinueExpr);}
                 |   "return"^        {##.setType(ReturnExpr);}
-                ) (("(" ")") => "(" ")" | assign | )
+                ) ejectorArg
             |   "^"^ assign          {##.setType(ReturnExpr);}
                                      warn["Smalltalk-style '^' deprecated"]!
+            ;
+
+ejectorArg: ("(" ")") => "("! ")"! {##=#([Absent], ##);} 
+            | assign              
+            | {##=#([Absent],##);}
             ;
 
 // || is don't-care associative
