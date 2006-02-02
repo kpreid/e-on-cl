@@ -5,6 +5,8 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 def AstroTag := makeAstroTag.asType()
 
@@ -18,7 +20,13 @@ def makeBaseAstroBuilder implements DeepFrozen {
          [=> BAstroArg := any,
           => BAstro := any]) {
 
-    def baseAstroBuilder { # implements EventuallyDeepFrozen, AstroBuilder
+    def baseAstroBuilder implements EventuallyDeepFrozen { # implements AstroBuilder
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+
       to attr(functor :Pass, value :Pass) {
         return self.term(self.leafTag(schema.obtainTagForName(".attr."), null), self.term(functor, value))
       }

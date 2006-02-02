@@ -1,0 +1,12 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def <qu> := <import:org.quasiliteral.*>; null
+  ? def makeBaseAstroBuilder := <qu:astro.makeBaseAstroBuilder>
+  # value: <makeBaseAstroBuilder>
+  
+  ? makeBaseAstroBuilder :DeepFrozen
+  # value: <makeBaseAstroBuilder>
+  
+  ? def testBuilder := makeBaseAstroBuilder(null, null, [].asMap())
+  # value: <baseAstroBuilder>
