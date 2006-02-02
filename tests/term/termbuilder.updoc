@@ -13,10 +13,10 @@
   ? def t2 := makeTerm(makeAstroTag(45, "bar", nullOk), null, null, [])
   # value: term`bar`
 
-  ? def makeTermBuilder := <qu:term.makeTermBuilder>
+  ? def makeTermBuilder :DeepFrozen := <qu:term.makeTermBuilder>
   # value: <makeTermBuilder>
   
-  ? def tb := makeTermBuilder()
+  ? def tb :DeepFrozen := makeTermBuilder()
   # value: <termBuilder>
 
 XXX schema parameter

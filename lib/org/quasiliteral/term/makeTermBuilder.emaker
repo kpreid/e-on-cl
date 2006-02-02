@@ -6,6 +6,7 @@ pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def Term := any # XXX restrict
 def AstroTag := any # XXX restrict
@@ -24,7 +25,7 @@ def makeTermBuilder implements DeepFrozen {
     }
 
     /** XXX faked for now */
-    def schema {
+    def schema implements DeepFrozen {
       to obtainTagForName(name) { return makeAstroTag(null, name, nullOk) }
     }
     
@@ -35,7 +36,13 @@ def makeTermBuilder implements DeepFrozen {
                                             ["BAstroArg" => AstroArg,
                                              ])
   
-    bind termBuilder := def "termBuilder" extends baseBuilder {
+    bind termBuilder := def "termBuilder" extends baseBuilder implements EventuallyDeepFrozen {
+      method __optSealedDispatch(brand) :any {
+        if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+          EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+        }
+      }
+  
       to empty() { return termBuilder.seq() }
       to term(functor :Term ? (functor.getArgs() == []), 
               args :AstroArg) { # XXX args guard?
