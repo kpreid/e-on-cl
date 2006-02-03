@@ -702,7 +702,30 @@ XXX make precedence values available as constants"
                                         (find-symbol (symbol-name tag) :e.nonkernel))
                                     :elements out-children)))
       (case tag
-        ((e.grammar::|DOC_COMMENT|) 
+        ;; -- no special treatment --
+        ((e.grammar::|AssignExpr|
+          e.grammar::|CallExpr|
+          e.grammar::|CoerceExpr|
+          e.grammar::|ForwardExpr| 
+          e.grammar::|HideExpr|
+          e.grammar::|ListExpr|
+          e.grammar::|LiteralExpr|
+          e.grammar::|MetaContextExpr|
+          e.grammar::|MetaStateExpr|
+          e.grammar::|NounExpr|
+          e.grammar::|ReturnExpr|
+          e.grammar::|SendExpr|
+          e.grammar::|SlotExpr|
+          e.grammar::|SwitchExpr|
+          e.grammar::|ThunkExpr|
+          e.grammar::|URIExpr|
+          e.grammar::|ListPattern|
+          e.grammar::|SuchThatPattern|
+          e.grammar::|TailPattern|)
+          (pass))
+      
+        ;; -- misc. leaves and 'special' nodes --
+        ((e.grammar::|DOC_COMMENT| e.grammar::|IDENT|) 
           (assert (null out-children))
           text)
         ((e.grammar::|DocComment|) 
@@ -710,9 +733,6 @@ XXX make precedence values available as constants"
           (destructuring-bind (comment body) out-children
             (declare (ignore comment))
             body))
-        ((e.grammar::|IDENT|) 
-          (assert (null out-children))
-          text)
         ((e.grammar::|INT|) 
           (assert (null out-children))
           (let ((*read-eval* nil)) 
@@ -731,50 +751,55 @@ XXX make precedence values available as constants"
           (assert (null out-children))
           (destructuring-bind (character) (coerce text 'list)
             character))
-        
-        
         ((e.grammar::|URI|) 
           (assert (null out-children))
           text)
-        ((e.grammar::|List| e.grammar::|Implements|) out-children)
-        (e.grammar::|Extends|
-          (destructuring-bind (&optional extends) out-children
-            extends))
         (e.grammar::|Absent|
           nil)
+        #+(or)
         ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|)
           ;; XXX review these nodes; some of them are not being generated any more 
           (assert (null out-children))
           tag)
+        (e.grammar::|URIGetter| 
+          (assert (null out-children))
+          (cons tag text))
+
+        ;; -- special-purpose branches ---
+        ((e.grammar::|List| e.grammar::|Implements|) out-children)
+        (e.grammar::|Extends|
+          (destructuring-bind (&optional extends) out-children
+            extends))
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
             (list 'e.grammar::|"catch"| pattern body)))
         (e.grammar::|"=>"|
           (destructuring-bind (key value) out-children
             (list 'assoc key value)))
-                
+        
+        ;; -- node type de-confusion --  
         (e.grammar::|UpdateExpr|
           (mn '|UpdateExpr| 
             (destructuring-bind (target verboid &rest args) out-children
               (etypecase verboid
                 ((cons (eql update-op)) (mn '|BinaryExpr| (cdr verboid) target (coerce args 'vector)))
                 (string (apply #'mn '|CallExpr| target verboid args))))))
-                 
+        
+        ;; -- child rearrangement --     
         ((e.grammar::|BinaryExpr|)
           (destructuring-bind (left &rest rights) out-children
             ;; GRUMBLE: either .., ..! should be marked as RangeExpr by the parser or CompareExpr should be another kind of BinaryExpr
             (mn '|BinaryExpr| text left (coerce rights 'vector))))
+
+        ;; -- text introduction --
         ((e.grammar::|CompareExpr|)
           (destructuring-bind (left right) out-children
             (mn '|CompareExpr| text left right)))
+        (e.grammar::|ConditionalExpr|
+          (destructuring-bind (left right) out-children
+            (mn '|ConditionalExpr| text left right)))
 
-            
-        ((e.grammar::|CallExpr| e.grammar::|"."|)
-          ;; GRUMBLE: shouldn't need to match "."
-          (apply #'mn '|CallExpr| out-children))
-        ((e.grammar::|SendExpr|)
-          (destructuring-bind (r verb &rest a) out-children
-            (mn '|SendExpr| r verb (coerce a 'vector))))
+        ;; -- de-optioning --
         (e.grammar::|DefineExpr|
           (destructuring-bind (l r &optional ejector) out-children
             (mn '|DefrecExpr| l r ejector)))
@@ -787,9 +812,11 @@ XXX make precedence values available as constants"
           (ecase (length out-children)
             (2 (mn '|IfExpr| (first out-children) (second out-children) (mn '|NullExpr|)))
             (3 (pass))))
+        ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
+          (destructuring-bind (noun &optional guard) out-children
+            (mn (find-symbol (symbol-name tag) #.*package*) noun guard)))
 
-
-        ;; -- negated variants --
+        ;; -- negated-operator introduction --
         ((e.grammar::|SameExpr|)
           (destructuring-bind (left right) out-children
             (mn '|SameExpr| left right (ecase (find-symbol text :keyword)
@@ -807,45 +834,18 @@ XXX make precedence values available as constants"
                   (:=~ '|MatchBindExpr|)) 
                 specimen pattern)))
 
+        ;; -- other --
+        (e.grammar::|SeqExpr|
+          ;; XXX this is more like an expansion issue
+          (if (null out-children)
+            (mn '|NullExpr|)
+            (apply #'mn '|SeqExpr| out-children)))
         (e.grammar::|NounExpr|
           (destructuring-bind (noun) out-children
             (etypecase noun
               (string (mn '|NounExpr| noun))
               ((cons (eql e.grammar::|URIGetter|) t)
                 (mn '|URISchemeExpr| (cdr noun))))))
-        
-        (e.grammar::|PrefixExpr|
-          (destructuring-bind (op arg) out-children
-            (check-type op (cons (eql op) string))
-            (mn '|PrefixExpr| (cdr op) arg)))
-          
-        ((e.grammar::|AssignExpr|
-          e.grammar::|CoerceExpr|
-          e.grammar::|ForwardExpr| 
-          e.grammar::|HideExpr|
-          e.grammar::|ListExpr|
-          e.grammar::|LiteralExpr|
-          e.grammar::|MetaContextExpr|
-          e.grammar::|MetaStateExpr|
-          e.grammar::|NounExpr|
-          e.grammar::|ReturnExpr|
-          e.grammar::|SlotExpr|
-          e.grammar::|SwitchExpr|
-          e.grammar::|ThunkExpr|
-          e.grammar::|URIExpr|
-          e.grammar::|ListPattern|
-          e.grammar::|SuchThatPattern|
-          e.grammar::|TailPattern|)
-          ;; simple
-          (pass))
-        ((e.grammar::|IgnorePattern|)
-          ;; 0-ary
-          (mn (find-symbol (symbol-name tag) #.*package*)))
-        
-        (e.grammar::|ConditionalExpr|
-          (destructuring-bind (left right) out-children
-            (mn '|ConditionalExpr| text left right)))
-            
         (e.grammar::|MapExpr|
           ;; needs processing of its children
           (apply #'mn '|MapExpr|
@@ -857,12 +857,6 @@ XXX make precedence values available as constants"
                                       (rest item))
                   ;; XXX the expansion should create the ListExprs instead
                   collect (mn '|ListExpr| key value))))
-        
-        ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
-          (destructuring-bind (noun &optional guard) out-children
-            (mn (find-symbol (symbol-name tag) #.*package*) noun guard)))
-        (()
-          (pass))
         (e.grammar::|TryExpr|
           (destructuring-bind (expr &rest stuff) out-children
             (loop for thing in stuff do
@@ -875,14 +869,19 @@ XXX make precedence values available as constants"
                 (t
                   (error "unexpected TryExpr element: ~S" thing))))
             expr))
-        (e.grammar::|SeqExpr| 
-          (if (null out-children)
-            (mn '|NullExpr|)
-            (apply #'mn '|SeqExpr| out-children)))
-        (e.grammar::|URIGetter| 
-          (assert (null out-children))
-          (cons tag text))
-          
+
+        ;; -- operator handling --        
+        (e.grammar::|PrefixExpr|
+          (destructuring-bind (op arg) out-children
+            (check-type op (cons (eql op) string))
+            (mn '|PrefixExpr| (cdr op) arg)))
+
+        ;; -- to be removed --          
+        ((e.grammar::|IgnorePattern|)
+          ;; 0-ary
+          (mn (find-symbol (symbol-name tag) #.*package*)))
+        
+        ;; -- object-expr stuff --
         ((e.grammar::|ObjectExpr|)
           (destructuring-bind (doc-comment qualified-name (extends implements script)) out-children
             (mn '|NKObjectExpr| doc-comment qualified-name extends (coerce implements 'vector) script)))
@@ -896,8 +895,6 @@ XXX make precedence values available as constants"
         ((e.grammar::|PlumbingObject|)
           (destructuring-bind (implements matcher) out-children
             (list nil implements (mn '|EScript| nil (vector matcher)))))
-
-                 
         ((e.grammar::|EScript|)
           (let ((todo out-children))
             (let ((methods '())
@@ -925,6 +922,7 @@ XXX make precedence values available as constants"
           (destructuring-bind (doc-comment pattern body) out-children
             (declare (ignore doc-comment))
             (mn '|EMatcher| pattern body)))
+
         (otherwise
           (cond
             ((and (string= (aref (symbol-name tag) 0) "\"") 

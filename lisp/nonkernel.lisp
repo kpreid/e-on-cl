@@ -415,7 +415,7 @@
 (defemacro |SendExpr| (|EExpr|) ((|recipient| t |EExpr|)
                                  (|verb| nil string) 
                                  (|args| t (e-list |EExpr|)))
-                                ()
+                                (:rest-slot t)
   (mn '|CallExpr|
     (mn '|NounExpr| "E")
     "send"
