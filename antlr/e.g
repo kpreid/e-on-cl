@@ -69,6 +69,7 @@ tokens {
     EscapeExpr;
     HideExpr;
     IfExpr;
+    If1Expr;
     ForExpr;
     WhenExpr;
     CoerceExpr;
@@ -78,6 +79,7 @@ tokens {
     PrefixExpr;
     LiteralExpr;
     MatchBindExpr;
+    MismatchExpr;
     NounExpr;
     ObjectExpr;
     InterfaceExpr;
@@ -243,7 +245,8 @@ basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
             |   escapeExpr | whenExpr | metaExpr | accumExpr ;
 
 ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
-            ("else"! (ifExpr | body ))?              {##.setType(IfExpr);}
+            ("else"! (ifExpr | body ) {##.setType(IfExpr);}
+             |                        {##.setType(If1Expr);})              
             ;
 
 forExpr:    "for"^ forPatt "in"! br assign body (catcher)?
@@ -474,7 +477,7 @@ logical:        order
                 |   "!="^ order      {##.setType(SameExpr);}
                 |   "&!"^ order      {##.setType(BinaryExpr);}
                 |   "=~"^ pattern    {##.setType(MatchBindExpr);}
-                |   "!~"^ pattern    {##.setType(MatchBindExpr);}
+                |   "!~"^ pattern    {##.setType(MismatchExpr);}
                 |   ("^"^ {##.setType(BinaryExpr);} order)+
                 |   ("&"^ {##.setType(BinaryExpr);} order)+
                 |   ("|"^ {##.setType(BinaryExpr);} order)+
@@ -612,7 +615,7 @@ eqPatt:         nounExpr
                 |   quasiString         {##=#([QuasiLiteralPattern],##);}
                                                        // was IDENT quasiString
                 )
-            |   "_"^ (":"! guard)?      {##=#([IgnorePattern],##);}
+            |   "_"^ (":"! guard)?      {##.setType(IgnorePattern);}
             |   "=="^ prim              {##.setType(SamePattern);}
             |   "!="^ prim              {##.setType(SamePattern);}
             |   compareOp prim
@@ -626,6 +629,7 @@ eqPatt:         nounExpr
 
 // namePatts are patterns that bind at most one name.
 // this is expanded inline into eqPatt, but used directly elsewhere
+// XXX why not "eqPatt: ... | namePatt;" instead of this duplication? --kpreid
 namePatt:       nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
             |   "_"^ (":"! guard)?        {##.setType(IgnorePattern);}
             |   binder

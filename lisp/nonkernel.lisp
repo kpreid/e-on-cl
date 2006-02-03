@@ -10,6 +10,7 @@
     :|ConditionalExpr|
     :|DefrecExpr|
     :|ForwardExpr|
+    :|If1Expr|
     :|ListExpr|
     :|MapExpr|
     :|MismatchExpr|
@@ -318,7 +319,12 @@
       (make-instance '|SeqExpr| :elements (list
         (mn '|PromiseVarExpr| |noun| resolver-noun)
         resolver-noun))))
-        
+
+(defemacro |If1Expr| (|EExpr|) ((|test| t |EExpr|) 
+                                (|then| t |EExpr|))
+                               ()
+  (mn '|IfExpr| |test| |then| (mn '|NullExpr|)))
+            
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
       (load-time-value (mn '|NounExpr| "__makeList"))

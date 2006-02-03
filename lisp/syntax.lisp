@@ -708,11 +708,14 @@ XXX make precedence values available as constants"
           e.grammar::|CoerceExpr|
           e.grammar::|ForwardExpr| 
           e.grammar::|HideExpr|
+          e.grammar::|IfExpr|
+          e.grammar::|If1Expr|
           e.grammar::|ListExpr|
           e.grammar::|LiteralExpr|
+          e.grammar::|MatchBindExpr|
           e.grammar::|MetaContextExpr|
           e.grammar::|MetaStateExpr|
-          e.grammar::|NounExpr|
+          e.grammar::|MismatchExpr|
           e.grammar::|ReturnExpr|
           e.grammar::|SendExpr|
           e.grammar::|SlotExpr|
@@ -756,11 +759,6 @@ XXX make precedence values available as constants"
           text)
         (e.grammar::|Absent|
           nil)
-        #+(or)
-        ((e.grammar::|"pragma"| e.grammar::|"meta"| e.grammar::|"implements"| e.grammar::|"extends"|)
-          ;; XXX review these nodes; some of them are not being generated any more 
-          (assert (null out-children))
-          tag)
         (e.grammar::|URIGetter| 
           (assert (null out-children))
           (cons tag text))
@@ -800,6 +798,12 @@ XXX make precedence values available as constants"
             (mn '|ConditionalExpr| text left right)))
 
         ;; -- de-optioning --
+        ((e.grammar::|IgnorePattern|)
+          (destructuring-bind (&optional guard) out-children
+            (if guard
+              #+(or) (mn '|AcceptsPattern|)
+              (error "reserved syntax: anon guard") ;; XXX source position in error
+              (mn '|IgnorePattern|)))) 
         (e.grammar::|DefineExpr|
           (destructuring-bind (l r &optional ejector) out-children
             (mn '|DefrecExpr| l r ejector)))
@@ -808,10 +812,6 @@ XXX make precedence values available as constants"
           (destructuring-bind (patt &optional (body (mn '|NullExpr|)) ((catch-marker catch-patt catch-body) '(nil nil nil))) out-children
             (declare (ignore catch-marker))
             (mn '|EscapeExpr| patt body catch-patt catch-body)))
-        (e.grammar::|IfExpr|
-          (ecase (length out-children)
-            (2 (mn '|IfExpr| (first out-children) (second out-children) (mn '|NullExpr|)))
-            (3 (pass))))
         ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
           (destructuring-bind (noun &optional guard) out-children
             (mn (find-symbol (symbol-name tag) #.*package*) noun guard)))
@@ -827,12 +827,6 @@ XXX make precedence values available as constants"
             (mn '|SamePattern| value (ecase (find-symbol text :keyword)
                                        (:!= +e-true+)
                                        (:== +e-false+)))))
-        (e.grammar::|MatchBindExpr|
-          (destructuring-bind (specimen pattern) out-children
-            (mn (ecase (find-symbol text :keyword)
-                  (:!~ '|MismatchExpr|)
-                  (:=~ '|MatchBindExpr|)) 
-                specimen pattern)))
 
         ;; -- other --
         (e.grammar::|SeqExpr|
@@ -876,11 +870,6 @@ XXX make precedence values available as constants"
             (check-type op (cons (eql op) string))
             (mn '|PrefixExpr| (cdr op) arg)))
 
-        ;; -- to be removed --          
-        ((e.grammar::|IgnorePattern|)
-          ;; 0-ary
-          (mn (find-symbol (symbol-name tag) #.*package*)))
-        
         ;; -- object-expr stuff --
         ((e.grammar::|ObjectExpr|)
           (destructuring-bind (doc-comment qualified-name (extends implements script)) out-children
