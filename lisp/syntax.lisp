@@ -198,7 +198,7 @@
     (e. tw |print| "{" #|}|#)
     (let ((tw2 (e. tw |indent|)))
       (e. tw2 |println|)
-      (e. node |welcome| (e. +e-printer+ |makePrintENodeVisitor| tw +precedence-outer+)))
+      (e. node |welcome| (e. +e-printer+ |makePrintENodeVisitor| tw2 +precedence-outer+)))
     (e. tw |lnPrint| #|{|# "}"))
 
   (:|makePrintENodeVisitor| (tw)

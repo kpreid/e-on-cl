@@ -442,7 +442,7 @@
                         (e. matcher |getBody|)
                         (match-chain (rest list))))
                     (mn '|CallExpr| (mn '|NounExpr| "throw") "run"
-                      (mn '|CallExpr| (mn '|LiteralExpr| "no match") "add"
+                      (mn '|CallExpr| (mn '|LiteralExpr| "no match: ") "add"
                         specimen-var)))))
           (match-chain (coerce |matchers| 'list)))))))
 
