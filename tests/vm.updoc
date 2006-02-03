@@ -388,7 +388,7 @@ Plumbing
   
   Plumbing expressions can't have super '
   ? def x extends y match msg {}
-  # syntax error: ...
+  # syntax error: expecting "{", found 'match'
 
 Alleged type
 

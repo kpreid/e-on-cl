@@ -11,6 +11,7 @@
     :|DefrecExpr|
     :|ForwardExpr|
     :|ListExpr|
+    :|MapExpr|
     :|MismatchExpr|
     :|NKObjectExpr|
     :|NullExpr|
@@ -175,6 +176,7 @@
         (:+ "add")
         (:- "subtract")
         (:* "multiply")
+        (:** "pow")
         (:/ "approxDivide")
         (:// "floorDivide")
         (:% "mod")
@@ -322,6 +324,12 @@
       (load-time-value (mn '|NounExpr| "__makeList"))
       "run"
       (coerce |subs| 'list)))
+
+(defemacro |MapExpr| (|EExpr|) ((|pairs| t (e-list |EExpr|)))
+                               (:rest-slot t)
+  (mn '|CallExpr| (mn '|NounExpr| "__makeMap") 
+                  "fromPairs" 
+                  (apply #'mn '|ListExpr| (coerce |pairs| 'list))))
 
 (defemacro |MismatchExpr| (|EExpr|) ((|specimen| t |EExpr|)
                                      (|pattern| t |Pattern|))

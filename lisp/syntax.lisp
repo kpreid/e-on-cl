@@ -749,6 +749,9 @@ XXX make precedence values available as constants"
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
             (list 'e.grammar::|"catch"| pattern body)))
+        (e.grammar::|"=>"|
+          (destructuring-bind (key value) out-children
+            (list 'assoc key value)))
                 
         (e.grammar::|UpdateExpr|
           (mn '|UpdateExpr| 
@@ -841,7 +844,19 @@ XXX make precedence values available as constants"
         
         (e.grammar::|ConditionalExpr|
           (destructuring-bind (left right) out-children
-            (mn '|ConditionalExpr| text left right)))  
+            (mn '|ConditionalExpr| text left right)))
+            
+        (e.grammar::|MapExpr|
+          ;; needs processing of its children
+          (apply #'mn '|MapExpr|
+            (loop for item in out-children
+                  for (key value) = (progn
+                                      (check-type item (cons (eql assoc)
+                                                         (cons t
+                                                           (cons t null))))
+                                      (rest item))
+                  ;; XXX the expansion should create the ListExprs instead
+                  collect (mn '|ListExpr| key value))))
         
         ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
           (destructuring-bind (noun &optional guard) out-children
@@ -913,10 +928,12 @@ XXX make precedence values available as constants"
         (otherwise
           (cond
             ((and (string= (aref (symbol-name tag) 0) "\"") 
-                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 2)) "="))
+                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 2)) "=")
+                  (null out-children))
               (cons 'update-op (subseq text 0 (1- (length text)))))
             ((and (string= (aref (symbol-name tag) 0) "\"") 
-                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 1)) "\""))
+                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 1)) "\"")
+                  (null out-children))
               (cons 'op text))
             (t (error "don't know what to do with ~S <- ~A" expr (write-to-string path :length 5))))))))))
 

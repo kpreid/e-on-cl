@@ -87,6 +87,11 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("[a, b]")
   # value: e`__makeList.run(a, b)`
 
+'MapExpr'
+
+  ? t("[a => b]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run(a, b)))`
+
 'MismatchExpr'
 
   ? t("a !~ b")
