@@ -929,7 +929,16 @@ evalToPair
   #             guard
   #         
 
-quasi-substitution
+--- Printing ---
+
+  Bug test: nested code was not being printed with the indenting TextWriter, resulting in only the first line being indented
+  ? e`{x; y}`
+  # value: e`{
+  #            x
+  #            y
+  #        }`
+
+--- Quasi-substitution ---
 
   ? <vm:HideExpr>(null, <vm:QuasiLiteralExpr>(null, 0, null), null).welcome(makeVisitor(0))
   # stdout: HideExpr e`{...

@@ -188,7 +188,7 @@
     (e. tw |print| "{" #|}|#)
     (let ((tw2 (e. tw |indent|)))
       (e. tw2 |println|)
-      (e. node |welcome| (e. +e-printer+ |makePrintENodeVisitor| tw +precedence-outer+)))
+      (e. node |welcome| (e. +e-printer+ |makePrintENodeVisitor| tw2 +precedence-outer+)))
     (e. tw |lnPrint| #|{|# "}"))
 
   (:|makePrintENodeVisitor| (tw)
@@ -640,20 +640,22 @@ XXX make precedence values available as constants"
   (values))
 
 (defun load-parse-cache-file (file)
-  "Returns T if the file exists and therefore was loaded."
-  (with-open-file (s file :direction :input 
-                          :if-does-not-exist nil
-                          :external-format e.extern:+standard-external-format+)
-    (when s
-      (load-parse-cache s)
-      t)))
+  "Returns T if the file exists and therefore was loaded, or nil if it does not exist or could not be loaded."
+  (with-simple-restart (continue "Skip loading parse cache ~S." file)
+    (with-open-file (s file :direction :input 
+                            :if-does-not-exist nil
+                            :external-format e.extern:+standard-external-format+)
+      (when s
+        (load-parse-cache s)
+        t))))
 
 (defun save-parse-cache-file (file)
-  (with-open-file (s file :direction :output
-                          :if-exists :supersede
-                          :external-format e.extern:+standard-external-format+)
-    (save-parse-cache s))
-  (values))
+  (with-simple-restart (continue "Skip writing parse cache ~S." file)
+    (with-open-file (s file :direction :output
+                            :if-exists :supersede
+                            :external-format e.extern:+standard-external-format+)
+      (save-parse-cache s))
+    (values)))
 
 (defmacro with-parse-cache-file ((file-form) &body body &aux (file-var (gensym "parse-cache-file-")))
   `(let ((,file-var ,file-form))
