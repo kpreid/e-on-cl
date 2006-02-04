@@ -701,9 +701,11 @@ XXX make precedence values available as constants"
     (let* ((next-path (cons expr path))
            (out-children (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
                                  in-children)))
-     (flet ((pass () (make-instance (or (find-symbol (symbol-name tag) :e.kernel)
-                                        (find-symbol (symbol-name tag) :e.nonkernel))
-                                    :elements out-children)))
+     (labels ((make-from-tag (&rest elements)
+                (make-instance (or (find-symbol (symbol-name tag) :e.kernel)
+                                   (find-symbol (symbol-name tag) :e.nonkernel))
+                               :elements elements))
+              (pass () (apply #'make-from-tag out-children)))
       (case tag
         ;; -- no special treatment --
         ((e.grammar::|AssignExpr|
@@ -790,19 +792,19 @@ XXX make precedence values available as constants"
                 ((cons (eql update-op)) (mn '|BinaryExpr| (cdr verboid) target (coerce args 'vector)))
                 (string (apply #'mn '|CallExpr| target verboid args))))))
         
-        ;; -- child rearrangement --     
+        ;; -- operator handling --        
+        (e.grammar::|PrefixExpr|
+          (destructuring-bind (op arg) out-children
+            (check-type op (cons (eql op) string))
+            (mn '|PrefixExpr| (cdr op) arg)))
         ((e.grammar::|BinaryExpr|)
           (destructuring-bind (left &rest rights) out-children
             ;; GRUMBLE: either .., ..! should be marked as RangeExpr by the parser or CompareExpr should be another kind of BinaryExpr
             (mn '|BinaryExpr| text left (coerce rights 'vector))))
 
         ;; -- text introduction --
-        ((e.grammar::|CompareExpr|)
-          (destructuring-bind (left right) out-children
-            (mn '|CompareExpr| text left right)))
-        (e.grammar::|ConditionalExpr|
-          (destructuring-bind (left right) out-children
-            (mn '|ConditionalExpr| text left right)))
+        ((e.grammar::|CompareExpr| e.grammar::|ConditionalExpr|)
+          (apply #'make-from-tag text out-children))
 
         ;; -- de-optioning --
         ((e.grammar::|IgnorePattern|)
@@ -811,17 +813,16 @@ XXX make precedence values available as constants"
               #+(or) (mn '|AcceptsPattern|)
               (error "reserved syntax: anon guard") ;; XXX source position in error
               (mn '|IgnorePattern|)))) 
-        (e.grammar::|DefineExpr|
+        (e.grammar::|DefrecExpr|
           (destructuring-bind (l r &optional ejector) out-children
             (mn '|DefrecExpr| l r ejector)))
         (e.grammar::|EscapeExpr|
-          ;; GRUMBLE: an empty body makes the parser return only the pattern node - it should return an "empty-body node" or some such instead
-          (destructuring-bind (patt &optional (body (mn '|NullExpr|)) ((catch-marker catch-patt catch-body) '(nil nil nil))) out-children
+          (destructuring-bind (patt body &optional ((catch-marker catch-patt catch-body) '(nil nil nil))) out-children
             (declare (ignore catch-marker))
             (mn '|EscapeExpr| patt body catch-patt catch-body)))
         ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
           (destructuring-bind (noun &optional guard) out-children
-            (mn (find-symbol (symbol-name tag) #.*package*) noun guard)))
+            (make-from-tag noun guard)))
 
         ;; -- negated-operator introduction --
         ((e.grammar::|SameExpr|)
@@ -870,12 +871,6 @@ XXX make precedence values available as constants"
                 (t
                   (error "unexpected TryExpr element: ~S" thing))))
             expr))
-
-        ;; -- operator handling --        
-        (e.grammar::|PrefixExpr|
-          (destructuring-bind (op arg) out-children
-            (check-type op (cons (eql op) string))
-            (mn '|PrefixExpr| (cdr op) arg)))
 
         ;; -- object-expr stuff --
         ((e.grammar::|ObjectExpr|)

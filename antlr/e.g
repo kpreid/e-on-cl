@@ -64,7 +64,7 @@ tokens {
     AssignExpr;
     UpdateExpr;
     CallExpr;
-    DefineExpr;
+    DefrecExpr;
     ForwardExpr;
     EscapeExpr;
     HideExpr;
@@ -213,13 +213,6 @@ setPocket![Token key, String value]: {
 } ;
 
 
-//;; GRUMBLE: an empty body makes the parser return only the pattern node
-// it should return an "empty-body node" or some such instead
-//
-//that's from parsing "escape foo {}"
-//;; GRUMBLE: updates should have a separate node type
-//about AssignExpr
-
 start:     br (topSeq)? ;
 //start:     (module (";"! | LINESEP!) | LINESEP!)* (topSeq)? ;
 //module: !;// placeholder for expressions that must be at the top of the file
@@ -270,7 +263,7 @@ accumulator:
  |      "while"^ parenExpr         accumBody   {##.setType(WhileExpr);}
  ;
 
-accumBody:
+accumBody:                      // XXX full set of binary ops
         "{"! ( accumPlaceholder (("+"^ | "*"^ | "&"^ | "|"^) assign 
                                                       {##.setType(BinaryExpr);}
                                 | "."^ verb parenArgs {##.setType(CallExpr);})
@@ -315,17 +308,17 @@ docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
 
 //so ObjectExpr(doc, fqn, auditors, script|method|matcher)
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
-// var x := ... should produce a DefineExpr with a VarPattern
-// bind x := ... should produce a DefineExpr with a BindPattern
+// var x := ... should produce a DefrecExpr with a VarPattern
+// bind x := ... should produce a DefrecExpr with a BindPattern
 defExpr:    //doco
             "def"^  (  (objectPredict) => doco objName objectTail
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! defRightSide
-                                                      {##.setType(DefineExpr);}
+                                                      {##.setType(DefrecExpr);}
                     |  nounExpr {##.setType(ForwardExpr);}
                     )
             | (binder | varNamer)
-                    (   ":="! defRightSide {##=#([DefineExpr],##);}
+                    (   ":="! defRightSide {##=#([DefrecExpr],##);}
                     |   objectTail  {##=#([ObjectExpr],##);}
                     )
             ;
