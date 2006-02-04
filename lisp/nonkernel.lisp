@@ -250,14 +250,48 @@
 
 (defun conditional-op-p (x) (member x '("&&" "||") :test #'equal))
 
+(defun names-to-nouns (names)
+  (map 'list (lambda (name) (mn '|NounExpr| name)) names))
+
 (defemacro |ConditionalExpr| (|EExpr|) ((|op| nil (satisfies conditional-op-p))
                                         (|left| t |EExpr|)
                                         (|right| t |EExpr|))
                                        ()
-  ;; XXX handle bindings
-  (ecase (find-symbol |op| :keyword)
-    (:&&   (mn '|IfExpr| |left| |right| (mn '|NounExpr| "false")))
-    (:\|\| (mn '|IfExpr| |left| (mn '|NounExpr| "true") |right|))))
+
+  (let* ((kernel-left  (e-macroexpand |left|))
+         (kernel-right (e-macroexpand |right|))
+         (left-map  (e. (e. kernel-left |staticScope|) |outNames|))
+         (right-map (e. (e. kernel-right |staticScope|) |outNames|))
+         (left-nouns  (names-to-nouns (e. left-map |getKeys|)))
+         (right-nouns (names-to-nouns (e. right-map |getKeys|)))
+         (both-nouns (names-to-nouns (e. (e. left-map |or| right-map) |getKeys|)))
+         (slot-list (apply #'mn '|ListExpr| 
+                      (map 'list (lambda (noun) (mn '|SlotExpr| noun))
+                                 both-nouns))))
+    (labels ((slot-patterns (nouns)
+               (apply #'mn '|ListPattern|
+                 (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
+                            nouns)))
+             (bind-failure (nouns) 
+               (mn '|MatchBindExpr| (mn '|NullExpr|)
+                                    (slot-patterns nouns))))
+      (mn '|MatchBindExpr|
+        (ecase (find-symbol |op| :keyword)
+          (:\|\| (mn '|IfExpr| kernel-left 
+                               (mn '|SeqExpr|
+                                 (bind-failure right-nouns)
+                                 slot-list)
+                               (mn '|IfExpr| kernel-right
+                                 (mn '|SeqExpr|
+                                   (bind-failure left-nouns)
+                                   slot-list)
+                                 (mn '|NullExpr|))))
+          (:&&   (mn '|IfExpr| kernel-left
+                               (mn '|IfExpr| kernel-right
+                                             slot-list
+                                             (mn '|NullExpr|))
+                               (mn '|NullExpr|))))
+        (slot-patterns both-nouns)))))
 
 (defemacro |PromiseVarExpr| (|EExpr|) ((|promiseNoun| t |EExpr|)
                                        (|resolverNoun| t |EExpr|))

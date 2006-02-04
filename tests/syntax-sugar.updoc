@@ -104,31 +104,27 @@ Where headings are in quotes, it indicates that the names are those I invented f
 'ConditionalExpr'
 
   ? t("(def a := b) || (def c := d)")
-  # value: e`{
-  #            if (def a := b) {
-  #                null =~ [&c]
+  # value: e`if (def a := b) {
+  #            null =~ [&c]
+  #            __makeList.run(&c, &a)
+  #        } else {
+  #            if (def c := d) {
+  #                null =~ [&a]
   #                __makeList.run(&c, &a)
   #            } else {
-  #                if (def c := d) {
-  #                    null =~ [&a]
-  #                    __makeList.run(&c, &a)
-  #                } else {
-  #                    null
-  #                }
+  #                null
   #            }
   #        } =~ [&c, &a]`
   
   ? t("(def a := b) && (def c := d)")
-  # value: e`{
-  #            if (def a := b) {
-  #                if (def c := d) {
-  #                    __makeList.run(&c, &a)
-  #                } else {
-  #                    null
-  #                }
+  # value: e`if (def a := b) {
+  #            if (def c := d) {
+  #                __makeList.run(&c, &a)
   #            } else {
   #                null
   #            }
+  #        } else {
+  #            null
   #        } =~ [&c, &a]`
   
   XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
