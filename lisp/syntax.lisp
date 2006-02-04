@@ -713,11 +713,13 @@ XXX make precedence values available as constants"
           e.grammar::|AccumPlaceholderExpr|
           e.grammar::|CallExpr|
           e.grammar::|CoerceExpr|
+          e.grammar::|CurryExpr|
           e.grammar::|ForExpr|
           e.grammar::|ForwardExpr| 
           e.grammar::|HideExpr|
           e.grammar::|IfExpr|
           e.grammar::|If1Expr|
+          e.grammar::|InterfaceExpr|
           e.grammar::|ListExpr|
           e.grammar::|LiteralExpr|
           e.grammar::|MatchBindExpr|
@@ -837,6 +839,9 @@ XXX make precedence values available as constants"
                                        (:== +e-false+)))))
 
         ;; -- other --
+        (e.grammar::|"interface"|
+          ;; XXX don't know why this is needed
+          (apply #'mn '|InterfaceExpr| out-children))
         (e.grammar::|SeqExpr|
           ;; XXX this is more like an expansion issue
           (if (null out-children)

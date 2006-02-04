@@ -10,10 +10,12 @@
     :|CoerceExpr|
     :|CompareExpr|
     :|ConditionalExpr|
+    :|CurryExpr|
     :|DefrecExpr|
     :|ForExpr|
     :|ForwardExpr|
     :|If1Expr|
+    :|InterfaceExpr|
     :|ListExpr|
     :|MapExpr|
     :|MismatchExpr|
@@ -201,16 +203,18 @@
     (apply #'mn '|CallExpr|
       |first|
       (case (find-symbol |op| :keyword)
-        (:+ "add")
-        (:- "subtract")
-        (:* "multiply")
+        ;; XXX ensure that this list is complete
+        (:+  "add")
+        (:-  "subtract")
+        (:*  "multiply")
         (:** "pow")
-        (:/ "approxDivide")
+        (:/  "approxDivide")
         (:// "floorDivide")
-        (:% "mod")
+        (:%  "mod")
         (:%% "remainder")
-        (:& "and")
+        (:&  "and")
         (:\| "or")
+        (:^  "xor")
         (otherwise |op|))
       (coerce |rest| 'list))))
 
@@ -292,6 +296,17 @@
                                              (mn '|NullExpr|))
                                (mn '|NullExpr|))))
         (slot-patterns both-nouns)))))
+
+(defemacro |CurryExpr| (|EExpr|) ((|expr| t (or |CallExpr| |SendExpr|)))
+                                 ()
+  ;; xxx may want to unrestrict the type eventually?
+  (mn '|CallExpr|
+    (mn '|NounExpr| "__makeVerbFacet")
+    (etypecase |expr|
+      (|CallExpr| "curryCall")
+      (|SendExpr| "currySend"))
+    (e. |expr| |getRecipient|)
+    (mn '|LiteralExpr| (e. |expr| |getVerb|))))
 
 (defemacro |PromiseVarExpr| (|EExpr|) ((|promiseNoun| t |EExpr|)
                                        (|resolverNoun| t |EExpr|))
@@ -453,6 +468,34 @@
   (destructuring-bind (test then) (e.elang::node-visitor-arguments body)
     (mn '|If1Expr| test (expand-accum-body then accum-var))))
 
+(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil string) 
+                                      (|name| nil (or null |Pattern| string))
+                                      (|parent| t (or null |EExpr|))
+                                      (|auditors| t (e-list |EExpr|)) 
+                                      (|messages| nil (e-list |MessageExpr|)))
+                                     ()
+  (etypecase name
+    (|Pattern|
+      (mn '|DefrecExpr| |name| 
+        (mn '|InterfaceExpr| |docComment|
+                             (let ((noun-string (e.elang::pattern-opt-noun |name|)))
+                               (if noun-string
+                                 ;; XXX remove the __T once we're out of the compatibility phase
+                                 (format nil "$~A__T" noun-string)
+                                 "_"))
+                             |parent|
+                             |auditors|
+                             |messages|)))
+    ((or null string)
+      (mn '|CallExpr|
+        (mn '|NounExpr| "__makeProtocolDesc")
+        "run"
+        |docComment|
+        |name| ;; XXX qualify
+        (mn '|ListExpr|)
+        (mn '|ListExpr|)
+        (mn '|ListExpr|)))))
+  
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
       (load-time-value (mn '|NounExpr| "__makeList"))
@@ -482,8 +525,11 @@
         |name| 
         (mn '|NKObjectExpr| 
           |docComment|
-          ;; XXX remove the __C once we're out of the compatibility phase
-          (format nil "$~A__C" (or (e.elang::pattern-opt-noun |name|) "_"))
+          (let ((noun-string (e.elang::pattern-opt-noun |name|)))
+            (if noun-string
+              ;; XXX remove the __C once we're out of the compatibility phase
+              (format nil "$~A__C" noun-string)
+              "_"))
           |parent|
           |auditors|
           |script|) 

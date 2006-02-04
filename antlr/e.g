@@ -393,10 +393,11 @@ interfaceExpr:  //doco below is a hack.  it should be here...
                 "interface"^  doco objName
                 //(":"! guard)?
                 (   ("guards" pattern)?
-                    ("extends" br order ("," order)*)?     // trailing comma
-                                            // would be ambiguous with HideExpr
-                    ("implements" br order ("," order)*)?  // trailing comma
-                                            // would be ambiguous with HideExpr
+                    ("extends"! br order ("," order)* {##=#([Extends],##);}
+                    | {##=#([Absent],##);})?
+                    // trailing comma would be ambiguous with HideExpr
+                    ("implements"! br order ("," order)* {##=#([Implements],##);}
+                    | {##=#([Absent],##);})
                     "{"^ (imethod br)* "}"!
                 |   mtypes (":"! guard)?   // function
                 )
@@ -532,16 +533,19 @@ postfix:        call
 
 call:   p:prim
         (!  a:parenArgs         { ##=#([CallExpr,"run"], p, [STRING,"run"], a); }
-        |   "."^ message        { ##.setType(CallExpr); }
+        // XXX reformat this to be clearer
+        |   "."^ verb  { ##.setType(CallExpr); } 
+                       (("(") => parenArgs
+                       | { ##=#([CurryExpr], ##);})
         |!  "["^ l:argList "]"! { ##=#([CallExpr,"get"], p, [STRING,"get"], l); }
-        |   "<-"^ (parenArgs | message | "::" ("&")? prop) { ##.setType(SendExpr); }
+        |   "<-"^ { ##.setType(SendExpr); }
+                  (! a2:parenArgs { ##=#([SendExpr,"run"], p, [STRING,"run"], a2); }
+                  | verb (("(") => parenArgs
+                         | { ##=#([CurryExpr], ##);}) 
+                  | "::" ("&")? prop)
         |   "::" ("&")? prop
         )*
     ;
-
-message:        verb (("(") => parenArgs
-                      | {##.setType(CurryExpr);})   // curry
-            ;
 
 parenArgs:      "("! argList ")"!  ;
 lambdaArgs:      "("! argList ")"! (sepword! body)?  ; //(body)? | body  ;

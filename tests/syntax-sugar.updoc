@@ -129,6 +129,14 @@ Where headings are in quotes, it indicates that the names are those I invented f
   
   XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
 
+'CurryExpr'
+
+  ? t("pragma.enable(\"verb-curry\"); a.b")
+  # value: e`__makeVerbFacet.curryCall(a, "b")`
+
+  ? t("pragma.enable(\"verb-curry\"); a <- b")
+  # value: e`__makeVerbFacet.currySend(a, "b")`
+
 'DefrecExpr'
 
   ? t("def a := b")
@@ -167,6 +175,25 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        }`
 
   XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
+
+'InterfaceExpr'
+
+  ? t("interface a {}")
+  # value: e`def a := {
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+    
+  ? t("interface a { to b(c :d) :e
+  >                  to f() }")
+  # value: e`def a := {
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #                __makeMessageDesc.run("", "b", __makeList.run(__makeParamDesc.run("c", d)), e)
+  #            }, {
+  #                __makeMessageDesc.run("", "f", __makeList.run(), void)
+  #            }))
+  #        }`
+
+  XXX interfaces with preceding doc-comments currently don't parse so aren't tested
 
 'ListExpr'
 

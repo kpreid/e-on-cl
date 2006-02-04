@@ -1,16 +1,21 @@
 Parsing bugs:
 
   Fails to parse:
-    Interface expressions (unexpected token "interface")
+    Interface expressions (unexpected token "interface"). Some additional testing seems to indicate that it is only interface expressions preceded by doc-comments which fail to parse.
     Quasi expressions (tagged`` and untagged `` forms) (unexpected token: ["`",<290>,line=229,col=63])
     Object expressions (def and thunk) followed by guards (unexpected token: [":",<126>,line=1,col=10])
     N-ary infix operators and update forms ("a + (b, c)") -- deprecated? if so, should report a specific error
     a <- "b"(c) -- (unknown:1)@11: expecting \"=\", found '(c)'
     /** foo */ thunk { b } -- unexpected token: [\"thunk\",<131>,line=1,col=12]"))
     <foo+bar> -- (unknown:1)@1: unexpected token: [\"<\",<174>,line=1,col=1] -- + is legal in a URI scheme expr
+    Object expressions in atomic and high-precedence positions:
+      x & def y{}
+      x & thunk{}
+      def x implements def auditor {} {}
 
     
-  Bad parse trees:  
+  Bad parse trees:   
+    "interfaceExpr" rule comes out with a node type of "interface" even though there's a setType action (huh?)
     x::y expression - parses as three siblings
     Any type of CallExpr followed by [] indexing, e.g. x()[0] or even x[0][1] - produces a tree like (x "get" 0 "get" 1) instead of ((x "get" 0) "get" 1)
     a <- (b) -- produces a 2-child SendExpr, thus putting b in the verb position. Should produce a "run" verb node or a "FunctionSendExpr".
