@@ -134,6 +134,7 @@ tokens {
     PlumbingObject;
     FunctionObject;
     List;
+    Assoc;
     WhenFn;
     Implements;
     Extends;
@@ -254,10 +255,10 @@ ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
 forExpr:    "for"^ forPatt "in"! br assign body (catcher)?
                                                {##.setType(ForExpr);}  ;
 // the first pattern is actually the optional one. If it is missing, include an
-// empty ignore pattern for it.
+// Absent node for it.
 forPatt:        pattern br
-                ("=>"! pattern    {##=#([ListPattern,"=>"], ##);}
-                |   {##=#([ListPattern,"=>"], [IgnorePattern, ""], ##);})
+                ("=>"! pattern    {##=#([Assoc], ##);}
+                              |   {##=#([Assoc], [Absent], ##);})
             ;
 
 accumExpr:      "accum"^ call accumulator pocket["accumulator"]! 
@@ -576,7 +577,7 @@ prim:           literal
 
 mapList:    (map br (","! mapList)?)?   ;
 
-map:            eExpr br "=>"^ eExpr
+map:            eExpr br "=>"^ eExpr {##.setType(Assoc);}
             |   "=>"^ (nounExpr
                       | "&"nounExpr
                       | "def" nounExpr )

@@ -19,6 +19,15 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        }
   #        accum__1`
 
+  ? t("pragma.enable(\"accumulator\"); accum a if (b) { _ + c }")
+  # value: e`def var accum__1 := a
+  #        if (b) {
+  #            accum__1 := accum__1.add(c)
+  #        } else {
+  #            null
+  #        }
+  #        accum__1`
+
   ? t("pragma.enable(\"accumulator\"); accum a while (b) { _.c(d) }")
   # value: e`def var accum__1 := a
   #        escape __break {
@@ -38,8 +47,31 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        }
   #        accum__1`
   
-  XXX all accum control structure types (for, while, if)
-  XXX all accumulation expression types (verb, binop)
+  ? t("pragma.enable(\"accumulator\"); accum a for b => c in d { _.e(f) }")
+  # value: e`def var accum__1 := a
+  #        escape __break {
+  #            def var valid__2 := true
+  #            try {
+  #                d.iterate(def _ {
+  #                    
+  #                    method run(key__3, value__4) {
+  #                        require.run(valid__2, "For-loop body isn't valid after for-loop exits.")
+  #                        escape __continue {
+  #                            escape skip__5 {
+  #                                def b := (key__3, skip__5)
+  #                                def c := (value__4, skip__5)
+  #                                accum__1 := accum__1.e(f)
+  #                            }
+  #                            null
+  #                        }
+  #                    }
+  #                })
+  #            } finally {
+  #                valid__2 := false
+  #            }
+  #            null
+  #        }
+  #        accum__1`
 
 'BinaryExpr'
 
@@ -111,6 +143,34 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        def value__3 := def [a, b] := __makeList.run(b__1, c)
   #        bR__2.resolve(b)
   #        value__3`
+
+'ForExpr'
+
+  ? t("for a => b in c { d }")
+  # value: e`escape __break {
+  #            def var valid__1 := true
+  #            try {
+  #                c.iterate(def _ {
+  #                    
+  #                    method run(key__2, value__3) {
+  #                        require.run(valid__1, "For-loop body isn't valid after for-loop exits.")
+  #                        escape __continue {
+  #                            escape skip__4 {
+  #                                def a := (key__2, skip__4)
+  #                                def b := (value__3, skip__4)
+  #                                d
+  #                            }
+  #                            null
+  #                        }
+  #                    }
+  #                })
+  #            } finally {
+  #                valid__1 := false
+  #            }
+  #            null
+  #        }`
+
+  XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
 
 'ListExpr'
 

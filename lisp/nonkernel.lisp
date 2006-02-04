@@ -174,7 +174,6 @@
   (let ((accum-var (gennoun "accum")))
     (mn '|SeqExpr|
       (mn '|DefineExpr| (mn '|VarPattern| accum-var nil) |initialValue| nil)
-      ;; XXX substitute accumulation call
       (expand-accum-body |loop| accum-var)
       accum-var)))
 
@@ -183,9 +182,9 @@
 
 (defmethod expand-accum-body ((body |CallExpr|) accum-var)
   (destructuring-bind (recipient verb args) (e.elang::node-visitor-arguments body)
-    (assert (typep (ref-shorten recipient) '|AccumPlaceholderExpr|))
+    (check-type (ref-shorten recipient) |AccumPlaceholderExpr|)
     ;; XXX this mess is evidence we need a handy make-node-according-to-"visitor"-arguments function (visitor arguments == maker arguments)
-    (mn '|AssignExpr| accum-var (apply #'mn '|CallExpr| accum-var verb (coerce args 'list)))))
+    (mn '|UpdateExpr| (apply #'mn '|CallExpr| accum-var verb (coerce args 'list)))))
 
 (defemacro |BinaryExpr| (|EExpr|) ((|op| nil string)
                                    (|first| t |EExpr|)
@@ -214,6 +213,11 @@
         (:\| "or")
         (otherwise |op|))
       (coerce |rest| 'list))))
+
+(defmethod expand-accum-body ((body |BinaryExpr|) accum-var)
+  (destructuring-bind (op first rest) (e.elang::node-visitor-arguments body)
+    (check-type (ref-shorten first) |AccumPlaceholderExpr|)
+    (mn '|UpdateExpr| (mn '|BinaryExpr| op accum-var rest))))
 
 (defemacro |CoerceExpr| (|EExpr|) ((value t |EExpr|)
                                    (guard t |EExpr|))
@@ -341,6 +345,64 @@
                       collect (mn '|CallExpr| rn "resolve" vn))
               ,result-noun))))
       (mn '|DefineExpr| kernel-pattern kernel-r-value kernel-ejector))))
+
+(defemacro |ForExpr| (|EExpr|) ((|assocPatterns| t (cons (eql assoc)
+                                                     (cons (or |Pattern| null)
+                                                       (cons |Pattern| null))))
+                                (|collection| t |EExpr|)
+                                (|body| t |EExpr|))
+                               ()
+  (let ((valid-flag-var (gennoun "valid"))
+        (key-var (gennoun "key"))
+        (value-var (gennoun "value"))
+        (pattern-escape-var (gennoun "skip"))
+        (key-pattern (or (second |assocPatterns|) (mn '|IgnorePattern|)))
+        (value-pattern (third |assocPatterns|)))
+    (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
+      (mn '|SeqExpr|
+        (mn '|DefineExpr| (mn '|VarPattern| valid-flag-var nil)
+                          (mn '|NounExpr| "true") nil)
+        (mn '|FinallyExpr|
+          (mn '|CallExpr| |collection| "iterate"
+            (mn '|ObjectExpr|
+              ""
+              "_"
+              #()
+              (mn '|EScript| 
+                (vector (mn '|EMethod| 
+                  "" "run" (vector (mn '|FinalPattern| key-var nil)
+                                   (mn '|FinalPattern| value-var nil)) 
+                  nil
+                  (mn '|SeqExpr|
+                    (mn '|CallExpr| (mn '|NounExpr| "require") 
+                                    "run"
+                                    valid-flag-var
+                                    (mn '|LiteralExpr| "For-loop body isn't valid after for-loop exits."))
+                    (mn '|EscapeExpr| (mn '|FinalPattern|
+                                        (mn '|NounExpr| "__continue") nil) 
+                                          
+                      (mn '|SeqExpr|
+                        (mn '|EscapeExpr| (mn '|FinalPattern|
+                                            pattern-escape-var nil)
+                          (mn '|SeqExpr|
+                            (mn '|DefineExpr| key-pattern 
+                                              key-var pattern-escape-var)
+                            (mn '|DefineExpr| value-pattern 
+                                              value-var pattern-escape-var)
+                            |body|)
+                          nil nil)
+                        ;; this null-expr prevents the pattern failures or the loop body's final expression from being returned from the iterate callback; only __continue can return non-null
+                        (mn '|NullExpr|))
+                      nil nil)))) 
+                #())))
+          (mn '|AssignExpr| valid-flag-var (mn '|NounExpr| "false")))
+        ;; this null-expr prevents the return value of 'iterate' from being returned from the for expr; only __break can return non-null
+        (mn '|NullExpr|))
+      nil nil)))
+
+(defmethod expand-accum-body ((node |ForExpr|) accum-var)
+  (destructuring-bind (patterns collection body) (e.elang::node-visitor-arguments node)
+    (mn '|ForExpr| patterns collection (expand-accum-body body accum-var))))
 
 (defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |NounExpr|)) ()
   (let* ((resolver-noun (noun-to-resolver-noun |noun|)))

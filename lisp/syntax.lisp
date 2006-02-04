@@ -778,7 +778,7 @@ XXX make precedence values available as constants"
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
             (list 'e.grammar::|"catch"| pattern body)))
-        (e.grammar::|"=>"|
+        (e.grammar::|Assoc|
           (destructuring-bind (key value) out-children
             (list 'assoc key value)))
         
