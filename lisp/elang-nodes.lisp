@@ -157,7 +157,7 @@
   ())
 
 (define-node-class |AssignExpr|      (|EExpr|)
-  ((:|noun|   t (or |NounExpr| |QuasiExpr|))
+  ((:|noun|   t |EExpr|)
    (:|rValue| t |EExpr|)))
 (define-node-class |CallExpr|        (|EExpr|)
   ((:|recipient| t |EExpr|)
@@ -818,6 +818,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (when (and opt-ejector-expr
              (usesp opt-ejector-expr pattern))
     (ejerror ejector "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
+
+(define-kernel-e-type-constraints |AssignExpr|
+  (:|noun| |NounExpr|))
 
 (define-kernel-e-type-constraints |NounPattern|
   (:|noun| |NounExpr|))

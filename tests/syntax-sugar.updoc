@@ -8,6 +8,39 @@ These are tests specifically of the text->Kernel-E stages, skipping evaluation a
 
 Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
 
+'AccumExpr'
+
+  ? t("pragma.enable(\"accumulator\"); accum a if (b) { _.c(d) }")
+  # value: e`def var accum__1 := a
+  #        if (b) {
+  #            accum__1 := accum__1.c(d)
+  #        } else {
+  #            null
+  #        }
+  #        accum__1`
+
+  ? t("pragma.enable(\"accumulator\"); accum a while (b) { _.c(d) }")
+  # value: e`def var accum__1 := a
+  #        escape __break {
+  #            __loop.run(def _ {
+  #                
+  #                method run() :boolean {
+  #                    if (b) {
+  #                        escape __continue {
+  #                            accum__1 := accum__1.c(d)
+  #                        }
+  #                        true
+  #                    } else {
+  #                        false
+  #                    }
+  #                }
+  #            })
+  #        }
+  #        accum__1`
+  
+  XXX all accum control structure types (for, while, if)
+  XXX all accumulation expression types (verb, binop)
+
 'BinaryExpr'
 
   ? t("a + b")
@@ -275,6 +308,25 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   ? t("<svn+ssh>")
   # value: e`::"svn+ssh__uriGetter"`
+
+'WhileExpr'
+
+  ? t("while (a) { b }")
+  # value: e`escape __break {
+  #            __loop.run(def _ {
+  #                
+  #                method run() :boolean {
+  #                    if (a) {
+  #                        escape __continue {
+  #                            b
+  #                        }
+  #                        true
+  #                    } else {
+  #                        false
+  #                    }
+  #                }
+  #            })
+  #        }`
 
 'BindPattern'  
 

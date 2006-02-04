@@ -107,6 +107,8 @@ tokens {
     SendExpr;
     CurryExpr;
     BinaryExpr;
+    AccumExpr;
+    AccumPlaceholderExpr;
 
     FinalPattern;
     VarPattern;
@@ -258,21 +260,24 @@ forPatt:        pattern br
                 |   {##=#([ListPattern,"=>"], [IgnorePattern, ""], ##);})
             ;
 
-accumExpr:      "accum"^ call accumulator pocket["accumulator"]! ;
+accumExpr:      "accum"^ call accumulator pocket["accumulator"]! 
+                {##.setType(AccumExpr);};
 
 accumulator:
-        "for"^ forPatt "in"! logical accumBody
- |      "if"^ parenExpr            accumBody
- |      "while"^ parenExpr         accumBody
+        "for"^ forPatt "in"! logical accumBody {##.setType(ForExpr);}
+ |      "if"^ parenExpr            accumBody   {##.setType(If1Expr);}
+ |      "while"^ parenExpr         accumBody   {##.setType(WhileExpr);}
  ;
 
 accumBody:
-        "{"! ( "_" (("+"^ | "*"^ | "&"^ | "|"^) assign
-                   | "."^ verb parenArgs)
+        "{"! ( accumPlaceholder (("+"^ | "*"^ | "&"^ | "|"^) assign 
+                                                      {##.setType(BinaryExpr);}
+                                | "."^ verb parenArgs {##.setType(CallExpr);})
             | accumulator
             ) br "}"!
  ;
 
+accumPlaceholder: "_" {##.setType(AccumPlaceholderExpr);} ;
 
 whenExpr:       "when"^ parenArgs br "->"!  whenFn
                 (catcher)* ("finally" body)?   {##.setType(WhenExpr);}
@@ -629,7 +634,7 @@ eqPatt:         nounExpr
 
 // namePatts are patterns that bind at most one name.
 // this is expanded inline into eqPatt, but used directly elsewhere
-// XXX why not "eqPatt: ... | namePatt;" instead of this duplication? --kpreid
+// Note that this is not a simple subset of eqPatt.
 namePatt:       nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
             |   "_"^ (":"! guard)?        {##.setType(IgnorePattern);}
             |   binder

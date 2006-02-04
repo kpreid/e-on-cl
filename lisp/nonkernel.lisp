@@ -4,11 +4,14 @@
 (cl:defpackage :e.nonkernel
   (:use)
   (:export
+    :|AccumExpr|
+    :|AccumPlaceholderExpr|
     :|BinaryExpr|
     :|CoerceExpr|
     :|CompareExpr|
     :|ConditionalExpr|
     :|DefrecExpr|
+    :|ForExpr|
     :|ForwardExpr|
     :|If1Expr|
     :|ListExpr|
@@ -26,6 +29,7 @@
     :|UpdateExpr|
     :|URIExpr|
     :|URISchemeExpr|
+    :|WhileExpr|
     :|BindPattern|
     :|SamePattern|
     :|TailPattern|
@@ -147,6 +151,7 @@
        ,@options)
      (defmethod e-macroexpand-1 ((,node ,node-class-name) ,stop)
        (declare (ignore ,stop))
+       ;; XXX can this be simplified with node-visitor-arguments?
        (destructuring-bind ,(let ((vars (mapcar #'first properties)))
                               (if (getf options :rest-slot)
                                 `(,@(butlast vars) &rest ,@(last vars))
@@ -158,6 +163,29 @@
   (make-instance '|NounExpr| :elements (list (concatenate 'string (e. noun |getName|) "__Resolver"))))
 
 ;;; --- ---
+
+(defgeneric expand-accum-body (body accum-var))
+(def-shorten-methods expand-accum-body 2)
+;; Additional methods defined later in this file
+
+(defemacro |AccumExpr| (|EExpr|) ((|initialValue| t |EExpr|)
+                                  (|loop| t |EExpr|))
+                                 ()
+  (let ((accum-var (gennoun "accum")))
+    (mn '|SeqExpr|
+      (mn '|DefineExpr| (mn '|VarPattern| accum-var nil) |initialValue| nil)
+      ;; XXX substitute accumulation call
+      (expand-accum-body |loop| accum-var)
+      accum-var)))
+
+;; no expansion; will be substituted by AccumExpr expander
+(define-node-class |AccumPlaceholderExpr| (|EExpr|) ())
+
+(defmethod expand-accum-body ((body |CallExpr|) accum-var)
+  (destructuring-bind (recipient verb args) (e.elang::node-visitor-arguments body)
+    (assert (typep (ref-shorten recipient) '|AccumPlaceholderExpr|))
+    ;; XXX this mess is evidence we need a handy make-node-according-to-"visitor"-arguments function (visitor arguments == maker arguments)
+    (mn '|AssignExpr| accum-var (apply #'mn '|CallExpr| accum-var verb (coerce args 'list)))))
 
 (defemacro |BinaryExpr| (|EExpr|) ((|op| nil string)
                                    (|first| t |EExpr|)
@@ -324,7 +352,11 @@
                                 (|then| t |EExpr|))
                                ()
   (mn '|IfExpr| |test| |then| (mn '|NullExpr|)))
-            
+
+(defmethod expand-accum-body ((body |If1Expr|) accum-var)
+  (destructuring-bind (test then) (e.elang::node-visitor-arguments body)
+    (mn '|If1Expr| test (expand-accum-body then accum-var))))
+
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
       (load-time-value (mn '|NounExpr| "__makeList"))
@@ -480,6 +512,33 @@
                                      ()
   (mn '|NounExpr| (format nil "~A__uriGetter" |scheme|)))
 
+(defemacro |WhileExpr| (|EExpr|) ((|test| t |EExpr|)
+                                  (|body| t |EExpr|))
+                                 ()
+  (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
+    (mn '|CallExpr| (mn '|NounExpr| "__loop") "run"
+      (mn '|ObjectExpr|
+        ""
+        "_"
+        #()
+        (mn '|EScript| 
+          (vector (mn '|EMethod| 
+            "" "run" #() (mn '|NounExpr| "boolean")
+            (mn '|IfExpr|
+              |test|
+              (mn '|SeqExpr|
+                (mn '|EscapeExpr| (mn '|FinalPattern|
+                                    (mn '|NounExpr| "__continue") nil) 
+                                  |body| nil nil)
+                (mn '|NounExpr| "true"))
+              (mn '|NounExpr| "false")))) 
+          #())))
+    nil nil))
+
+(defmethod expand-accum-body ((node |WhileExpr|) accum-var)
+  (destructuring-bind (test body) (e.elang::node-visitor-arguments node)
+    (mn '|WhileExpr| test (expand-accum-body body accum-var))))
+    
 (defemacro |BindPattern| (|Pattern|) ((|noun| t |NounExpr|)
                                       (|optGuard| t (or null |EExpr|)))
                                      ()

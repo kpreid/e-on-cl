@@ -362,7 +362,10 @@ XXX make precedence values available as constants"
             (declare (ignore opt-original))
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
-            (e. +e-printer+ |printString| tw qualified-name)
+            (if (string= qualified-name "_")
+              ;; XXX is this condition correct?
+              (e. tw |print| "_")
+              (e. +e-printer+ |printString| tw qualified-name))
             (when (> (length auditors) 0)
               (e. tw |print| " implements ")
               (loop for sep = "" then ", "
@@ -704,8 +707,11 @@ XXX make precedence values available as constants"
       (case tag
         ;; -- no special treatment --
         ((e.grammar::|AssignExpr|
+          e.grammar::|AccumExpr|
+          e.grammar::|AccumPlaceholderExpr|
           e.grammar::|CallExpr|
           e.grammar::|CoerceExpr|
+          e.grammar::|ForExpr|
           e.grammar::|ForwardExpr| 
           e.grammar::|HideExpr|
           e.grammar::|IfExpr|
@@ -722,6 +728,7 @@ XXX make precedence values available as constants"
           e.grammar::|SwitchExpr|
           e.grammar::|ThunkExpr|
           e.grammar::|URIExpr|
+          e.grammar::|WhileExpr|
           e.grammar::|ListPattern|
           e.grammar::|SuchThatPattern|
           e.grammar::|TailPattern|)
