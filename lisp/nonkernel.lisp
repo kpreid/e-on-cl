@@ -12,6 +12,7 @@
     :|ConditionalExpr|
     :|CurryExpr|
     :|DefrecExpr|
+    :|ExitExpr|
     :|ForExpr|
     :|ForwardExpr|
     :|If1Expr|
@@ -23,7 +24,6 @@
     :|NullExpr|
     :|PrefixExpr|
     :|RangeExpr|
-    :|ReturnExpr|
     :|SameExpr|
     :|SendExpr|
     :|SwitchExpr|
@@ -579,8 +579,9 @@
       |start|
       |end|))
 
-(defemacro |ReturnExpr| (|EExpr|) ((|value| t (or null |EExpr|))) ()
-  (apply #'mn '|CallExpr| (mn '|NounExpr| "__return") 
+(defemacro |ExitExpr| (|EExpr|) ((|label| nil string)
+                                 (|value| t (or null |EExpr|))) ()
+  (apply #'mn '|CallExpr| (mn '|NounExpr| (format nil "__~A" |label|))
                           "run" 
                           (when |value| (list |value|))))
 

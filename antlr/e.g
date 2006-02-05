@@ -93,9 +93,7 @@ tokens {
     CatchExpr;
     FinallyExpr;
 
-    ReturnExpr;
-    ContinueExpr;
-    BreakExpr;
+    ExitExpr;
     WhileExpr;
     SwitchExpr;
     TryExpr;
@@ -447,11 +445,11 @@ assignOp:       "//=" | "+=" | "-=" | "*=" | "/="
             |   "^=" | "|="
             ;
 
-ejector:        (   "break"^         {##.setType(BreakExpr);}
-                |   "continue"^      {##.setType(ContinueExpr);}
-                |   "return"^        {##.setType(ReturnExpr);}
-                ) ejectorArg
-            |   "^"^ assign          {##.setType(ReturnExpr);}
+ejector:        (   "break"^         
+                |   "continue"^      
+                |   "return"^        
+                ) ejectorArg         {##.setType(ExitExpr);}
+            |   "^"^ assign          {##.setType(ExitExpr);##.setText("return");}
                                      warn["Smalltalk-style '^' deprecated"]!
             ;
 

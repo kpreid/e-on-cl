@@ -148,6 +148,20 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        bR__2.resolve(b)
   #        value__3`
 
+'ExitExpr'
+
+  ? t("return")
+  # value: e`__return.run()`
+
+  ? t("return a")
+  # value: e`__return.run(a)`
+
+  ? t("break a")
+  # value: e`__break.run(a)`
+
+  ? t("continue a")
+  # value: e`__continue.run(a)`
+
 'ForExpr'
 
   ? t("for a => b in c { d }")
@@ -275,14 +289,6 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`a.not()`
 
 'RangeExpr': see 'BinaryExpr' for now
-
-'ReturnExpr'
-
-  ? t("return")
-  # value: e`__return.run()`
-
-  ? t("return a")
-  # value: e`__return.run(a)`
 
 'SameExpr'
   

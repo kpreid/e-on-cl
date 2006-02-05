@@ -726,7 +726,6 @@ XXX make precedence values available as constants"
           e.grammar::|MetaContextExpr|
           e.grammar::|MetaStateExpr|
           e.grammar::|MismatchExpr|
-          e.grammar::|ReturnExpr|
           e.grammar::|SendExpr|
           e.grammar::|SlotExpr|
           e.grammar::|SwitchExpr|
@@ -805,7 +804,9 @@ XXX make precedence values available as constants"
             (mn '|BinaryExpr| text left (coerce rights 'vector))))
 
         ;; -- text introduction --
-        ((e.grammar::|CompareExpr| e.grammar::|ConditionalExpr|)
+        ((e.grammar::|CompareExpr| 
+          e.grammar::|ConditionalExpr| 
+          e.grammar::|ExitExpr|)
           (apply #'make-from-tag text out-children))
 
         ;; -- de-optioning --
