@@ -653,7 +653,7 @@
 
 (defemacro |URISchemeExpr| (|EExpr|) ((|scheme| nil string))
                                      ()
-  (mn '|NounExpr| (format nil "~A__uriGetter" |scheme|)))
+  (mn '|NounExpr| (format nil "~A__uriGetter" (string-downcase |scheme|))))
 
 (defemacro |WhileExpr| (|EExpr|) ((|test| t |EExpr|)
                                   (|body| t |EExpr|))

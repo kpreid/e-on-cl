@@ -390,6 +390,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("<a:b>")
   # value: e`a__uriGetter.get("b")`
   
+  ? t("<A:B>")
+  # value: e`a__uriGetter.get("B")`
+  
   ? t("<ab:c>")
   # value: e`ab__uriGetter.get("c")`
 
@@ -401,8 +404,17 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("<a>")
   # value: e`a__uriGetter`
 
+  ? t("<A>")
+  # value: e`a__uriGetter`
+
   ? t("<svn+ssh>")
   # value: e`::"svn+ssh__uriGetter"`
+
+  ? try { t("<0>") } catch _ {true}
+  # value: true
+  
+  ? t("<a+90-.>")
+  # value: e`::"a+90-.__uriGetter"`
 
 'WhileExpr'
 

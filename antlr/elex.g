@@ -140,8 +140,8 @@ OPERATOR options {testLiterals=true;} :
                             | ">=" BR {$setType(SR_ASSIGN);}
                             | ) // should have BR, except for terminating a
                                  // URI
-    |   ('<'  IDENT ('>' | ':')) =>
-                      '<'! IDENT ( '>'! {$setType(URIGetter);}
+    |   ('<'  URISCHEME ('>' | ':')) =>
+                      '<'! URISCHEME ( '>'! {$setType(URIGetter);}
                                  | ':' (    (ANYWS)=> BR {$setType(URIStart);}
                                        |   URI '>'!  {$setType(URI);}))
                 |    '<' BR ;
@@ -256,8 +256,16 @@ HEX_DIGIT   :    ('0'..'9'|'A'..'F'|'a'..'f')  ;
 // an identifier.  Note that testLiterals is set to true!  This means
 // that after we match the rule, we look in the literals table to see
 // if it's a literal or really an identifer
+// XXX need to extend this to cover Unicode
 IDENT       options {testLiterals=true;}
             :    ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*
+            ;
+
+// the scheme component of a URI literal
+// NOTE: this should not be extended to Unicode; RFC 2396 lists this set specifically.
+protected
+URISCHEME   options {testLiterals=true;}
+            :    ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'0'..'9'|'+'|'-'|'.')*
             ;
 
 // a numeric literal
