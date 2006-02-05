@@ -784,6 +784,9 @@ XXX make precedence values available as constants"
         (e.grammar::|Assoc|
           (destructuring-bind (key value) out-children
             (list 'assoc key value)))
+        (e.grammar::|Export|
+          (destructuring-bind (key-value) out-children
+            (list 'export key-value)))
         
         ;; -- node type de-confusion --  
         (e.grammar::|UpdateExpr|
@@ -857,14 +860,20 @@ XXX make precedence values available as constants"
         (e.grammar::|MapExpr|
           ;; needs processing of its children
           (apply #'mn '|MapExpr|
-            (loop for item in out-children
-                  for (key value) = (progn
-                                      (check-type item (cons (eql assoc)
-                                                         (cons t
-                                                           (cons t null))))
-                                      (rest item))
-                  ;; XXX the expansion should create the ListExprs instead
-                  collect (mn '|ListExpr| key value))))
+            (loop for item in out-children collect
+                  ;; XXX the expander should be doing most of this instead
+                    (etypecase item
+                      ((cons (eql assoc) (cons t (cons t null)))
+                        (destructuring-bind (key value) (rest item)
+                          (mn '|ListExpr| key value)))
+                      ((cons (eql export) (cons t null))
+                        (destructuring-bind (key-value) (rest item)
+                          (mn '|ListExpr| 
+                            (mn '|LiteralExpr|
+                            (etypecase key-value
+                              (|NounExpr| (e. key-value |getName|))
+                              (|SlotExpr| (format nil "&~A" (e. (e. key-value |getNoun|) |getName|)))))
+                            key-value)))))))
         (e.grammar::|TryExpr|
           (destructuring-bind (expr &rest stuff) out-children
             (loop for thing in stuff do

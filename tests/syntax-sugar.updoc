@@ -222,6 +222,12 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("[a => b]")
   # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run(a, b)))`
 
+  ? t("[=> a]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("a", a)))`
+
+  ? t("[=> &a]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("&a", &a)))`
+
 'MismatchExpr'
 
   ? t("a !~ b")

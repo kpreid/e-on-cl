@@ -98,7 +98,6 @@ tokens {
     SwitchExpr;
     TryExpr;
     MapPattern;
-    LiteralPattern;
     ListExpr;
     MapExpr;
     BindPattern;
@@ -131,8 +130,10 @@ tokens {
     MethodObject;
     PlumbingObject;
     FunctionObject;
+
     List;
     Assoc;
+    Export;
     WhenFn;
     Implements;
     Extends;
@@ -519,10 +520,13 @@ pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;
 //      (-3).pow(2)  or -(3.pow(2))
 // to disambiguate which you mean.
 prefix:         postfix
-            |  "&"!  postfix                        {##=#([SlotExpr],##);}
+            |  slotExpr
             |  ("!" | "~" | "*" | "+")  postfix    {##=#([PrefixExpr],##);}
             |  "-" prim                            {##=#([PrefixExpr],##);}
             ;
+
+// extracted because of its use in 'map'
+slotExpr: "&"!  postfix                        {##=#([SlotExpr],##);} ;
 
 // Calls and sends are left associative.
 postfix:        call
@@ -564,7 +568,8 @@ prim:           literal
                                          warn["computed URIExpr is deprecated"]!
             //|   "<"^ nounExpr (":"! add)? ">"! {##.setType(URIExpr);}
             |   "["^
-                (   (eExpr br "=>") => mapList  {##.setType(MapExpr);}
+                (   (eExpr br "=>" | "=>") => mapList  
+                                                {##.setType(MapExpr);}
                 |   argList                     {##.setType(ListExpr);}
                 )  "]"!
             |   body          {##=#([HideExpr],##);} warn["hide deprecated"]!
@@ -574,8 +579,9 @@ mapList:    (map br (","! mapList)?)?   ;
 
 map:            eExpr br "=>"^ eExpr {##.setType(Assoc);}
             |   "=>"^ (nounExpr
-                      | "&"nounExpr
-                      | "def" nounExpr )
+                      | slotExpr
+                      // | "def" nounExpr // XXX should be an explicit error; EoJ says: reserved: Forward exporter
+                      ) {##.setType(Export);}
             ;
 
 //Property names for use e.g., with the :: syntax.
