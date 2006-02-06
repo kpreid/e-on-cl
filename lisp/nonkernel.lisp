@@ -33,10 +33,15 @@
     :|URISchemeExpr|
     :|WhileExpr|
     :|BindPattern|
+    :|MapPattern|
     :|SamePattern|
     :|TailPattern|
     :|FunctionScript|
-    :|ETo|))
+    :|ETo|
+    :|MapPatternAssoc|
+    :|MapPatternImport|
+    :|MapPatternRequired|
+    :|MapPatternOptional|))
 
 (cl:defpackage :e.nonkernel.impl
   (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :e.nonkernel)
@@ -474,7 +479,7 @@
                                       (|auditors| t (e-list |EExpr|)) 
                                       (|messages| nil (e-list |MessageExpr|)))
                                      ()
-  (etypecase name
+  (etypecase |name|
     (|Pattern|
       (mn '|DefrecExpr| |name| 
         (mn '|InterfaceExpr| |docComment|
@@ -696,6 +701,86 @@
           "resolve"
           temp))
         (make-instance '|NounExpr| :elements '("true"))))))))
+
+;; XXX lousy name
+(define-node-class |MapPatternKeyer| (|ENode|) ())
+
+;; XXX lousy names
+(defgeneric map-pattern-key (keyer))
+(defgeneric map-pattern-value (keyer))
+
+;; XXX mediocre name
+(define-node-class |MapPatternAssoc| (|MapPatternKeyer|)
+  ((:|key| t |EExpr|)
+   (:|value| t |Pattern|)))
+
+(defmethod map-pattern-key ((keyer |MapPatternAssoc|))
+  (e. keyer |getKey|))
+(defmethod map-pattern-value ((keyer |MapPatternAssoc|))
+  (e. keyer |getValue|))
+
+(define-node-class |MapPatternImport| (|MapPatternKeyer|)
+  ((:|keyValue| t |Pattern|)))
+
+(defmethod map-pattern-key ((keyer |MapPatternImport|))
+  (let ((key-value (e. keyer |getKeyValue|)))
+    (mn '|LiteralExpr|
+      (etypecase key-value
+        ((or |FinalPattern| |VarPattern|) (e. (e. key-value |getNoun|) |getName|))
+        (|SlotPattern| (format nil "&~A" (e. (e. key-value |getNoun|) |getName|)))))))
+(defmethod map-pattern-value ((keyer |MapPatternImport|))
+  (e. keyer |getKeyValue|))
+
+(define-node-class |MapPatternPart| (|ENode|) ())
+
+(defgeneric build-incremental-map-pattern (first rest))
+
+(define-node-class |MapPatternRequired| (|MapPatternPart|)
+  ((:|keyer| t |MapPatternKeyer|)))
+   
+(defmethod build-incremental-map-pattern ((first |MapPatternRequired|) rest)
+  (let ((map-var (gennoun "map"))
+        (assoc (e. first |getKeyer|)))
+    (mn '|SuchThatPattern|
+      (mn '|FinalPattern| map-var nil)
+      (mn '|MatchBindExpr|
+        (mn '|CallExpr| map-var "optExtract" (map-pattern-key assoc))
+        (mn '|ListPattern|
+          (map-pattern-value assoc)
+          (build-incremental-map-pattern (first rest) (rest rest)))))))
+
+(define-node-class |MapPatternOptional| (|MapPatternPart|)
+  ((:|keyer| t |MapPatternKeyer|)
+   (:|default| t |EExpr|)))
+
+(defmethod build-incremental-map-pattern ((first |MapPatternOptional|) rest)
+  (let ((map-var (gennoun "map"))
+        (assoc (e. first |getKeyer|)))
+    (mn '|SuchThatPattern|
+      (mn '|FinalPattern| map-var nil)
+      (mn '|MatchBindExpr|
+        (mn '|CallExpr| map-var "extract" (map-pattern-key assoc)
+                                          (e. first |getDefault|))
+        (mn '|ListPattern|
+          (map-pattern-value assoc)
+          (build-incremental-map-pattern (first rest) (rest rest)))))))
+
+(defmethod build-incremental-map-pattern ((first null) rest)
+  (check-type rest null)
+  (let ((map-var (gennoun "map")))
+    (mn '|SuchThatPattern|
+      (mn '|FinalPattern| map-var nil)
+      (mn '|CompareExpr| "<=>" (mn '|CallExpr| map-var "size") 
+                               (mn '|LiteralExpr| 0)))))
+
+#| (define-node-class |MapPatternRest| (|MapPatternPart|) ...) |#
+
+(defemacro |MapPattern| (|Pattern|) ((|pairs| t (e-list |MapPatternPart|)))
+                                    (:rest-slot t)
+  (let ((pairs (coerce |pairs| 'list)))
+    (build-incremental-map-pattern (first pairs) (rest pairs))))
+
+
 
 (defemacro |SamePattern| (|Pattern|) ((|value| t |EExpr|)
                                       (|invert| nil e-boolean))

@@ -98,6 +98,10 @@ tokens {
     SwitchExpr;
     TryExpr;
     MapPattern;
+    MapPatternAssoc;
+    MapPatternImport;
+    MapPatternOptional;
+    MapPatternRequired;
     ListExpr;
     MapExpr;
     BindPattern;
@@ -672,9 +676,12 @@ parenExpr:      "("! seq ")"!  ;
 //mapPattList:    mapPatts {##=#([List],##);} ;
 mapPatts:       (mapPattern (","! mapPatts)?)? ;
 
-mapPattern:     key br "=>"^ pattern (":=" order)?
-            |   "=>"^ namePatt (":=" order)? // BLECH
-            ;
+mapPattern:       mapPatternAddressing (":="^ order {##.setType(MapPatternOptional);}
+                                       |            {##=#([MapPatternRequired],##);}) ;
+            
+mapPatternAddressing: key br "=>"^ pattern {##.setType(MapPatternAssoc);}
+                    | "=>"^ namePatt       {##.setType(MapPatternImport);}
+                    ;
 
 // QUASI support
 quasiString:    QUASIOPEN!

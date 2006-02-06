@@ -445,6 +445,22 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: epatt`a__1 :b ? (a__Resolver.resolve(a__1)
   #        true)`
 
+'MapPattern'
+  
+  ? tp("[\"a\" => b]")
+  # value: epatt`map__1 ? (map__1.optExtract("a") =~ [b, map__2 ? __comparer.asBigAs(map__2.size(), 0)])`
+  
+  ? tp("[(a) => b]")
+  # value: epatt`map__1 ? (map__1.optExtract(a) =~ [b, map__2 ? __comparer.asBigAs(map__2.size(), 0)])`
+  
+  ? tp("[=> a]")
+  # value: epatt`map__1 ? (map__1.optExtract("a") =~ [a, map__2 ? __comparer.asBigAs(map__2.size(), 0)])`
+
+  ? tp("[\"a\" => b := c]")
+  # value: epatt`map__1 ? (map__1.extract("a", c) =~ [b, map__2 ? __comparer.asBigAs(map__2.size(), 0)])`
+
+  XXX expansion to be changed to not use such-that
+
 'SamePattern'
 
   ? tp("==x")
