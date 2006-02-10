@@ -108,7 +108,7 @@ Holes
 
 XXX all term-language grammar
 
-  ? qBuilder.valueMaker("foo").substitute([])
+  ? makeQBuilder.getTerm__quasiParser().valueMaker("foo").substitute([])
   # value: term`foo`
 
 XXX substitution on all term trees
