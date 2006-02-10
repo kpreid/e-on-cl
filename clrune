@@ -125,10 +125,11 @@ LISPTYPE=`basename $LISP`
 if [ "$LISPTYPE" = lisp ]; then
   LISPTYPE=cmucl
 fi
-if [ "$LISPTYPE" = j.jar ]; then
-  LISPTYPE=abcl
+if [ "$LISPTYPE" = j.jar -o "$LISPTYPE" = abcl.jar ]; then
+  LISPTYPE=abcl-jar
 fi
 
+HERE=`dirname $0`
 QUOTED_HERE=`dirname $0 | perl -pe 's&(["\\\\])&\\$1&g'`
 
 # Arguments as a string of Lisp expressions, for implementations which don't provide access to argv from within the Lisp environment.
@@ -143,7 +144,7 @@ QUOTED_JHOME=`echo "$JHOME/" | perl -pe 's&(["\\\\])&\\$1&g'`
 # COMMON_INIT1/2 are separated since INIT2 needs to be read after INIT1 is evaluated, as the E.KNOT package will not exist until then.
 
 COMMON_INIT1='(progn
-  (setf *compile-print* nil)
+  (setf *compile-print* t)
   (when '"$LOADQUIET"'
     (setf *compile-verbose* nil)
     (setf *load-verbose* nil))
@@ -237,8 +238,18 @@ case "$LISPTYPE" in
        -eval "$COMMON_INIT1" "$COMMON_INIT2" \
        -eval "(e.rune:rune `quote_args`)"
   ;;
+  abcl-jar)
+    # XXX using e.jar only as a source of Antlr
+    "$EXEC" java -cp "$LISP":"$HERE/antlr/":"$JHOME/e.jar" org.armedbear.lisp.Main \
+      "${LISP_EXTRA[@]}" \
+      --eval '(require :asdf)' \
+      --eval "$COMMON_INIT1" \
+      --eval "$COMMON_INIT2" \
+      --eval "(e.rune:rune `quote_args`)"
+  ;;
   abcl)
-    "$EXEC" java -cp "$LISP" org.armedbear.lisp.Main \
+    # oops, can't set classpath
+    "$EXEC" "$LISP" \
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \

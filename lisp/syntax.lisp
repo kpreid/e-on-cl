@@ -6,10 +6,18 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (use-package :e.nonkernel)) ;; XXX remove once nonkernel package is defined before syntax package
 
+'#.(when (member :abcl *features*) 
+    (pushnew 'e.syntax::local-parser *features*))
+
 ; --- ---
 
 (defun is-identifier (text)
-  (query-to-java "isIdentifier" text))
+  #-e.syntax::local-parser
+  (query-to-java "isIdentifier" text)
+  #+e.syntax::local-parser
+  ;; XXX inadequate stub originally written to get the local-parser mode working
+  (or (string= text "")
+      (not (digit-char-p (aref text 0)))))
 
 (defun convention-uncapitalize (string)
   (if (and (plusp (length string))
@@ -491,6 +499,9 @@ XXX make precedence values available as constants"
 
 ; --- Parsing ---
 
+;; if we are using the local parser, this is unused because clrune has already
+;; set up the single Java process's classpath
+#-e.syntax::local-parser
 (defun compute-antlr-class-location ()
   ;; xxx look into making this cleaner
   (make-pathname
@@ -503,10 +514,13 @@ XXX make precedence values available as constants"
                                               :e-on-cl.antlr-parser)
                                           "e")))))
 
+#-e.syntax::local-parser
 (defvar *parse-cache-hash* (make-hash-table :test #'equal))
 
+#-e.syntax::local-parser
 (defvar *parser-process*)
 
+#-e.syntax::local-parser
 (defun start-parser ()
   (assert (not (boundp '*parser-process*)))
   ; XXX pipe this through common tracing architecture
@@ -529,20 +543,19 @@ XXX make precedence values available as constants"
           "def parseEToSExpression := <import:parseEToSExpression>(<unsafe>)~%")
   (values))
 
-; disabling this for now because starting the parser at load time introduces dependencies (particularly, e.extern:+standard-external-format-common-name+ being defined first)
-; ; XXX stubbing out the parser for systems where we haven't made it work yet
-; #-(or abcl clisp) (start-parser)
-
+#-e.syntax::local-parser
 (defun kill-parser ()
   (when (boundp '*parser-process*)
     (close (e.util:external-process-input-stream *parser-process*))
     (close (e.util:external-process-output-stream *parser-process*))
     (makunbound '*parser-process*)))
 
+#-e.syntax::local-parser
 (defun ensure-parser ()
   (unless (boundp '*parser-process*)
     (start-parser)))
 
+#-e.syntax::local-parser
 (defun build-nodes (tree)
   (if (consp tree)
     (case (car tree)
@@ -582,10 +595,13 @@ XXX make precedence values available as constants"
       (t 
         (error "~A" s)))))
 
+#-e.syntax::local-parser
 (defvar *parse-counter* 0)
 
+#-e.syntax::local-parser
 (define-condition link-out-of-sync-error (error) ())
 
+#-e.syntax::local-parser
 (defun call-to-java (verb args &key trying-again)
   (ensure-parser)
 
@@ -614,6 +630,7 @@ XXX make precedence values available as constants"
         (progn
           (call-to-java verb args :trying-again t))))))
 
+#-e.syntax::local-parser
 (defun query-to-java (verb &rest args)
   "Memoized version of call-to-java"
   
@@ -648,6 +665,7 @@ XXX make precedence values available as constants"
 (defun e-source-to-tree (source &key syntax-ejector)
   (build-nodes (query-or-die syntax-ejector "run" source)))
 
+#-e.syntax::local-parser
 (defun query-or-die (ejector &rest msg)
   (let ((result (apply #'query-to-java msg)))
     (if (eql (first result) 'error)
@@ -657,7 +675,14 @@ XXX make precedence values available as constants"
 (defun e-source-to-tree (source &key syntax-ejector pattern)
   ;; XXX this isn't really the relevant package
   (e.nonkernel.impl:kernelize
-    (antlr-root (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) +e-false+))))
+    (antlr-root 
+      #-e.syntax::local-parser
+        (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) +e-false+)
+      #+e.syntax::local-parser
+        (handler-case
+          (antlr-parse "unknown" source pattern nil)
+          (error (c)
+            (eject-or-ethrow syntax-ejector c))))))
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
@@ -669,6 +694,70 @@ XXX make precedence values available as constants"
     (e-source-to-tree source :syntax-ejector syntax-ejector :pattern t))))
 
 ;;; --- Antlr parser support ---
+
+#+e.syntax::local-parser
+(progn
+  (defun jvector (element-type &rest elements)
+    (jnew-array-from-array element-type (coerce elements 'vector)))
+  (declaim (ftype function antlr-parse))
+  (defglobal +ast-get-type+     (jmethod "antlr.collections.AST" "getType"))
+  (defglobal +ast-get-text+     (jmethod "antlr.collections.AST" "getText"))
+  (defglobal +ast-first-child+  (jmethod "antlr.collections.AST" "getFirstChild"))
+  (defglobal +ast-next-sibling+ (jmethod "antlr.collections.AST" "getNextSibling"))
+  (defglobal +token-names+ (jfield-raw #|jfield did an incomplete translation|# "EParser" "_tokenNames"))
+  (defun nodes-to-list (first-node)
+    (loop for c = first-node
+                then (jcall +ast-next-sibling+ c)
+          while c
+          collect c)))
+
+#+e.syntax::local-parser
+(let* ((c-ealexer (jconstructor "EALexer" "java.io.Reader"))
+       (c-quasi-lexer (jconstructor "QuasiLexer" "antlr.LexerSharedInputState"))
+       (c-string-reader (jconstructor "java.io.StringReader" "java.lang.String"))
+       (get-input-state (jmethod "antlr.CharScanner" "getInputState"))
+       (c-token-multi-buffer (jconstructor "antlr.TokenMultiBuffer" "[Ljava.lang.String;" #|]|# "[Lantlr.TokenStream;" #|]|#))
+       (set-selector (jmethod "antlr.SwitchingLexer" "setSelector" "antlr.TokenMultiBuffer"))
+       (set-filename (jmethod "antlr.CharScanner" "setFilename" "java.lang.String"))
+       (c-e-parser (jconstructor "EParser" "antlr.TokenBuffer"))
+       (parser-set-filename (jmethod "antlr.Parser" "setFilename" "java.lang.String"))
+       (e-parser-set-pocket (jmethod "EParser" "setPocket" "antlr.Token" "java.lang.String"))
+       (c-common-token (jconstructor "antlr.CommonToken" "int" "java.lang.String"))
+       (get-ast (jmethod "antlr.Parser" "getAST"))
+       (plumbing-token (jnew c-common-token -1 "plumbing"))
+       (pattern-parse-method (jmethod "EParser" "pattern"))
+       (expr-parse-method (jmethod "EParser" "start")))
+  (defun antlr-parse (fname text is-pattern is-quasi)
+    (let* ((elexer (jnew c-ealexer (jnew c-string-reader text)))
+           (qlexer (jnew c-quasi-lexer (jcall get-input-state elexer)))
+           (tb (jnew c-token-multi-buffer
+                     (jvector "java.lang.String" "e" "quasi")
+                     (jvector "antlr.TokenStream" elexer qlexer))))
+      (dolist (x (list elexer qlexer))
+        (jcall set-selector x tb)
+        (jcall set-filename x fname))
+      (let ((parser (jnew c-e-parser tb)))
+        (jcall parser-set-filename parser fname)
+        (jcall e-parser-set-pocket parser plumbing-token "enable")
+        (jcall (if is-pattern
+                 pattern-parse-method
+                 expr-parse-method)
+               parser)
+        (nodes-to-list (jcall get-ast parser))))))
+
+#-e.syntax::local-parser
+(defmacro ast-node-bind ((tag-var text-var children-var) node-var &body body)
+  `(destructuring-bind ((,tag-var ,text-var) &rest ,children-var) ,node-var
+     ,@body))
+
+#+e.syntax::local-parser
+(defmacro ast-node-bind ((tag-var text-var children-var) node-var &body body)
+  `(let* ((,tag-var  (intern (jarray-ref +token-names+
+                                         (jcall +ast-get-type+ ,node-var))
+                             :e.grammar))
+          (,text-var (jcall +ast-get-text+ ,node-var))
+          (,children-var (nodes-to-list (jcall +ast-first-child+ ,node-var))))
+     ,@body))
 
 (defun mn (name &rest elements)
   (make-instance name :elements elements))
@@ -686,19 +775,9 @@ XXX make precedence values available as constants"
       ((integer 2)  
         (apply #'mn '|SeqExpr| enodes)))))
 
-(defun unwrap-noun (string) 
-  "defunct stub"
-  string)
-
-#+(or)
-(defun unwrap-noun (noun)
-  "uses of this are places where there are IDENTs that aren't NounExprs"
-  (check-type noun |NounExpr|)
-  (first (node-elements noun)))
-
-(defun build-antlr-nodes (expr &key path)
-  (destructuring-bind ((tag text) &rest in-children) expr
-    (let* ((next-path (cons expr path))
+(defun build-antlr-nodes (ast-node &key path)
+  (ast-node-bind (tag text in-children) ast-node
+    (let* ((next-path (cons ast-node path))
            (out-children (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
                                  in-children)))
      (labels ((make-from-tag (&rest elements)
@@ -921,10 +1000,11 @@ XXX make precedence values available as constants"
                              (coerce (nreverse matchers) 'vector)))))
         ((e.grammar::|EMethod|)
           (let ((doc-comment ""))
-            (when (eql (caaar in-children) 'e.grammar::|DOC_COMMENT|)
-              ;; ick
-              (setf doc-comment (cadar (pop in-children)))
-              (pop out-children))
+            (ast-node-bind (stag stext schildren) (first in-children) tag
+              (when (eql stag 'e.grammar::|DOC_COMMENT|)
+                ;; ick
+                (setf doc-comment stext)
+                (pop out-children)))
             (destructuring-bind (verb-ident param-list return-guard body) out-children
               (mn (ecase (intern text :keyword) 
                     ((:|to| :|fn|) '|ETo|) 

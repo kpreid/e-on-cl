@@ -121,8 +121,10 @@
   (:method ((node vector ) stop) (funcall stop))
   (:method ((node null   ) stop) (funcall stop)))
 
-(defun e-macroexpand (node)
-  (loop (setf node (e-macroexpand-1 node (lambda () (return node))))))
+(defun e-macroexpand (node &aux (catch-tag (gensym)))
+  ;; using throw instead of return because of ABCL compiler bug
+  (catch catch-tag
+    (loop (setf node (e-macroexpand-1 node (lambda () (throw catch-tag node)))))))
 
 (defgeneric e-macroexpand-all (node))
 
@@ -320,7 +322,7 @@
     (mn '|ListPattern|
       (mn '|FinalPattern| |promiseNoun| nil)
       (mn '|FinalPattern| |resolverNoun| nil))
-    (load-time-value (mn '|CallExpr| (mn '|NounExpr| "Ref") "promise"))
+    (mn '|CallExpr| (mn '|NounExpr| "Ref") "promise")
     nil))
 
 
@@ -503,7 +505,7 @@
   
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
-      (load-time-value (mn '|NounExpr| "__makeList"))
+      (mn '|NounExpr| "__makeList")
       "run"
       (coerce |subs| 'list)))
 
@@ -561,7 +563,7 @@
         (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))
 
 (defemacro |NullExpr| (|EExpr|) () ()
-  (load-time-value (mn '|NounExpr| "null")))
+  (mn '|NounExpr| "null"))
 
 (defemacro |PrefixExpr| (|EExpr|) ((|op| nil string)
                                    (|argument| t |EExpr|))

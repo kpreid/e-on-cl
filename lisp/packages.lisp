@@ -9,9 +9,8 @@
   
   #.(cl:let ((cl:package (cl:or 
                #+(or allegro clisp lispworks) :clos
-               #+(or cmu) :mop
+               #+(or cmu abcl) :mop
                #+sbcl :sb-mop
-               #+abcl :system ; XXX possibly ABCL bug that it isn't in MOP:
                #+openmcl :openmcl-mop
                #+ccl :ccl)))
     (cl:when cl:package
@@ -387,7 +386,8 @@
 
 (cl:defpackage :e.elang.syntax
   (:nicknames :e.syntax)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node 
+        #+abcl :java)
   (:export
     +e-printer+
     
