@@ -473,10 +473,10 @@ XXX make precedence values available as constants"
   ; XXX pipe this through common tracing architecture
   (format *trace-output* "~&; starting Java-E parsing subprocess~%")
   (setf *parser-process* (e.util:run-program
-    "/usr/bin/env"
+    "/usr/bin/env" ;; XXX platform assumption - we should have a way of telling our portable-run-program to "search" with unspecified means
     (list "rune"
           "-J-XX:ThreadStackSize=10240"
-          "-cpa" (namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
+          "-cpa" (native-namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
           "-") 

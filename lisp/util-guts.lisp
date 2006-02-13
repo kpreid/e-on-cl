@@ -3,21 +3,34 @@
 
 (cl:in-package :e.util)
 
+(defun %define-if-available (packages symbols copier)
+  (dolist (nd symbols)
+    (let ((name (string nd)))
+      (dolist (package (remove-if-not #'find-package packages))
+        (multiple-value-bind (symbol found) (find-symbol name package)
+          (when (eql found :external)
+            (funcall copier (intern (string name) #.*package*) symbol)))))))
+
+(defmacro define-if-available (packages symbols &key (accessor 'fdefinition))
+  `(%define-if-available ',packages ',symbols 
+     (lambda (.out. .in.)
+       (setf (,accessor .out.) (,accessor .in.)))))
+
+(defun default-alias (alias original)
+  (unless (fboundp alias)
+    (setf (fdefinition alias)
+          (fdefinition original))))
+
 ;;; --- serve-event ---
 
 ;; Simple passthrough
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  #+sbcl 
-  (progn
-    (setf (fdefinition 'serve-event)       #'sb-sys:serve-event)
-    (setf (fdefinition 'add-io-handler)    #'sb-sys:add-fd-handler)
-    (setf (fdefinition 'remove-io-handler) #'sb-sys:remove-fd-handler))
-  #+cmu
-  (progn
-    (setf (fdefinition 'serve-event)       #'system:serve-event)
-    (setf (fdefinition 'add-io-handler)    #'system:add-fd-handler)
-    (setf (fdefinition 'remove-io-handler) #'system:remove-fd-handler)))
+(define-if-available 
+  (#+sbcl :sb-sys
+   #+cmu  :system)
+  (:serve-event     
+   :add-io-handler 
+   :remove-io-handler))
 
 ;; Implement our own
 
@@ -111,6 +124,15 @@
           (%eih-installer handler)
           (exclusion-group-excluded (%eih-group handler)))))
 
+;;; --- pathname handling ---
+
+(define-if-available 
+  (#+sbcl :sb-ext) 
+  ("NATIVE-PATHNAME" "NATIVE-NAMESTRING"))
+
+(default-alias 'native-pathname 'pathname)
+(default-alias 'native-namestring 'namestring)
+
 ;;; --- run-program ---
 
 ; Our run-program was originally just SBCL's run-program, so we imitate its interface on implementations that don't have a sufficiently similar function.
@@ -125,16 +147,11 @@
                   :reader external-process-output-stream))
   (:documentation "For Lisps whose RUN-PROGRAM-or-similar does not return an object/structure."))
 
-#-(or lispworks clisp)
-(defun run-program (&rest args) 
-  (apply
-    #+ccl    #'ccl:run-program
-    #+sbcl   #'sb-ext:run-program
-    #+cmu    #'extensions:run-program
-    #-(or sbcl ccl cmu)
-      (error "Don't know where to find RUN-PROGRAM")
-    
-    args))
+(define-if-available
+  (#+ccl :ccl
+   #+sbcl :sb-ext
+   #+cmu :extensions)
+  (:run-program))
 
 #+clisp
   (defun squote (string)
@@ -228,6 +245,11 @@
       #-(or sbcl ccl cmu)
         (error "Don't know where to find external-process-output-stream")
       args)))
+
+(unless (fboundp 'run-program)
+  (defun run-program (&rest args)
+    (declare (ignore args))
+    (error "Don't know where to find RUN-PROGRAM")))
 
 ;;; --- backtrace ---
 

@@ -152,7 +152,7 @@ COMMON_INIT1='(progn
   (values))'
 
 COMMON_INIT2='(progn
-  (e.knot:found-e-on-java-home #p"'$QUOTED_JHOME'")
+  (e.knot:found-e-on-java-home (e.util:native-pathname "'$QUOTED_JHOME'"))
   (values))'
 
 

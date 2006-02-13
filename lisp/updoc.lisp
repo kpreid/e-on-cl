@@ -456,7 +456,7 @@
         (loop-finish))))
     
   (call-when-resolved
-      (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps :confine confine)
+      (updoc-start (mapcar #'native-pathname args) :profiler profiler :print-steps print-steps :confine confine)
     (efun (result)
       (declare (ignore result))
       (force-output)

@@ -102,19 +102,16 @@
     (make-pathname :directory '(:relative "compiled-lib"))
     (asdf:component-pathname +the-asdf-system+)))
 
-(defun found-e-on-java-home (dir-system-namestring)
+(defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
-  ;; XXX treating the data from clrune as a Lisp namestring is wrong due
-  ;; to the typical Lisp implementation's addition of wildcards, etc.
-  (let ((dir-pathname (pathname dir-system-namestring)))
-    (setf *emaker-search-list* 
-      (append *emaker-search-list*
-        (handler-case
-            (progn
-              (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) (merge-pathnames #p"e.jar" dir-pathname))))
-          (error (c)
-            (warn "Could not use e.jar because: ~A" c)
-            (list (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname)))))))))
+  (setf *emaker-search-list* 
+    (append *emaker-search-list*
+      (handler-case
+          (progn
+            (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) (merge-pathnames #p"e.jar" dir-pathname))))
+        (error (c)
+          (warn "Could not use e.jar because: ~A" c)
+          (list (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname))))))))
 
 (defun fqn-to-relative-pathname (fqn)
   (let* ((pos (or (position #\. fqn :from-end t) -1))

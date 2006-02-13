@@ -38,6 +38,9 @@
     :call-with-io-handler-exclusion
     :with-io-handler-exclusion
     
+    :native-pathname
+    :native-namestring
+    
     :run-program
     :external-process-input-stream
     :external-process-output-stream

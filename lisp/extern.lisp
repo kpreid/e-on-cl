@@ -62,6 +62,7 @@
     :type (second name-and-type))))
 
 (defun make-file-getter (path-components)
+  ;; XXX prohibit slashes? what are our consistency rules?
   (let ((pathname (path-components-to-pathname path-components)))
     (e-lambda |file| ()
       (:|__printOn| (tw)
@@ -74,6 +75,7 @@
         (e. tw |print| ">")
         nil)
       (:|getPath| ()
+        ;; XXX move to URI syntax?
         (with-text-writer-to-string (tw)
           (loop for x across path-components do
               (e. tw |print| "/" x))
@@ -83,9 +85,8 @@
             (e. tw |print| "/"))))
       
       (:|getPlatformPath| ()
-        ;; XXX E-on-Java has no documentation for this and treats at as
-        ;; equivalent to getPath. Find out what the intent is.
-        (namestring pathname))
+        "Return the pathname of this file in the host OS's syntax."
+        (native-namestring pathname))
       
       (:|exists| () 
         "Return whether an actual file designated by this object currently exists."
