@@ -952,6 +952,27 @@ evalToPair
   #             foo
   #         
 
+--- getOptPrincipalNoun ---
+
+  ? (def simplest := <vm:FinalPattern>(null, <vm:NounExpr>(null, "foo", null), null, null)).getOptPrincipalNoun()
+  # value: "foo"
+
+  ? <vm:VarPattern>(null, <vm:NounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  # value: "foo"
+
+  ? <vm:SlotPattern>(null, <vm:NounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  # value: "foo"
+  XXX should be &foo?
+  
+  ? <vm:SuchThatPattern>(null, simplest, <vm:NounExpr>(null, "bar", null), null).getOptPrincipalNoun()
+  # value: "foo"
+
+  ? (def listPatt := <vm:ListPattern>(null, [simplest], null)).getOptPrincipalNoun()
+
+  ? <vm:CdrPattern>(null, listPatt, listPatt, null).getOptPrincipalNoun()
+  
+  ? <vm:IgnorePattern>(null, null).getOptPrincipalNoun()
+
 
 XXX maker tests for nodes that don't have them yet '
     -- many makers have been indirectly tested by the current implementation of KernelECopyVisitor, but we should have proper tests including coercion checks
@@ -959,7 +980,7 @@ XXX methods of individual nodes
     -- and now that we are using e-call-match for simple properties: check __respondsTo/getAllegedType correctness
 XXX well-formedness constraints tested before eval, but not at construction so we can build conveniently
       no shadowing without an intervening HideExpr
-      no recursive definitions (evaluator constraint?)
+      no recursive definitions in DefineExpr (evaluator constraint?)
 XXX test quasi features (quasi expr/pattern allowed everywhere it should be)
 XXX SourceSpan preservation
 XXX nodes should be PassByCopy

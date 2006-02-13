@@ -204,18 +204,23 @@ The 'name slot gives a label for the value which was not settled, such as the na
 (defvar *runner* nil)
 
 (defclass vat-checking () 
-  ((expected-vat :initform *vat*
-                 :type (or null vat)))
+  ((vat-checking-expected-vat :type vat))
   (:documentation "Remembers the current vat and checks that it is correct upon later opportunities (currently e-call-dispatch). Should not be relied upon, as it may be made a noop in an optimized mode.
 
 If there is no current vat at initialization time, captures the current vat at the next check time, so that vat-checking instances may be used during pre-vat-creation setup code."))
 
+(defmethod shared-initialize ((this vat-checking) slot-names &key &allow-other-keys)
+  (when *vat*
+    (setf (slot-value this 'vat-checking-expected-vat) *vat*))
+  (call-next-method))
+
 (defmethod e-call-dispatch :before ((rec vat-checking) mverb &rest args)
   (declare (ignore mverb args))
-  (with-slots (expected-vat) rec
-    (if expected-vat
+  (with-slots ((expected-vat vat-checking-expected-vat)) rec
+    (if (slot-boundp rec 'vat-checking-expected-vat)
       (assert (eq *vat* expected-vat))
-      (setf expected-vat *vat*))))
+      (when *vat*
+        (setf expected-vat *vat*)))))
 
 ; --- Ref implementation ---
 

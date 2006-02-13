@@ -194,6 +194,7 @@
     (:stamped +deep-frozen-stamp+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
+  (:|asType| () (type-specifier-to-guard 'e-simple-slot))
   (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
@@ -201,9 +202,20 @@
     (:stamped +deep-frozen-stamp+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeVarSlot"))
+  (:|asType| () (type-specifier-to-guard 'e-var-slot))
   (:|run| (value)
     (make-instance 'e-var-slot :value value))))
 
+(defglobal +the-make-guarded-slot+ (e-lambda "org.erights.e.elib.slot.makeGuardedSlot"
+    (:stamped +deep-frozen-stamp+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeGuardedSlot"))
+  (:|asType| () (type-specifier-to-guard 'e-guarded-slot))
+  (:|run| (guard value opt-ejector)
+    (make-instance 'e-guarded-slot :value value
+                                   :guard guard
+                                   :opt-ejector opt-ejector))))
+    
 (defclass e-simple-slot () 
   ((value :initarg :value))
   (:documentation "A normal immutable slot."))
@@ -289,7 +301,7 @@
   "if this slot is initialized with a value, it is coerced; if initialized with a getter and setter, it is assumed to be correct"
   (declare (ignore slot-names))
   (if value-supplied
-    (apply #'call-next-method 
+    (apply #'call-next-method slot slot-names
       :value (e. guard |coerce| value opt-ejector)
       initargs)
     (call-next-method)))
@@ -310,8 +322,16 @@
 
 (defmethod print-object ((slot e-guarded-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "var & ~W :~W" (e. slot |getValue|) (slot-value slot 'guard))))
+    (format stream "var & ~W :~W" 
+      (if (slot-boundp slot 'getter) 
+        (e. slot |getValue|)
+        '#:<unbound-getter>)
+      (ignore-errors (slot-value slot 'guard)))))
 
+;; XXX this is duplicated with information in the maker functions
+(def-fqn e-simple-slot  "org.erights.e.elib.slot.FinalSlot")
+(def-fqn e-var-slot     "org.erights.e.elib.slot.VarSlot")
+(def-fqn e-guarded-slot "org.erights.e.elib.slot.GuardedSlot")
 
 ;;; --- e-boolean ---
 

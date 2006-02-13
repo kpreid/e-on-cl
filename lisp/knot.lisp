@@ -535,6 +535,8 @@ If a log message is produced, context-thunk is run to produce a string describin
           
           ; --- data constructors ---
           ("__makeFinalSlot"     ,elib:+the-make-simple-slot+)
+          ("__makeVarSlot"       ,elib:+the-make-var-slot+)
+          ("__makeGuardedSlot"   ,elib:+the-make-guarded-slot+)
           ("__makeInt"           ,elib:+the-make-int+)
           ("__makeList"          ,elib:+the-make-list+)
           ("__makeMap"           ,elib:+the-make-const-map+)

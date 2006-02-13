@@ -424,6 +424,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (multiple-value-call #'vector (eval-e this scope))))
 
 (def-vtable |Pattern|
+  (:|getOptPrincipalNoun/0| #'pattern-opt-noun)
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "epatt"))

@@ -130,6 +130,7 @@
     :native-e-slot
     :+the-make-simple-slot+
     :+the-make-var-slot+
+    :+the-make-guarded-slot+
     
     :cl-type-fq-name
     :cl-type-fq-expr :cl-type-simple-expr
