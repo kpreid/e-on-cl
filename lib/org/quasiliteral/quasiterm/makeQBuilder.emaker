@@ -49,7 +49,7 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       }
     }
     
-  
+    
     to doesQuasis() { return true }
   
     to start(top :QTerm) { return top }
@@ -162,27 +162,26 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       return single
     }
     
-    match [=="seq", args :List[QTerm]] {
+    match [=="seq", args :List[QTerm] ? (args.size() != 1)] {
       def qBuilderSeq implements QAstroArgStamp {
-        to getTerms() { return args }
-        
         to substitute(sargs) {
-          return E.call(astroBuilder, "seq",  accum [] for arg in args { _.with(arg.substitute(sargs)) })
+          return E.call(astroBuilder, "seq", accum [] for arg in args { _.with(arg.substitute(sargs)) })
         }
         
-        to __printOn(out :TextWriter) {
-          out.write("qtermSeq`(")
+        to termPrint(out :TextWriter) {
           var sep := ""
           for arg in args { 
             out.write(sep)
-            out.print(arg)
+            arg.termPrint(out)
             sep := ", "
           }
-          out.write(")`")
+        }
+        
+        to __printOn(out) {
+          qtPrint(out, qBuilderSeq)
         }
       }
     }
-
   }
   
   
