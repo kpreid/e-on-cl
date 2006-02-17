@@ -28,7 +28,7 @@ def makeTermLexer implements DeepFrozen {
             
             match rx`\s+(@r.*)` { text := r }
 
-            match rx`(@t[][\(\){}:,])(@r.*)` {
+            match rx`(@t[][\(\){}:,*+?])(@r.*)` {
               text := r
               tokens.push([t])
             }

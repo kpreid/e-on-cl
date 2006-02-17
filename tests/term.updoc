@@ -93,8 +93,8 @@ XXX test tag restrictions
   ? lex("foo")
   # value: [["Tag", [["Ident", "foo"]]]]
   
-  ? lex("(,)[{:]}")
-  # value: [["("], [","], [")"], ["["], ["{"], [":"], ["]"], ["}"]]
+  ? lex("(,)[{:]}+*?")
+  # value: [["("], [","], [")"], ["["], ["{"], [":"], ["]"], ["}"], ["+"], ["*"], ["?"]]
   
   ? lex("foo(bar)")
   # value: [["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [")"]]
@@ -108,10 +108,11 @@ XXX test tag restrictions
   ? lex("0 1 2 107 -1 3 000")
   # value: [["Integer", 0], ["Integer", 1], ["Integer", 2], ["Integer", 107], ["Integer", -1], ["Integer", 3], ["Integer", 0]]
   
-  XXX errors to be changed
   ? lex("+3")
-  # problem: unexpected term token: +3
-  
+  # value: [["+"], ["Integer", 3]]
+
+XXX EoJ term lexer returns terms
+XXX lexer tests should be in a separate file
 XXX token types: integer, float, char, string, tag, punct, chars
 XXX consequence of loose ::, or malformed tags in general
 XXX consequence of non-token characters
