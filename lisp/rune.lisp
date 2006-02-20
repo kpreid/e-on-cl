@@ -102,6 +102,79 @@
   (declare (ignore args))
   (values))
 
+(defun save-toplevel (args)
+  (assert (= 1 (length args))) ;; will be options later, regarding how much to include
+  (let ((image-file (native-pathname (first args)))
+        (executable-p t)
+        #| XXX todo: (may-enter-debugger t) |#)
+    
+    (save-flush)
+    
+    #.(or
+        #+sbcl
+        (quote
+          (sb-ext:save-lisp-and-die
+            image-file
+            :executable executable-p
+            :toplevel #'%revive-start))
+        #+cmucl
+        (ext:save-lisp 
+          image-file 
+          :purify t
+          :init-function #'%revive-start
+          :load-init-file nil
+          :site-init nil
+          :batch-mode nil
+          :print-herald nil
+          :process-command-line nil
+          :executable executable-p)
+        #+openmcl
+        (quote
+          ;; reference: http://www.clozure.com/pipermail/openmcl-devel/2003-May/001062.html
+          (ccl:save-application
+            image-file
+            :toplevel-function #'%revive-start
+            :prepend-kernel executable-p))
+        #+clisp
+        (quote
+          (ext:saveinitmem
+            image-file
+            :quiet t
+            ; :norc t ; XXX is this appropriate?
+            :init-function #'%revive-start
+            :start-package (find-package :cl-user)
+            :keep-global-handlers nil ; XXX is this appropriate?
+            :executable executable-p))
+        '(error "Saving an executable/image is not supported for ~A." (lisp-implementation-type)))
+        
+    ;; depending on the implementation (e.g. sbcl's save-lisp-and-die) we may
+    ;; or may not reach here
+    (global-exit 0)))
+
+(defun save-flush ()
+  (assert (null *vat*))
+
+  (setf *parse-cache-name* nil)
+  
+  ;; make sure we've loaded everything lispy, in order to simplify the
+  ;; stuff-changing-out-from-under-our-image problem
+  (asdf:operate 'asdf:load-op :e-on-cl.updoc)
+  ;(asdf:operate 'asdf:load-op :e-on-cl.sockets)
+  #|XXX review what should go here|#)
+
+(defun revive-flush ()
+  #|XXX review what should go here|#)
+
+(defun %revive-start ()
+  (revive-flush)
+  (apply #'rune (or #+sbcl (rest sb-ext:*posix-argv*)
+                    #+clisp ext:*args*
+                    #+openmcl (rest ccl::*command-line-argument-list*)
+                    #+cmucl (rest ext:*command-line-strings*)))
+  (warn "Fell out of ~S; exiting." 'rune)
+  ;; XXX have an overall exit status policy
+  (global-exit 255))
+
 (defun rune (&rest args
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)
@@ -138,6 +211,8 @@
         (setf toplevel #'irc-repl-toplevel))
       (("--nothing")
         (setf toplevel #'nothing-toplevel))
+      (("--save")
+        (setf toplevel #'save-toplevel))
       (otherwise 
         (loop-finish)))))
   
@@ -176,6 +251,11 @@ Lisp-level options:
       Action-selecting option:
       Do nothing. In particular, do not exit, and do not run the vat.
       This usually results in a Lisp REPL.
+  --save <file>
+      Action-selecting option:
+      Generate an image file of the Lisp implementation with E-on-CL loaded.
+      If supported, it will be executable. Under CLISP, the first argument to
+      the resulting executable must be \"--\" for correct argument processing.
   
   If no action-selecting option is given, the E rune() function is
   called with the remaining arguments.
