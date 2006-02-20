@@ -38,7 +38,16 @@
       (ext:quit))
   (error "Don't know how to global-exit"))
 
-(defun script-toplevel (args)
+
+(defvar *toplevel-documentation* (make-hash-table))
+
+(defmacro define-toplevel (name lambda-list doc &body body)
+  "Just like DEFUN but guaranteed to save the documentation, in *toplevel-documentation*."
+  `(progn
+     (setf (gethash ',name *toplevel-documentation*) ',doc)
+     (defun ,name ,lambda-list ,doc ,@body)))
+
+(define-toplevel script-toplevel (args)
   (establish-vat :label "rune script toplevel")
   (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
          (Ref (e. scope |get| "Ref"))
@@ -62,35 +71,43 @@
       (global-exit (if (ref-opt-problem result) 255 0))))
   (top-loop))
 
-(defun repl-toplevel (args)
+(define-toplevel repl-toplevel (args)
+  "Enter the Lisp-implemented E REPL."
   (assert (null args))
   (generic-toplevel "rune repl toplevel"
                     (system-symbol "REPL-START" "E.UPDOC" :e-on-cl.updoc)))
 
-(defun selftest-toplevel (args)
+(define-toplevel selftest-toplevel (args)
+  "Run the tests for E-on-CL."
   (assert (zerop (length args)))
   (time (asdf:operate 'asdf:test-op +the-asdf-system+))
   (force-output)
   (global-exit 0))
 
-(defun lisptest-toplevel (args)
+(define-toplevel lisptest-toplevel (args)
+  "Run those tests for E-on-CL which do not involve executing the E language."
   (assert (zerop (length args)))
   (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil +the-asdf-system+)
   (force-output)
   (global-exit 0))
 
-(defun updoc-toplevel (args)
+(define-toplevel updoc-toplevel (args)
+  "Invoke the Lisp-implemented Updoc implementation, interpreting the
+      arguments as Updoc file pathnames."
   (establish-vat :label "rune updoc toplevel")
   (apply (system-symbol "UPDOC-RUNE-ENTRY" "E.UPDOC" :e-on-cl.updoc) args)
   (force-output)
   (global-exit 0))
 
-(defun irc-repl-toplevel (args)
+(define-toplevel irc-repl-toplevel (args)
+  "Start an IRC bot. The arguments are: <nick> <server> <channel>*"
   (establish-vat :label "rune irc toplevel")
   (apply (system-symbol "START-IRC-REPL" :e.irc-repl :e-on-cl.irc-repl) args)
   (top-loop))
 
-(defun translate-toplevel (args)
+(define-toplevel translate-toplevel (args)
+  "Parse the sole argument as E source and print the Common Lisp form
+      it is compiled into."
   (assert (= 1 (length args)))
   (establish-vat :label "rune --translate toplevel")
   (print (e.elang:get-translation (e.syntax:e-source-to-tree (first args))))
@@ -98,11 +115,17 @@
   (force-output)
   (global-exit 0))
 
-(defun nothing-toplevel (args)
+(define-toplevel nothing-toplevel (args)
+  "Do nothing. In particular, do not exit, and do not run the vat.
+      This usually results in a Lisp REPL."
   (declare (ignore args))
   (values))
 
-(defun save-toplevel (args)
+(define-toplevel save-toplevel (args)
+  "Generate an image file of the Lisp implementation with E-on-CL loaded.
+      If supported, it will be executable. Under CLISP, the first argument to
+      the resulting executable must be \"--\" for correct argument processing.
+      The sole argument is the name of the image file to create."
   (assert (= 1 (length args))) ;; will be options later, regarding how much to include
   (let ((image-file (native-pathname (first args)))
         (executable-p t)
@@ -175,6 +198,25 @@
   ;; XXX have an overall exit status policy
   (global-exit 255))
 
+(defparameter *toplevels* '(("--updoc"     updoc-toplevel)
+                            ("--selftest"  selftest-toplevel)
+                            ("--lisptest"  lisptest-toplevel)
+                            ("--translate" translate-toplevel)
+                            ("--lrepl"     repl-toplevel)
+                            ("--irc"       irc-repl-toplevel)
+                            ("--nothing"   nothing-toplevel)
+                            ("--save"      save-toplevel)))
+
+(defun document-toplevels (stream data colon at)
+  (declare (ignore colon at))
+  (destructuring-bind (option function) data
+    (format stream "~:
+  ~A
+      Action-selecting option:
+      ~A~%"
+                   option
+                   (gethash function *toplevel-documentation*))))
+
 (defun rune (&rest args
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)
@@ -197,23 +239,11 @@
       (("--resources" "-R")
         (push (e.extern:pathname-to-file (merge-pathnames (native-pathname (pop args))))
               e.knot:*emaker-search-list*))
-      (("--selftest")
-        (setf toplevel #'selftest-toplevel))
-      (("--lisptest")
-        (setf toplevel #'lisptest-toplevel))
-      (("--updoc")
-        (setf toplevel #'updoc-toplevel))
-      (("--translate")
-        (setf toplevel #'translate-toplevel))
-      (("--lrepl")
-        (setf toplevel #'repl-toplevel))
-      (("--irc")
-        (setf toplevel #'irc-repl-toplevel))
-      (("--nothing")
-        (setf toplevel #'nothing-toplevel))
-      (("--save")
-        (setf toplevel #'save-toplevel))
-      (otherwise 
+      (otherwise
+        (let ((tl (assoc (first args) *toplevels* :test #'equal)))
+          (when tl
+            (pop args)
+            (setf toplevel (second tl))))
         (loop-finish)))))
   
   (when do-usage
@@ -230,39 +260,15 @@ Lisp-level options:
       Bind e.elib:*break-on-ejections* to the given value.
   --resources|-R <dir>
       Add a directory to search for emakers and resource files.
-  --selftest
-      Action-selecting option:
-      Run the tests for E-on-CL.
-  --updoc
-      Action-selecting option:
-      Invoke the Lisp-implemented Updoc implementation, interpreting the
-      arguments as Updoc file pathnames.
-  --translate
-      Action-selecting option:
-      Parse the sole argument as E source and print the Common Lisp form
-      it is compiled into.
-  --lrepl
-      Action-selecting option:
-      Enter the Lisp-implemented E REPL.
-  --irc
-      Action-selecting option:
-      Start an IRC bot. The arguments are: <nick> <server> <channel>*
-  --nothing
-      Action-selecting option:
-      Do nothing. In particular, do not exit, and do not run the vat.
-      This usually results in a Lisp REPL.
-  --save <file>
-      Action-selecting option:
-      Generate an image file of the Lisp implementation with E-on-CL loaded.
-      If supported, it will be executable. Under CLISP, the first argument to
-      the resulting executable must be \"--\" for correct argument processing.
+~{~/e.rune::document-toplevels/~}
   
   If no action-selecting option is given, the E rune() function is
   called with the remaining arguments.
   
   Now attempting to start rune to give further usage help...
 
-")
+"
+      *toplevels*)
     (push "--help" args))
   
   (when parse-cache-name
