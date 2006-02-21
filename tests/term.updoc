@@ -83,6 +83,9 @@ XXX test tag restrictions
 
   ? term.getTerms()
   # value: [term`foo`]
+  
+  ? makeTerm(tag, null, null, [term]).withoutArgs()
+  # value: term`foo`
 
 --- Lexer
 

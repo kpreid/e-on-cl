@@ -5,7 +5,8 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 # XXX document
-# XXX boolean result guards?
+
+# NOTE: Adding boolean result guards would break the OrderedRegion making trick (int > 0)
 def comparer implements DeepFrozen {
   method lessThan   (a, b) { a.op__cmp(b).belowZero  () }
   method leq        (a, b) { a.op__cmp(b).atMostZero () }

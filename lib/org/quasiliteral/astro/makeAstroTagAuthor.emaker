@@ -31,7 +31,8 @@ def makeAstroTagAuthor(SelflessStamp) {
         to getOptTagCode() { return optTagCode }
         to getDataGuard()  { return dataGuard }
         
-        # to op__cmp
+        /** Compare on tag names regardless of schema or tag codes. [XXX justify this] */
+        to op__cmp(other :AstroTag) { return tagName.op__cmp(other.getTagName()) }
         # to isTagForData
       }
       return astroTag

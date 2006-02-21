@@ -1,9 +1,14 @@
-# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2006 Kevin Reid (portions) and 2002 Combex, Inc. (portions),
+# under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
+
+# XXX appropriate phrasing of the above notice
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+
 pragma.enable("accumulator")
+pragma.enable("trinary-define")
 
 #def &term__quasiParser0 := <elib:slot.makeLazySlot>(thunk {
 #  makeQBuilder(null)
@@ -11,22 +16,133 @@ pragma.enable("accumulator")
 
 def makeTermParser := <import:org.quasiliteral.term.makeTermParser>
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
-def AstroTag := makeAstroTag.asType()
 def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
+
+def AstroTag := makeAstroTag.asType()
+def Astro := any # XXX restrict
+def AstroArg := any # XXX restrict
+def Term := <import:org.quasiliteral.term.makeTerm>.asType()
+def TagTerm := Term[AstroTag, any, TagTerm]
 
 interface QAstroArg guards QAstroArgStamp {}
 def QFunctor := QAstroArg # XXX restrict
 def QTerm := QAstroArg # XXX restrict
+
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
+def FlexList := <elib:tables.makeFlexList>.asType()
+def EList := any[List, FlexList]
+def Number := any[int, float64] # XXX better definition
 
 def memoize := <import:org.cubik.cle.memoize>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def root implements DeepFrozen {
+ /** Produces an object to serve as the root of 'extends' chains. It responds 'no such method' to everything, but refers to 'self' in the error instead of the  parent-most object. */
+ to get(self) {
+  return def root implements EventuallyDeepFrozen {
+    method __optSealedDispatch(brand) :any {
+      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+      }
+    }
+    
+    match [verb, args] {
+      # XXX typed exception
+      throw(`the ${self.__getAllegedType().getFQName()} ${E.toQuote(self)} does not understand $verb/${args.size()} $args`)
+    }
+  } 
+}}
 
 def qtPrint implements DeepFrozen { to run(tw :TextWriter, what :QAstroArg) {
   tw.write("qterm`")
   what.termPrint(tw)
   tw.write("`")
 }}
+
+def EMPTY_INDEX := []
+
+def multiPut implements DeepFrozen {
+ /**
+  * Given a multi-dimensional list and an index path, put newValue at that
+  * position in the list.
+  * <p/>
+  * For example, if 'bindings' is [['a','b'],['c','d','e']] diverge(),
+  * 'holeNum' is 1, 'index' is [2], and 'newValue' is 'x', then the 'e'
+  * should be replaced with 'x', since it's at list[1][2]. If any index
+  * step is out of bounds, the corresponding list is grown to include it
+  * (see {@link FlexList#ensureSize(int)} and null is returned.
+  * Alternatively, if an old value is being overwritten, then that old
+  * value is also returned.
+  */
+ to run(bindings, holeNum :int, indexes :EList, newValue) {
+  # XXX blindly copied
+  var list := bindings
+  var dest := holeNum
+  for i => index in indexes {
+      list.ensureSize(dest + 1)
+      var optNext := list[dest]
+      if (optNext == null) {
+        optNext := FlexList.make(index + 1)
+        list[dest] := optNext
+      } else if (escape ej { optNext == FlexList.coerce(optNext, ej) } catch _ { false }) {
+          #we're cool
+      } else {
+        optNext := optNext :EList
+        optNext := optNext.diverge()
+      }
+      list := optNext
+      dest := index
+  }
+  var result := null
+  if (list.size() > dest) {
+    result := list[dest]
+  }
+  list.ensureSize(dest + 1)
+  list[dest] := newValue
+  return result
+}}
+
+def multiGet implements DeepFrozen {
+ /**
+  * Given a multi-dimensional list and an index path, retrieve the
+  * corresponding element of the list.
+  * 
+  * For example, if 'args' is [['a','b'],['c','d','e']], 'holeNum' is 1,
+  * 'index' is [2,3], and 'repeat' is true, then the answer should be
+  * 'e', since it's at args[1][2], and the repeat flag allows us to ignore
+  * the 3 when we find that 'e' isn't a list. If 'repeat' had been false,
+  * the presence of an additional step on the index path would have caused
+  * an exception to be thrown. In either case, if an index step is out of
+  * bounds, an exception is thrown regardless of the value of 'repeat'.
+  */
+ to run(args :List, holeNum :int, indexes :EList, repeat :boolean) {
+    # XXX blindly copied
+    var result := args[holeNum]
+    for i => index in indexes {
+      def list := 
+        escape ej {
+          def optEj := if (repeat) { ej } else { null }
+          EList.coerce(result, optEj)
+        } catch _ {
+          # It doesn't matter why the coercion failed. This means we should simply repeat the last non-list result we got.
+          return result
+        }
+      result := list[index]
+    }
+    return result
+}}
+
+def inBounds implements DeepFrozen {
+ to run(num :int, quant :char) :boolean {
+  return \
+    switch (quant) {
+      match =='?' { num == 0 || num == 1 }
+      match =='+' { num >= 1 }
+      match =='*' { num >= 0 }
+      match _ { throw("Must be '?', '+', or '*': " + quant) }
+    }
+}}
+
 
 def _make implements DeepFrozen { to run(astroBuilder) {
 
@@ -41,6 +157,167 @@ def _make implements DeepFrozen { to run(astroBuilder) {
                                           schema,
                                           ["BAstroArg" => QAstroArg,
                                            ])
+  
+  def makeBaseQAstro implements DeepFrozen {
+   to run(self) {
+    return def baseQAstro extends root[self] {
+      # XXX blindly imitating EoJ. review after I understand this
+      to matchBind(args :List, specimen, ejector) {
+        def specimenTerm :TagTerm := (specimen, ejector)
+        def bindings := [].diverge()
+        def matched :int := self.matchBindSlice(args, [specimenTerm], bindings, EMPTY_INDEX)
+        if (matched <=> 1) {
+          return bindings.snapshot()
+        } else {
+          throw.eject(ejector, `$self doesn't match: $specimenTerm`)
+        }
+      }
+    }
+  }}
+
+  def leafTag implements DeepFrozen {
+   to run(tagName :String, optSpan :nullOk[SourceSpan]) :Astro {
+    # XXX componentized tag names
+    def tag :AstroTag := astroBuilder.getSchema().obtainTagForName(tagName)
+    return astroBuilder.leafTag(tag, optSpan)
+  }}
+
+  def optCoerce implements DeepFrozen {
+   to run(termoid, isFunctorHole :boolean, optTag :nullOk[AstroTag]) {
+    # XXX copied blindly, review. At the very least, it should be the astroBuilder's business how data types are coerced.
+    var result :Astro := null
+    switch (termoid) {
+      match ==null {
+        result := leafTag("null", null)
+      }
+      match astro :Astro {
+        result := astro
+      }
+      match string :String {
+        if (null != optTag && optTag.getOptDataType() == Twine) {
+          result := astroBuilder.leafString(string, null)
+        } else {
+          result := leafTag(string, null);
+        }
+      } 
+      match twine :Twine {
+        if (null != optTag && optTag.getOptDataType() == Twine) {
+          result := astroBuilder.leafTwine(twine, null)
+        } else {
+          result := leafTag(twine.bare(), twine.getOptSpan())
+        }
+      }
+      match ==true {
+        result := leafTag("true", null)
+      } 
+      match ==false {
+        result := leafTag("false", null)
+      } 
+      match termoid :Number {
+        result := astroBuilder.leafData(termoid, null)
+      } 
+      match character :char {
+        result := astroBuilder.leafChar(character, null)
+      } 
+      match _ {
+        return null
+      }
+    }
+    if (null != optTag && !(optTag <=> result.getTag())) {
+      return null
+    }
+    if (isFunctorHole && result.getArgs().size() != 0) {
+      return null
+    }
+    return result
+  }}
+
+  def makeLeafTagOrData implements DeepFrozen {
+    to run(optTag :nullOk[AstroTag], inputData, optSpan) {
+      def [tag, data] := 
+        # ewwww
+        if (optTag != null) { 
+          [optTag, inputData]
+        } else {
+          def term := astroBuilder.leafData(inputData, optSpan)
+          [term.getTag(), term.getData()]
+        }
+      def quasiFunctor extends makeBaseQAstro(quasiFunctor) implements QAstroArgStamp {
+      to substitute(args) {
+        # XXX for proper implementation see QFunctor.java
+        if (optTag != null && inputData == null) {
+          return astroBuilder.leafTag(tag, null)
+        } else if (optTag == null && inputData != null) {
+          return astroBuilder.leafData(inputData, null)
+        } else {
+          throw(`unimplemented data-and-tag case: $optTag, ${E.toQuote(inputData)}`)
+        }
+      }
+      
+      to getTag() { return tag }
+    
+      # Just returns shapeSoFar, since this has no shape and no children
+      /** Internal; pattern matching/substitution implementation. */
+      to startShape(_, _, _, shapeSoFar :int) {
+        return shapeSoFar
+      }
+  
+      /** Internal; pattern matching/substitution implementation. */
+      to endShape(_, _, _) {
+        # Do nothing.
+      }
+
+      /** Internal; pattern matching implementation. */
+      to matchBindSlice(args, specimenList, bindings, index) {
+        # XXX blindly copied, review
+        if (specimenList.size() <= 0) {
+          return -1;
+        }
+        # optCoerce checks that the tag matches
+        def optSpecimen :nullOk[Astro] := optCoerce(specimenList.get(0), false, tag);
+        #traceln(`functor matchBindSlice; $optTag->$tag $inputData->$data matching against $specimenList $optSpecimen; other data is ${specimen.getData()}`)
+        if (optSpecimen =~ specimen :Astro) {
+          if (null != data) {
+            #if data is null, then it's a wildcard.
+            def otherData := specimen.getData()
+            if (data != otherData) {
+              # Twines match even if their source spans are different
+              if (data =~ t1 :Twine &&
+                  otherData =~ t2 :Twine &&
+                  t1 == data &&
+                  t2 == otherData) {
+                if (t1.bare() != t2.bare()) {
+                  return -1;
+                }
+              } else {
+                return -1;
+              }
+            }
+          }
+          #specimenList
+          #traceln(`passing functor matchBindSlice`)
+          #functor info matches, so we match one (the first) element of
+          return 1;
+        } else {
+          #traceln(`failing no specimen`)
+          return -1;
+        }
+      }
+    
+      to termPrint(tw :TextWriter) {
+        # XXX correct?
+        tw.print(tag.getTagName())
+        if (data != null) {
+          tw.quote(data)
+        }
+      }
+      
+      to __printOn(tw) {
+        qtPrint(tw, quasiFunctor)
+      }
+    }
+    return quasiFunctor    
+  }}
 
   bind qBuilder := def "$qBuilder" extends baseBuilder implements EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
     method __optSealedDispatch(brand) :any {
@@ -55,26 +332,63 @@ def _make implements DeepFrozen { to run(astroBuilder) {
     to start(top :QTerm) { return top }
     
     to empty() {
-      return def quasiEmpty implements QAstroArgStamp {
-        to termPrint(tw :TextWriter) {
-          # nothing
-        }
-        
-        to __printOn(tw) {
-          qtPrint(tw, quasiEmpty)
-        }
-      }
+      return qBuilder.seq()
     }
     
     to term(functor :QFunctor) { return functor }
 
     to term(functor :QFunctor, args :QAstroArg) { 
-      return def quasiTerm implements QAstroArgStamp {
+      return def quasiTerm extends makeBaseQAstro(quasiTerm) implements QAstroArgStamp {
         to substitute(sargs) {
           # XXX incomplete
           return astroBuilder.term(functor.substitute(sargs), args.substitute(sargs))
         }
-      
+        
+        # A QTerm has whatever shape its children agree on
+        /** Internal; pattern matching/substitution implementation. */
+        to startShape(sargs, optBindings, prefix, var shapeSoFar) :int {
+          shapeSoFar := functor.startShape(sargs, optBindings, prefix, shapeSoFar)
+          shapeSoFar := args.startShape(sargs, optBindings, prefix, shapeSoFar)
+          return shapeSoFar
+        }
+    
+        # Just delegate to all children
+        /** Internal; pattern matching/substitution implementation. */
+        to endShape(optBindings, prefix, shape) {
+          functor.endShape(optBindings, prefix, shape)
+          args.endShape(optBindings, prefix, shape)
+        }
+        
+        to matchBindSlice(sargs,
+                          specimenList,
+                          bindings,
+                          index) :int {
+          # XXX blindly copied, review
+          if (specimenList.size() <= 0) {
+            return -1
+          }
+          def optSpecimen :Astro := optCoerce(specimenList.get(0), false, functor.getTag());
+          if (null == optSpecimen) {
+            return -1;
+          }
+          def matches := functor.matchBindSlice(sargs,
+                                                [optSpecimen.withoutArgs()],
+                                                bindings,
+                                                index);
+          if (matches <= 0) {
+            return -1;
+          }
+          require(1 == matches,
+                  thunk {`Functor may only match 0 or 1 specimen: $matches`})
+          def tArgs :List := optSpecimen.getArgs()
+          def num := args.matchBindSlice(sargs, tArgs, bindings, index);
+          if (tArgs.size() == num) {
+            return 1;
+          } else {
+            return -1;
+          }
+        }
+
         to termPrint(tw :TextWriter) {
           # XXX incapable of cycle handling
           functor.termPrint(tw)
@@ -90,7 +404,8 @@ def _make implements DeepFrozen { to run(astroBuilder) {
     }
     
     to valueHole(key :int) {
-      return def quasiValueFunctorHole implements QAstroArgStamp { # XXX should be implements QFunctor?
+      def myIsFunctorHole := true # stub
+      return def quasiValueFunctorHole extends makeBaseQAstro(quasiValueFunctorHole) implements QAstroArgStamp { # XXX should be implements QFunctor?
         to substitute(args :List) {
           def holeValue := args[key]
           return switch (holeValue) {
@@ -101,6 +416,54 @@ def _make implements DeepFrozen { to run(astroBuilder) {
               # XXX ask astroBuilder to make us a tag-with-given-name instead
               astroBuilder.leafTag(makeAstroTag(null, name, nullOk), null) }
             match x { x }
+          }
+        }
+        
+        # If the substitution arg at [myHoleHum]+prefix is actually a list
+        # for further indexing, what's the size of that list?
+        # 
+        # If it's not a list, it could still act as a list by repetition,
+        # but then it's of indeterminate size, so just return shapeSoFar.
+        # If it is a list, then if shapeSoFar has already been determined (ie,
+        # not -1), then require these to agree.
+        /** Internal; pattern matching/substitution implementation. */
+        to startShape(args, optBindings, prefix, shapeSoFar) :int {
+          # XXX blindly copied, review
+          def term := multiGet(args, key, prefix, true)
+          def list :=    # XXX consider rewriting this in trinary-define form
+            escape ej {
+              EList.coerce(term, ej)
+            } catch _ {
+              #It doesn't matter why the coercion failed.
+              return shapeSoFar
+            }
+          def result := list.size()
+          require(-1 == shapeSoFar || shapeSoFar == result,
+            thunk {`Inconsistent shape: $shapeSoFar vs $result`})
+          return result
+        }
+    
+        /** Internal; pattern matching/substitution implementation. */
+        to endShape(_, _, _) {
+          # XXX blindly copied, review
+
+          # Do nothing.
+        }
+        
+        to matchBindSlice(args, specimenList, bindings, index) {
+          # XXX blindly copied, review
+          if (specimenList.size() <= 0) {
+            return -1
+          }
+          def specimen := specimenList[0]
+          def termoid := multiGet(args, key, index, true)
+          def optTerm :Astro := optCoerce(termoid, myIsFunctorHole, null)
+          require(null != optTerm,
+                  thunk{`Term $termoid doesn't match $quasiValueFunctorHole`})
+          if (optTerm == specimen) { # XXX EoJ uses <=>: why?
+            return 1
+          } else {
+            return -1
           }
         }
       
@@ -116,40 +479,72 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       }
     }
     
-    to leafData(data, optSpan :nullOk[SourceSpan]) {
-      # XXX is this adequate?
-      return def quasiData implements QAstroArgStamp { # implemens QFunctor
-        to substitute(args) {
-          return astroBuilder.leafData(data, optSpan)
+    to patternHole(key :int) {
+      def myIsFunctorHole := true # stub
+      return def quasiPattFunctorHole extends makeBaseQAstro(quasiPattFunctorHole) implements QAstroArgStamp { # XXX should be implements QFunctor?
+        to substitute(args :List) {
+          throw(`can't substitute quasi-pattern hole $quasiPattFunctorHole`)
         }
         
-        to termPrint(out :TextWriter) {
-          out.quote(data)
+        # An at-hole doesn't contribute to the shape, so just returns
+        # shapeSoFar, but initializes the binding at [myHoleNum]+prefix to a
+        # new empty FlexList.
+        /** Internal; pattern matching/substitution implementation. */
+        to startShape(args, optBindings, prefix, shapeSoFar) :int {
+          # XXX blindly copied, review
+          require(optBindings != null, 
+            thunk {`no at-holes in a ValueMaker: $quasiPattFunctorHole`})
+          multiPut(optBindings, key, prefix, [].diverge())
+          return shapeSoFar
         }
-
-        to __printOn(out) {
-          qtPrint(out, quasiData)
+ 
+        # Truncate and snapshot the bindings at [myHoleNum]+prefix to shape.
+        /** Internal; pattern matching/substitution implementation. */
+        to endShape(optBindings, prefix, shape) {
+          require(optBindings != null, 
+            thunk{`no at-holes in a ValueMaker: $quasiPattFunctorHole`})
+          def list :FlexList := multiGet(optBindings.snapshot(), key, prefix, false)
+          list.setSize(shape)
+          multiPut(optBindings, key, prefix, list.snapshot())
+        }
+        
+        /** Internal; pattern matching implementation. */
+        to matchBindSlice(args :List, specimens :List, bindings, index :EList) {
+          # XXX blindly copied, review
+          if (specimens.size() <= 0) {
+            return -1
+          }
+          def optSpecimen := optCoerce(specimens[0], myIsFunctorHole, null) # third arg is myOptTag in EoJ -- figure it out when we get tagged holes done
+          if (optSpecimen == null) {
+            return -1
+          }
+          def optOldValue := multiPut(bindings, key, index, optSpecimen)
+          if (optOldValue == null || optOldValue <=> optSpecimen) {
+            return 1
+          } else {
+            # EoJ comment: //XXX Should this throw?
+            return -1
+          }
+        }
+      
+        to termPrint(tw :TextWriter) {
+          tw.write("@{")
+          tw.print(key)
+          tw.write("}")
+        }
+        
+        to __printOn(tw) {
+          qtPrint(tw, quasiPattFunctorHole)
         }
       }
     }
     
+    to leafData(data, optSpan :nullOk[SourceSpan]) {
+      return makeLeafTagOrData(null, data, optSpan)
+    }
+    
     to leafTag(tag :AstroTag, optSpan :nullOk[SourceSpan]) {
-      def quasiFunctor implements QAstroArgStamp {
-        to substitute(args) {
-          # XXX for proper implementation see QFunctor.java
-          return astroBuilder.leafTag(tag, null)
-        }
-      
-        to termPrint(tw :TextWriter) {
-          # XXX incorrect?
-          tw.print(tag.getTagName())
-        }
-        
-        to __printOn(tw) {
-          qtPrint(tw, quasiFunctor)
-        }
-      }
-      return quasiFunctor
+      return makeLeafTagOrData(tag, null, optSpan)
     }
     
     /** XXX this doesn't exist in the Java version and I forget whether it's temporary or not */
@@ -158,19 +553,121 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       return qBuilder.leafTag(makeAstroTag(null, tagName, nullOk), null)
     }
     
-     to seq(single :QTerm) {
+    to some(optSubPattern :nullOk[AstroArg], quant :char) {
+      return def qSome extends makeBaseQAstro(qSome) implements QAstroArgStamp {
+        to __printOn(tw) { qtPrint(tw, qSome) }
+        
+        to termPrint(tw :TextWriter) {
+          if (optSubPattern != null) {
+            optSubPattern.termPrint(tw)
+          }
+          tw.print(quant)
+        }
+
+        to startShape(args, optBindings, prefix, shapeSoFar) :int {
+          if (null == optSubPattern) {
+            return shapeSoFar
+          } else {
+            return optSubPattern.startShape(args, optBindings, prefix, shapeSoFar)
+          }
+        }
+    
+        to endShape(optBindings, prefix, shape) :void {
+          if (null == optSubPattern) {
+            # Do nothing.
+          } else {
+            optSubPattern.endShape(optBindings, prefix, shape)
+          }
+        }
+        
+        to matchBindSlice(args, var specimenList, bindings, index) {
+          if (null == optSubPattern) {
+            def result := specimenList.size()
+            return \
+              switch (quant) {
+                match =='?' { 1.min(result) }
+                match =='+' { if (result <= 0) {-1} else {result} }
+                match =='*' { result }
+                match _ { throw("Unrecognized: " + quant); }
+              }
+          }
+          def maxShape := optSubPattern.startShape(args, bindings, index, -1)
+          var result := 0
+          var lastDim := index.size()
+          def subIndex := index.diverge()
+          subIndex.ensureSize(lastDim + 1)
+          var shapeSoFar :int := 0
+          while (maxShape == -1 || shapeSoFar < maxShape) {
+              if (specimenList.size() == 0) {
+                  break;
+              }
+              if (quant == '?' && result >= 1) {
+                  break;
+              }
+              subIndex[lastDim] := shapeSoFar
+              def more :int := optSubPattern.matchBindSlice(args, specimenList, bindings, subIndex)
+              if (-1 == more) {
+                  break;
+              }
+              require(more >= 1 || maxShape != -1,
+                      thunk{`Patterns of indeterminate rank must make progress: $qSome vs $specimenList`})
+              result += more
+              specimenList run= (more)
+              
+              shapeSoFar += 1
+          }
+          optSubPattern.endShape(bindings, index, shapeSoFar)
+          require(inBounds(result, quant),
+                  thunk{`Improper quantity: $result vs $quant`})
+          return result
+        }
+      }
+    }
+    
+    to seq(single :QTerm) {
       return single
     }
     
-    match [=="seq", args :List[QTerm] ? (args.size() != 1)] {
+    match [=="seq", elements :List[QTerm] ? (elements.size() != 1)] {
       def qBuilderSeq implements QAstroArgStamp {
         to substitute(sargs) {
-          return E.call(astroBuilder, "seq", accum [] for arg in args { _.with(arg.substitute(sargs)) })
+          return E.call(astroBuilder, "seq", accum [] for arg in elements { _.with(arg.substitute(sargs)) })
         }
         
+        # A QPairSeq has whatever shape its args agree on
+        /** Internal; pattern matching/substitution implementation. */
+        to startShape(args, optBindings, prefix, var shapeSoFar) :int {
+          for element in elements {
+            shapeSoFar := element.startShape(args, optBindings, prefix, shapeSoFar)
+          }
+          return shapeSoFar
+        }
+    
+        # Just delegate to all children
+        /** Internal; pattern matching/substitution implementation. */
+        to endShape(optBindings, prefix, shape) :void {
+          for element in elements {
+            element.endShape(optBindings, prefix, shape)
+          }
+        }
+
+        /**
+         * Matches the arg list by a naive greedy algorithm.
+         */
+        to matchBindSlice(args, var specimenList, bindings, index) {
+          return accum 0 for x in elements { _ + (
+            def leftNum := x.matchBindSlice(args, specimenList, bindings, index)
+            if (leftNum <= -1) {
+              return -1
+            }
+            specimenList run= (leftNum)
+            leftNum
+          )}
+        }
+    
         to termPrint(out :TextWriter) {
           var sep := ""
-          for arg in args { 
+          for arg in elements { 
             out.write(sep)
             arg.termPrint(out)
             sep := ", "

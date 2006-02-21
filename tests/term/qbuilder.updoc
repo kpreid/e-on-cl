@@ -43,7 +43,7 @@ XXX write these tests, in independent-of-TermParser form
 --- Literals
 
   ? def dqt := qb.start(qb.leafData(def d := "foo", null))
-  # value: qterm`"foo"`
+  # value: qterm`.String."foo"`
 
   ? def dt := dqt.substitute([])
   # value: term`"foo"`
@@ -58,3 +58,96 @@ XXX write these tests, in independent-of-TermParser form
   
   ? hqt.substitute([term`foo`])
   # value: term`foo`
+
+--- Patterns
+
+  ? def pqt := qb.start(qb.patternHole(0))
+  # value: qterm`@{0}`
+  
+  ? pqt.matchBind([], term`a`, null)
+  # value: [term`a`]
+  
+  ? pqt.matchBind([], 44, null)
+  # problem: not a Term[AstroTag, any, <***CYCLE***>]: 44
+
+  term with hole arg
+  ? qb.start(qb.term(qb.tag([["Ident", "foo"]]), qb.patternHole(0))).matchBind([], term`foo(bar)`, null)
+  # value: [term`bar`]
+
+  term with wrong number of args
+  ? qb.start(qb.term(qb.tag([["Ident", "foo"]]), qb.patternHole(0))).matchBind([], term`foo`, null)
+  # problem: qterm`foo(@{0})` doesn't match: foo
+
+  wrong tag
+  ? qb.start(qb.term(qb.tag([["Ident", "bar"]]), qb.patternHole(0))).matchBind([], term`foo(bar)`, null)
+  # problem: qterm`bar(@{0})` doesn't match: foo(bar)
+
+  unspecified args
+  ? qb.start(qb.term(qb.tag([["Ident", "foo"]]))).matchBind([], term`foo(bar)`, null)
+  # value: []
+
+  empty args
+  ? qb.start(qb.term(qb.tag([["Ident", "foo"]]), qb.empty())).matchBind([], term`foo(bar)`, null)
+  # problem: qterm`foo()` doesn't match: foo(bar)
+
+  value hole matching
+  ? qb.start(qb.valueHole(0)).matchBind([term`foo`], term`foo`, null)
+  # value: []
+  
+  value hole nonmatching
+  ? qb.start(qb.valueHole(0)).matchBind([term`foo`], term`bar`, null)
+  # problem: qterm`${0}` doesn't match: bar
+
+  data matching
+  ? qb.start(qb.term(qb.leafData(1, null))).matchBind([], term`1`, null)
+  # value: []
+
+  data nonmatching
+  ? qb.start(qb.term(qb.leafData(1, null))).matchBind([], term`2`, null)
+  # problem: qterm`.int.1` doesn't match: 2
+
+--- Repetition
+
+  with pattern hole
+  ? qb.start(qb.tuple(qb.some(qb.patternHole(0), '*'))).matchBind([], term`[foo, bar]`, null)
+  # value: [[term`foo`, term`bar`]]
+
+  with value hole, matching
+  ? qb.start(qb.tuple(qb.some(qb.valueHole(0), '*'))).matchBind([[term`foo`, term`bar`]], term`[foo, bar]`, null)
+  # value: []
+
+  with value hole, nonmatching
+  ? qb.start(qb.tuple(qb.some(qb.valueHole(0), '*'))).matchBind([[term`foo`, term`baz`]], term`[foo, bar]`, null)
+  # problem: qterm`.tuple.(${0}*)` doesn't match: [foo, bar]
+  
+  with functor, matching
+  ? qb.start(qb.tuple(qb.some(qb.term(qb.tag([["Ident", "foo"]])), '+'))).matchBind([], term`[foo, foo]`, null)
+  # value: []
+
+  with functor, nonmatching
+  XXX this type of failure is unlike all others; this behavior is copied from E-on-Java, but it doesn't seem /right/ '
+  ? qb.start(qb.tuple(qb.some(qb.term(qb.tag([["Ident", "foo"]])), '+'))).matchBind([], term`[]`, null)
+  # problem: Improper quantity: 0 vs +
+
+  with functor, matching
+  ? qb.start(qb.tuple(qb.some(qb.term(qb.tag([["Ident", "foo"]]), qb.empty()), '+'))).matchBind([], term`[foo, foo]`, null)
+  # value: []
+
+  with functor, nonmatching
+  XXX this type of failure is unlike all others; this behavior is copied from E-on-Java, but it doesn't seem /right/ '
+  ? qb.start(qb.tuple(qb.some(qb.term(qb.tag([["Ident", "foo"]]), qb.empty()), '+'))).matchBind([], term`[foo(bar)]`, null)
+  # problem: Improper quantity: 0 vs +
+
+  with data, matching
+  ? qb.start(qb.tuple(qb.some(qb.term(qb.leafData(1, null)), '+'))).matchBind([], term`[1]`, null)
+  # value: []
+
+  with data, nonmatching
+  ? qb.start(qb.tuple(qb.some(qb.term(qb.leafData(1, null)), '+'))).matchBind([], term`[2]`, null)
+  # problem: Improper quantity: 0 vs +
+
+  nested (just testing startShape existence for now)
+  ? qb.start(qb.tuple(qb.some(qb.tuple(qb.some(qb.term(qb.leafData(1, null)), '*')), '+'))).matchBind([], term`[[1]]`, null)
+  # value: []
+
+XXX thorough tests of all pattern matching code paths

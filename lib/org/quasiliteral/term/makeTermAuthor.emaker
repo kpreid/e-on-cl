@@ -152,6 +152,10 @@ def makeTermAuthor(SelflessStamp) {
         to getOptSpan() { return optSpan }
         to getArgs()    { return args }
         
+        to withoutArgs() {
+          return makeTerm(tag, data, optSpan, [])
+        }
+        
         to getTerms() { return [term] }
         
         to __printOn(tw :TextWriter) {
