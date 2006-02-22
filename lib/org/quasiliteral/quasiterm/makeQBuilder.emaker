@@ -255,6 +255,7 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       }
       
       to getTag() { return tag }
+      to _getOptTagForCoercion() { return tag }
     
       # Just returns shapeSoFar, since this has no shape and no children
       /** Internal; pattern matching/substitution implementation. */
@@ -367,7 +368,8 @@ def _make implements DeepFrozen { to run(astroBuilder) {
           if (specimenList.size() <= 0) {
             return -1
           }
-          def optSpecimen :Astro := optCoerce(specimenList.get(0), false, functor.getTag());
+          # XXX _getOptTagForCoercion is not like EoJ; review
+          def optSpecimen :Astro := optCoerce(specimenList.get(0), false, functor._getOptTagForCoercion());
           if (null == optSpecimen) {
             return -1;
           }
@@ -418,6 +420,8 @@ def _make implements DeepFrozen { to run(astroBuilder) {
             match x { x }
           }
         }
+        
+        # to _getOptTagForCoercion() ...
         
         # If the substitution arg at [myHoleHum]+prefix is actually a list
         # for further indexing, what's the size of that list?
@@ -485,6 +489,8 @@ def _make implements DeepFrozen { to run(astroBuilder) {
         to substitute(args :List) {
           throw(`can't substitute quasi-pattern hole $quasiPattFunctorHole`)
         }
+        
+        to _getOptTagForCoercion() { return null }
         
         # An at-hole doesn't contribute to the shape, so just returns
         # shapeSoFar, but initializes the binding at [myHoleNum]+prefix to a

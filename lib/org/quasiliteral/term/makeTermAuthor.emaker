@@ -151,6 +151,9 @@ def makeTermAuthor(SelflessStamp) {
         to getData()    { return data }
         to getOptSpan() { return optSpan }
         to getArgs()    { return args }
+
+        /** E-on-Java compatibility */
+        to getOptData() { return data }
         
         to withoutArgs() {
           return makeTerm(tag, data, optSpan, [])

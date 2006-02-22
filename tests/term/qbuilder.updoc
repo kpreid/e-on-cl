@@ -106,6 +106,10 @@ XXX write these tests, in independent-of-TermParser form
   ? qb.start(qb.term(qb.leafData(1, null))).matchBind([], term`2`, null)
   # problem: qterm`.int.1` doesn't match: 2
 
+  term with functor hole (bug test)
+  ? qb.start(qb.term(qb.patternHole(0), qb.patternHole(1))).matchBind([], term`foo(bar)`, null)
+  # value: [term`foo`, term`bar`]
+
 --- Repetition
 
   with pattern hole
