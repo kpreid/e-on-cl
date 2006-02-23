@@ -5,11 +5,16 @@
 
 (defun %define-if-available (packages symbols copier)
   (dolist (nd symbols)
-    (let ((name (string nd)))
+    (let* ((name (if (listp nd)
+                   (string (second nd))
+                   (string nd)))
+           (here-symbol (if (listp nd)
+                          (first nd)
+                          (intern name #.*package*))))
       (dolist (package (remove-if-not #'find-package packages))
-        (multiple-value-bind (symbol found) (find-symbol name package)
+        (multiple-value-bind (other-symbol found) (find-symbol name package)
           (when (eql found :external)
-            (funcall copier (intern (string name) #.*package*) symbol)))))))
+            (funcall copier here-symbol other-symbol)))))))
 
 (defmacro define-if-available (packages symbols &key (accessor 'fdefinition))
   `(%define-if-available ',packages ',symbols 
@@ -29,8 +34,8 @@
   (#+sbcl :sb-sys
    #+cmu  :system)
   (:serve-event     
-   :add-io-handler 
-   :remove-io-handler))
+   (add-io-handler :add-fd-handler)
+   (remove-io-handler :remove-fd-handler)))
 
 ;; Implement our own
 

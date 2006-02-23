@@ -510,9 +510,10 @@
                           (result resolver (make-promise)))
       ;; XXX this is assortedly bad
       ;; not least, it should not implement its own line-buffer
-      (labels ((take ()
+      (labels ((prompt ()
                  (format t "~&e-on-cl? ")
-                 (force-output)
+                 (force-output))
+               (take ()
                  (e. stdin |whenAvailable| 1 (efun ()
                    (if (not (ref-is-resolved (e. stdin |terminates|)))
                      (let ((ch (aref (e. stdin |read| 1 1 #|XXX ALL|#) 0)))
@@ -522,11 +523,13 @@
                              (funcall stepper (copy-seq buf))
                              (efun (step-result)
                                (declare (ignore step-result))
+                               (prompt)
                                (take)))
                            (setf (fill-pointer buf) 0))
                          (progn
                            (vector-push-extend ch buf)
                            (take))))
                      (e. resolver |resolve| (e. stdin |terminates|)))))))
+        (prompt)
         (take)
         result))))
