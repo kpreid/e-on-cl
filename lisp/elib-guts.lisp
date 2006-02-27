@@ -186,6 +186,7 @@
 
 
 ;;; XXX review the actual uses of these various slot implementations; also consider moving them to e-lambdas
+;;; XXX look for ways to reduce the duplication of these common makers
 
 (defun import-uncall (fqn)
   `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
@@ -714,7 +715,6 @@
 (def-fqn type-desc "org.erights.e.elib.base.TypeDesc")
 (def-fqn message-desc "org.erights.e.elib.base.MessageDesc")
 (def-fqn param-desc "org.erights.e.elib.base.ParamDesc")
-(def-fqn e-simple-slot "org.erights.e.elib.slot.FinalSlot") ; xxx 'Final'?
 (def-fqn local-throw-sealed-box "org.cubik.cle.prim.LocalThrowSealedBox")
 
 (loop for group-type in '(and or) do
