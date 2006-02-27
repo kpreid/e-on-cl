@@ -455,7 +455,7 @@ If there is no current vat at initialization time, captures the current vat at t
 (defmethod enqueue-turn ((vat vat) function)
   (enqueue-turn (vat-runner vat)
                 (lambda ()
-                  (call-with-turn function vat))))
+                  (call-with-turn function vat :exclude-io t))))
 
 (defgeneric vr-add-io-handler (context target direction function))
 
