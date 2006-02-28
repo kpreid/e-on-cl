@@ -50,6 +50,11 @@
                 (code-char 0))))
 
 (def-vtable cl-type-guard
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    ;; assuming that super behaves DeepFrozen
+    (eql auditor +deep-frozen-stamp+))
+
   (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (cl-type-specifier guard) opt-ejector guard))
   (:|__printOn| (this tw)
@@ -109,10 +114,6 @@
           (apply #'e-call-dispatch super mverb args)))
       (apply #'e-call-dispatch super mverb args))))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen cl-type-guard))
-  ; NOTE: assuming that super behaves deep-frozen
-  t)
-
 (defmethod make-load-form ((object cl-type-guard) &optional environment)
   (declare (ignore environment))
   ;; must be custom in order to ignore allow super and trivial-box being restored as nil
@@ -122,16 +123,13 @@
 
 ; --- Auditing ---
 
-(defmethod e-audit-check-dispatch ((auditor t) (specimen t))
-  nil)
-
 (defglobal +the-audit-checker+ (e-lambda "org.erights.e.elib.slot.auditChecker"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "__auditedBy")) ; XXX move to e.syntax?
   (:|run| (auditor specimen)
-    (as-e-boolean (e-audit-check-dispatch auditor specimen)))))
+    (as-e-boolean (approvedp auditor specimen)))))
 
 ; --- local resolver ---
 
@@ -337,6 +335,11 @@
 ;;; --- e-boolean ---
 
 (def-vtable e-boolean
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    "Booleans are atomic."
+    (eql auditor +deep-frozen-stamp+))
+
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (if (e-is-true this)
@@ -360,9 +363,6 @@
     "Boolean exclusive or."
     (e-coercef other 'e-boolean)
     (if (e-is-true this) (e. other |not|) other)))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen e-boolean))
-  t)
 
 ; --- Ejector ---
 
@@ -441,7 +441,7 @@
 
 ; XXX consider replacing all eeq-is-transparent-selfless methods with audit stamps.
 (defmethod eeq-is-transparent-selfless ((a t))
-  (e-audit-check-dispatch +selfless-stamp+ a))
+  (approvedp +selfless-stamp+ a))
 
 (defun spread-uncall (a)
   "assumes the object produces a properly formed uncall"

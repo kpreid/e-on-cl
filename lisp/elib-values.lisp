@@ -7,22 +7,29 @@
 ; --- Nil ---
 
 (def-vtable null
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "null")))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen null))
-  t)
-
 ; --- String ---
 
 (def-class-opaque string)
 
+;; XXX eeq-is-transparent-selfless to be replaced in all cases with SelflessStamp test
 (defmethod eeq-is-transparent-selfless ((a string))
   (declare (ignore a)) nil)
 
 (def-vtable string
+  ;; XXX check whether audited-by-magic-verbs inappropriately show up in typedescs
+  (audited-by-magic-verb (this auditor)
+    "Strings are atomic."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
+
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
@@ -152,10 +159,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (def-atomic-sameness string string= sxhash)
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen string))
-  "Strings are atomic."
-  t)
-
 ; --- Cons ---
 
 ; to have methods and a public maker eventually
@@ -172,13 +175,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- Symbol ---
 
 (def-vtable symbol
+  (audited-by-magic-verb (this auditor)
+    "Symbols are atomic to E. Their mutable properties are not accessible."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| (symbol-name this))))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen symbol))
-  "Symbols are atomic to E. Their mutable properties are not accessible."
-  t)
 
 ; --- Character ---
 
@@ -210,6 +213,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         thereis (code-char code)))
 
 (def-vtable character
+  (audited-by-magic-verb (this auditor)
+    "Characters are atomic."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
+  
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
@@ -232,9 +240,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|previous| (this)
     "Return the previous character in the total ordering of characters. Throws an exception if this is the first character."
     (char-nearby this -1)))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen character))
-  t)
 
 ; --- ConstList (vector) ---
 
@@ -437,6 +442,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- Number ---
 
 (def-vtable number
+  (audited-by-magic-verb (this auditor)
+    "Numbers are atomic."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
+
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (prin1-to-string this)))
@@ -517,10 +527,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (string-downcase
         (with-standard-io-syntax
           (format nil "~VR" base this))))))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen number))
-  ; xxx is the specimen type too broad?
-  t)
 
 (def-vtable integer
   (:|__conformTo| (this guard)

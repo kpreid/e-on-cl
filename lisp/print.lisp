@@ -24,7 +24,7 @@
 (defglobal +the-text-writer-guard+ (e-lambda
     "org.erights.e.elib.print.TextWriterGuard"
     (:stamped +deep-frozen-stamp+)
-  (:|coerce/2| (standard-coerce (lambda (specimen) (e-audit-check-dispatch +text-writer-stamp+ specimen))
+  (:|coerce/2| (standard-coerce (lambda (specimen) (approvedp +text-writer-stamp+ specimen))
                               (lambda () +the-text-writer-guard+)
                               (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
                               :test-shortened nil))))

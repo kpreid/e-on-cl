@@ -72,20 +72,40 @@
 
 ; --- Ref protocol ---
 
-; mverb is :|verb/arity|
+
 (defgeneric e-call-dispatch (rec mverb &rest args)
+  (:documentation "Main dispatch function for E calls and other call-like operations.
+
+Shortens REC if needed. MVERB must be either a mangled verb as in E.UTIL:MANGLE-VERB, or a non-keyword symbol that is a magic verb (such as AUDITED-BY-MAGIC-VERB); if a mangled verb, its arity must be equal to the number of ARGS.
+
+Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and not expose non-keyword mverbs to untrusted code. XXX This list of requirements is probably not complete.")
   (declare (optimize (speed 3))))
-(defgeneric e-call-match    (rec mverb &rest args)
+
+(defgeneric e-call-match (rec mverb &rest args)
+  (:documentation "The last method of E-CALL-DISPATCH calls this method with the same arguments, if MVERB is not a Miranda method. This is used for implementing 'matchers'/inheritance.")
   (declare (optimize (speed 3))))
+
 (defgeneric e-send-dispatch (rec mverb &rest args)
+  (:documentation "Used only for REFs' various behaviors on sends; should not be specialized for non-REFs.")
   (declare (optimize (speed 3))))
 
 (defgeneric eeq-hash-dispatch (a))
 (defgeneric eeq-same-dispatch (left right))
 (defgeneric eeq-is-transparent-selfless (a))
 
-; user code must never be able to define methods of this function
-(defgeneric e-audit-check-dispatch (auditor specimen))
+;; XXX move implementation to elib-guts? inline?
+(declaim (ftype (function (t t) boolean) approvedp))
+(defun approvedp (auditor specimen)
+  ;; AUDITED-BY-MAGIC-VERB's argument is guaranteed to be shortened. XXX document this somewhere where implementors of AUDITED-BY-MAGIC-VERB will notice
+  "Whether SPECIMEN has been approved by AUDITOR, as a CL boolean. AUDITOR and SPECIMEN will be shortened. AUDITOR must be near."
+  (setf specimen (ref-shorten specimen))
+  (setf auditor (ref-shorten auditor))
+  (assert (eql (ref-state auditor) 'near)) ;; XXX better way to write this?
+  (and (eql (ref-state specimen) 'near) ;; XXX is E auditing potentially applicable to non-near refs?
+       (e-call-dispatch specimen 
+                        'audited-by-magic-verb 
+                        auditor)
+       t))
 
 (declaim (ftype (function (t (or string symbol character) (or list vector)) t) e-call e-send))
 
@@ -244,11 +264,6 @@ If there is no current vat at initialization time, captures the current vat at t
   (declare (ignore mverb args))
   (error "e-send-dispatch not implemented by ~W" (type-of x)))
   
-(defmethod e-audit-check-dispatch (auditor (ref ref)
-    &aux (short (ref-shorten ref)))
-  (unless (eql ref short)
-    (e-audit-check-dispatch auditor short)))
-
 (defmethod print-object ((ref ref) stream)
   (let ((state (ref-state ref))
         (*print-circle* t))      ; !!
@@ -620,15 +635,10 @@ If there is no current vat at initialization time, captures the current vat at t
 ; --- E objects ---
 
 ; A built-for-E object is a FUNCTION expecting (mverb &rest args). It handles its own dispatch, match, and no-such-method.
-;
-; If mverb is *not* in the KEYWORD package, then it is a special verb and invocations of it should not be revealed to user code. Currently, the only special verb is 'audited-by-magic-verb, which is used by the auditing mechanism.
 
 ; These must be defined early as some e-calls to function objects are performed in later loading.
 (defmethod e-call-dispatch ((recip function) mverb &rest args)
   (apply recip mverb args))
-
-(defmethod e-audit-check-dispatch (auditor (specimen function))
-  (funcall specimen 'audited-by-magic-verb auditor))
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
@@ -646,19 +656,26 @@ If there is no current vat at initialization time, captures the current vat at t
                options)
         (nreverse not))))
   
+  (defun mangled-verb-p (thing)
+    (and (typep thing 'keyword)
+         (find #\/ (symbol-name thing))))
+  
   (defun vtable-entry-mverb (desc prefix-arity
-      &aux (verb-or-mverb-string (string (first desc))))
-    (if (find #\/ verb-or-mverb-string)
-      (intern verb-or-mverb-string "KEYWORD")
-      (e.util:mangle-verb
-        verb-or-mverb-string
-        (multiple-value-bind (min max)
-            (progn
-              (assert (cddr desc) () "Inferring arity for function vtable entry not supported: ~S" desc)
-              (e.util:lambda-list-arguments-range (second desc)))
-          (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-or-mverb-string min prefix-arity)
-          (assert (= min max) () "Variable arguments not yet supported for vtable-case-entry arity inference")
-          (- min prefix-arity)))))
+      &aux (verb-or-mverb (first desc)))
+    (etypecase verb-or-mverb
+      ((and symbol (or (not keyword) (satisfies mangled-verb-p)))
+        verb-or-mverb)
+      (keyword
+        (let ((verb-string (symbol-name verb-or-mverb)))
+          (e.util:mangle-verb
+            verb-string
+            (multiple-value-bind (min max)
+                (progn
+                  (assert (cddr desc) () "Inferring arity for function vtable entry not supported: ~S" desc)
+                  (e.util:lambda-list-arguments-range (second desc)))
+              (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-string min prefix-arity)
+              (assert (= min max) () "Variable arguments not yet supported for vtable-case-entry arity inference")
+              (- min prefix-arity)))))))
 
   (defun vtable-case-entry (desc args-sym prefix-args &key type-name
       &aux (mverb (vtable-entry-mverb desc (length prefix-args))))
@@ -726,6 +743,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (defun vtable-entry-message-desc (entry &key (prefix-arity 0)
       &aux (mverb (vtable-entry-mverb entry prefix-arity))
            (impl-desc (rest entry)))
+    (assert (mangled-verb-p mverb))
     (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
       (make-instance 'message-desc
         :verb verb
@@ -734,7 +752,14 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
                   (make-array arity :initial-element 
                     (make-instance 'param-desc))))))
-                            
+  
+  (defun vtable-entry-maybe-describe-fresh (function entry &rest options)
+    "messy."
+    ;; XXX should be more like mverb-is-magic-p
+    (if (typep (first entry) '(and symbol (not keyword)))
+      nil
+      (list (apply function entry options))))
+  
   (defun nl-miranda-case-maybe (verb entries &rest body)
     (unless (find verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
       `(((,verb) ,@body))))
@@ -778,7 +803,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                 :auditors #()
                 :message-types-v
                   (or-miranda-message-descs
-                    ',(mapcar #'vtable-entry-message-desc method-entries)))))
+                    ',(mapcan (lambda (e) (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc e)) method-entries)))))
             
             ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
               (e-coercef verb 'string)
@@ -788,7 +813,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                         ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
                                   method-entries))
                 (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
-            ((elib:audited-by-magic-verb) (destructuring-bind (auditor) ,args-sym
+            ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb method-entries `(destructuring-bind (auditor) ,args-sym
               (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
             (otherwise 
               (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
@@ -822,6 +847,9 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (loop for (key value) on options by #'cddr do
       (case key
         (:stamped
+          (when (find 'audited-by-magic-verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
+            ;; XXX make this test cleaner
+            (error "Both ~S option and ~S specified in e-lambda ~S." :stamped 'audited-by-magic-verb fqn))
           (push value stamp-forms))
         (:doc
           (assert (string= documentation "") (documentation) "duplicate :doc option")
@@ -846,7 +874,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (partition (lambda (x) (eq (first x) 'otherwise)) entries)
     `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (entry) (vtable-entry-mverb entry 0)) entries)))
       (defglobal ,descs-name 
-        ',(mapcar #'vtable-entry-message-desc specifics))
+        ',(mapcan (lambda (e) (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc e)) specifics))
       (defun ,func-name (,self-var ,mverb-litem ,args-litem else-func)
         (case ,mverb-litem
           ,@(loop for desc in specifics collect
@@ -856,6 +884,9 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
  
 ;(declaim (inline miranda))
 (def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args miranda-mverbs)
+  
+    (audited-by-magic-verb (auditor)
+      nil)
   
     (:|__printOn| (tw)
       ; FUNCTION-based E-objects must always implement their own __printOn/1.
@@ -1027,13 +1058,13 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   
     #+(or e.vtable-collect.use-example e.vtable-collect.use-mop)
     (defmethod vtable-local-message-types ((type-sym (eql ',type-spec)))
-      (list ,@(loop for entry in entries collect
-        (vtable-entry-message-desc-pair entry :prefix-arity 1))))
+      (list ,@(loop for entry in entries append
+        (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc-pair entry :prefix-arity 1))))
     
     #+e.vtable-collect.use-example
     (defmethod vtable-collect-message-types ((specimen ,evaluated-specializer) narrowest-type)
       (if (subtypep ',evaluated-specializer narrowest-type)
-        (list* ,@(mapcar #'(lambda (entry) (vtable-entry-message-desc-pair entry :prefix-arity 1)) entries)
+        (list* ,@(mapcan #'(lambda (entry) (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc-pair entry :prefix-arity 1)) entries)
           (call-next-method))
         (call-next-method)))
     
@@ -1103,46 +1134,41 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   ; NOTE: Eventually, deep-frozen-stamp & thread-and-process-wide-semantics-safe-stamp => directly sharable across threads, like Java-E does with all Java-PassByCopy.
+  (audited-by-magic-verb (auditor)
+    ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
+    (eql auditor +deep-frozen-stamp+))
   (:|audit| (object-expr witness)
     ; XXX audit/2 is an E-language-dependent interface, but we must implement it to allow E code to employ these stamps. Should we then define a more general interface? 'audit(language, expr, witness)'? Same questions apply to other primitive stamps.
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) 
-                                   (specimen (eql +deep-frozen-stamp+)))
-  t)
-
 (defglobal +selfless-stamp+ (e-lambda
     "org.erights.e.elib.serial.SelflessStamp"
     (:doc "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
   
-While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it."
-     :stamped +deep-frozen-stamp+)
+While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
+  (audited-by-magic-verb (auditor)
+    (cond 
+      ((eql (ref-shorten auditor) +selfless-stamp+)
+        ;; Prevents an infinite recursion:
+        ;;       (eeq-is-transparent-selfless some-obj)
+        ;;    -> (approvedp +selfless-stamp+ some-obj)
+        ;;    -> (eeq-is-same-ever +selfless-stamp+ some-approver-of-obj)
+        ;;    -> (eeq-is-transparent-selfless +selfless-stamp+)
+        ;;    -> (approvedp +selfless-stamp+ +selfless-stamp+)
+        ;;    -> (eeq-is-same-ever +selfless-stamp+ +deep-frozen-stamp+)
+        ;;    -> repeat with +selfless-stamp+ in place of some-obj
+        ;;      
+        ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
+        ;; 
+        ;; This could instead be defined as an eeq-is-transparent-selfless method, but I expect to remove that generic function eventually to reduce the number of kinds of 'dispatch on e-ref'. -- kpreid 2005-03-16
+        nil)
+      ((eql (ref-shorten auditor) +deep-frozen-stamp+)
+        ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
+        t)))
   (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
-
-(defmethod e-audit-check-dispatch ((auditor t) (specimen (eql +selfless-stamp+)))
-  (cond 
-    ((eql (ref-shorten auditor) +selfless-stamp+)
-      ;; Prevents an infinite recursion:
-      ;;       (eeq-is-transparent-selfless some-obj)
-      ;;    -> (e-audit-check-dispatch +selfless-stamp+ some-obj)
-      ;;    -> (eeq-is-same-ever +selfless-stamp+ some-approver-of-obj)
-      ;;    -> (eeq-is-transparent-selfless +selfless-stamp+)
-      ;;    -> (e-audit-check-dispatch +selfless-stamp+ +selfless-stamp+)
-      ;;    -> (eeq-is-same-ever +selfless-stamp+ +deep-frozen-stamp+)
-      ;;    -> repeat with +selfless-stamp+ in place of some-obj
-      ;;      
-      ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
-      ;; 
-      ;; This could instead be defined as an eeq-is-transparent-selfless method, but I expect to remove that generic function eventually to reduce the number of kinds of 'dispatch on e-ref'. -- kpreid 2005-03-16
-      nil)
-    ((eql (ref-shorten auditor) +deep-frozen-stamp+)
-      ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
-      t)
-    (t
-      (call-next-method))))
 
 ; --- utilities referenced below ---
 

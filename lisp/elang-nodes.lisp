@@ -467,10 +467,11 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defmethod make-load-form ((a false-guard) &optional environment)
   (make-load-form-saving-slots a :environment environment))
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen false-guard))
-  t)
   
 (def-vtable false-guard
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw) 
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| (slot-value this 'text))))
