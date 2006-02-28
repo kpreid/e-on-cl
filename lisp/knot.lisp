@@ -447,7 +447,7 @@ If a log message is produced, context-thunk is run to produce a string describin
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function (lambda (ref)
         (as-e-boolean (typep ref 
-          '(or (satisfies elib:eeq-is-transparent-selfless)
+          '(or (satisfies elib::eeq-is-transparent-selfless)
                null
                string
                character

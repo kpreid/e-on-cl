@@ -225,6 +225,9 @@
     (format stream "& ~W" (slot-value slot 'value))))
 
 (def-vtable e-simple-slot
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__optUncall| (this)
     `#(,+the-make-simple-slot+ "run" #(,(slot-value this 'value))))
   (:|__printOn| (this tw) ; XXX move to e.syntax?
@@ -244,9 +247,6 @@
     "Returns true."
     (declare (ignore this))
     +e-true+))
-
-(defmethod eeq-is-transparent-selfless ((a e-simple-slot))
-  (declare (ignore a)) t)
 
 (defmethod make-load-form ((a e-simple-slot) &optional environment)
   (make-load-form-saving-slots a :environment environment))  
@@ -438,9 +438,8 @@
           (setf (gethash obj opt-fringe) nil))
         nil))))
 
-
-; XXX consider replacing all eeq-is-transparent-selfless methods with audit stamps.
-(defmethod eeq-is-transparent-selfless ((a t))
+(declaim (inline eeq-is-transparent-selfless))
+(defun eeq-is-transparent-selfless (a)
   (approvedp +selfless-stamp+ a))
 
 (defun spread-uncall (a)

@@ -91,6 +91,10 @@
         do (setf (gethash noun destination) slot)))
 
 (def-vtable scope
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
+
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<scope " (slot-value this 'fqn-prefix) ">")
@@ -235,10 +239,6 @@
             (copy-hash-table-entries local-definitions new-table
               :test (lambda (noun) (string/= noun removed-noun)))
             new-table)))))
-
-(defmethod eeq-is-transparent-selfless ((a scope))
-  (declare (ignore a))
-  t)
 
 ;;; --- structured classless exceptions ---
 

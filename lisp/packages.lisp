@@ -210,7 +210,6 @@
     :traversal-key
     :eeq-hash-dispatch
     :eeq-same-dispatch
-    :eeq-is-transparent-selfless
     :def-atomic-sameness
     
     :source-span :+the-make-source-span+

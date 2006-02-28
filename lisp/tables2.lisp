@@ -19,11 +19,11 @@
    (end-col    :initarg :end-col    :type (integer 0) :reader span-end-col)))
 
 (def-fqn source-span "org.erights.e.elib.base.SourceSpan")
-(defmethod eeq-is-transparent-selfless ((a source-span))
-  (declare (ignore a)) 
-  t)
 
 (def-vtable source-span
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn/1| (span out)
     (e-coercef out +the-text-writer-guard+)
     (with-slots (uri one-to-one start-line end-line start-col end-col) span
@@ -350,6 +350,10 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           do (format stream "~A~W => ~W" sep key value))))
 
 (def-vtable const-map
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
+
   ; XXX import documentation strings lazily from EMap interface
   (:|__optUncall| (this)
     `#(,+the-make-const-map+ "fromColumns" ,(e. this |getPair|)))
@@ -512,9 +516,6 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
-(defmethod eeq-is-transparent-selfless ((a const-map))
-  (declare (ignore a)) 
-  t)
 (def-class-opaque const-map)
 
 

@@ -91,7 +91,6 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 
 (defgeneric eeq-hash-dispatch (a))
 (defgeneric eeq-same-dispatch (left right))
-(defgeneric eeq-is-transparent-selfless (a))
 
 ;; XXX move implementation to elib-guts? inline?
 (declaim (ftype (function (t t) boolean) approvedp))
@@ -786,6 +785,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
            (args-sym   (gensym "ARGS")))
     (declare (string fqn documentation))
     `(let ((,stamps-sym (vector ,@stamp-forms)))
+      (declare (ignorable ,stamps-sym)) ;; will be ignored if there is an explicit audited-by-magic-verb method
       (nest-fq-name (,fqn)
         (labels ((,self-func (,mverb-sym &rest ,args-sym)
           (case ,mverb-sym
@@ -849,6 +849,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
         (:stamped
           (when (find 'audited-by-magic-verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
             ;; XXX make this test cleaner
+            ;; XXX this test should be done in e-lambda-expansion instead of here, so that all forms of e-lambdas get it
             (error "Both ~S option and ~S specified in e-lambda ~S." :stamped 'audited-by-magic-verb fqn))
           (push value stamp-forms))
         (:doc
@@ -886,6 +887,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
 (def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args miranda-mverbs)
   
     (audited-by-magic-verb (auditor)
+      (declare (ignore auditor))
       nil)
   
     (:|__printOn| (tw)
@@ -1110,7 +1112,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (declare (ignore a))
     ',visible-type))
 
-; xxx it might be useful to enforce the constraint that anything returning t from eeq-is-transparent-selfless must have a specialized observable-type-of, or something to that effect.
+; xxx it might be useful to enforce the constraint that anything stamped +selfless-stamp+ and not a FUNCTION must have a specialized observable-type-of, or something to that effect.
 ;
 ; Or, perhaps, the observable-type-of anything transparent-selfless should be derived from its uncall's maker somehow.
 
@@ -1160,8 +1162,6 @@ While this is a process-wide object, its stamps should not be taken as significa
         ;;    -> repeat with +selfless-stamp+ in place of some-obj
         ;;      
         ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
-        ;; 
-        ;; This could instead be defined as an eeq-is-transparent-selfless method, but I expect to remove that generic function eventually to reduce the number of kinds of 'dispatch on e-ref'. -- kpreid 2005-03-16
         nil)
       ((eql (ref-shorten auditor) +deep-frozen-stamp+)
         ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.

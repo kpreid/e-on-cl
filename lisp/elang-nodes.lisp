@@ -335,11 +335,10 @@
 
 ; --- E-level methods ---
 
-(defmethod eeq-is-transparent-selfless ((a |ENode|))
-  (declare (ignore a))
-  t)
-
 (def-vtable |ENode|
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let ((quote (e-is-true (e. tw |isQuoting|))))

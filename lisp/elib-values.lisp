@@ -19,16 +19,14 @@
 
 (def-class-opaque string)
 
-;; XXX eeq-is-transparent-selfless to be replaced in all cases with SelflessStamp test
-(defmethod eeq-is-transparent-selfless ((a string))
-  (declare (ignore a)) nil)
-
 (def-vtable string
-  ;; XXX check whether audited-by-magic-verbs inappropriately show up in typedescs
   (audited-by-magic-verb (this auditor)
-    "Strings are atomic."
+    "Strings are atomic, but unlike other vectors, *not* Selfless."
     (declare (ignore this))
+    ;; NOTE that this implementation overrides the one for VECTORs, and so
+    ;; prevents STRINGs from claiming Selfless.
     (eql auditor +deep-frozen-stamp+))
+  (:|__optUncall/0| (constantly nil))
 
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -246,8 +244,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; Just as in Java E arrays serve as ConstLists, so do vectors here, and we make the same assumption of non-mutation.
 
 (def-class-opaque vector)
-(defmethod eeq-is-transparent-selfless ((a vector))
-  (declare (ignore a)) t)
 
 ; XXX this should be move to some utility section somewhere, or the equality section of elib-guts
 ; xxx OPT memoize results since we're doing all this subtypeping?
@@ -283,6 +279,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX documentation
 (def-vtable vector
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. e.syntax:+e-printer+ |printList| tw this +e-true+))
@@ -851,6 +850,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; Hmm. Could we write something like DEF-STRUCTOID-VTABLE to implement the common features of these?
 
 (def-vtable type-desc
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let* ((simple-name (copy-seq (simplify-fq-name (or (type-desc-opt-fq-name this) "_"))))
@@ -871,6 +873,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getMessageTypes/0| 'type-desc-message-types))
 
 (def-vtable message-desc
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (verb doc-comment params opt-result-guard) this
@@ -884,6 +889,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getOptResultGuard/0| 'message-desc-opt-result-guard))
 
 (def-vtable param-desc
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (opt-name opt-guard) this
@@ -896,16 +904,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getName| (this)
     "Returns _ if this ParamDesc has no name."
     (or (param-desc-opt-name this) "_")))
-
-(defmethod eeq-is-transparent-selfless ((a type-desc))
-  (declare (ignore a))
-  t)
-(defmethod eeq-is-transparent-selfless ((a message-desc))
-  (declare (ignore a))
-  t)
-(defmethod eeq-is-transparent-selfless ((a param-desc))
-  (declare (ignore a))
-  t)
 
 ; --- Weak references ---
 
