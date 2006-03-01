@@ -659,8 +659,8 @@ If there is no current vat at initialization time, captures the current vat at t
     (and (typep thing 'keyword)
          (find #\/ (symbol-name thing))))
   
-  (defun vtable-entry-mverb (desc prefix-arity
-      &aux (verb-or-mverb (first desc)))
+  (defun smethod-mverb (smethod prefix-arity
+      &aux (verb-or-mverb (first smethod)))
     (etypecase verb-or-mverb
       ((and symbol (or (not keyword) (satisfies mangled-verb-p)))
         verb-or-mverb)
@@ -670,38 +670,38 @@ If there is no current vat at initialization time, captures the current vat at t
             verb-string
             (multiple-value-bind (min max)
                 (progn
-                  (assert (cddr desc) () "Inferring arity for function vtable entry not supported: ~S" desc)
-                  (e.util:lambda-list-arguments-range (second desc)))
+                  (assert (cddr smethod) () "Inferring arity for function smethod not supported: ~S" smethod)
+                  (e.util:lambda-list-arguments-range (second smethod)))
               (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-string min prefix-arity)
-              (assert (= min max) () "Variable arguments not yet supported for vtable-case-entry arity inference")
+              (assert (= min max) () "Variable arguments not yet supported for smethod-case-entry arity inference")
               (- min prefix-arity)))))))
 
-  (defun vtable-case-entry (desc args-sym prefix-args &key type-name
-      &aux (mverb (vtable-entry-mverb desc (length prefix-args))))
+  (defun smethod-case-entry (smethod args-sym prefix-args &key type-name
+      &aux (mverb (smethod-mverb smethod (length prefix-args))))
     "Return a CASE clause whose key is a mangled-verb, suitable for implementing method dispatch for E objects.
 
-The first element of the desc is a string designator for the verb. If it contains a slash, it is treated as a mangled-verb (verb/arity); if not, the second element must be a lambda list, which is used to determine the number of arguments.
+The first element of the smethod is a string designator for the verb. If it contains a slash, it is treated as a mangled-verb (verb/arity); if not, the second element must be a lambda list, which is used to determine the number of arguments.
 
 If there is exactly one further element, then it is an expression (typically #'...) which the returned clause will use in `(apply ,expr ,args-sym).
 
 If there are two or more further elements, then they are a lambda list and implicit-progn forms which will be evaluated.
 
 prefix-args is a list of forms which will be prepended to the arguments of the method body."
-    (assert (not (eq (first desc) 'otherwise)))
+    (assert (not (eq (first smethod) 'otherwise)))
     `((,mverb) 
-      ,(vtable-method-body (rest desc) args-sym prefix-args :type-name type-name :verb-name mverb)))
+      ,(smethod-body (rest smethod) args-sym prefix-args :type-name type-name :verb-name mverb)))
   
-  (defun vtable-function-case-entry (desc prefix-arity &key type-name
-      &aux (mverb (vtable-entry-mverb desc prefix-arity)))
-    (assert (not (eq (first desc) 'otherwise)))
+  (defun smethod-function-case-entry (smethod prefix-arity &key type-name
+      &aux (mverb (smethod-mverb smethod prefix-arity)))
+    (assert (not (eq (first smethod) 'otherwise)))
     `((,mverb)
-      ,(vtable-method-function-form (rest desc) :type-name type-name :verb-name mverb)))
+      ,(smethod-function-form (rest smethod) :type-name type-name :verb-name mverb)))
 
-  (defun vtable-method-body (body args-sym prefix-args &key type-name verb-name)
-    `(apply ,(vtable-method-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args ,args-sym))
+  (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
+    `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args ,args-sym))
   
-  (defun vtable-method-function-form (body &key type-name verb-name)
-    "XXX transfer the relevant portions of vtable-case-entry's documentation here"
+  (defun smethod-function-form (body &key type-name verb-name)
+    "XXX transfer the relevant portions of smethod-case-entry's documentation here"
     (if (= 1 (length body))
       (first body)
       (let* ((name (format nil "~A#~A" type-name verb-name))
@@ -734,14 +734,14 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (*package* (or (symbol-package sym) (find-package :cl))))
               (write-to-string sym))))) 'vector))
                             
-  (defun vtable-entry-message-desc-pair (entry &rest keys &key (prefix-arity 0) &allow-other-keys
-      &aux (mverb (vtable-entry-mverb entry prefix-arity)))
+  (defun smethod-message-desc-pair (smethod &rest keys &key (prefix-arity 0) &allow-other-keys
+      &aux (mverb (smethod-mverb smethod prefix-arity)))
     (vector (symbol-name mverb) 
-            (apply #'vtable-entry-message-desc entry keys)))
+            (apply #'smethod-message-desc smethod keys)))
   
-  (defun vtable-entry-message-desc (entry &key (prefix-arity 0)
-      &aux (mverb (vtable-entry-mverb entry prefix-arity))
-           (impl-desc (rest entry)))
+  (defun smethod-message-desc (smethod &key (prefix-arity 0)
+      &aux (mverb (smethod-mverb smethod prefix-arity))
+           (impl-desc (rest smethod)))
     (assert (mangled-verb-p mverb))
     (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
       (make-instance 'message-desc
@@ -752,15 +752,15 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (make-array arity :initial-element 
                     (make-instance 'param-desc))))))
   
-  (defun vtable-entry-maybe-describe-fresh (function entry &rest options)
+  (defun smethod-maybe-describe-fresh (function smethod &rest options)
     "messy."
     ;; XXX should be more like mverb-is-magic-p
-    (if (typep (first entry) '(and symbol (not keyword)))
+    (if (typep (first smethod) '(and symbol (not keyword)))
       nil
-      (list (apply function entry options))))
+      (list (apply function smethod options))))
   
-  (defun nl-miranda-case-maybe (verb entries &rest body)
-    (unless (find verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
+  (defun nl-miranda-case-maybe (verb smethods &rest body)
+    (unless (find verb smethods :key (lambda (e) (smethod-mverb e 0)))
       `(((,verb) ,@body))))
 
   (defmacro %fqn-prefix ()
@@ -777,7 +777,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (defun environment-fqn-prefix (env)
     (macroexpand '(%fqn-prefix) env))
     
-  (defun e-lambda-expansion (method-entries fqn documentation stamp-forms opt-otherwise-body
+  (defun e-lambda-expansion (smethods fqn documentation stamp-forms opt-otherwise-body
       &aux (self-func (make-symbol fqn))
            (self-expr `#',self-func)
            (stamps-sym (gensym "STAMPS"))
@@ -789,13 +789,13 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       (nest-fq-name (,fqn)
         (labels ((,self-func (,mverb-sym &rest ,args-sym)
           (case ,mverb-sym
-            ,@(loop for desc in method-entries
-                    collect (vtable-case-entry desc args-sym '() :type-name fqn))
-            ,@(nl-miranda-case-maybe :|__printOn/1| method-entries `(destructuring-bind (tw) ,args-sym
+            ,@(loop for smethod in smethods
+                    collect (smethod-case-entry smethod args-sym '() :type-name fqn))
+            ,@(nl-miranda-case-maybe :|__printOn/1| smethods `(destructuring-bind (tw) ,args-sym
               (e-coercef tw +the-text-writer-guard+)
               (e. tw |print| ',(format nil "<~A>" (simplify-fq-name fqn)))
               nil))
-            ,@(nl-miranda-case-maybe :|__getAllegedType/0| method-entries `(destructuring-bind () ,args-sym
+            ,@(nl-miranda-case-maybe :|__getAllegedType/0| smethods `(destructuring-bind () ,args-sym
               (make-instance 'type-desc
                 :doc-comment ',documentation
                 :fq-name ',fqn
@@ -803,24 +803,24 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                 :auditors #()
                 :message-types-v
                   (or-miranda-message-descs
-                    ',(mapcan (lambda (e) (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc e)) method-entries)))))
+                    ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) smethods)))))
             
-            ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
+            ,@(nl-miranda-case-maybe :|__respondsTo/2| smethods `(destructuring-bind (verb arity) ,args-sym
               (e-coercef verb 'string)
               (e-coercef arity '(integer 0))
               (as-e-boolean (or
                 (member (e-util:mangle-verb verb arity) 
-                        ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
-                                  method-entries))
+                        ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
+                                  smethods))
                 (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
-            ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb method-entries `(destructuring-bind (auditor) ,args-sym
+            ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
               (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
             (otherwise 
               (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
                 ,(let ((fallthrough
                         `(no-such-method ,self-expr ,mverb-sym ,args-sym)))
                   (if opt-otherwise-body
-                    (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
+                    (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
                     fallthrough))))))))
           ,self-expr))))
           
@@ -830,7 +830,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "_") "" '() nil))
 
 
-(defmacro e-lambda (qname (&rest options) &body entries &environment env)
+(defmacro e-lambda (qname (&rest options) &body smethods &environment env)
   "XXX document this
 
 fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the object itself."
@@ -839,7 +839,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (return-from e-lambda 
       `(with-result-promise (,qname)
          (e-lambda ,(concatenate 'string "$" (symbol-name qname)) 
-                   (,@options) ,@entries))))
+                   (,@options) ,@smethods))))
   (let ((fqn (join-fq-name (environment-fqn-prefix env) (or qname "_")))
         (stamp-forms '())
         (documentation ""))
@@ -847,7 +847,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (loop for (key value) on options by #'cddr do
       (case key
         (:stamped
-          (when (find 'audited-by-magic-verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
+          (when (find 'audited-by-magic-verb smethods :key (lambda (e) (smethod-mverb e 0)))
             ;; XXX make this test cleaner
             ;; XXX this test should be done in e-lambda-expansion instead of here, so that all forms of e-lambdas get it
             (error "Both ~S option and ~S specified in e-lambda ~S." :stamped 'audited-by-magic-verb fqn))
@@ -862,24 +862,24 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     ;; Extract 'otherwise' method
     (multiple-value-bind (otherwises specifics)
         (partition (lambda (x) (typep x '(cons (eql otherwise) t)))
-                   entries)
+                   smethods)
       (assert (<= (length otherwises) 1))
       ;; Expansion
       (e-lambda-expansion specifics fqn documentation stamp-forms (rest (first otherwises))))))
   
 ; --- Miranda methods ---
 
-(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem verb-list-sym) &body entries)
+(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem verb-list-sym) &body smethods)
   "The reason for this macro's existence is to allow compiling the miranda-methods into a single function and simultaneously capturing the method names and comments for alleged-type purposes. I realize this is ugly, and I'd be glad to hear of better solutions."
   (multiple-value-bind (otherwises specifics) 
-      (partition (lambda (x) (eq (first x) 'otherwise)) entries)
-    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (entry) (vtable-entry-mverb entry 0)) entries)))
+      (partition (lambda (x) (eq (first x) 'otherwise)) smethods)
+    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (smethod) (smethod-mverb smethod 0)) smethods)))
       (defglobal ,descs-name 
-        ',(mapcan (lambda (e) (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc e)) specifics))
+        ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) specifics))
       (defun ,func-name (,self-var ,mverb-litem ,args-litem else-func)
         (case ,mverb-litem
-          ,@(loop for desc in specifics collect
-              (vtable-case-entry desc args-litem '() :type-name fqn))
+          ,@(loop for smethod in specifics collect
+              (smethod-case-entry smethod args-litem '() :type-name fqn))
           ,@(loop for desc in otherwises collect
               `(otherwise (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" fqn)) ,@(cdr desc)) ,mverb-litem ,args-litem))))))))
  
@@ -1012,14 +1012,14 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (error "oops: no example of ~S seen yet for alleged type purposes" type)
       #+e.vtable-collect.use-typelist 
       (setf (gethash type *vtable-message-types-cache*)
-        ; xxx this is wrong: it doesn't necessarily return entries in precedence-list order
+        ; xxx this is wrong: it doesn't necessarily return smethods in precedence-list order
         (loop for vtype in *types-with-vtables*
               when (subtypep type vtype)
               append (vtable-local-message-types type)))))
 
 #+e.vtable-collect.use-mop
 (defun vtable-message-types (type)
-  ; Note that we reverse the class precedence list, because the caller of this stuffs it into non-strict ConstMap construction, and so takes the *last* seen vtable entry as the overriding one. xxx perhaps this subtle dependency should be made more robust/explicit?
+  ; Note that we reverse the class precedence list, because the caller of this stuffs it into non-strict ConstMap construction, and so takes the *last* seen smethod as the overriding one. xxx perhaps this subtle dependency should be made more robust/explicit?
   (loop for superclass in (reverse (e-util:class-precedence-list (find-class type)))
     append (vtable-local-message-types (class-name superclass))))
 
@@ -1041,7 +1041,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   "See *EXERCISE-REFFINESS*."
   (map-into args (lambda (x) (make-instance 'forwarding-ref :target x)) args))
 
-(defmacro def-vtable (type-spec &body entries
+(defmacro def-vtable (type-spec &body smethods
     &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))
          (vtable-class-var (gensym "VTABLE-CLASS"))
          (eql-instance-var (gensym "EQL-INSTANCE"))
@@ -1060,13 +1060,13 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   
     #+(or e.vtable-collect.use-example e.vtable-collect.use-mop)
     (defmethod vtable-local-message-types ((type-sym (eql ',type-spec)))
-      (list ,@(loop for entry in entries append
-        (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc-pair entry :prefix-arity 1))))
+      (list ,@(loop for smethod in smethods append
+        (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1))))
     
     #+e.vtable-collect.use-example
     (defmethod vtable-collect-message-types ((specimen ,evaluated-specializer) narrowest-type)
       (if (subtypep ',evaluated-specializer narrowest-type)
-        (list* ,@(mapcan #'(lambda (entry) (vtable-entry-maybe-describe-fresh #'vtable-entry-message-desc-pair entry :prefix-arity 1)) entries)
+        (list* ,@(mapcan #'(lambda (smethod) (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1)) smethods)
           (call-next-method))
         (call-next-method)))
     
@@ -1080,8 +1080,8 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (when ,vtable-class-var
       (defmethod opt-local-method-function-for-class ((class (eql ,vtable-class-var)) mverb)
         (case mverb
-          ,@(loop for desc in entries collect
-              (vtable-function-case-entry desc 0 :type-name (prin1-to-string type-spec)))
+          ,@(loop for smethod in smethods collect
+              (smethod-function-case-entry smethod 0 :type-name (prin1-to-string type-spec)))
           (otherwise nil))))
     
     ; XXX gensymify 'args
@@ -1089,16 +1089,16 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (when *exercise-reffiness*
         (reffify-args args))
       (case mverb
-        ,@(loop for desc in entries collect
+        ,@(loop for smethod in smethods collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
-            (vtable-case-entry desc 'args `(rec) :type-name (prin1-to-string type-spec)))
+            (smethod-case-entry smethod 'args `(rec) :type-name (prin1-to-string type-spec)))
         ((:|__respondsTo/2|) (destructuring-bind (verb arity) args
           (e-coercef verb 'string)
           (e-coercef arity '(integer 0))
           (as-e-boolean (or
             (member (e-util:mangle-verb verb arity) 
-                    ',(mapcar (lambda (entry) (vtable-entry-mverb entry 1)) 
-                              entries))
+                    ',(mapcar (lambda (smethod) (smethod-mverb smethod 1)) 
+                              smethods))
             (e-is-true (call-next-method))))))
   
         (otherwise (call-next-method))))))
