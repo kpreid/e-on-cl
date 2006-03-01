@@ -192,7 +192,7 @@ case "$LISPTYPE" in
   ecl)
     # xxx is there a quiet flag?
     "$EXEC" "$LISP" \
-      -eval '(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")' \
+      -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
       -eval "$COMMON_INIT2" \
       -eval "(e.rune:rune $QUOTED_ARGS)"
@@ -212,7 +212,7 @@ case "$LISPTYPE" in
     lisp_extra_push "-repl"
 
     #"$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
-    #  -x "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
+    #  -x "(require :asdf)" \
     #     "$COMMON_INIT1" \
     #     "$COMMON_INIT2" \
     #     "(e.rune:rune `quote_args`)"
@@ -222,7 +222,7 @@ case "$LISPTYPE" in
         '(let ((p (or (probe-file (merge-pathnames ".clisprc.lisp" (user-homedir-pathname))) 
                       (probe-file (merge-pathnames ".clisprc" (user-homedir-pathname)))))) 
            (when p (load p)))' \
-        "(require :asdf \"$QUOTED_HERE/lisp/asdf.lisp\")" \
+        "(require :asdf)" \
         "$COMMON_INIT1" "$COMMON_INIT2" \
         "(apply (function e.rune:rune) ext:*args*)") \
       "$@"                    
@@ -233,7 +233,7 @@ case "$LISPTYPE" in
     fi
     "$EXEC" "$LISP" -batch \
       "${LISP_EXTRA[@]}" \
-       -eval "(require :asdf \"$QUOTED_HERE/asdf.lisp\")" \
+       -eval "(require :asdf)" \
        -eval "$COMMON_INIT1" "$COMMON_INIT2" \
        -eval "(e.rune:rune `quote_args`)"
   ;;

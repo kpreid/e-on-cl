@@ -7,6 +7,7 @@ Major bugs:
   - Auditors get more authority than they should: all the state of the audited object.
   - Closing sockets is not supported at all.
   - mapStream.chunked doesn't check that the function returns the proper number of elements, and this is abused.
+  - We need to take *default-pathname-defaults* off asdf:*central-registry*, so that E-on-CL images don't accidentally load code from the current directory; also think about what else in this vein might be needed.
 
 Minor bugs:
   
@@ -20,7 +21,6 @@ Internal bugs:
 Little features:
   - FlexSet
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
-  - have updoc stop running a given script if a mismatch has occurred and a later step depends on a lexical binding made/shadowed by that step
   - Have our own E source expander, so that we can replace sugars (property access, for-loop, nonprimitive patterns, etc.
 
 Big features:
