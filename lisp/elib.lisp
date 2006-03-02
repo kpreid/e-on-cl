@@ -1178,7 +1178,7 @@ While this is a process-wide object, its stamps should not be taken as significa
 
 ; --- utilities referenced below ---
 
-(deftype e-list (element-type &aux (sym (gensym (princ-to-string element-type))))
+(deftype e-list (element-type &aux (sym (make-symbol (format nil "generated predicate for (E-LIST ~A)" element-type))))
   (setf (symbol-function sym) 
         (lambda (specimen)
           (every (lambda (element) (typep element element-type)) specimen)))
