@@ -469,7 +469,8 @@ If there is no current vat at initialization time, captures the current vat at t
 (defmethod enqueue-turn ((vat vat) function)
   (enqueue-turn (vat-runner vat)
                 (lambda ()
-                  (call-with-turn function vat :exclude-io t))))
+                  (call-with-turn function vat :label "basic turn"
+                                               :exclude-io t))))
 
 (defgeneric vr-add-io-handler (context target direction function))
 
@@ -485,7 +486,10 @@ If there is no current vat at initialization time, captures the current vat at t
                      direction
                      (lambda (target*)
                        (assert (eql target target*) () "buh?")
-                       (with-turn (vat :exclude-io nil) 
+                       (with-turn (vat :exclude-io nil 
+                                       :label (format nil "IO handler ~A for ~A"
+                                                      function
+                                                      target)) 
                          (funcall (ref-shorten function) target*)))))
 
 (defun vr-remove-io-handler (handler)
@@ -537,8 +541,10 @@ If there is no current vat at initialization time, captures the current vat at t
     (sorted-queue-put time-queue time func)))
 
 (defmethod enqueue-timed ((vat vat) time func)
-  (enqueue-timed (vat-runner vat) time (lambda ()
-                                         (call-with-turn func vat))))
+  (enqueue-timed (vat-runner vat) time
+                 (lambda ()
+                   ;; XXX future improvement: human-formatted time
+                   (call-with-turn func vat :label (format nil "~A at time ~A" func time)))))
 
 (defun establish-vat (&rest initargs)
   (assert (null *vat*))
