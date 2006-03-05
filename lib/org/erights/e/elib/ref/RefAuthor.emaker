@@ -26,7 +26,7 @@ def RefAuthor {
         # XXX does this match the semantics of the standard E whenResolved?
         #traceln(`entering whenResolved`)
         def [resultPromise, resultResolver] := makePromise()
-        def safeWhenResolvedReactor() :void {
+        def safeWhenResolvedReactor(_) :void {
           #traceln(`entering safeWhenResolvedReactor (ref is $ref)`)
           if (refIsResolved(ref)) {
             #traceln(`  is-resolved branch ($resultResolver)`)
@@ -43,7 +43,7 @@ def RefAuthor {
             #traceln(`  sent next __whenMoreResolved to $ref`)
           }
         }
-        safeWhenResolvedReactor()
+        safeWhenResolvedReactor(null)
         resultPromise
       }
       to isResolved(r) :any { refIsResolved(r) }

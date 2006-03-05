@@ -323,17 +323,17 @@ If there is no current vat at initialization time, captures the current vat at t
   (values 'broken (slot-value x 'problem)))
 
 (declaim (inline broken-ref-magic))
-(defun broken-ref-magic (mverb args)
+(defun broken-ref-magic (ref mverb args)
   (when (member mverb '(:|__whenMoreResolved/1| :|__whenBroken/1|))
-    (e<- (first args) |run|))
+    (e<- (first args) |run| ref))
   nil)
 
 (defmethod e-call-dispatch ((ref broken-ref) mverb &rest args)
-  (broken-ref-magic mverb args)
+  (broken-ref-magic ref mverb args)
   (error (ref-opt-problem ref)))
 
 (defmethod e-send-dispatch ((ref broken-ref) mverb &rest args)
-  (broken-ref-magic mverb args)
+  (broken-ref-magic ref mverb args)
   ref)
 
 ; - identified ref -
@@ -833,7 +833,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   ) ; end eval-when
 
 (defmacro efun (method-first &body method-rest &environment env)
-  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "_") "" '() nil))
+  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "$_") "" '() nil))
 
 
 (defmacro e-lambda (qname (&rest options) &body smethods &environment env)
@@ -925,7 +925,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (:|__optUncall| () nil)
 
     (:|__whenMoreResolved| (reactor)
-      (e<- reactor |run|)
+      (e<- reactor |run| self)
       nil)
 
     (:|__whenBroken| (reactor)
