@@ -464,7 +464,7 @@
     ; XXX ref-slot will eventually be a weak reference
     (unless opt-handler
       (error "null is not allowed as the handler"))
-    (unless (eeq-is-settled opt-identity)
+    (unless (settledp opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
     (e-lambda "$proxyResolver" ()
       (:|__printOn| (tw)

@@ -33,7 +33,7 @@
   (with-result-promise (wrapped-tw)
     (e-lambda "org.cubik.cle.prim.TextWriterHint" ()
       (:|__conformTo| (guard)
-        (if (eeq-is-same-ever guard +the-text-writer-guard+)
+        (if (samep guard +the-text-writer-guard+)
           tw
           wrapped-tw))
       (otherwise (mverb &rest args)

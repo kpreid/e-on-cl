@@ -6,7 +6,7 @@
 ; --- Setting up genhash ---
 
 (with-simple-restart (continue "Skip hash function registration.")
-  (register-hash-function 'eeq-is-same-ever #'eeq-same-yet-hash #'eeq-is-same-ever))
+  (register-hash-function 'samep #'same-hash #'samep))
 
 ; --- SourceSpan for Twine ---
 
@@ -135,7 +135,7 @@
             (span2 (e. t2 |getOptSpan|)))
         (if (and span1 span2
                  (string= (e. span1 |getUri|) (e. span2 |getUri|))
-                 (eeq-is-same-ever (e. span1 |isOneToOne|)
+                 (samep (e. span1 |isOneToOne|)
                                    (e. span2 |isOneToOne|)))
           ;; compatible spans (same URI)
           (if (e. span1 |isOneToOne|)
@@ -155,7 +155,7 @@
                         (e. span2 |getEndCol|)))
               ;; not adjacent
               nil)
-            (if (eeq-is-same-ever span1 span2)
+            (if (samep span1 span2)
               ;; blob and identical
               (make-instance 'leaf-twine 
                 :string (strings)
@@ -396,14 +396,14 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (let (last-pair 
             removing-nonlast)
         (e. map |iterate| (efun (k v) (setf last-pair (list k v))))
-        (setf removing-nonlast (not (eeq-is-same-ever (first last-pair) key-to-remove)))
+        (setf removing-nonlast (not (samep (first last-pair) key-to-remove)))
         (e. +the-make-const-map+ |fromIteratable|
           (e-lambda "org.cubik.cle.prim.mapWithoutIterator" () (:|iterate| (f)
             (e. map |iterate| (efun (key value)
               (cond
-                ((and last-pair removing-nonlast (eeq-is-same-ever key key-to-remove))
+                ((and last-pair removing-nonlast (samep key key-to-remove))
                   (e. f |run| (first last-pair) (second last-pair)))
-                ((eeq-is-same-ever key (first last-pair))
+                ((samep key (first last-pair))
                   #|do nothing|#)
                 (t
                   (e. f |run| key value)))
@@ -537,7 +537,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (declare (ignore slot-names))
   (unless (slot-boundp this 'table)
     (with-slots (table keys) this
-      (setf table (make-generic-hashtable :test 'eeq-is-same-ever))
+      (setf table (make-generic-hashtable :test 'samep))
       (loop for key across keys
             for i from 0
             do (setf (hashref key table) i)))))
@@ -564,7 +564,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defgeneric ensure-storage (this))
 
-(defun copy-eeq-genhash (old &aux (new (make-generic-hashtable :test 'eeq-is-same-ever)))
+(defun copy-samep-genhash (old &aux (new (make-generic-hashtable :test 'samep)))
   (map-generic-hash #'(lambda (k v) (setf (hashref k new) v)) old)
   new)
 
@@ -575,7 +575,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
    (snapshot    :initform nil
                 :documentation "If non-nil, then reads should be redirected to this ConstMap (currently always genhash-const-map-impl). Writes should cause its state to be copied into new table, keys, and values.")
    (table       :initarg :table
-                :initform (make-generic-hashtable :test 'eeq-is-same-ever))
+                :initform (make-generic-hashtable :test 'samep))
    (keys        :initform (make-array 0 :fill-pointer 0 :adjustable t)
                 :type (or null (and vector 
                                     (satisfies adjustable-array-p)
@@ -602,7 +602,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                                  :fill-pointer t
                                  :adjustable t
                                  :initial-contents s-values)
-              table (copy-eeq-genhash (slot-value snapshot 'table))
+              table (copy-samep-genhash (slot-value snapshot 'table))
               snapshot nil)))))
 
 (def-vtable genhash-flex-map-impl
@@ -731,7 +731,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
            (closed nil)
            (keys   (make-array 4 :adjustable t :fill-pointer 0))
            (values (make-array 4 :adjustable t :fill-pointer 0))
-           (table  (make-generic-hashtable :test 'eeq-is-same-ever)))
+           (table  (make-generic-hashtable :test 'samep)))
       (e. iteratable |iterate| 
         (e-lambda "org.cubik.cle.prim.ConstMapConstructionIterator" ()
           (:|run| (key value)

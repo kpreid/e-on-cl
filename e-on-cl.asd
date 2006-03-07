@@ -27,7 +27,7 @@
      (:file "elib-values"
             :depends-on ("elib" "sugar"))
      (:file "tables2"
-            :depends-on ("sugar" "same")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
+            :depends-on ("sugar" "same")) ; genhash's register-hash-function needs the values #'same-hash #'samep
      (:file "print"
             ; TextWriter
             :depends-on ("elib"))

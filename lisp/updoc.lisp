@@ -262,7 +262,7 @@
                   (setf (values new-result scope)
                         (elang:eval-e (e. handler |begin| step) scope))))
               (e. handler |takeStreams|)
-              (unless (eeq-is-same-yet new-result nil)
+              (unless (same-yet-p new-result nil)
                 (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
               (call-when-resolved wait-hook (efun (x)
                 ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results

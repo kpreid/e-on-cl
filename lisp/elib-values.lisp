@@ -249,7 +249,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; xxx OPT memoize results since we're doing all this subtypeping?
 (declaim (ftype (function (t t) function) fast-sameness-test))
 (defun fast-sameness-test (a-type b-type)
-  "Return a function which will operate equivalently to EEQ-IS-SAME-EVER, provided that its two arguments are of a-type and b-type, respectively."
+  "Return a function which will operate equivalently to SAMEP, provided that its two arguments are of a-type and b-type, respectively."
   (flet ((either-subtypep (type)
           (and (or (subtypep a-type type)
                    (subtypep b-type type))
@@ -266,7 +266,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         #'eql)
       ; general comparison
       (t 
-        #'eeq-is-same-ever))))
+        #'samep))))
 
 (defun reprint (obj fqn printer)
   (declare (ignore fqn)) ; XXX should be put into the getAllegedType
@@ -705,68 +705,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<sealed problem>")))
 
-; --- TraversalKey ---
-
-; TraversalKey code is:
-;  Copyright 2002 Combex, Inc. under the terms of the MIT X license
-;  found at http://www.opensource.org/licenses/mit-license.html
-
-(defclass traversal-key (vat-checking) 
-  ((wrapped :initarg :wrapped
-            :accessor tk-wrapped)
-   (snap-hash :initarg :snap-hash
-              :accessor tk-snap-hash
-              :type fixnum)
-   (fringe :initarg :fringe
-           :accessor tk-fringe
-           :type hash-table)))
-   
-(defun make-traversal-key (target)
-  (let ((wrapped (ref-shorten target))
-        (fringe (make-hash-table :test #'eql)))
-    (make-instance 'traversal-key
-      :wrapped wrapped
-      :fringe fringe
-      :snap-hash (eeq-same-yet-hash wrapped fringe))))
-
-#+(or) ;; Unused now that the Equalizer supplies TraversalKeys.
-(defglobal +the-make-traversal-key+ 
-  (let ((traversal-key-guard (make-instance 'cl-type-guard 
-                               :type-specifier 'traversal-key)))
-    (e-lambda "org.cubik.cle.prim.makeTraversalKey" ()
-      (:|asType| () traversal-key-guard)
-      (:|run/1| 'make-traversal-key))))
-
-(defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
-  ;(format t "eeq-same-dispatch traversal-keys ~A ~A" (tk-wrapped a) (tk-wrapped b))
-  (and
-    (eql (tk-snap-hash a)
-         (tk-snap-hash b))
-    (eeq-is-same-yet (tk-wrapped a)
-                     (tk-wrapped b))
-    (eql (hash-table-count (tk-fringe a))
-         (hash-table-count (tk-fringe b)))
-    (loop for aelem being each hash-key of (tk-fringe a)
-          always (nth-value 1 (gethash aelem (tk-fringe b))))))
-
-(defmethod eeq-hash-dispatch ((a traversal-key))
-  (tk-snap-hash a))
-  
-(def-vtable traversal-key
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print|
-      "<key:"
-      (tk-wrapped this)
-      ">")))
-
-(defmethod print-object ((tk traversal-key) stream)
-  "solely for debugging"
-  (print-unreadable-object (tk stream :type t :identity nil)
-    (format stream "on ~W" (tk-wrapped tk))))
-
 ; --- TypeDesc, etc ---
-
 
 (defun message-types-to-map (mtypes)
   (e. +the-make-const-map+ |fromColumns|

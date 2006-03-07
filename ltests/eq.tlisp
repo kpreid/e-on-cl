@@ -17,7 +17,7 @@
 
 (deftest fast-sameness-test.general
   (fast-sameness-test 't 't)
-  #.#'eeq-is-same-ever)
+  #.#'samep)
 
 #-abcl ;; as of 0.0.9, ABCL's subtypep isn't smart enough for this
 (deftest fast-sameness-test.disjoint-eql
@@ -26,11 +26,11 @@
 
 (deftest fast-sameness-test.function-general
   (fast-sameness-test 'function 't)
-  #.#'eeq-is-same-ever)
+  #.#'samep)
 
 (deftest fast-sameness-test.symbol-general
   (fast-sameness-test 'symbol 't)
-  #.#'eeq-is-same-ever)
+  #.#'samep)
 
 #-abcl ;; as of 0.0.9, ABCL's subtypep isn't smart enough for this
 (deftest fast-sameness-test.disjoint-general

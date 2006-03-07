@@ -34,7 +34,7 @@
                          (e-util:function-responds-to f arity))
                     (e-is-true (elib:miranda #'wrapper mverb args nil))))))
             ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
-              (not (not (find auditor stamps :test #'eeq-is-same-ever)))))
+              (not (not (find auditor stamps :test #'samep)))))
             (otherwise
               (elib:miranda #'wrapper mverb args (lambda ()
                 (error "no such method on wrapped function: ~A" mverb)))))))))
@@ -309,7 +309,7 @@
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
           (do-symbols (node-type (find-package :e.elang.vm-node))
-            (when (eeq-is-same-yet specimen (get node-type 'static-maker))
+            (when (same-yet-p specimen (get node-type 'static-maker))
               (return-from opt-unget 
                 (concatenate 'string (first prefixes) 
                                      (string node-type)))))
@@ -441,13 +441,13 @@ If a log message is produced, context-thunk is run to produce a string describin
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function (f+ #'as-e-boolean #'ref-is-resolved)
                      :stamps (list +deep-frozen-stamp+))
-      (wrap-function (f+ #'as-e-boolean #'eeq-is-settled)
+      (wrap-function (f+ #'as-e-boolean #'settledp)
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function #'make-unconnected-ref
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function (lambda (ref)
         (as-e-boolean (typep ref 
-          '(or (satisfies eeq-is-transparent-selfless)
+          '(or (satisfies transparent-selfless-p)
                null
                string
                character

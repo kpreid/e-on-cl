@@ -519,7 +519,7 @@ XXX This is an excessively large authority and will probably be replaced."
             (lambda (auditor)
               (when (position auditor 
                               approvers
-                              :test #'elib:eeq-is-same-ever) 
+                              :test #'elib:samep) 
                 t)))))
 
 #| saved old getSlot impl that avoids touching every slot

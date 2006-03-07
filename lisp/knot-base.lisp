@@ -375,8 +375,8 @@
   "Converts an optional uncall value into an optional unget value. That is, returns 'name' if 'portrayal' matches [==loader, ==\"get\", [name]]; otherwise null."
   (when (and portrayal 
              (=               (length portrayal) 3)
-             (eeq-is-same-yet (aref portrayal 0) loader)
-             (eeq-is-same-yet (aref portrayal 1) "get"))
+             (same-yet-p (aref portrayal 0) loader)
+             (same-yet-p (aref portrayal 1) "get"))
     (let ((args (e-coerce (aref portrayal 2) 'vector)))
       (when (= (length args) 1)
         (aref args 0)))))
@@ -417,7 +417,7 @@
       #+eventually-frozen-path-loader (:|__optSealedDispatch| (brand)
         ; XXX this implementation of the EventuallyDeepFrozen state check is not really *correct* per the auditor's rules, but will handle the correct cases, since we know that the parts of this which are not actually DeepFrozen 
         (cond
-          ((eeq-is-same-ever brand (e. eventually-deep-frozen |getPeekBrand|))
+          ((samep brand (e. eventually-deep-frozen |getPeekBrand|))
             (e. (e. eventually-deep-frozen |getPeekSealer|) 
                 |seal|
                 (e. +the-make-const-map+ |fromPairs|

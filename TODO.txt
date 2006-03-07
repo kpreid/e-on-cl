@@ -83,19 +83,6 @@ E-in-S-expression syntax ideas (not necessarily to be implemented any time soon)
 
 ---
 
-Arbitrary anonymous functions as type specifiers:
-
-(lambda (guard)
-  (let ((sym (make-symbol (e-quote guard))))
-    (setf (symbol-function sym) 
-      (lambda (specimen)
-        (eeq-is-same-yet (e. guard |coerce| specimen)
-                         specimen)))
-    `(satisfies ,sym)))
-  
-  
----
-
 This unfinished scrap of code from vtable-case-entry wouldn't have worked, but might have some use later
 
 (let* ((name (format nil "~A#~A" type-name mverb))

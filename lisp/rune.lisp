@@ -126,6 +126,7 @@
       If supported, it will be executable. Under CLISP, the first argument to
       the resulting executable must be \"--\" for correct argument processing.
       The sole argument is the name of the image file to create."
+  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
   (assert (= 1 (length args))) ;; will be options later, regarding how much to include
   (let ((image-file (native-pathname (first args)))
         (executable-p t)

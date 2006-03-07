@@ -51,9 +51,9 @@
 (defmacro def-atomic-sameness (type eq-func-form hash-func-form
     &aux (left (gensym)) (right (gensym)))
   `(progn 
-    (defmethod eeq-same-dispatch ((,left ,type) (,right ,type))
+    (defmethod samep-dispatch ((,left ,type) (,right ,type))
       (,eq-func-form ,left ,right))
-    (defmethod eeq-hash-dispatch ((,left ,type))
+    (defmethod same-hash-dispatch ((,left ,type))
       (,hash-func-form ,left))))
 
 (defmacro with-text-writer-to-string ((var) &body body &aux (stream-var (gensym)))
@@ -89,8 +89,8 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
   (:documentation "Used only for REFs' various behaviors on sends; should not be specialized for non-REFs.")
   (declare (optimize (speed 3))))
 
-(defgeneric eeq-hash-dispatch (a))
-(defgeneric eeq-same-dispatch (left right))
+(defgeneric same-hash-dispatch (a))
+(defgeneric samep-dispatch (left right))
 
 ;; XXX move implementation to elib-guts? inline?
 (declaim (ftype (function (t t) boolean) approvedp))
@@ -343,9 +343,9 @@ If there is no current vat at initialization time, captures the current vat at t
              :reader identified-ref-identity)))
 
 (def-atomic-sameness identified-ref
-  (lambda (a b) (eeq-is-same-ever (identified-ref-identity a)
-                                  (identified-ref-identity b)))
-  (lambda (a) (eeq-same-yet-hash (identified-ref-identity a) nil)))
+  (lambda (a b) (samep (identified-ref-identity a)
+                       (identified-ref-identity b)))
+  (lambda (a) (same-hash (identified-ref-identity a))))
 
 (defmethod ref-state :around ((ref identified-ref))
   (let ((result (multiple-value-list (call-next-method))))
@@ -820,7 +820,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                                   smethods))
                 (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
             ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
-              (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
+              (not (not (find auditor ,stamps-sym :test #'samep)))))
             (otherwise 
               (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
                 ,(let ((fallthrough
@@ -1159,12 +1159,12 @@ While this is a process-wide object, its stamps should not be taken as significa
     (cond 
       ((eql (ref-shorten auditor) +selfless-stamp+)
         ;; Prevents an infinite recursion:
-        ;;       (eeq-is-transparent-selfless some-obj)
+        ;;       (transparent-selfless-p some-obj)
         ;;    -> (approvedp +selfless-stamp+ some-obj)
-        ;;    -> (eeq-is-same-ever +selfless-stamp+ some-approver-of-obj)
-        ;;    -> (eeq-is-transparent-selfless +selfless-stamp+)
+        ;;    -> (samep +selfless-stamp+ some-approver-of-obj)
+        ;;    -> (transparent-selfless-p +selfless-stamp+)
         ;;    -> (approvedp +selfless-stamp+ +selfless-stamp+)
-        ;;    -> (eeq-is-same-ever +selfless-stamp+ +deep-frozen-stamp+)
+        ;;    -> (samep +selfless-stamp+ +deep-frozen-stamp+)
         ;;    -> repeat with +selfless-stamp+ in place of some-obj
         ;;      
         ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
@@ -1380,6 +1380,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (declaim (ftype (function (t) t) type-specifier-to-guard))
 
 (declaim (ftype (function (t t) boolean) 
-                eeq-is-same-yet eeq-is-same-ever))
+                same-yet-p samep))
 (declaim (ftype (function (t) boolean) 
-                eeq-is-settled))
+                settledp))

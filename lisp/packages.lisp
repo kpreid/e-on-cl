@@ -203,14 +203,12 @@
     :nest-fq-name :environment-fqn-prefix
     
     :make-equalizer
-    :eeq-is-settled
-    :eeq-is-same-ever
-    :eeq-is-same-yet
-    :eeq-is-transparent-selfless
-    :eeq-same-yet-hash
+    :settledp
+    :samep
+    :same-yet-p
+    :transparent-selfless-p
+    :same-hash
     :traversal-key
-    :eeq-hash-dispatch
-    :eeq-same-dispatch
     :def-atomic-sameness
     :insufficiently-settled-error
     
@@ -231,6 +229,7 @@
 (e.util:defglobals
   elib:+the-make-simple-slot+
   elib:+the-make-var-slot+
+  elib:+the-make-guarded-slot+
 
   elib:+the-any-map-guard+
   elib:+the-flex-list-guard+
@@ -271,7 +270,7 @@
   e.elib:join-fq-name
   e.elib:make-equalizer
   e.elib:cl-type-simple-expr
-  e.elib:eeq-same-yet-hash
+  e.elib:same-hash
   e.elib:make-text-writer-to-cl-stream
   e.elib:e-import))
 

@@ -1,5 +1,6 @@
-; This Common Lisp code is Copyright 2005-2006 Kevin Reid, under the terms of the
-; MIT X license, and partially derived from Java code which is
+; This Common Lisp code, insofar as it is original work, is
+; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license.
+; It is partially derived from Java code which is
 ; Copyright 2002 Combex, Inc. under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
@@ -8,37 +9,29 @@
 
 (in-package :e.elib.same-impl)
 
-(defconstant +eeq-hash-depth+ 5)
+(defconstant +hash-depth+ 5)
 
-(defun eeq-same-yet-hash (target &optional fringe)
-  "If fringe is nil (the default value), requires a settled target."
-  (let ((result (eeq-internal-sameness-hash target +eeq-hash-depth+ fringe)))
-    (when fringe
-      (loop for prom being each hash-key of fringe do
-        (setf result (logxor result (eeq-identity-hash prom)))))
-    result))
+(defun identity-hash (target) (sxhash target))
 
-(defun eeq-identity-hash (target) (sxhash target))
-
-(defun eeq-sameness-fringe (original opt-fringe &optional (sofar (make-hash-table)))
+(defun sameness-fringe (original opt-fringe &optional (sofar (make-hash-table)))
   "returns cl:boolean"
   ; XXX translation of Java
   ;(declare (optimize (speed 3) (safety 3)))
   (when (nth-value 1 (gethash original sofar))
     ;(format t "original in sofar: ~S" original)
-    (return-from eeq-sameness-fringe t))
+    (return-from sameness-fringe t))
   (let ((obj (ref-shorten original)))
     (when (nth-value 1 (gethash obj sofar))
       ;(format t "shortened in sofar: ~S" obj)
-      (return-from eeq-sameness-fringe t))
-    (when (eeq-is-transparent-selfless obj)
+      (return-from sameness-fringe t))
+    (when (transparent-selfless-p obj)
       ;(format t "selfless: ~S" obj)
       (setf (gethash original sofar) nil)
-      (return-from eeq-sameness-fringe
+      (return-from sameness-fringe
         (loop
           with result = t
           for elem across (spread-uncall obj)
-          do (setf result (and result (eeq-sameness-fringe elem opt-fringe sofar)))
+          do (setf result (and result (sameness-fringe elem opt-fringe sofar)))
              (when (and (not result) (null opt-fringe))
                (return nil))
           finally (return result))))
@@ -52,8 +45,8 @@
           (setf (gethash obj opt-fringe) nil))
         nil))))
 
-(declaim (inline eeq-is-transparent-selfless))
-(defun eeq-is-transparent-selfless (a)
+(declaim (inline transparent-selfless-p))
+(defun transparent-selfless-p (a)
   (approvedp +selfless-stamp+ a))
 
 (defun spread-uncall (a)
@@ -62,34 +55,34 @@
     (e-coercef unspread 'vector)
     (concatenate 'vector `#(,(aref unspread 0) ,(aref unspread 1)) (aref unspread 2))))
 
-(defmethod eeq-same-dispatch (left right)
-  (assert (not (eeq-is-transparent-selfless left)))
-  (assert (not (eeq-is-transparent-selfless right)))
+(defmethod elib::samep-dispatch (left right)
+  (assert (not (transparent-selfless-p left)))
+  (assert (not (transparent-selfless-p right)))
   (assert (not (eql left right)))
   nil)
 
-(defun eeq-internal-sameness-hash (target hash-depth opt-fringe)
+(defun %sameness-hash (target hash-depth opt-fringe)
   ;(declare (optimize (speed 3) (safety 3)))
   (setf target (ref-shorten target))
   (if (<= hash-depth 0)
-    (return-from eeq-internal-sameness-hash (cond
-      ((eeq-sameness-fringe target opt-fringe)
+    (return-from %sameness-hash (cond
+      ((sameness-fringe target opt-fringe)
         -1)
       ((null opt-fringe)
         (error "Must be settled"))
       (t
         -1))))
-  (if (eeq-is-transparent-selfless target)
+  (if (transparent-selfless-p target)
     (reduce #'logxor 
       (loop for a across (spread-uncall target)
-            collect (eeq-internal-sameness-hash a (1- hash-depth) opt-fringe)))
-    (let ((hash (eeq-hash-dispatch target)))
+            collect (%sameness-hash a (1- hash-depth) opt-fringe)))
+    (let ((hash (elib::same-hash-dispatch target)))
       (cond
         (hash
           hash)
         ((ref-is-resolved target)
           ; Selfless objects were caught earlier. Any settled non-Selfless reference has the identity of its underlying object.
-          (eeq-identity-hash target))
+          (identity-hash target))
         ((null opt-fringe)
           (error "Must be settled"))
         (t
@@ -97,11 +90,11 @@
           (setf (gethash target opt-fringe) +e-false+)
           -1)))))
 
-(defmethod eeq-hash-dispatch ((a null))
+(defmethod elib::same-hash-dispatch ((a null))
   (declare (ignore a))
   0)
   
-(defmethod eeq-hash-dispatch (a)
+(defmethod elib::same-hash-dispatch (a)
   (declare (ignore a))
   nil)
 
@@ -214,8 +207,8 @@
                     ; at this depth.
                     (equalizer-trace "exit opt-same sofar loop")
                     (return +e-true+))
-                  (let ((left-selfless (eeq-is-transparent-selfless left))
-                        (right-selfless (eeq-is-transparent-selfless right)))
+                  (let ((left-selfless (transparent-selfless-p left))
+                        (right-selfless (transparent-selfless-p right)))
                     (cond
                       ((and left-selfless right-selfless)
                         (opt-same-spread left right sofar))
@@ -227,8 +220,8 @@
                       (t
                         ; this handles what in Java-E are HONORARY selfless
                         ; objects
-                        (equalizer-trace "exit opt-same via eeq-same-dispatch to come")
-                        (as-e-boolean (eeq-same-dispatch left right))))))))
+                        (equalizer-trace "exit opt-same via samep-dispatch to come")
+                        (as-e-boolean (elib::samep-dispatch left right))))))))
       
       (nest-fq-name ("org.erights.e.elib.tables.makeEqualizer")
         (e-lambda |equalizer|
@@ -247,14 +240,78 @@
           
           (:|makeTraversalKey/1| 'make-traversal-key))))))
 
+;;; --- TraversalKey ---
+
+(defun same-yet-hash (target fringe)
+  "Used by TraversalKey implementation. Returns a hash value which corresponds to the equality test ELIB:SAME-YET-P mixed with the fringe's hashes."
+  (let ((result (%sameness-hash target +hash-depth+ fringe)))
+    (loop for prom being each hash-key of fringe do
+        (setf result (logxor result (identity-hash prom))))
+    result))
+
+(defclass traversal-key (vat-checking) 
+  ((wrapped :initarg :wrapped
+            :accessor tk-wrapped)
+   (snap-hash :initarg :snap-hash
+              :accessor tk-snap-hash
+              :type fixnum)
+   (fringe :initarg :fringe
+           :accessor tk-fringe
+           :type hash-table)))
+   
+(defun make-traversal-key (target)
+  (let ((wrapped (ref-shorten target))
+        (fringe (make-hash-table :test #'eql)))
+    (make-instance 'traversal-key
+      :wrapped wrapped
+      :fringe fringe
+      :snap-hash (same-yet-hash wrapped fringe))))
+
+#+(or) ;; Unused now that the Equalizer supplies TraversalKeys.
+(defglobal +the-make-traversal-key+ 
+  (let ((traversal-key-guard (make-instance 'cl-type-guard 
+                               :type-specifier 'traversal-key)))
+    (e-lambda "org.cubik.cle.prim.makeTraversalKey" ()
+      (:|asType| () traversal-key-guard)
+      (:|run/1| 'make-traversal-key))))
+
+(def-atomic-sameness traversal-key
+  (lambda (a b)
+    (and (eql (tk-snap-hash a)
+              (tk-snap-hash b))
+         (same-yet-p (tk-wrapped a)
+                          (tk-wrapped b))
+         (eql (hash-table-count (tk-fringe a))
+              (hash-table-count (tk-fringe b)))
+         (loop for aelem being each hash-key of (tk-fringe a)
+               always (nth-value 1 (gethash aelem (tk-fringe b))))))
+  tk-snap-hash)
+
+(def-vtable traversal-key
+  (:|__printOn| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print|
+      "<key:"
+      (tk-wrapped this)
+      ">")))
+
+(defmethod print-object ((tk traversal-key) stream)
+  "solely for debugging"
+  (print-unreadable-object (tk stream :type t :identity nil)
+    (format stream "on ~W" (tk-wrapped tk))))
+
 ;;; --- XXX name this section ---
 
 (defvar *the-equalizer* (make-equalizer))
 
-(defun eeq-is-same-yet  (a b)
+(defun same-yet-p  (a b)
   (e-is-true (e. *the-equalizer* |sameYet| a b)))
-(defun eeq-is-same-ever (a b)
+(defun samep (a b)
   (e-is-true (e. *the-equalizer* |sameEver| a b)))
 
-(defun eeq-is-settled (a)
-  (eeq-sameness-fringe a nil))
+(defun same-hash (target)
+  "Return a hash value which corresponds to the equality test ELIB:SAMEP."
+  (%sameness-hash target +hash-depth+ nil))
+
+(defun settledp (a)
+  (sameness-fringe a nil))
