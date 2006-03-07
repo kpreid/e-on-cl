@@ -362,7 +362,7 @@ If there is no current vat at initialization time, captures the current vat at t
 (defclass disconnected-ref (broken-ref identified-ref)
   ())
 
-; - promises - 
+;;; - promises - 
 
 (defclass local-resolver (vat-checking)
   ((ref :initarg :ref
@@ -373,9 +373,9 @@ If there is no current vat at initialization time, captures the current vat at t
   (let ((promise (make-instance 'promise-ref)))
     (values promise (make-instance 'local-resolver :ref promise))))
 
-; --- near refs / vats ---
+;;;; --- near refs / vats ---
 
-; - forwarding-ref -
+;;;; - forwarding-ref -
 
 (defclass forwarding-ref (ref)
   ((target :initarg :target))
@@ -1292,18 +1292,94 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
 (defglobal +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
-; --- Equalizer ---
+;;; --- Additional reference pieces ---
 
-(defvar *the-equalizer*)
+(defun no-such-method (recipient mverb args)
+  (error 'no-such-method-error :recipient recipient 
+                               :mverb mverb
+                               :args args))
 
-(defun eeq-is-same-yet  (a b)
-  (e-is-true (e. *the-equalizer* |sameYet| a b)))
-(defun eeq-is-same-ever (a b)
-  (e-is-true (e. *the-equalizer* |sameEver| a b)))
+(defmethod e-call-dispatch ((rec t) mverb &rest args)
+  "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
+  (elib:miranda rec mverb args (lambda ()
+    (apply #'e-call-match rec mverb args))))
 
-(defun eeq-is-settled (a)
-  (eeq-sameness-fringe a nil))
+(defmethod e-call-match ((rec t) mverb &rest args)
+  "Final case of E call dispatch - always fails."
+  (no-such-method rec mverb args))
+
+
+#+e.instrument.ref-shorten-uses 
+  (defvar *instrument-ref-shorten-kinds* (make-hash-table))
+
+(defun ref-shorten (x)
+  (declare (optimize (speed 3) (space 3) (safety 3) (compilation-speed 0)))
+  #+e.instrument.ref-shorten-uses
+    (incf (gethash (class-of x) *instrument-ref-shorten-kinds* 0))
+  (typecase x
+    ((not ref) x)
+    (forwarding-ref
+      (with-slots (target) x
+        (setf target (ref-shorten target))))
+    (t
+      (%ref-shorten x))))
+
+;;; --- Promise resolution ---
+
+;; NOTE: vtable and resolution is declared now (rather than, say, in elib-guts.lisp) so that later code can make use of promises when being loaded
+
+(declaim (inline promise-ref-resolve))
+(defun promise-ref-resolve (ref new-target
+    &aux (buffer (slot-value ref 'buffer)))
+  (declare (type promise-ref ref)
+           (type (vector list) buffer))
+  (setf new-target (ref-shorten new-target))
+  (with-ref-transition-invariants (ref)
+    (if (eq new-target ref)
+      (change-class ref 'unconnected-ref :problem (make-condition 'vicious-cycle-error))
+      (change-class ref 'forwarding-ref :target new-target)))
+  
+  ; after change-class, the buffer has been dropped by the ref
+  ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet
+  (loop for (resolver mverb args) across buffer do
+    (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))))
+
+(locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+  (defun resolve-race (this target)
+    "Internal function used by the local-resolver vtable."
+    (with-slots (ref) this
+      (if (null ref)
+        +e-false+
+        (progn
+          (promise-ref-resolve ref target)
+          (setf ref nil)
+          +e-true+)))))
+
+(def-vtable local-resolver
+  (:|__printOn| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| (if (slot-value this 'ref)
+                     "<Resolver>"
+                     "<Closed Resolver>")))
+  ; XXX resolve/2
+  (:|resolveRace/1| 'resolve-race)
+  (:|resolve| (this target)
+    (unless (e-is-true (resolve-race this target))
+      ;; under sealed exception rules, this is not an information leak
+      (error "this resolver's ref has already been resolved, therefore cannot be resolved to ~A" (e-quote target))))
+  (:|smash| (this problem)
+    "Equivalent to this.resolve(Ref.broken(problem))."
+    ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
+    (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
+  (:|isDone| (this)
+    "Returns whether this resolver's promise has been resolved already."
+    (as-e-boolean (not (slot-value this 'ref))))) 
 
 ;;; --- functions that might be referenced before they're defined in the elib package ---
 
 (declaim (ftype (function (t) t) type-specifier-to-guard))
+
+(declaim (ftype (function (t t) boolean) 
+                eeq-is-same-yet eeq-is-same-ever))
+(declaim (ftype (function (t) boolean) 
+                eeq-is-settled))

@@ -21,10 +21,13 @@
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
             :depends-on ("elib"))
+     (:file "same"
+            ; Equalizer, hashing, etc
+            :depends-on ("elib" "sugar"))
      (:file "elib-values"
             :depends-on ("elib" "sugar"))
      (:file "tables2"
-            :depends-on ("sugar" "elib-guts")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
+            :depends-on ("sugar" "same")) ; genhash's register-hash-function needs the values #'eeq-same-yet-hash #'eeq-is-same-ever
      (:file "print"
             ; TextWriter
             :depends-on ("elib"))
@@ -43,7 +46,9 @@
      (:file "syntax"
             :depends-on ("packages" "elang-nodes"))
      (:file "compiler-base"
-            :depends-on ("packages" "elang-nodes"))
+            :depends-on ("packages" 
+                         "elang-nodes" 
+                         "elib-guts" #| needs e-simple-slot class definition - XXX violates elib-guts's description |#))
      (:file "compiler-seq"
             :depends-on ("compiler-base"))
      (:file "compiler-entry"

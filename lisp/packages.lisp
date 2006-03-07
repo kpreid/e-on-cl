@@ -206,11 +206,13 @@
     :eeq-is-settled
     :eeq-is-same-ever
     :eeq-is-same-yet
+    :eeq-is-transparent-selfless
     :eeq-same-yet-hash
     :traversal-key
     :eeq-hash-dispatch
     :eeq-same-dispatch
     :def-atomic-sameness
+    :insufficiently-settled-error
     
     :source-span :+the-make-source-span+
     :twine :+the-make-twine+
