@@ -29,14 +29,11 @@
     (ccl:quit status)
   #+clisp
     (ext:quit status)
-  #+cmu  ; XXX have exit status warning
-    (extensions:quit)
+  #+cmu
+    (unix:unix-exit status)
   #+abcl
-    (progn
-      (unless (zerop status)
-        (warn "discarding nonzero exit status ~A due to ABCL limitations" status))
-      (ext:quit))
-  (error "Don't know how to global-exit"))
+    (ext:quit :status status)
+  (cl-user::quit))
 
 
 (defvar *toplevel-documentation* (make-hash-table))
