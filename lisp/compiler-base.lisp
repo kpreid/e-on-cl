@@ -211,7 +211,7 @@
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
   ;; xxx eventually this should be able to point at the source position of the assignment
   (declare (ignore value-form))
-  (error "~A is not an assignable variable" (binding-get-source-noun binding)))
+  (error "shouldn't happen: unassignable binding in compiler: ~A" (binding-get-source-noun binding)))
 
 (defmethod binding-exit-info ((binding direct-def-binding) broken-ref-form)
   `((,(binding-get-code binding) ,broken-ref-form)))
@@ -339,7 +339,7 @@
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     ;; XXX review wording of this error
-    (e. tw |write| "problem: undefined variable: ")
+    (e. tw |write| "problem: shouldn't happen: uncaught unbound noun in compiler: ")
     (e. tw |print| (unbound-noun-noun this))))
 
 ;;; --- utilities for generated code ---

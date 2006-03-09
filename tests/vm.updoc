@@ -97,11 +97,11 @@ Non-contagion:
 More AssignExpr:
 
   ? y := 3
-  # problem: not an assignable slot: <& 2>
+  # problem: y is not an assignable variable
 
   confirm static rejection  
   ? if (false) { y := 3 }
-  # problem: not an assignable slot: <& 2>
+  # problem: y is not an assignable variable
   
   ? x := (x + 3)
   # value: 3
@@ -571,8 +571,8 @@ Trinary DefineExpr
   >     <evm:NounExpr>(null, "true", null), 
   >     null,
   >     null), 
-  >   null).eval(safeScope.with("y" => "false").nestOuter())
-  # problem: define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
+  >   null).eval(safeScope.with("y", "false").nestOuter())
+  # problem: kernel define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
 
 SlotExpr, SlotPattern, AssignExpr
 
@@ -590,8 +590,12 @@ SlotExpr, SlotPattern, AssignExpr
   ? (&pi).__optUncall()
   # value: [<makeFinalSlot>, "run", [3.14159]]
   
+  Since this is not an AssignExpr but a SlotExpr and call, the error is that which results from FinalSlot#setValue, and is not statically caught.
+  
   ? [(&pi).setValue(3)]
   # problem: not an assignable slot: <& 3.14159>
+  
+  ? if (false) { [(&pi).setValue(3)] }
   
  outer normal slot
  
@@ -695,6 +699,7 @@ SlotExpr, SlotPattern, AssignExpr
   >   def perverseSlot {
   >     to getValue() :any { return v += 1 }
   >     to setValue(new :tint) :void { v += new * 100 }
+  >     to isFinal() :any { return false }
   >   }
   > }
   # value: <perverseSlot>

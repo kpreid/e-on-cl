@@ -290,6 +290,8 @@
   (:export
     :scope
     :make-scope
+    :require-node-fits-scope
+    
     :make-safe-scope
     :make-io-scope
     
@@ -359,6 +361,7 @@
   (:export
     :eval-e
     :get-translation
+    :require-kernel-e
     
     :+the-make-static-scope+
     

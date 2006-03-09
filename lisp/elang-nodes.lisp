@@ -7,6 +7,7 @@
 
 (defgeneric node-elements (node))
 (defgeneric compute-node-static-scope (node))
+(defgeneric reduce-scopewise (node builder))
 (defgeneric opt-node-property-getter (node field-keyword))
 (defgeneric node-visitor-arguments (node))
 (defgeneric node-class-arity (node-class))
@@ -319,17 +320,6 @@
   (declare (ignore slot-names))
   (unless (or methods (> (length matchers) 0))
       (error "EScript must have methods or at least one matcher")))
-    
-(defmethod shared-initialize :after ((node |DefineExpr|) slot-names &key &allow-other-keys
-    &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
-         (r-value (funcall (opt-node-property-getter node :|pattern|)))
-         (opt-ejector-expr (funcall (opt-node-property-getter node :|optEjectorExpr|))))
-  (declare (ignore slot-names))
-  (when (usesp r-value pattern)
-    (error "define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
-  (when (and opt-ejector-expr
-             (usesp opt-ejector-expr pattern))
-    (error "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
 
 ;; XXX reject NounPatterns that use their noun in the guard
 
@@ -596,16 +586,16 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (flatten :|foo|) -- the sequencing of the list property foo of this node
     (! <CL-form>) -- CL code to return a static scope
     
-    Within a ! form, elang::node is bound to this node and (:get <keyword>) is bound to a property-fetching function."
+    Within a ! form, elang::node is bound to this node, elang::builder is bound to the scope builder, and (:get <keyword>) is bound to a property-fetching function."
   (labels ((transform (expr)
             (cond
               ((null expr)
-                `+empty-static-scope+)
+                `(e. builder |getEmptyScope|))
               ((atom expr)
                 `(let ((.value. (:get ',expr)))
                    (if .value.
-                     (e. .value. |staticScope|)
-                     +empty-static-scope+)))
+                     (get-scope .value.)
+                     (e. builder |getEmptyScope|))))
               ((eql (first expr) 'hide)
                 (assert (= (length expr) 2))
                 `(e. ,(transform (second expr)) |hide|))
@@ -613,27 +603,36 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                 (reduce #'(lambda (a b) `(e. ,a |add| ,b)) 
                         (rest expr)
                         :key #'transform
-                        :initial-value `+empty-static-scope+))
+                        :initial-value `(e. builder |getEmptyScope|)))
               ((eql (first expr) '!)
                 `(progn ,@(rest expr)))
               ((eql (first expr) 'flatten)
                 (assert (= (length expr) 2))
-                `(sum-node-scopes (or (:get ',(second expr)) #())))
+                `(sum-node-scopes (or (:get ',(second expr)) #()) #'get-scope (e. builder |getEmptyScope|)))
               (t
                 (error "Unknown scope-rule expression: ~S" expr)))))
-    `(defmethod compute-node-static-scope ((node ,specializer))
-      (flet ((:get (keyword) (funcall (opt-node-property-getter node keyword))))
-        (declare (ignorable (function :get)))
-        ,(transform scope-expr)))))
+    `(progn
+      ;; XXX remove this duplication.
+      ;; Note that compute-node-static-scope currently can't be expressed by reduce-scopewise due to the caching layer
+      (defmethod compute-node-static-scope ((node ,specializer))
+        (flet ((:get (keyword) (funcall (opt-node-property-getter node keyword)))
+               (get-scope (node) (e. node |staticScope|)))
+          (declare (ignorable (function :get) (function get-scope)))
+          (let ((builder +the-make-static-scope+))
+          ,(transform scope-expr))))
+      (defmethod reduce-scopewise ((node ,specializer) builder)
+        (flet ((:get (keyword) (funcall (opt-node-property-getter node keyword)))
+               (get-scope (node) (reduce-scopewise node builder)))
+          (declare (ignorable (function :get) (function get-scope)))
+          ,(transform scope-expr))))))
 
-(defun sum-node-scopes (nodes)
+(defun sum-node-scopes (nodes getter empty)
   (reduce #'(lambda (a b) (e. a |add| b))
-          (map 'list #'(lambda (a) (e. a |staticScope|))
-                     nodes)
-          :initial-value +empty-static-scope+))
+          (map 'list getter nodes)
+          :initial-value empty))
 
 (def-scope-rule |AssignExpr|
-  (seq (! (e. +the-make-static-scope+ |scopeAssign| (:get :|noun|)))
+  (seq (! (e. builder |scopeAssign| (:get :|noun|)))
        :|rValue|))
 
 (def-scope-rule |CallExpr|
@@ -674,10 +673,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   nil)
 
 (def-scope-rule |MetaStateExpr|
-  (! (e. +the-make-static-scope+ |scopeMeta|)))
+  (! (e. builder |scopeMeta|)))
 
 (def-scope-rule |NounExpr|
-  (! (e. +the-make-static-scope+ |scopeRead| node)))
+  (! (e. builder |scopeRead| node)))
 
 (def-scope-rule |ObjectExpr|
   (seq (flatten :|auditorExprs|) :|script|))
@@ -686,7 +685,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (flatten :|subs|))
 
 (def-scope-rule |SlotExpr|
-  (! (e. +the-make-static-scope+ |scopeRead| (:get :|noun|))))
+  (! (e. builder |scopeRead| (:get :|noun|))))
 
 
 (def-scope-rule |CdrPattern|
@@ -694,7 +693,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |FinalPattern|
   (seq :|optGuardExpr|
-       (! (e. +the-make-static-scope+ |scopeDef| node))))
+       (! (e. builder |scopeDef| node))))
 
 (def-scope-rule |IgnorePattern|
   nil)
@@ -704,14 +703,14 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |SlotPattern|
   (seq :|optGuardExpr|
-       (! (e. +the-make-static-scope+ |scopeSlot| node))))
+       (! (e. builder |scopeSlot| node))))
 
 (def-scope-rule |SuchThatPattern|
   (seq :|pattern| :|test|))
 
 (def-scope-rule |VarPattern|
   (seq :|optGuardExpr|
-       (! (e. +the-make-static-scope+ |scopeVar| node))))
+       (! (e. builder |scopeVar| node))))
 
 (def-scope-rule |EMatcher|
   (hide (seq :|pattern|
@@ -725,3 +724,90 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |EScript|
   (seq (flatten :|optMethods|)
        (flatten :|matchers|)))
+
+;;; --- Kernel-E checking ---
+
+;; utility, to be moved
+(defun to-condition (defaulted-type datum &rest arguments)
+  "Implements CLHS 9.1.2.1."
+  (etypecase datum
+    (symbol
+      (apply #'make-condition datum arguments))
+    ((or string function)
+      (make-condition defaulted-type :format-control datum :format-arguments arguments))
+    (condition
+      datum)))
+(defun ejerror (ejector &rest args)
+  (eject-or-ethrow ejector (apply #'to-condition 'simple-error args)))
+
+;; XXX the following is a stub of a more elaborate mechanism which will be introduced when the ANTLR parser is merged in, having nonkernel nodes. For now, it exists only for checking simple inter-node constraints.
+
+(defun require-kernel-e (node ejector)
+  "Verify that the node is a valid Kernel-E tree."
+  (reduce-scopewise node (make-scope-checker ejector))
+  (require-kernel-e-recursive node ejector)
+  (values))
+
+(defun make-scope-checker (ejector) 
+  (labels ((make (finals assigns)
+             ;; XXX use hash tables?
+             ;(format *trace-output* "~&scope checker ~S ~S~%" finals assigns)
+             (e-lambda |kernelScopeCheckerValue| ()
+               (:|_getFinals| () finals)
+               (:|_getAssigns| () assigns)
+               (:|hide| () (make nil nil))
+               (:|add| (other &aux (bad (intersection finals (e. other |_getAssigns|) :test #'string=)))
+               ;(format *trace-output* "~&scope check ~S ~S ~S ~%" finals (e. other |_getAssigns|) bad)
+                 (if bad
+                   ;; XXX message could use some improvement
+                   (ejerror ejector "~A is not an assignable variable" (first bad))
+                   (make (append finals (e. other |_getFinals|))
+                         (append assigns (e. other |_getAssigns|))))))))
+    (e-lambda "$kernelScopeChecker" ()
+      (:|scopeAssign| (node)
+        (make nil (list (e. node |getName|))))
+      (:|scopeDef| (node)
+        (make (list (e. (e. node |getNoun|) |getName|)) nil))
+      (:|scopeRead| (node)
+        (declare (ignore node))
+        (make nil nil))
+      (:|scopeVar| (node)
+        (declare (ignore node))
+        (make nil nil))
+      (:|scopeSlot| (node)
+        (declare (ignore node))
+        (make nil nil))
+      (:|scopeMeta| () (make nil nil))
+      (:|getEmptyScope| () (make nil nil)))))
+
+(defgeneric require-kernel-e-recursive (node ejector)
+  (:method-combination progn))
+
+(defmethod require-kernel-e-recursive progn ((node null) ejector)
+  nil)
+
+(defmethod require-kernel-e-recursive progn ((node vector) ejector)
+  (map nil (lambda (sub) (require-kernel-e-recursive sub ejector)) node))
+
+(defmethod require-kernel-e-recursive progn ((node |ENode|) ejector)
+  (loop with maker = (get (class-name (class-of node)) 'static-maker)
+        for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+        for maybe-subnode in (node-visitor-arguments node)
+        when (e-is-true subnode-flag)
+          do (require-kernel-e-recursive maybe-subnode ejector)))
+
+(defmethod require-kernel-e-recursive progn ((node |DefineExpr|) ejector
+    &aux (pattern (e. node |getPattern|))
+         (r-value (e. node |getRValue|))
+         (opt-ejector-expr (e. node |getOptEjectorExpr|)))
+  (labels ((reject (name-d node-d name-u node-u)
+             (when (and node-d node-u (usesp node-d node-u))
+               (ejerror ejector "kernel define expr may not use definitions ~
+                                 from ~A (~A) in ~A (~A)" 
+                                 name-d (e-quote node-d) 
+                                 name-u (e-quote node-u)))))
+    (reject "pattern" pattern               "r-value expr" r-value)
+    (reject "pattern" pattern               "ejector expr" opt-ejector-expr)
+    (reject "r-value expr" r-value          "pattern" pattern)
+    (reject "ejector expr" opt-ejector-expr "pattern" pattern)))
+
