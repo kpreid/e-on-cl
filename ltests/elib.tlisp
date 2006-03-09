@@ -27,7 +27,7 @@
 
 (deftest guard->type-specifier->guard
   (let ((guard (e-lambda "$typeSpecifierTest" ())))
-    (same-or-objects #'eeq-is-same-ever guard (type-specifier-to-guard (guard-to-type-specifier guard))))
+    (same-or-objects #'samep guard (type-specifier-to-guard (guard-to-type-specifier guard))))
   t)
   
 (deftest type-specifier->guard->type-specifier

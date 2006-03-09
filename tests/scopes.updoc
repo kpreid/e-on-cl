@@ -85,7 +85,7 @@ Outer scope methods part 2, and checking that aScope has the expected contents.
   ? [aScope["y"] //= 2, x]
   # value: [242, 242]
   
-  XXX nestOuter/0 bindings/0 bindings/1
+  XXX bindings/0 bindings/1
   Not supported: newContext/1 getScopeLayout/0 update/1
 
  or/1
@@ -108,10 +108,42 @@ Outer scope methods part 2, and checking that aScope has the expected contents.
   # value: <scope testScope$>
   
   ? aScope.__optUncall()
-  # value: [<makeScope>, "fromState", [["false" => false, "&y" => <var 242>], "testScope$"]]
+  # value: [<makeScope>, "_make", [["false" => false, "&y" => <var 242>], "testScope$", ["false", "y"]]]
+  
+  ? aScope == E.call(E, "call", aScope.__optUncall())
+  # value: true
   
   XXX test proper uncall of a binding whose noun is ::"&foo"
   XXX test that a scope with bindings overridden via with/or/eval only produces one map entry
+
+--- 'Nesting' ---
+
+In the E language, rebinding a noun (e.g. e`def x := 1; def x := 2; x`) is not allowed, unless there is an intervening scope box (e.g. e`def x := 1; {def x := 2; x}`). A scope object enforces this; scope boxes are represented by #nestOuter/0.
+
+  ? def nestTest1 := makeScope.fromState([].asMap(), "nestTest$")
+  # value: <scope nestTest$>
+  
+  ? def nestTest2 := nestTest1.with("x", 1)
+  # value: <scope nestTest$>
+  
+  ? nestTest2["x"]
+  # value: 1
+
+  ? def nestTest3 := nestTest2.with("x", 2)
+  # problem: "x" already in scope
+  XXX better-phrased error
+  
+  ? def nestTest3 := nestTest2.withSlot("x", __makeFinalSlot(2))
+  # problem: "x" already in scope
+
+  ? def nestTest2boxed := nestTest2.nestOuter()
+  # value: <scope nestTest$>
+
+  ? def nestTest3 := nestTest2boxed.with("x", 2)
+  # value: <scope nestTest$>
+  
+  ? nestTest3["x"]
+  # value: 2
 
 --- Making safe-scopes
 
@@ -148,5 +180,3 @@ This is for creating a scope with the usual safeScope structure but with differe
   # value: true
 
 XXX write tests for the e-on-cl makeIOScope which is what ScopeSetup is based on
-
-XXX nestOuter constraint

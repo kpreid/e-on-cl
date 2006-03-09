@@ -34,7 +34,7 @@
                          (e-util:function-responds-to f arity))
                     (e-is-true (elib:miranda #'wrapper mverb args nil))))))
             ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
-              (not (not (find auditor stamps :test #'eeq-is-same-ever)))))
+              (not (not (find auditor stamps :test #'samep)))))
             (otherwise
               (elib:miranda #'wrapper mverb args (lambda ()
                 (error "no such method on wrapped function: ~A" mverb)))))))))
@@ -106,20 +106,17 @@
     (make-pathname :directory '(:relative "compiled-lib"))
     (asdf:component-pathname +the-asdf-system+)))
 
-(defun found-e-on-java-home (dir-system-namestring)
+(defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
-  ;; XXX treating the data from clrune as a Lisp namestring is wrong due
-  ;; to the typical Lisp implementation's addition of wildcards, etc.
-  (let ((dir-pathname (pathname dir-system-namestring)))
-    (setf *antlr-jar* (merge-pathnames #p"e.jar" dir-pathname))
-    (setf *emaker-search-list* 
-      (append *emaker-search-list*
-        (handler-case
-            (progn
-              (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) (merge-pathnames #p"e.jar" dir-pathname))))
-          (error (c)
-            (warn "Could not use e.jar because: ~A" c)
-            (list (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname)))))))))
+  (setf *antlr-jar* (merge-pathnames #p"e.jar" dir-pathname))
+  (setf *emaker-search-list* 
+    (append *emaker-search-list*
+      (handler-case
+          (progn
+            (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) (merge-pathnames #p"e.jar" dir-pathname))))
+        (error (c)
+          (warn "Could not use e.jar because: ~A" c)
+          (list (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname))))))))
 
 (defun fqn-to-relative-pathname (fqn)
   (let* ((pos (or (position #\. fqn :from-end t) -1))
@@ -317,7 +314,7 @@
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
           (do-symbols (node-type (find-package :e.elang.vm-node))
-            (when (eeq-is-same-yet specimen (get node-type 'static-maker))
+            (when (same-yet-p specimen (get node-type 'static-maker))
               (return-from opt-unget 
                 (concatenate 'string (first prefixes) 
                                      (string node-type)))))
@@ -449,13 +446,13 @@ If a log message is produced, context-thunk is run to produce a string describin
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function (f+ #'as-e-boolean #'ref-is-resolved)
                      :stamps (list +deep-frozen-stamp+))
-      (wrap-function (f+ #'as-e-boolean #'eeq-is-settled)
+      (wrap-function (f+ #'as-e-boolean #'settledp)
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function #'make-unconnected-ref
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function (lambda (ref)
         (as-e-boolean (typep ref 
-          '(or (satisfies elib:eeq-is-transparent-selfless)
+          '(or (satisfies transparent-selfless-p)
                null
                string
                character
@@ -540,6 +537,8 @@ If a log message is produced, context-thunk is run to produce a string describin
           
           ; --- data constructors ---
           ("__makeFinalSlot"     ,elib:+the-make-simple-slot+)
+          ("__makeVarSlot"       ,elib:+the-make-var-slot+)
+          ("__makeGuardedSlot"   ,elib:+the-make-guarded-slot+)
           ("__makeInt"           ,elib:+the-make-int+)
           ("__makeList"          ,elib:+the-make-list+)
           ("__makeMap"           ,elib:+the-make-const-map+)

@@ -171,6 +171,13 @@ String#contains/1
   ? "abc".contains('d')
   # value: false
 
+Bug test: Strings aren't transparent and don't have uncalls
+
+  ? ["".__optUncall()]
+  # value: [null]
+  
+  XXX can't yet check for SelflessStamp '
+
 Characters
 
   ? 'a' :DeepFrozen

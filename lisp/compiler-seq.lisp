@@ -190,7 +190,20 @@
     &aux (outer-block (gensym "ESCAPE"))
          (ejector-block (gensym "ESCAPE-BODY-"))
          (catch-value-var (gensym "CAUGHT"))
-         (inner-result-var (gensym "ESCRESULT")))
+         (inner-result-var (gensym "ESCRESULT"))
+         (body-scope (e. body |staticScope|)))
+  (when (and (typep ejector-patt '|FinalPattern|)
+             (null (ref-shorten (e. ejector-patt |getOptGuardExpr|)))
+             (not (e-is-true (e. (e. body-scope |namesUsed|) 
+                                 |maps| 
+                                 (e. (e. ejector-patt |getNoun|) |getName|))))
+             (not (e-is-true (e. body-scope |hasMetaStateExpr|))))
+    #+(or) 
+    (progn 
+      (format t "~&triggered ejector optimization for ~S in ~S~%" ejector-patt (scope-layout-fqn-prefix layout))
+      (force-output))
+    (return-from sequence-expr ;; XXX dependence on existence of block
+      (values `((,result ,(hide-sequence body layout))) layout)))
   (values
     (labels ((body-form (ejector-block)
               (sequence-to-form 
@@ -211,7 +224,16 @@
                (declare (ignorable ,catch-value-var))
                ,(sequence-to-form 
                   (with-nested-scope-layout (layout)
-                    (append (updating-sequence-patt opt-catch-pattern layout catch-value-var nil)
+                    (append (updating-sequence-patt 
+                              opt-catch-pattern 
+                              layout
+                              catch-value-var
+                              `(eject-function 
+                                 ',(format nil "~A catch block pattern" 
+                                               (pattern-opt-noun ejector-patt)) 
+                                 (lambda (v) 
+                                   (declare (ignore v))
+                                   (return-from ,outer-block ,catch-value-var))))
                             (updating-sequence-expr opt-catch-body layout result)))
                   result))
              (body-form outer-block))))))

@@ -7,22 +7,27 @@
 ; --- Nil ---
 
 (def-vtable null
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "null")))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen null))
-  t)
-
 ; --- String ---
 
 (def-class-opaque string)
 
-(defmethod eeq-is-transparent-selfless ((a string))
-  (declare (ignore a)) nil)
-
 (def-vtable string
+  (audited-by-magic-verb (this auditor)
+    "Strings are atomic, but unlike other vectors, *not* Selfless."
+    (declare (ignore this))
+    ;; NOTE that this implementation overrides the one for VECTORs, and so
+    ;; prevents STRINGs from claiming Selfless.
+    (eql auditor +deep-frozen-stamp+))
+  (:|__optUncall/0| (constantly nil))
+
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
@@ -152,10 +157,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (def-atomic-sameness string string= sxhash)
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen string))
-  "Strings are atomic."
-  t)
-
 ; --- Cons ---
 
 ; to have methods and a public maker eventually
@@ -172,13 +173,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- Symbol ---
 
 (def-vtable symbol
+  (audited-by-magic-verb (this auditor)
+    "Symbols are atomic to E. Their mutable properties are not accessible."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| (symbol-name this))))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen symbol))
-  "Symbols are atomic to E. Their mutable properties are not accessible."
-  t)
 
 ; --- Character ---
 
@@ -210,6 +211,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         thereis (code-char code)))
 
 (def-vtable character
+  (audited-by-magic-verb (this auditor)
+    "Characters are atomic."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
+  
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (if (e-is-true (e. tw |isQuoting|))
@@ -233,22 +239,17 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Return the previous character in the total ordering of characters. Throws an exception if this is the first character."
     (char-nearby this -1)))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen character))
-  t)
-
 ; --- ConstList (vector) ---
 
 ; Just as in Java E arrays serve as ConstLists, so do vectors here, and we make the same assumption of non-mutation.
 
 (def-class-opaque vector)
-(defmethod eeq-is-transparent-selfless ((a vector))
-  (declare (ignore a)) t)
 
 ; XXX this should be move to some utility section somewhere, or the equality section of elib-guts
 ; xxx OPT memoize results since we're doing all this subtypeping?
 (declaim (ftype (function (t t) function) fast-sameness-test))
 (defun fast-sameness-test (a-type b-type)
-  "Return a function which will operate equivalently to EEQ-IS-SAME-EVER, provided that its two arguments are of a-type and b-type, respectively."
+  "Return a function which will operate equivalently to SAMEP, provided that its two arguments are of a-type and b-type, respectively."
   (flet ((either-subtypep (type)
           (and (or (subtypep a-type type)
                    (subtypep b-type type))
@@ -265,7 +266,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         #'eql)
       ; general comparison
       (t 
-        #'eeq-is-same-ever))))
+        #'samep))))
 
 (defun reprint (obj fqn printer)
   (declare (ignore fqn)) ; XXX should be put into the getAllegedType
@@ -278,6 +279,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX documentation
 (def-vtable vector
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. e.syntax:+e-printer+ |printList| tw this +e-true+))
@@ -437,6 +441,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; --- Number ---
 
 (def-vtable number
+  (audited-by-magic-verb (this auditor)
+    "Numbers are atomic."
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
+
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (prin1-to-string this)))
@@ -517,10 +526,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (string-downcase
         (with-standard-io-syntax
           (format nil "~VR" base this))))))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen number))
-  ; xxx is the specimen type too broad?
-  t)
 
 (def-vtable integer
   (:|__conformTo| (this guard)
@@ -700,68 +705,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<sealed problem>")))
 
-; --- TraversalKey ---
-
-; TraversalKey code is:
-;  Copyright 2002 Combex, Inc. under the terms of the MIT X license
-;  found at http://www.opensource.org/licenses/mit-license.html
-
-(defclass traversal-key (vat-checking) 
-  ((wrapped :initarg :wrapped
-            :accessor tk-wrapped)
-   (snap-hash :initarg :snap-hash
-              :accessor tk-snap-hash
-              :type fixnum)
-   (fringe :initarg :fringe
-           :accessor tk-fringe
-           :type hash-table)))
-   
-(defun make-traversal-key (target)
-  (let ((wrapped (ref-shorten target))
-        (fringe (make-hash-table :test #'eql)))
-    (make-instance 'traversal-key
-      :wrapped wrapped
-      :fringe fringe
-      :snap-hash (eeq-same-yet-hash wrapped fringe))))
-
-#+(or) ;; Unused now that the Equalizer supplies TraversalKeys.
-(defglobal +the-make-traversal-key+ 
-  (let ((traversal-key-guard (make-instance 'cl-type-guard 
-                               :type-specifier 'traversal-key)))
-    (e-lambda "org.cubik.cle.prim.makeTraversalKey" ()
-      (:|asType| () traversal-key-guard)
-      (:|run/1| 'make-traversal-key))))
-
-(defmethod eeq-same-dispatch ((a traversal-key) (b traversal-key))
-  ;(format t "eeq-same-dispatch traversal-keys ~A ~A" (tk-wrapped a) (tk-wrapped b))
-  (and
-    (eql (tk-snap-hash a)
-         (tk-snap-hash b))
-    (eeq-is-same-yet (tk-wrapped a)
-                     (tk-wrapped b))
-    (eql (hash-table-count (tk-fringe a))
-         (hash-table-count (tk-fringe b)))
-    (loop for aelem being each hash-key of (tk-fringe a)
-          always (nth-value 1 (gethash aelem (tk-fringe b))))))
-
-(defmethod eeq-hash-dispatch ((a traversal-key))
-  (tk-snap-hash a))
-  
-(def-vtable traversal-key
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print|
-      "<key:"
-      (tk-wrapped this)
-      ">")))
-
-(defmethod print-object ((tk traversal-key) stream)
-  "solely for debugging"
-  (print-unreadable-object (tk stream :type t :identity nil)
-    (format stream "on ~W" (tk-wrapped tk))))
-
 ; --- TypeDesc, etc ---
-
 
 (defun message-types-to-map (mtypes)
   (e. +the-make-const-map+ |fromColumns|
@@ -845,6 +789,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; Hmm. Could we write something like DEF-STRUCTOID-VTABLE to implement the common features of these?
 
 (def-vtable type-desc
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let* ((simple-name (copy-seq (simplify-fq-name (or (type-desc-opt-fq-name this) "_"))))
@@ -865,6 +812,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getMessageTypes/0| 'type-desc-message-types))
 
 (def-vtable message-desc
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (verb doc-comment params opt-result-guard) this
@@ -878,6 +828,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getOptResultGuard/0| 'message-desc-opt-result-guard))
 
 (def-vtable param-desc
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (with-slots (opt-name opt-guard) this
@@ -890,16 +843,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getName| (this)
     "Returns _ if this ParamDesc has no name."
     (or (param-desc-opt-name this) "_")))
-
-(defmethod eeq-is-transparent-selfless ((a type-desc))
-  (declare (ignore a))
-  t)
-(defmethod eeq-is-transparent-selfless ((a message-desc))
-  (declare (ignore a))
-  t)
-(defmethod eeq-is-transparent-selfless ((a param-desc))
-  (declare (ignore a))
-  t)
 
 ; --- Weak references ---
 

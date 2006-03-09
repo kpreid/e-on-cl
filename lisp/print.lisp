@@ -24,7 +24,7 @@
 (defglobal +the-text-writer-guard+ (e-lambda
     "org.erights.e.elib.print.TextWriterGuard"
     (:stamped +deep-frozen-stamp+)
-  (:|coerce/2| (standard-coerce (lambda (specimen) (e-audit-check-dispatch +text-writer-stamp+ specimen))
+  (:|coerce/2| (standard-coerce (lambda (specimen) (approvedp +text-writer-stamp+ specimen))
                               (lambda () +the-text-writer-guard+)
                               (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
                               :test-shortened nil))))
@@ -33,7 +33,7 @@
   (with-result-promise (wrapped-tw)
     (e-lambda "org.cubik.cle.prim.TextWriterHint" ()
       (:|__conformTo| (guard)
-        (if (eeq-is-same-ever guard +the-text-writer-guard+)
+        (if (samep guard +the-text-writer-guard+)
           tw
           wrapped-tw))
       (otherwise (mverb &rest args)

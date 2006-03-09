@@ -18,7 +18,16 @@ def makeTermParser implements DeepFrozen {
     
     def lparser := lalr1`
       "TermL" := start.
-      start := term                         => ${b.start}.
+      start := termRep                      => ${b.start}.
+      
+      termRep := term                       => $__identityFunc.
+      termRep := term ${"*"}                => ${def _(t,_) { return \
+                                                  b.some(t,'*')}}.
+      termRep := term ${"+"}                => ${def _(t,_) { return \
+                                                  b.some(t,'+')}}.
+      termRep := term ${"?"}                => ${def _(t,_) { return \
+                                                  b.some(t,'?')}}.
+      
       term := functor                       => ${b.term}.
       term := functor lpar argList rpar     => ${def _(f,_,a,_) { return \
                                                   b.term(f,a)}}.
@@ -28,12 +37,12 @@ def makeTermParser implements DeepFrozen {
                                                   b.bag(a)}}.
       term := ${"["} argList ${"]"}         => ${def _(_,a,_) { return \
                                                   b.tuple(a)}}.
-      term := functor ${":"} term           => ${def _(f,_,a) { return \
+      term := functor ${":"} termRep        => ${def _(f,_,a) { return \
                                                   b.attr(f,a)}}.
 
       argList :=                            => ${b.empty}.
-      argList := term                       => $__identityFunc.
-      argList := term ${","} argList        => ${def _(l,_,r) { return \
+      argList := termRep                    => $__identityFunc.
+      argList := termRep ${","} argList     => ${def _(l,_,r) { return \
                                                   b.seq(l,r)}}.
 
       functor := tag                        => $__identityFunc.

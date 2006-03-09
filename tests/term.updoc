@@ -3,7 +3,6 @@
 
   ? def <qu> := <import:org.quasiliteral.*>; null
 
---- Terms
 
   ? def makeAstroTag := <qu:astro.makeAstroTag>
   # value: <makeAstroTag>
@@ -83,37 +82,6 @@ XXX test tag restrictions
 
   ? term.getTerms()
   # value: [term`foo`]
-
---- Lexer
-
-  ? def makeTermLexer := <qu:term.makeTermLexer>; null
-
-  ? def lex(twine) :any { return makeTermLexer(false)(twine.asStream()).readAll() }; null
-
-  ? lex("foo")
-  # value: [["Tag", [["Ident", "foo"]]]]
   
-  ? lex("(,)[{:]}")
-  # value: [["("], [","], [")"], ["["], ["{"], [":"], ["]"], ["}"]]
-  
-  ? lex("foo(bar)")
-  # value: [["Tag", [["Ident", "foo"]]], ["("], ["Tag", [["Ident", "bar"]]], [")"]]
-
-  ? lex(".foo. .bar.baz")
-  # value: [["Tag", [["Ident", ".foo."]]], ["Tag", [["Ident", ".bar.baz"]]]]
-  
-  ? lex("${9} @{10} ")
-  # value: [["Quasi$", 9], ["Quasi@", 10]]
-  
-  ? lex("0 1 2 107 -1 3 000")
-  # value: [["Integer", 0], ["Integer", 1], ["Integer", 2], ["Integer", 107], ["Integer", -1], ["Integer", 3], ["Integer", 0]]
-  
-  XXX errors to be changed
-  ? lex("+3")
-  # problem: unexpected term token: +3
-  
-XXX token types: integer, float, char, string, tag, punct, chars
-XXX consequence of loose ::, or malformed tags in general
-XXX consequence of non-token characters
-
-... temporarily? continued in term/parse.updoc
+  ? makeTerm(tag, null, null, [term]).withoutArgs()
+  # value: term`foo`

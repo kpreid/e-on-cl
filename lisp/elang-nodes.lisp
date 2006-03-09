@@ -369,11 +369,10 @@
 
 ; --- E-level methods ---
 
-(defmethod eeq-is-transparent-selfless ((a |ENode|))
-  (declare (ignore a))
-  t)
-
 (def-vtable |ENode|
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let ((quote (e-is-true (e. tw |isQuoting|))))
@@ -458,6 +457,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (multiple-value-call #'vector (eval-e this scope))))
 
 (def-vtable |Pattern|
+  (:|getOptPrincipalNoun/0| #'pattern-opt-noun)
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "epatt"))
@@ -500,10 +500,11 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defmethod make-load-form ((a false-guard) &optional environment)
   (make-load-form-saving-slots a :environment environment))
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen false-guard))
-  t)
   
 (def-vtable false-guard
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw) 
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| (slot-value this 'text))))

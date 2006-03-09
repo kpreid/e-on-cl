@@ -24,9 +24,15 @@
   "potato")
 
 
-(defun stream-handler-target (stream)
+(defun stream-handler-target (stream &key strict)
   ;; XXX this belongs in e.util
-  #+sbcl (sb-sys:fd-stream-fd stream)
+  #+sbcl 
+    (etypecase stream
+      (synonym-stream
+        (if strict
+          (error "can't strictly make a target from synonym stream ~S" stream)
+          (stream-handler-target (symbol-value (synonym-stream-symbol stream)))))
+      (sb-sys:fd-stream (sb-sys:fd-stream-fd stream)))
   #-sbcl (error "not implemented"))
 
 #-(and) ;; XXX *TEMPORARILY* disabled because it leaks fds
@@ -62,4 +68,35 @@
           (task1 0)
           (top-loop)))
       (map nil #'remove-exclusive-io-handler handlers))
+    (values)))
+
+(deftest ordinary-turn-excludes-io
+  ;; Tests that turns created with ELIB:ENQUEUE-TURN do IO handler exclusion.
+  (let* ((runner (make-instance 'runner))
+         (*runner* runner)
+         (vat (make-instance 'vat :label "ordinary-turn-excludes-io test"
+                                  :runner runner))
+         (*vat* vat)
+         (unseen 3)
+         (handler (add-exclusive-io-handler 
+                    (elib::handler-exclusion-group runner) 
+                    (stream-handler-target *standard-output* #|XXX assuming *standard-output* is always writable - bad assumption|#) 
+                    :output 
+                    (lambda (target) 
+                      (declare (ignore target)) 
+                      (with-turn (vat :exclude-io nil)
+                        #+(or) (warn "in io turn with ~S" unseen)
+                        #| nothing |#)))))
+    (unwind-protect
+      (block done
+        (loop repeat unseen do
+          (enqueue-turn vat 
+            (lambda ()
+              #+(or) (warn "in send turn with ~S" unseen)
+              (sb-sys:serve-event 0.1) ;; allow the IO handler to possibly execute
+              (decf unseen)
+              (unless (plusp unseen)
+                (return-from done)))))
+        (top-loop))
+      (remove-exclusive-io-handler handler))
     (values)))

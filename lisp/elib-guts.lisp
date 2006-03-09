@@ -7,39 +7,6 @@
 
 ;;; Currently, this file is just defined as 'stuff moved from elib.lisp that doesn't actually need to be loaded before other files, so as to reduce dependencies requiring recompiling'.
 
-; --- reference mechanics ---
-
-(defun no-such-method (recipient mverb args)
-  (error 'no-such-method-error :recipient recipient 
-                               :mverb mverb
-                               :args args))
-
-(defmethod e-call-dispatch ((rec t) mverb &rest args)
-  "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
-  (elib:miranda rec mverb args (lambda ()
-    (apply #'e-call-match rec mverb args))))
-
-(defmethod e-call-match ((rec t) mverb &rest args)
-  "Final case of E call dispatch - always fails."
-  (no-such-method rec mverb args))
-
-
-
-#+e.instrument.ref-shorten-uses 
-  (defvar *instrument-ref-shorten-kinds* (make-hash-table))
-
-(defun ref-shorten (x)
-  (declare (optimize (speed 3) (space 3) (safety 3) (compilation-speed 0)))
-  #+e.instrument.ref-shorten-uses
-    (incf (gethash (class-of x) *instrument-ref-shorten-kinds* 0))
-  (typecase x
-    ((not ref) x)
-    (forwarding-ref
-      (with-slots (target) x
-        (setf target (ref-shorten target))))
-    (t
-      (%ref-shorten x))))
-
 ; --- native-type guards ---
 
 (defglobal +trivial-value-lists+
@@ -50,6 +17,11 @@
                 (code-char 0))))
 
 (def-vtable cl-type-guard
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    ;; assuming that super behaves DeepFrozen
+    (eql auditor +deep-frozen-stamp+))
+
   (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (cl-type-specifier guard) opt-ejector guard))
   (:|__printOn| (this tw)
@@ -109,10 +81,6 @@
           (apply #'e-call-dispatch super mverb args)))
       (apply #'e-call-dispatch super mverb args))))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen cl-type-guard))
-  ; NOTE: assuming that super behaves deep-frozen
-  t)
-
 (defmethod make-load-form ((object cl-type-guard) &optional environment)
   (declare (ignore environment))
   ;; must be custom in order to ignore allow super and trivial-box being restored as nil
@@ -122,70 +90,19 @@
 
 ; --- Auditing ---
 
-(defmethod e-audit-check-dispatch ((auditor t) (specimen t))
-  nil)
-
 (defglobal +the-audit-checker+ (e-lambda "org.erights.e.elib.slot.auditChecker"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "__auditedBy")) ; XXX move to e.syntax?
   (:|run| (auditor specimen)
-    (as-e-boolean (e-audit-check-dispatch auditor specimen)))))
-
-; --- local resolver ---
-
-(declaim (inline promise-ref-resolve))
-(defun promise-ref-resolve (ref new-target
-    &aux (buffer (slot-value ref 'buffer)))
-  (declare (type promise-ref ref)
-           (type (vector list) buffer))
-  (setf new-target (ref-shorten new-target))
-  (with-ref-transition-invariants (ref)
-    (if (eq new-target ref)
-      (change-class ref 'unconnected-ref :problem (make-condition 'vicious-cycle-error))
-      (change-class ref 'forwarding-ref :target new-target)))
-  
-  ; after change-class, the buffer has been dropped by the ref
-  ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet
-  (loop for (resolver mverb args) across buffer do
-    (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))))
-
-(locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun resolve-race (this target)
-    "Internal function used by the local-resolver vtable."
-    (with-slots (ref) this
-      (if (null ref)
-        +e-false+
-        (progn
-          (promise-ref-resolve ref target)
-          (setf ref nil)
-          +e-true+)))))
-
-(def-vtable local-resolver
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| (if (slot-value this 'ref)
-                     "<Resolver>"
-                     "<Closed Resolver>")))
-  ; XXX resolve/2
-  (:|resolveRace/1| 'resolve-race)
-  (:|resolve| (this target)
-    (unless (e-is-true (resolve-race this target))
-      ;; under sealed exception rules, this is not an information leak
-      (error "this resolver's ref has already been resolved, therefore cannot be resolved to ~A" (e-quote target))))
-  (:|smash| (this problem)
-    "Equivalent to this.resolve(Ref.broken(problem))."
-    ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
-    (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
-  (:|isDone| (this)
-    "Returns whether this resolver's promise has been resolved already."
-    (as-e-boolean (not (slot-value this 'ref)))))
+    (as-e-boolean (approvedp auditor specimen)))))
 
 ;;; --- Basic slots ---
 
 
 ;;; XXX review the actual uses of these various slot implementations; also consider moving them to e-lambdas
+;;; XXX look for ways to reduce the duplication of these common makers
 
 (defun import-uncall (fqn)
   `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
@@ -194,6 +111,7 @@
     (:stamped +deep-frozen-stamp+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
+  (:|asType| () (type-specifier-to-guard 'e-simple-slot))
   (:|run| (value)
     (make-instance 'e-simple-slot :value value))))
 
@@ -201,9 +119,20 @@
     (:stamped +deep-frozen-stamp+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeVarSlot"))
+  (:|asType| () (type-specifier-to-guard 'e-var-slot))
   (:|run| (value)
     (make-instance 'e-var-slot :value value))))
 
+(defglobal +the-make-guarded-slot+ (e-lambda "org.erights.e.elib.slot.makeGuardedSlot"
+    (:stamped +deep-frozen-stamp+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeGuardedSlot"))
+  (:|asType| () (type-specifier-to-guard 'e-guarded-slot))
+  (:|run| (guard value opt-ejector)
+    (make-instance 'e-guarded-slot :value value
+                                   :guard guard
+                                   :opt-ejector opt-ejector))))
+    
 (defclass e-simple-slot () 
   ((value :initarg :value))
   (:documentation "A normal immutable slot."))
@@ -214,6 +143,9 @@
     (format stream "& ~W" (slot-value slot 'value))))
 
 (def-vtable e-simple-slot
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__optUncall| (this)
     `#(,+the-make-simple-slot+ "run" #(,(slot-value this 'value))))
   (:|__printOn| (this tw) ; XXX move to e.syntax?
@@ -233,9 +165,6 @@
     "Returns true."
     (declare (ignore this))
     +e-true+))
-
-(defmethod eeq-is-transparent-selfless ((a e-simple-slot))
-  (declare (ignore a)) t)
 
 (defmethod make-load-form ((a e-simple-slot) &optional environment)
   (make-load-form-saving-slots a :environment environment))  
@@ -289,7 +218,7 @@
   "if this slot is initialized with a value, it is coerced; if initialized with a getter and setter, it is assumed to be correct"
   (declare (ignore slot-names))
   (if value-supplied
-    (apply #'call-next-method 
+    (apply #'call-next-method slot slot-names
       :value (e. guard |coerce| value opt-ejector)
       initargs)
     (call-next-method)))
@@ -310,12 +239,25 @@
 
 (defmethod print-object ((slot e-guarded-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "var & ~W :~W" (e. slot |getValue|) (slot-value slot 'guard))))
+    (format stream "var & ~W :~W" 
+      (if (slot-boundp slot 'getter) 
+        (e. slot |getValue|)
+        '#:<unbound-getter>)
+      (ignore-errors (slot-value slot 'guard)))))
 
+;; XXX this is duplicated with information in the maker functions
+(def-fqn e-simple-slot  "org.erights.e.elib.slot.FinalSlot")
+(def-fqn e-var-slot     "org.erights.e.elib.slot.VarSlot")
+(def-fqn e-guarded-slot "org.erights.e.elib.slot.GuardedSlot")
 
 ;;; --- e-boolean ---
 
 (def-vtable e-boolean
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    "Booleans are atomic."
+    (eql auditor +deep-frozen-stamp+))
+
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (if (e-is-true this)
@@ -339,9 +281,6 @@
     "Boolean exclusive or."
     (e-coercef other 'e-boolean)
     (if (e-is-true this) (e. other |not|) other)))
-
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen e-boolean))
-  t)
 
 ; --- Ejector ---
 
@@ -370,250 +309,6 @@
       (e. tw |print| "<" label " ejector>"))
     (:|run| ()      (%ejector-throw label fn nil))
     (:|run| (value) (%ejector-throw label fn value))))
-
-; --- Equalizer ---
-
-(defconstant +eeq-hash-depth+ 5)
-
-(defun eeq-same-yet-hash (target &optional fringe)
-  "If fringe is nil (the default value), requires a settled target."
-  (let ((result (eeq-internal-sameness-hash target +eeq-hash-depth+ fringe)))
-    (when fringe
-      (loop for prom being each hash-key of fringe do
-        (setf result (logxor result (eeq-identity-hash prom)))))
-    result))
-
-(defun eeq-identity-hash (target) (sxhash target))
-
-(defun eeq-sameness-fringe (original opt-fringe &optional (sofar (make-hash-table)))
-  "returns cl:boolean"
-  ; XXX translation of Java
-  ;(declare (optimize (speed 3) (safety 3)))
-  (when (nth-value 1 (gethash original sofar))
-    ;(format t "original in sofar: ~S" original)
-    (return-from eeq-sameness-fringe t))
-  (let ((obj (ref-shorten original)))
-    (when (nth-value 1 (gethash obj sofar))
-      ;(format t "shortened in sofar: ~S" obj)
-      (return-from eeq-sameness-fringe t))
-    (when (eeq-is-transparent-selfless obj)
-      ;(format t "selfless: ~S" obj)
-      (setf (gethash original sofar) nil)
-      (return-from eeq-sameness-fringe
-        (loop
-          with result = t
-          for elem across (spread-uncall obj)
-          do (setf result (and result (eeq-sameness-fringe elem opt-fringe sofar)))
-             (when (and (not result) (null opt-fringe))
-               (return nil))
-          finally (return result))))
-    (if (ref-is-resolved obj)
-      (progn
-        ;(format t "resolved: ~S" obj)
-        t)
-      (progn
-        ;(format t "fallthru: ~S" obj)
-        (when opt-fringe
-          (setf (gethash obj opt-fringe) nil))
-        nil))))
-
-
-; XXX consider replacing all eeq-is-transparent-selfless methods with audit stamps.
-(defmethod eeq-is-transparent-selfless ((a t))
-  (e-audit-check-dispatch +selfless-stamp+ a))
-
-(defun spread-uncall (a)
-  "assumes the object produces a properly formed uncall"
-  (let ((unspread (e. a |__optUncall|)))
-    (e-coercef unspread 'vector)
-    (concatenate 'vector `#(,(aref unspread 0) ,(aref unspread 1)) (aref unspread 2))))
-
-(defmethod eeq-same-dispatch (left right)
-  (assert (not (eeq-is-transparent-selfless left)))
-  (assert (not (eeq-is-transparent-selfless right)))
-  (assert (not (eql left right)))
-  nil)
-
-(defun eeq-internal-sameness-hash (target hash-depth opt-fringe)
-  ;(declare (optimize (speed 3) (safety 3)))
-  (setf target (ref-shorten target))
-  (if (<= hash-depth 0)
-    (return-from eeq-internal-sameness-hash (cond
-      ((eeq-sameness-fringe target opt-fringe)
-        -1)
-      ((null opt-fringe)
-        (error "Must be settled"))
-      (t
-        -1))))
-  (if (eeq-is-transparent-selfless target)
-    (reduce #'logxor 
-      (loop for a across (spread-uncall target)
-            collect (eeq-internal-sameness-hash a (1- hash-depth) opt-fringe)))
-    (let ((hash (eeq-hash-dispatch target)))
-      (cond
-        (hash
-          hash)
-        ((ref-is-resolved target)
-          ; Selfless objects were caught earlier. Any settled non-Selfless reference has the identity of its underlying object.
-          (eeq-identity-hash target))
-        ((null opt-fringe)
-          (error "Must be settled"))
-        (t
-          ; target is an unresolved promise. Our caller will take its hash into account via opt-fringe.
-          (setf (gethash target opt-fringe) +e-false+)
-          -1)))))
-
-(defmethod eeq-hash-dispatch ((a null))
-  (declare (ignore a))
-  0)
-  
-(defmethod eeq-hash-dispatch (a)
-  (declare (ignore a))
-  nil)
-
-#-(and) (declaim (inline equalizer-trace))
-#-(and) (defun equalizer-trace (&rest args)
-  ; XXX we should have a better, centralized trace system
-  (format *trace-output* "~&; equalizer:")
-  (apply #'format *trace-output* args)
-  (fresh-line))
-
-#+(and) (defmacro equalizer-trace (&rest arg-forms)
-  (declare (ignore arg-forms))
-  '(progn))
-
-(defmacro sort-two-by-hash (a b)
-  "not multiple-evaluation safe"
-  `(when (< (sxhash ,b) 
-            (sxhash ,a))
-     (setf ,a ,b 
-           ,b ,a)))
-
-;; xxx *Currently*, the equalizer being returned from a maker function is left over from when equalizers used buffer vectors. Future changes, such as parameterization, might make the maker useful again later so I haven't bothered to change it.
-
-(locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun make-equalizer () 
-    (declare (optimize (speed 3) (safety 3) (debug 0)))
-    (labels  ((push-sofar (left right sofar)
-                (declare (type (cons list list) sofar))
-                (sort-two-by-hash left right)
-                (cons (cons left  (car sofar))
-                      (cons right (cdr sofar))))
-              
-              (find-sofar (left right sofar)
-                (declare (type (cons list list) sofar))
-                (sort-two-by-hash left right)
-                (some (lambda (sofar-left sofar-right)
-                        (and (eql left  sofar-left)
-                             (eql right sofar-right)))
-                      (car sofar)
-                      (cdr sofar)))
-  
-              (opt-same-spread (left right sofar)
-                "returns e-boolean or nil"
-                (declare (type (cons list list) sofar))
-                (equalizer-trace "enter opt-same-spread ~S ~S ~S" left right sofar)
-                (let ((leftv  (spread-uncall left))
-                      (rightv (spread-uncall right))
-                      (not-different-result +e-true+))
-                  (declare (simple-vector leftv rightv))
-                  (when (/= (length leftv) (length rightv))
-                    ; Early exit, and precondition for the following loop.
-                    (equalizer-trace "exit opt-same-spread lengths ~S ~S" (length leftv) (right leftv))
-                    (return-from opt-same-spread +e-false+))
-                  (loop with sofarther = (push-sofar left right sofar)
-                        for i below (length leftv)
-                        for new-left = (aref leftv i)
-                        for new-right = (aref rightv i)
-                        for opt-result = (opt-same new-left new-right sofarther)
-                        do (cond 
-                             ; If we encountered an unsettled reference,
-                             ; then we can never be sure of sameness
-                             ; (return true), but we might later find out
-                             ; it's different (return false), so instead
-                             ; of returning nil now, we remember that 
-                             ; our result should not be true.
-                             ((null opt-result) 
-                               (equalizer-trace "tagging as not-same at ~S ~S ~S" i new-left new-right)
-                               (setf not-different-result nil))
-                             ; Two same-index elements of the uncalls are
-                             ; different, so the objects must be 
-                             ; different.
-                             ((eq opt-result +e-false+)
-                               (equalizer-trace "exit opt-same-spread different at ~S ~S ~S" i new-left new-right)
-                               (return-from opt-same-spread +e-false+))
-                             (t
-                               (equalizer-trace "opt-same-spread match at ~S ~S ~S" i new-left new-right))))
-                  ; If we reach here, then no definite differences have
-                  ; been found, so we return true or nil depending on
-                  ; whether we encountered an unsettled reference.
-                  (equalizer-trace "exit opt-same-spread with accumulated ~S" not-different-result)
-                  not-different-result))
-                  
-              (opt-same (left right sofar)
-                "returns e-boolean or nil"
-                (declare (type (cons list list) sofar))
-                (equalizer-trace "enter opt-same ~S ~S ~S" left right sofar)
-                ; XXX translation of Java - should be cleaned up to be less sequential
-                (block nil
-                  (when (eql left right)
-                    ; Early exit: primitive reference equality.
-                    (equalizer-trace "exit opt-same eql")
-                    (return +e-true+))
-                  (setf left (ref-shorten left))
-                  (setf right (ref-shorten right))
-                  (when (eql left right)
-                    ; Equality past resolved forwarding refs. At this
-                    ; point, we have caught all same Selfish objects.
-                    (equalizer-trace "exit opt-same ref-eql")
-                    (return +e-true+))
-                  (unless (and (ref-is-resolved left) (ref-is-resolved right))
-                    ; left and right are unresolved and not primitive-eql,
-                    ; so they must be a promise and something else which
-                    ; is not the same (possibly another promise).
-                    (equalizer-trace "exit opt-same unresolved")
-                    (return nil))
-                  (when (find-sofar left right sofar)
-                    ; This breaks cycles in equality comparison. Any
-                    ; pair found by find-sofar has been checked at a
-                    ; smaller recursion depth, and can be considered same
-                    ; at this depth.
-                    (equalizer-trace "exit opt-same sofar loop")
-                    (return +e-true+))
-                  (let ((left-selfless (eeq-is-transparent-selfless left))
-                        (right-selfless (eeq-is-transparent-selfless right)))
-                    (cond
-                      ((and left-selfless right-selfless)
-                        (opt-same-spread left right sofar))
-                      ((or  left-selfless right-selfless)
-                        ; Early exit: if one but not both are selfless,
-                        ; they can't be the same.
-                        (equalizer-trace "exit opt-same selflessness mismatch ~S ~S" left-selfless right-selfless)
-                        +e-false+)
-                      (t
-                        ; this handles what in Java-E are HONORARY selfless
-                        ; objects
-                        (equalizer-trace "exit opt-same via eeq-same-dispatch to come")
-                        (as-e-boolean (eeq-same-dispatch left right))))))))
-      
-      (nest-fq-name ("org.erights.e.elib.tables.makeEqualizer")
-        (e-lambda |equalizer|
-            (:stamped +deep-frozen-stamp+)
-          (:|sameEver| (left right)
-            (let ((result (e. |equalizer| |optSame| left right)))
-              (if result
-                result
-                (error 'insufficiently-settled-error :values (list left right)))))
-        
-          (:|sameYet| (left right)
-            (or (e. |equalizer| |optSame| left right) +e-false+))
-        
-          (:|optSame| (left right)
-            (opt-same left right '(() . ())))
-          
-          (:|makeTraversalKey/1| 'make-traversal-key))))))
-
-(setf *the-equalizer* (make-equalizer))
 
 ; --- Type/FQN mapping miscellaneous ---
 
@@ -694,7 +389,6 @@
 (def-fqn type-desc "org.erights.e.elib.base.TypeDesc")
 (def-fqn message-desc "org.erights.e.elib.base.MessageDesc")
 (def-fqn param-desc "org.erights.e.elib.base.ParamDesc")
-(def-fqn e-simple-slot "org.erights.e.elib.slot.FinalSlot") ; xxx 'Final'?
 (def-fqn local-throw-sealed-box "org.cubik.cle.prim.LocalThrowSealedBox")
 
 (loop for group-type in '(and or) do
@@ -770,7 +464,7 @@
     ; XXX ref-slot will eventually be a weak reference
     (unless opt-handler
       (error "null is not allowed as the handler"))
-    (unless (eeq-is-settled opt-identity)
+    (unless (settledp opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
     (e-lambda "$proxyResolver" ()
       (:|__printOn| (tw)

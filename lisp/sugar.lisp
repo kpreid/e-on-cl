@@ -83,12 +83,13 @@
   (multiple-value-bind (result result-resolver) (make-promise)
     (let ((safe-reactor
            (with-result-promise (safe-reactor)
-             (efun ()
+             (efun (_)
+               (declare (ignore _))
                (if (ref-is-resolved ref)
                  (unless (e-is-true (e. result-resolver |isDone|))
                    (e. result-resolver |resolve| (e<- ereactor |run| ref)))
                  (e<- ref |__whenMoreResolved| safe-reactor))))))
-      (e. safe-reactor |run|)
+      (e. safe-reactor |run| nil)
       result)))
 
 (defmacro when-resolved ((result-var) ref-form &body forms)

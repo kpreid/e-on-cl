@@ -268,8 +268,14 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 ; --- function declarations ---
 
 (declaim (ftype function
+  serve-event
   add-exclusive-io-handler
+  remove-exclusive-io-handler
+  call-with-io-handler-exclusion
 
+  native-pathname
+  native-namestring
+  
   run-program
   external-process-input-stream
   external-process-output-stream

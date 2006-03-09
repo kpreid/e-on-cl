@@ -51,9 +51,9 @@
 (defmacro def-atomic-sameness (type eq-func-form hash-func-form
     &aux (left (gensym)) (right (gensym)))
   `(progn 
-    (defmethod eeq-same-dispatch ((,left ,type) (,right ,type))
+    (defmethod samep-dispatch ((,left ,type) (,right ,type))
       (,eq-func-form ,left ,right))
-    (defmethod eeq-hash-dispatch ((,left ,type))
+    (defmethod same-hash-dispatch ((,left ,type))
       (,hash-func-form ,left))))
 
 (defmacro with-text-writer-to-string ((var) &body body &aux (stream-var (gensym)))
@@ -72,20 +72,39 @@
 
 ; --- Ref protocol ---
 
-; mverb is :|verb/arity|
+
 (defgeneric e-call-dispatch (rec mverb &rest args)
+  (:documentation "Main dispatch function for E calls and other call-like operations.
+
+Shortens REC if needed. MVERB must be either a mangled verb as in E.UTIL:MANGLE-VERB, or a non-keyword symbol that is a magic verb (such as AUDITED-BY-MAGIC-VERB); if a mangled verb, its arity must be equal to the number of ARGS.
+
+Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and not expose non-keyword mverbs to untrusted code. XXX This list of requirements is probably not complete.")
   (declare (optimize (speed 3))))
-(defgeneric e-call-match    (rec mverb &rest args)
+
+(defgeneric e-call-match (rec mverb &rest args)
+  (:documentation "The last method of E-CALL-DISPATCH calls this method with the same arguments, if MVERB is not a Miranda method. This is used for implementing 'matchers'/inheritance.")
   (declare (optimize (speed 3))))
+
 (defgeneric e-send-dispatch (rec mverb &rest args)
+  (:documentation "Used only for REFs' various behaviors on sends; should not be specialized for non-REFs.")
   (declare (optimize (speed 3))))
 
-(defgeneric eeq-hash-dispatch (a))
-(defgeneric eeq-same-dispatch (left right))
-(defgeneric eeq-is-transparent-selfless (a))
+(defgeneric same-hash-dispatch (a))
+(defgeneric samep-dispatch (left right))
 
-; user code must never be able to define methods of this function
-(defgeneric e-audit-check-dispatch (auditor specimen))
+;; XXX move implementation to elib-guts? inline?
+(declaim (ftype (function (t t) boolean) approvedp))
+(defun approvedp (auditor specimen)
+  ;; AUDITED-BY-MAGIC-VERB's argument is guaranteed to be shortened. XXX document this somewhere where implementors of AUDITED-BY-MAGIC-VERB will notice
+  "Whether SPECIMEN has been approved by AUDITOR, as a CL boolean. AUDITOR and SPECIMEN will be shortened. AUDITOR must be near."
+  (setf specimen (ref-shorten specimen))
+  (setf auditor (ref-shorten auditor))
+  (assert (eql (ref-state auditor) 'near)) ;; XXX better way to write this?
+  (and (eql (ref-state specimen) 'near) ;; XXX is E auditing potentially applicable to non-near refs?
+       (e-call-dispatch specimen 
+                        'audited-by-magic-verb 
+                        auditor)
+       t))
 
 (declaim (ftype (function (t (or string symbol character) (or list vector)) t) e-call e-send))
 
@@ -204,18 +223,23 @@ The 'name slot gives a label for the value which was not settled, such as the na
 (defvar *runner* nil)
 
 (defclass vat-checking () 
-  ((expected-vat :initform *vat*
-                 :type (or null vat)))
+  ((vat-checking-expected-vat :type vat))
   (:documentation "Remembers the current vat and checks that it is correct upon later opportunities (currently e-call-dispatch). Should not be relied upon, as it may be made a noop in an optimized mode.
 
 If there is no current vat at initialization time, captures the current vat at the next check time, so that vat-checking instances may be used during pre-vat-creation setup code."))
 
+(defmethod shared-initialize ((this vat-checking) slot-names &key &allow-other-keys)
+  (when *vat*
+    (setf (slot-value this 'vat-checking-expected-vat) *vat*))
+  (call-next-method))
+
 (defmethod e-call-dispatch :before ((rec vat-checking) mverb &rest args)
   (declare (ignore mverb args))
-  (with-slots (expected-vat) rec
-    (if expected-vat
+  (with-slots ((expected-vat vat-checking-expected-vat)) rec
+    (if (slot-boundp rec 'vat-checking-expected-vat)
       (assert (eq *vat* expected-vat))
-      (setf expected-vat *vat*))))
+      (when *vat*
+        (setf expected-vat *vat*)))))
 
 ; --- Ref implementation ---
 
@@ -239,11 +263,6 @@ If there is no current vat at initialization time, captures the current vat at t
   (declare (ignore mverb args))
   (error "e-send-dispatch not implemented by ~W" (type-of x)))
   
-(defmethod e-audit-check-dispatch (auditor (ref ref)
-    &aux (short (ref-shorten ref)))
-  (unless (eql ref short)
-    (e-audit-check-dispatch auditor short)))
-
 (defmethod print-object ((ref ref) stream)
   (let ((state (ref-state ref))
         (*print-circle* t))      ; !!
@@ -304,17 +323,17 @@ If there is no current vat at initialization time, captures the current vat at t
   (values 'broken (slot-value x 'problem)))
 
 (declaim (inline broken-ref-magic))
-(defun broken-ref-magic (mverb args)
+(defun broken-ref-magic (ref mverb args)
   (when (member mverb '(:|__whenMoreResolved/1| :|__whenBroken/1|))
-    (e<- (first args) |run|))
+    (e<- (first args) |run| ref))
   nil)
 
 (defmethod e-call-dispatch ((ref broken-ref) mverb &rest args)
-  (broken-ref-magic mverb args)
+  (broken-ref-magic ref mverb args)
   (error (ref-opt-problem ref)))
 
 (defmethod e-send-dispatch ((ref broken-ref) mverb &rest args)
-  (broken-ref-magic mverb args)
+  (broken-ref-magic ref mverb args)
   ref)
 
 ; - identified ref -
@@ -324,9 +343,9 @@ If there is no current vat at initialization time, captures the current vat at t
              :reader identified-ref-identity)))
 
 (def-atomic-sameness identified-ref
-  (lambda (a b) (eeq-is-same-ever (identified-ref-identity a)
-                                  (identified-ref-identity b)))
-  (lambda (a) (eeq-same-yet-hash (identified-ref-identity a) nil)))
+  (lambda (a b) (samep (identified-ref-identity a)
+                       (identified-ref-identity b)))
+  (lambda (a) (same-hash (identified-ref-identity a))))
 
 (defmethod ref-state :around ((ref identified-ref))
   (let ((result (multiple-value-list (call-next-method))))
@@ -343,7 +362,7 @@ If there is no current vat at initialization time, captures the current vat at t
 (defclass disconnected-ref (broken-ref identified-ref)
   ())
 
-; - promises - 
+;;; - promises - 
 
 (defclass local-resolver (vat-checking)
   ((ref :initarg :ref
@@ -354,9 +373,9 @@ If there is no current vat at initialization time, captures the current vat at t
   (let ((promise (make-instance 'promise-ref)))
     (values promise (make-instance 'local-resolver :ref promise))))
 
-; --- near refs / vats ---
+;;;; --- near refs / vats ---
 
-; - forwarding-ref -
+;;;; - forwarding-ref -
 
 (defclass forwarding-ref (ref)
   ((target :initarg :target))
@@ -441,14 +460,19 @@ If there is no current vat at initialization time, captures the current vat at t
       (label vat)
       (vat-in-turn vat))))
 
-(defmethod enqueue-turn ((runner runner) fun)
-  ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
-  (enqueue (slot-value runner 'sends) fun))
+(defgeneric enqueue-turn (context function))
 
-(defmethod enqueue-turn ((vat vat) fun)
+(defmethod enqueue-turn ((runner runner) function)
+  ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
+  (enqueue (slot-value runner 'sends) function))
+
+(defmethod enqueue-turn ((vat vat) function)
   (enqueue-turn (vat-runner vat)
                 (lambda ()
-                  (call-with-turn fun vat))))
+                  (call-with-turn function vat :label "basic turn"
+                                               :exclude-io t))))
+
+(defgeneric vr-add-io-handler (context target direction function))
 
 (defmethod vr-add-io-handler ((runner runner) target direction function)
   (add-exclusive-io-handler (handler-exclusion-group runner)
@@ -462,7 +486,10 @@ If there is no current vat at initialization time, captures the current vat at t
                      direction
                      (lambda (target*)
                        (assert (eql target target*) () "buh?")
-                       (with-turn (vat :exclude-io nil) 
+                       (with-turn (vat :exclude-io nil 
+                                       :label (format nil "IO handler ~A for ~A"
+                                                      function
+                                                      target)) 
                          (funcall (ref-shorten function) target*)))))
 
 (defun vr-remove-io-handler (handler)
@@ -507,13 +534,17 @@ If there is no current vat at initialization time, captures the current vat at t
           (funcall (dequeue sends))
           (serve-event-with-time-queue time-queue sends 0))))))
 
+(defgeneric enqueue-timed (context time func))
+
 (defmethod enqueue-timed ((runner runner) time func)
   (with-slots (time-queue) runner
     (sorted-queue-put time-queue time func)))
 
 (defmethod enqueue-timed ((vat vat) time func)
-  (enqueue-timed (vat-runner vat) time (lambda ()
-                                         (call-with-turn func vat))))
+  (enqueue-timed (vat-runner vat) time
+                 (lambda ()
+                   ;; XXX future improvement: human-formatted time
+                   (call-with-turn func vat :label (format nil "~A at time ~A" func time)))))
 
 (defun establish-vat (&rest initargs)
   (assert (null *vat*))
@@ -609,15 +640,10 @@ If there is no current vat at initialization time, captures the current vat at t
 ; --- E objects ---
 
 ; A built-for-E object is a FUNCTION expecting (mverb &rest args). It handles its own dispatch, match, and no-such-method.
-;
-; If mverb is *not* in the KEYWORD package, then it is a special verb and invocations of it should not be revealed to user code. Currently, the only special verb is 'audited-by-magic-verb, which is used by the auditing mechanism.
 
 ; These must be defined early as some e-calls to function objects are performed in later loading.
 (defmethod e-call-dispatch ((recip function) mverb &rest args)
   (apply recip mverb args))
-
-(defmethod e-audit-check-dispatch (auditor (specimen function))
-  (funcall specimen 'audited-by-magic-verb auditor))
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
@@ -635,46 +661,53 @@ If there is no current vat at initialization time, captures the current vat at t
                options)
         (nreverse not))))
   
-  (defun vtable-entry-mverb (desc prefix-arity
-      &aux (verb-or-mverb-string (string (first desc))))
-    (if (find #\/ verb-or-mverb-string)
-      (intern verb-or-mverb-string "KEYWORD")
-      (e.util:mangle-verb
-        verb-or-mverb-string
-        (multiple-value-bind (min max)
-            (progn
-              (assert (cddr desc) () "Inferring arity for function vtable entry not supported: ~S" desc)
-              (e.util:lambda-list-arguments-range (second desc)))
-          (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-or-mverb-string min prefix-arity)
-          (assert (= min max) () "Variable arguments not yet supported for vtable-case-entry arity inference")
-          (- min prefix-arity)))))
+  (defun mangled-verb-p (thing)
+    (and (typep thing 'keyword)
+         (find #\/ (symbol-name thing))))
+  
+  (defun smethod-mverb (smethod prefix-arity
+      &aux (verb-or-mverb (first smethod)))
+    (etypecase verb-or-mverb
+      ((and symbol (or (not keyword) (satisfies mangled-verb-p)))
+        verb-or-mverb)
+      (keyword
+        (let ((verb-string (symbol-name verb-or-mverb)))
+          (e.util:mangle-verb
+            verb-string
+            (multiple-value-bind (min max)
+                (progn
+                  (assert (cddr smethod) () "Inferring arity for function smethod not supported: ~S" smethod)
+                  (e.util:lambda-list-arguments-range (second smethod)))
+              (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-string min prefix-arity)
+              (assert (= min max) () "Variable arguments not yet supported for smethod-case-entry arity inference")
+              (- min prefix-arity)))))))
 
-  (defun vtable-case-entry (desc args-sym prefix-args &key type-name
-      &aux (mverb (vtable-entry-mverb desc (length prefix-args))))
+  (defun smethod-case-entry (smethod args-sym prefix-args &key type-name
+      &aux (mverb (smethod-mverb smethod (length prefix-args))))
     "Return a CASE clause whose key is a mangled-verb, suitable for implementing method dispatch for E objects.
 
-The first element of the desc is a string designator for the verb. If it contains a slash, it is treated as a mangled-verb (verb/arity); if not, the second element must be a lambda list, which is used to determine the number of arguments.
+The first element of the smethod is a string designator for the verb. If it contains a slash, it is treated as a mangled-verb (verb/arity); if not, the second element must be a lambda list, which is used to determine the number of arguments.
 
 If there is exactly one further element, then it is an expression (typically #'...) which the returned clause will use in `(apply ,expr ,args-sym).
 
 If there are two or more further elements, then they are a lambda list and implicit-progn forms which will be evaluated.
 
 prefix-args is a list of forms which will be prepended to the arguments of the method body."
-    (assert (not (eq (first desc) 'otherwise)))
+    (assert (not (eq (first smethod) 'otherwise)))
     `((,mverb) 
-      ,(vtable-method-body (rest desc) args-sym prefix-args :type-name type-name :verb-name mverb)))
+      ,(smethod-body (rest smethod) args-sym prefix-args :type-name type-name :verb-name mverb)))
   
-  (defun vtable-function-case-entry (desc prefix-arity &key type-name
-      &aux (mverb (vtable-entry-mverb desc prefix-arity)))
-    (assert (not (eq (first desc) 'otherwise)))
+  (defun smethod-function-case-entry (smethod prefix-arity &key type-name
+      &aux (mverb (smethod-mverb smethod prefix-arity)))
+    (assert (not (eq (first smethod) 'otherwise)))
     `((,mverb)
-      ,(vtable-method-function-form (rest desc) :type-name type-name :verb-name mverb)))
+      ,(smethod-function-form (rest smethod) :type-name type-name :verb-name mverb)))
 
-  (defun vtable-method-body (body args-sym prefix-args &key type-name verb-name)
-    `(apply ,(vtable-method-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args ,args-sym))
+  (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
+    `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args ,args-sym))
   
-  (defun vtable-method-function-form (body &key type-name verb-name)
-    "XXX transfer the relevant portions of vtable-case-entry's documentation here"
+  (defun smethod-function-form (body &key type-name verb-name)
+    "XXX transfer the relevant portions of smethod-case-entry's documentation here"
     (if (= 1 (length body))
       (first body)
       (let* ((name (format nil "~A#~A" type-name verb-name))
@@ -707,14 +740,15 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (*package* (or (symbol-package sym) (find-package :cl))))
               (write-to-string sym))))) 'vector))
                             
-  (defun vtable-entry-message-desc-pair (entry &rest keys &key (prefix-arity 0) &allow-other-keys
-      &aux (mverb (vtable-entry-mverb entry prefix-arity)))
+  (defun smethod-message-desc-pair (smethod &rest keys &key (prefix-arity 0) &allow-other-keys
+      &aux (mverb (smethod-mverb smethod prefix-arity)))
     (vector (symbol-name mverb) 
-            (apply #'vtable-entry-message-desc entry keys)))
+            (apply #'smethod-message-desc smethod keys)))
   
-  (defun vtable-entry-message-desc (entry &key (prefix-arity 0)
-      &aux (mverb (vtable-entry-mverb entry prefix-arity))
-           (impl-desc (rest entry)))
+  (defun smethod-message-desc (smethod &key (prefix-arity 0)
+      &aux (mverb (smethod-mverb smethod prefix-arity))
+           (impl-desc (rest smethod)))
+    (assert (mangled-verb-p mverb))
     (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
       (make-instance 'message-desc
         :verb verb
@@ -723,9 +757,16 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
                   (make-array arity :initial-element 
                     (make-instance 'param-desc))))))
-                            
-  (defun nl-miranda-case-maybe (verb entries &rest body)
-    (unless (find verb entries :key (lambda (e) (vtable-entry-mverb e 0)))
+  
+  (defun smethod-maybe-describe-fresh (function smethod &rest options)
+    "messy."
+    ;; XXX should be more like mverb-is-magic-p
+    (if (typep (first smethod) '(and symbol (not keyword)))
+      nil
+      (list (apply function smethod options))))
+  
+  (defun nl-miranda-case-maybe (verb smethods &rest body)
+    (unless (find verb smethods :key (lambda (e) (smethod-mverb e 0)))
       `(((,verb) ,@body))))
 
   (defmacro %fqn-prefix ()
@@ -742,7 +783,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (defun environment-fqn-prefix (env)
     (macroexpand '(%fqn-prefix) env))
     
-  (defun e-lambda-expansion (method-entries fqn documentation stamp-forms opt-otherwise-body
+  (defun e-lambda-expansion (smethods fqn documentation stamp-forms opt-otherwise-body
       &aux (self-func (make-symbol fqn))
            (self-expr `#',self-func)
            (stamps-sym (gensym "STAMPS"))
@@ -750,16 +791,17 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
            (args-sym   (gensym "ARGS")))
     (declare (string fqn documentation))
     `(let ((,stamps-sym (vector ,@stamp-forms)))
+      (declare (ignorable ,stamps-sym)) ;; will be ignored if there is an explicit audited-by-magic-verb method
       (nest-fq-name (,fqn)
         (labels ((,self-func (,mverb-sym &rest ,args-sym)
           (case ,mverb-sym
-            ,@(loop for desc in method-entries
-                    collect (vtable-case-entry desc args-sym '() :type-name fqn))
-            ,@(nl-miranda-case-maybe :|__printOn/1| method-entries `(destructuring-bind (tw) ,args-sym
+            ,@(loop for smethod in smethods
+                    collect (smethod-case-entry smethod args-sym '() :type-name fqn))
+            ,@(nl-miranda-case-maybe :|__printOn/1| smethods `(destructuring-bind (tw) ,args-sym
               (e-coercef tw +the-text-writer-guard+)
               (e. tw |print| ',(format nil "<~A>" (simplify-fq-name fqn)))
               nil))
-            ,@(nl-miranda-case-maybe :|__getAllegedType/0| method-entries `(destructuring-bind () ,args-sym
+            ,@(nl-miranda-case-maybe :|__getAllegedType/0| smethods `(destructuring-bind () ,args-sym
               (make-instance 'type-desc
                 :doc-comment ',documentation
                 :fq-name ',fqn
@@ -767,34 +809,34 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                 :auditors #()
                 :message-types-v
                   (or-miranda-message-descs
-                    ',(mapcar #'vtable-entry-message-desc method-entries)))))
+                    ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) smethods)))))
             
-            ,@(nl-miranda-case-maybe :|__respondsTo/2| method-entries `(destructuring-bind (verb arity) ,args-sym
+            ,@(nl-miranda-case-maybe :|__respondsTo/2| smethods `(destructuring-bind (verb arity) ,args-sym
               (e-coercef verb 'string)
               (e-coercef arity '(integer 0))
               (as-e-boolean (or
                 (member (e-util:mangle-verb verb arity) 
-                        ',(mapcar (lambda (entry) (vtable-entry-mverb entry 0)) 
-                                  method-entries))
+                        ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
+                                  smethods))
                 (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
-            ((elib:audited-by-magic-verb) (destructuring-bind (auditor) ,args-sym
-              (not (not (find auditor ,stamps-sym :test #'eeq-is-same-ever)))))
+            ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
+              (not (not (find auditor ,stamps-sym :test #'samep)))))
             (otherwise 
               (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
                 ,(let ((fallthrough
                         `(no-such-method ,self-expr ,mverb-sym ,args-sym)))
                   (if opt-otherwise-body
-                    (vtable-method-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
+                    (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
                     fallthrough))))))))
           ,self-expr))))
           
   ) ; end eval-when
 
 (defmacro efun (method-first &body method-rest &environment env)
-  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "_") "" '() nil))
+  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "$_") "" '() nil))
 
 
-(defmacro e-lambda (qname (&rest options) &body entries &environment env)
+(defmacro e-lambda (qname (&rest options) &body smethods &environment env)
   "XXX document this
 
 fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the object itself."
@@ -803,7 +845,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (return-from e-lambda 
       `(with-result-promise (,qname)
          (e-lambda ,(concatenate 'string "$" (symbol-name qname)) 
-                   (,@options) ,@entries))))
+                   (,@options) ,@smethods))))
   (let ((fqn (join-fq-name (environment-fqn-prefix env) (or qname "_")))
         (stamp-forms '())
         (documentation ""))
@@ -811,6 +853,10 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (loop for (key value) on options by #'cddr do
       (case key
         (:stamped
+          (when (find 'audited-by-magic-verb smethods :key (lambda (e) (smethod-mverb e 0)))
+            ;; XXX make this test cleaner
+            ;; XXX this test should be done in e-lambda-expansion instead of here, so that all forms of e-lambdas get it
+            (error "Both ~S option and ~S specified in e-lambda ~S." :stamped 'audited-by-magic-verb fqn))
           (push value stamp-forms))
         (:doc
           (assert (string= documentation "") (documentation) "duplicate :doc option")
@@ -822,29 +868,33 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     ;; Extract 'otherwise' method
     (multiple-value-bind (otherwises specifics)
         (partition (lambda (x) (typep x '(cons (eql otherwise) t)))
-                   entries)
+                   smethods)
       (assert (<= (length otherwises) 1))
       ;; Expansion
       (e-lambda-expansion specifics fqn documentation stamp-forms (rest (first otherwises))))))
   
 ; --- Miranda methods ---
 
-(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem verb-list-sym) &body entries)
+(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem verb-list-sym) &body smethods)
   "The reason for this macro's existence is to allow compiling the miranda-methods into a single function and simultaneously capturing the method names and comments for alleged-type purposes. I realize this is ugly, and I'd be glad to hear of better solutions."
   (multiple-value-bind (otherwises specifics) 
-      (partition (lambda (x) (eq (first x) 'otherwise)) entries)
-    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (entry) (vtable-entry-mverb entry 0)) entries)))
+      (partition (lambda (x) (eq (first x) 'otherwise)) smethods)
+    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (smethod) (smethod-mverb smethod 0)) smethods)))
       (defglobal ,descs-name 
-        ',(mapcar #'vtable-entry-message-desc specifics))
+        ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) specifics))
       (defun ,func-name (,self-var ,mverb-litem ,args-litem else-func)
         (case ,mverb-litem
-          ,@(loop for desc in specifics collect
-              (vtable-case-entry desc args-litem '() :type-name fqn))
+          ,@(loop for smethod in specifics collect
+              (smethod-case-entry smethod args-litem '() :type-name fqn))
           ,@(loop for desc in otherwises collect
               `(otherwise (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" fqn)) ,@(cdr desc)) ,mverb-litem ,args-litem))))))))
  
 ;(declaim (inline miranda))
 (def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args miranda-mverbs)
+  
+    (audited-by-magic-verb (auditor)
+      (declare (ignore auditor))
+      nil)
   
     (:|__printOn| (tw)
       ; FUNCTION-based E-objects must always implement their own __printOn/1.
@@ -875,7 +925,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (:|__optUncall| () nil)
 
     (:|__whenMoreResolved| (reactor)
-      (e<- reactor |run|)
+      (e<- reactor |run| self)
       nil)
 
     (:|__whenBroken| (reactor)
@@ -968,14 +1018,14 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (error "oops: no example of ~S seen yet for alleged type purposes" type)
       #+e.vtable-collect.use-typelist 
       (setf (gethash type *vtable-message-types-cache*)
-        ; xxx this is wrong: it doesn't necessarily return entries in precedence-list order
+        ; xxx this is wrong: it doesn't necessarily return smethods in precedence-list order
         (loop for vtype in *types-with-vtables*
               when (subtypep type vtype)
               append (vtable-local-message-types type)))))
 
 #+e.vtable-collect.use-mop
 (defun vtable-message-types (type)
-  ; Note that we reverse the class precedence list, because the caller of this stuffs it into non-strict ConstMap construction, and so takes the *last* seen vtable entry as the overriding one. xxx perhaps this subtle dependency should be made more robust/explicit?
+  ; Note that we reverse the class precedence list, because the caller of this stuffs it into non-strict ConstMap construction, and so takes the *last* seen smethod as the overriding one. xxx perhaps this subtle dependency should be made more robust/explicit?
   (loop for superclass in (reverse (e-util:class-precedence-list (find-class type)))
     append (vtable-local-message-types (class-name superclass))))
 
@@ -997,7 +1047,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   "See *EXERCISE-REFFINESS*."
   (map-into args (lambda (x) (make-instance 'forwarding-ref :target x)) args))
 
-(defmacro def-vtable (type-spec &body entries
+(defmacro def-vtable (type-spec &body smethods
     &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))
          (vtable-class-var (gensym "VTABLE-CLASS"))
          (eql-instance-var (gensym "EQL-INSTANCE"))
@@ -1016,13 +1066,13 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   
     #+(or e.vtable-collect.use-example e.vtable-collect.use-mop)
     (defmethod vtable-local-message-types ((type-sym (eql ',type-spec)))
-      (list ,@(loop for entry in entries collect
-        (vtable-entry-message-desc-pair entry :prefix-arity 1))))
+      (list ,@(loop for smethod in smethods append
+        (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1))))
     
     #+e.vtable-collect.use-example
     (defmethod vtable-collect-message-types ((specimen ,evaluated-specializer) narrowest-type)
       (if (subtypep ',evaluated-specializer narrowest-type)
-        (list* ,@(mapcar #'(lambda (entry) (vtable-entry-message-desc-pair entry :prefix-arity 1)) entries)
+        (list* ,@(mapcan #'(lambda (smethod) (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1)) smethods)
           (call-next-method))
         (call-next-method)))
     
@@ -1036,8 +1086,8 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (when ,vtable-class-var
       (defmethod opt-local-method-function-for-class ((class (eql ,vtable-class-var)) mverb)
         (case mverb
-          ,@(loop for desc in entries collect
-              (vtable-function-case-entry desc 0 :type-name (prin1-to-string type-spec)))
+          ,@(loop for smethod in smethods collect
+              (smethod-function-case-entry smethod 0 :type-name (prin1-to-string type-spec)))
           (otherwise nil))))
     
     ; XXX gensymify 'args
@@ -1045,16 +1095,16 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (when *exercise-reffiness*
         (reffify-args args))
       (case mverb
-        ,@(loop for desc in entries collect
+        ,@(loop for smethod in smethods collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
-            (vtable-case-entry desc 'args `(rec) :type-name (prin1-to-string type-spec)))
+            (smethod-case-entry smethod 'args `(rec) :type-name (prin1-to-string type-spec)))
         ((:|__respondsTo/2|) (destructuring-bind (verb arity) args
           (e-coercef verb 'string)
           (e-coercef arity '(integer 0))
           (as-e-boolean (or
             (member (e-util:mangle-verb verb arity) 
-                    ',(mapcar (lambda (entry) (vtable-entry-mverb entry 1)) 
-                              entries))
+                    ',(mapcar (lambda (smethod) (smethod-mverb smethod 1)) 
+                              smethods))
             (e-is-true (call-next-method))))))
   
         (otherwise (call-next-method))))))
@@ -1068,7 +1118,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (declare (ignore a))
     ',visible-type))
 
-; xxx it might be useful to enforce the constraint that anything returning t from eeq-is-transparent-selfless must have a specialized observable-type-of, or something to that effect.
+; xxx it might be useful to enforce the constraint that anything stamped +selfless-stamp+ and not a FUNCTION must have a specialized observable-type-of, or something to that effect.
 ;
 ; Or, perhaps, the observable-type-of anything transparent-selfless should be derived from its uncall's maker somehow.
 
@@ -1092,50 +1142,43 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   ; NOTE: Eventually, deep-frozen-stamp & thread-and-process-wide-semantics-safe-stamp => directly sharable across threads, like Java-E does with all Java-PassByCopy.
+  (audited-by-magic-verb (auditor)
+    ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
+    (eql auditor +deep-frozen-stamp+))
   (:|audit| (object-expr witness)
     ; XXX audit/2 is an E-language-dependent interface, but we must implement it to allow E code to employ these stamps. Should we then define a more general interface? 'audit(language, expr, witness)'? Same questions apply to other primitive stamps.
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) 
-                                   (specimen (eql +deep-frozen-stamp+)))
-  t)
-
 (defglobal +selfless-stamp+ (e-lambda
     "org.erights.e.elib.serial.SelflessStamp"
     (:doc "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
   
-While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it."
-     :stamped +deep-frozen-stamp+)
+While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
+  (audited-by-magic-verb (auditor)
+    (cond 
+      ((eql (ref-shorten auditor) +selfless-stamp+)
+        ;; Prevents an infinite recursion:
+        ;;       (transparent-selfless-p some-obj)
+        ;;    -> (approvedp +selfless-stamp+ some-obj)
+        ;;    -> (samep +selfless-stamp+ some-approver-of-obj)
+        ;;    -> (transparent-selfless-p +selfless-stamp+)
+        ;;    -> (approvedp +selfless-stamp+ +selfless-stamp+)
+        ;;    -> (samep +selfless-stamp+ +deep-frozen-stamp+)
+        ;;    -> repeat with +selfless-stamp+ in place of some-obj
+        ;;      
+        ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
+        nil)
+      ((eql (ref-shorten auditor) +deep-frozen-stamp+)
+        ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
+        t)))
   (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defmethod e-audit-check-dispatch ((auditor t) (specimen (eql +selfless-stamp+)))
-  (cond 
-    ((eql (ref-shorten auditor) +selfless-stamp+)
-      ;; Prevents an infinite recursion:
-      ;;       (eeq-is-transparent-selfless some-obj)
-      ;;    -> (e-audit-check-dispatch +selfless-stamp+ some-obj)
-      ;;    -> (eeq-is-same-ever +selfless-stamp+ some-approver-of-obj)
-      ;;    -> (eeq-is-transparent-selfless +selfless-stamp+)
-      ;;    -> (e-audit-check-dispatch +selfless-stamp+ +selfless-stamp+)
-      ;;    -> (eeq-is-same-ever +selfless-stamp+ +deep-frozen-stamp+)
-      ;;    -> repeat with +selfless-stamp+ in place of some-obj
-      ;;      
-      ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
-      ;; 
-      ;; This could instead be defined as an eeq-is-transparent-selfless method, but I expect to remove that generic function eventually to reduce the number of kinds of 'dispatch on e-ref'. -- kpreid 2005-03-16
-      nil)
-    ((eql (ref-shorten auditor) +deep-frozen-stamp+)
-      ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
-      t)
-    (t
-      (call-next-method))))
-
 ; --- utilities referenced below ---
 
-(deftype e-list (element-type &aux (sym (make-symbol (format nil "E-LIST generated predicate for ~A" element-type))))
+(deftype e-list (element-type &aux (sym (make-symbol (format nil "generated predicate for (E-LIST ~A)" element-type))))
   (setf (symbol-function sym) 
         (lambda (specimen)
           (every (lambda (element) (typep element element-type)) specimen)))
@@ -1249,15 +1292,94 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
 (defglobal +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
-; --- Equalizer ---
+;;; --- Additional reference pieces ---
 
-(defvar *the-equalizer*)
+(defun no-such-method (recipient mverb args)
+  (error 'no-such-method-error :recipient recipient 
+                               :mverb mverb
+                               :args args))
 
-(defun eeq-is-same-yet  (a b)
-  (e-is-true (e. *the-equalizer* |sameYet| a b)))
-(defun eeq-is-same-ever (a b)
-  (e-is-true (e. *the-equalizer* |sameEver| a b)))
+(defmethod e-call-dispatch ((rec t) mverb &rest args)
+  "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
+  (elib:miranda rec mverb args (lambda ()
+    (apply #'e-call-match rec mverb args))))
 
-(defun eeq-is-settled (a)
-  (eeq-sameness-fringe a nil))
+(defmethod e-call-match ((rec t) mverb &rest args)
+  "Final case of E call dispatch - always fails."
+  (no-such-method rec mverb args))
 
+
+#+e.instrument.ref-shorten-uses 
+  (defvar *instrument-ref-shorten-kinds* (make-hash-table))
+
+(defun ref-shorten (x)
+  (declare (optimize (speed 3) (space 3) (safety 3) (compilation-speed 0)))
+  #+e.instrument.ref-shorten-uses
+    (incf (gethash (class-of x) *instrument-ref-shorten-kinds* 0))
+  (typecase x
+    ((not ref) x)
+    (forwarding-ref
+      (with-slots (target) x
+        (setf target (ref-shorten target))))
+    (t
+      (%ref-shorten x))))
+
+;;; --- Promise resolution ---
+
+;; NOTE: vtable and resolution is declared now (rather than, say, in elib-guts.lisp) so that later code can make use of promises when being loaded
+
+(declaim (inline promise-ref-resolve))
+(defun promise-ref-resolve (ref new-target
+    &aux (buffer (slot-value ref 'buffer)))
+  (declare (type promise-ref ref)
+           (type (vector list) buffer))
+  (setf new-target (ref-shorten new-target))
+  (with-ref-transition-invariants (ref)
+    (if (eq new-target ref)
+      (change-class ref 'unconnected-ref :problem (make-condition 'vicious-cycle-error))
+      (change-class ref 'forwarding-ref :target new-target)))
+  
+  ; after change-class, the buffer has been dropped by the ref
+  ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet
+  (loop for (resolver mverb args) across buffer do
+    (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))))
+
+(locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+  (defun resolve-race (this target)
+    "Internal function used by the local-resolver vtable."
+    (with-slots (ref) this
+      (if (null ref)
+        +e-false+
+        (progn
+          (promise-ref-resolve ref target)
+          (setf ref nil)
+          +e-true+)))))
+
+(def-vtable local-resolver
+  (:|__printOn| (this tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| (if (slot-value this 'ref)
+                     "<Resolver>"
+                     "<Closed Resolver>")))
+  ; XXX resolve/2
+  (:|resolveRace/1| 'resolve-race)
+  (:|resolve| (this target)
+    (unless (e-is-true (resolve-race this target))
+      ;; under sealed exception rules, this is not an information leak
+      (error "this resolver's ref has already been resolved, therefore cannot be resolved to ~A" (e-quote target))))
+  (:|smash| (this problem)
+    "Equivalent to this.resolve(Ref.broken(problem))."
+    ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
+    (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
+  (:|isDone| (this)
+    "Returns whether this resolver's promise has been resolved already."
+    (as-e-boolean (not (slot-value this 'ref))))) 
+
+;;; --- functions that might be referenced before they're defined in the elib package ---
+
+(declaim (ftype (function (t) t) type-specifier-to-guard))
+
+(declaim (ftype (function (t t) boolean) 
+                same-yet-p samep))
+(declaim (ftype (function (t) boolean) 
+                settledp))

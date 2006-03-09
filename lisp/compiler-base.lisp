@@ -372,10 +372,11 @@
 
 (defmethod make-load-form ((a static-context) &optional environment)
   (make-load-form-saving-slots a :environment environment))
-(defmethod e-audit-check-dispatch ((auditor (eql +deep-frozen-stamp+)) (specimen static-context))
-  t)
   
 (def-vtable static-context
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
@@ -518,7 +519,7 @@ XXX This is an excessively large authority and will probably be replaced."
             (lambda (auditor)
               (when (position auditor 
                               approvers
-                              :test #'elib:eeq-is-same-ever) 
+                              :test #'elib:samep) 
                 t)))))
 
 #| saved old getSlot impl that avoids touching every slot

@@ -28,7 +28,7 @@ def RefAuthor {
         # XXX does this match the semantics of the standard E whenResolved?
         #traceln(`entering whenResolved`)
         def [resultPromise, resultResolver] := makePromise()
-        def safeWhenResolvedReactor() :void {
+        def safeWhenResolvedReactor(_) :void {
           #traceln(`entering safeWhenResolvedReactor (ref is $ref)`)
           if (refIsResolved(ref)) {
             #traceln(`  is-resolved branch ($resultResolver)`)
@@ -45,7 +45,7 @@ def RefAuthor {
             #traceln(`  sent next __whenMoreResolved to $ref`)
           }
         }
-        safeWhenResolvedReactor()
+        safeWhenResolvedReactor(null)
         resultPromise
       }
       to isResolved(r) :any { refIsResolved(r) }
@@ -62,57 +62,3 @@ def RefAuthor {
     }
   }
 }
-
-# This is the Lisp code which this file replaced, preserved in case we have some need to switch back.
-# 
-# (defvar +ref-kit+ (e-lambda "org.cubik.cle.prim.Ref"
-#     (:stamped +deep-frozen-stamp+)
-#   (:|promise/0| ()
-#     (multiple-value-call #'vector (make-promise)))
-#   (:|isBroken/1| (ref)
-#     (as-e-boolean (eql (elib:ref-state ref) 'elib:broken)))
-#   (:|isNear/1| (ref)
-#     (as-e-boolean (eql (elib:ref-state ref) 'elib:near)))
-#   (:|isEventual/1| (ref)
-#     (as-e-boolean (eql (elib:ref-state ref) 'elib:eventual)))
-#   (:|isFar/1| (ref)
-#     (as-e-boolean (and (eql (elib:ref-state ref) 'elib:eventual)
-#                        (elib:ref-is-resolved ref))))
-#   (:|isSettled/1| (ref)
-#     (as-e-boolean (elib:eeq-is-settled ref)))
-#   (:|broken/1| (problem)
-#     (elib:make-unconnected-ref problem))
-#   (:|isPassByCopy/1| (ref)
-#     ; XXX surely this list should be automatically derived from ...something.
-#     (as-e-boolean (typep ref 
-#       '(or (satisfies elib:eeq-is-transparent-selfless)
-#            null
-#            string
-#            character
-#            integer
-#            float64
-#            elib:e-boolean))))
-#   (:|whenResolved/2| (ref reactor &aux done)
-#     ; XXX does this match the semantics of the standard E whenResolved?
-#     (multiple-value-bind (result-promise result-resolver) (make-promise)
-#       (labels ((resolve-loop (now-ref)
-#                 (if (ref-is-resolved ref)
-#                   (unless done
-#                     (setf done t)
-#                     (e. result-resolver |resolve|
-#                       (e. reactor |run| (ref-shorten ref))))
-#                   (e<- now-ref |__whenMoreResolved| (e-lambda 
-#                       "org.cubik.cle.prim.SafeWhenResolvedReactor"
-#                       ()
-#                     (:|run/1| (response)
-#                       (resolve-loop response)))))))
-#         (resolve-loop ref)
-#         result-promise)))
-#   (:|isResolved/1| (ref)
-#     (as-e-boolean (ref-is-resolved ref)))
-#   (:|fulfillment/1| (ref)
-#     (if (ref-is-resolved ref)
-#       ref
-#       (error (or (ref-opt-problem ref)
-#                  "not resolved (Ref#fulfillment)"))))
-#   (:|optProblem/1| #'ref-opt-problem)))

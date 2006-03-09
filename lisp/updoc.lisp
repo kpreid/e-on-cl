@@ -262,7 +262,7 @@
                   (setf (values new-result scope)
                         (elang:eval-e (e. handler |begin| step) scope))))
               (e. handler |takeStreams|)
-              (unless (eeq-is-same-yet new-result nil)
+              (unless (same-yet-p new-result nil)
                 (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
               (call-when-resolved wait-hook (efun (x)
                 ;; timing constraint: whenResolved queueing happens *after* the turn executes; this ensures that stream effects from sends done by this step are collected into this step's results
@@ -456,7 +456,7 @@
         (loop-finish))))
     
   (call-when-resolved
-      (updoc-start (mapcar #'pathname args) :profiler profiler :print-steps print-steps :confine confine)
+      (updoc-start (mapcar #'native-pathname args) :profiler profiler :print-steps print-steps :confine confine)
     (efun (result)
       (declare (ignore result))
       (force-output)
@@ -510,9 +510,10 @@
                           (result resolver (make-promise)))
       ;; XXX this is assortedly bad
       ;; not least, it should not implement its own line-buffer
-      (labels ((take ()
+      (labels ((prompt ()
                  (format t "~&e-on-cl? ")
-                 (force-output)
+                 (force-output))
+               (take ()
                  (e. stdin |whenAvailable| 1 (efun ()
                    (if (not (ref-is-resolved (e. stdin |terminates|)))
                      (let ((ch (aref (e. stdin |read| 1 1 #|XXX ALL|#) 0)))
@@ -522,11 +523,13 @@
                              (funcall stepper (copy-seq buf))
                              (efun (step-result)
                                (declare (ignore step-result))
+                               (prompt)
                                (take)))
                            (setf (fill-pointer buf) 0))
                          (progn
                            (vector-push-extend ch buf)
                            (take))))
                      (e. resolver |resolve| (e. stdin |terminates|)))))))
+        (prompt)
         (take)
         result))))

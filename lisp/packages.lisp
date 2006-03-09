@@ -7,14 +7,16 @@
   (:nicknames :e-util) ; XXX remove use of this nickname
   (:use :cl)
   
-  #.(cl:let ((cl:package (cl:or 
+  #.(cl:let ((cl:package (cl:some #'cl:find-package '( 
                #+(or allegro clisp lispworks) :clos
                #+(or cmu abcl) :mop
                #+sbcl :sb-mop
                #+openmcl :openmcl-mop
-               #+ccl :ccl)))
+               #+ccl :ccl
+               :mop
+               :clos))))
     (cl:when cl:package
-      `(:import-from ,cl:package
+      `(:import-from ,(cl:package-name cl:package)
          :class-precedence-list)))
   
   (:export
@@ -35,6 +37,9 @@
     :io-handler-exclusion-group
     :call-with-io-handler-exclusion
     :with-io-handler-exclusion
+    
+    :native-pathname
+    :native-namestring
     
     :run-program
     :external-process-input-stream
@@ -128,6 +133,7 @@
     :native-e-slot
     :+the-make-simple-slot+
     :+the-make-var-slot+
+    :+the-make-guarded-slot+
     
     :cl-type-fq-name
     :cl-type-fq-expr :cl-type-simple-expr
@@ -151,11 +157,11 @@
     :+the-exception-guard+
     :+the-flex-list-guard+
     
+    :approvedp
     :+the-audit-checker+
     :audited-by-magic-verb
     :+deep-frozen-stamp+
     :+selfless-stamp+
-    :e-audit-check-dispatch
    
     :+e-false+ :+e-true+ :e-is-true :as-e-boolean :e-boolean
     
@@ -197,15 +203,14 @@
     :nest-fq-name :environment-fqn-prefix
     
     :make-equalizer
-    :eeq-is-settled
-    :eeq-is-same-ever
-    :eeq-is-same-yet
-    :eeq-same-yet-hash
+    :settledp
+    :samep
+    :same-yet-p
+    :transparent-selfless-p
+    :same-hash
     :traversal-key
-    :eeq-hash-dispatch
-    :eeq-same-dispatch
-    :eeq-is-transparent-selfless
     :def-atomic-sameness
+    :insufficiently-settled-error
     
     :source-span :+the-make-source-span+
     :twine :+the-make-twine+
@@ -224,6 +229,7 @@
 (e.util:defglobals
   elib:+the-make-simple-slot+
   elib:+the-make-var-slot+
+  elib:+the-make-guarded-slot+
 
   elib:+the-any-map-guard+
   elib:+the-flex-list-guard+
@@ -264,7 +270,7 @@
   e.elib:join-fq-name
   e.elib:make-equalizer
   e.elib:cl-type-simple-expr
-  e.elib:eeq-same-yet-hash
+  e.elib:same-hash
   e.elib:make-text-writer-to-cl-stream
   e.elib:e-import))
 

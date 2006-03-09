@@ -121,8 +121,6 @@ def makeIOScope implements DeepFrozen {
           
     ], "__unsafeImportScope$")
     
-    unsafeImports with= ("org.cubik.cle.boot.privilegedScope", ioScope)
-  
     if (exits =~ [=> &stdin, => &stdout, => &stderr] | _) {
       unsafeImports withSlot= ("org.erights.e.develop.exception.PrintStreamWriter", 
         makeLazySlot(thunk{
