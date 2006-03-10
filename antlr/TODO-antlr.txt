@@ -16,9 +16,6 @@ Parsing bugs:
     
   Bad parse trees:   
     "interfaceExpr" rule comes out with a node type of "interface" even though there's a setType action (huh?)
-    x::y expression - parses as three siblings
-    Any type of CallExpr followed by [] indexing, e.g. x()[0] or even x[0][1] - produces a tree like (x "get" 0 "get" 1) instead of ((x "get" 0) "get" 1)
-    a <- (b) -- produces a 2-child SendExpr, thus putting b in the verb position. Should produce a "run" verb node or a "FunctionSendExpr".
 
 Meta:
   Allow retrieving pragma change information, or have a state object which holds it, for persistence across REPL inputs as E-on-Java does
