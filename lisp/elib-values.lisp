@@ -19,6 +19,35 @@
 
 (def-class-opaque string)
 
+(defun split-by-runs (pattern sep source)
+  "String splitting algorithm, written so as to be usable on string and non-string Twines."
+  (e-coercef sep 'string)
+  (when (string= sep "")
+    (error "split: separator may not be empty"))
+  (let* ((nsep (loop for pos = (search sep pattern) 
+                             then (search sep pattern :start2 (+ (length sep) pos))
+                     while pos count t))
+         (result (make-array (1+ nsep) 
+                             :element-type (if (stringp source) 'string 'twine)
+                             :initial-element ""))
+         (start 0)
+         (rfill 0))
+    (labels ((output (&key (start 0) (end nil))
+               (setf (aref result rfill) 
+                       (e. source |run| start (or end (length pattern))))
+               (incf rfill))
+             (pick ()
+               (let ((pos (search sep pattern :start2 start)))
+                 (cond 
+                   ((null pos) (output :start start :end pos)
+                               nil)
+                   (t
+                     (output :start start :end pos)
+                     (setf start (+ pos (length sep)))
+                     t)))))
+      (loop while (pick))
+      result)))
+
 (def-vtable string
   (audited-by-magic-verb (this auditor)
     "Strings are atomic, but unlike other vectors, *not* Selfless."
@@ -73,28 +102,7 @@
   ; XXX simplify structure of both split and replaceAll
   (:|split| (this sep)
     "Return a list of substrings of this string which are separated by the string 'sep'. Will return empty elements at the end. The empty string results in a one-element result list."
-    (e-coercef sep 'string)
-    (when (string= sep "")
-      (error "split: separator may not be empty"))
-    (let* ((nsep (loop for pos = (search sep this) then (search sep this :start2 (+ (length sep) pos))
-                       while pos count t))
-           (result (make-array (1+ nsep) :element-type 'string :initial-element ""))
-           (start 0)
-           (rfill 0))
-      (labels ((output (source &key (start 0) (end nil))
-                 (setf (aref result rfill) (subseq source start end))
-                 (incf rfill))
-               (pick ()
-                 (let ((pos (search sep this :start2 start)))
-                   (cond 
-                     ((null pos) (output this :start start :end pos)
-                                 nil)
-                     (t
-                       (output this :start start :end pos)
-                       (setf start (+ pos (length sep)))
-                       t)))))
-        (loop while (pick))
-        result)))
+    (split-by-runs this sep this))
 
   (:|rjoin| (this items)
     "Return the strings in 'items' concatenated and separated by this string.
@@ -149,7 +157,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (loop while (pick))
         result)))
   
-  ;; XXX all Twine methods: getOptSpan/0, getParts/0, ...
+  ;; XXX all Twine methods
+  (:|asFrom| (this uri)
+    (e. +the-make-twine+ |fromString| 
+      this 
+      (e.elib.tables::source-span-for-string this uri)))
+  (:|getOptSpan| (this) 
+    (declare (ignore this))
+    nil)
   (:|isBare| (this)
     "Return true, because this is an ordinary String."
     (declare (ignore this))

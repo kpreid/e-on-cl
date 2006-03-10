@@ -105,3 +105,32 @@ Matching composite twine
 
   ? (twine + __makeTwine.fromString("$aardvark$", makeSourceSpan("http://example.org/t", true, 1, 10, 1, 19))).getOptSpan()
   # value: <http://example.org/t#:span::1:0::1:19>
+
+
+--- asFrom
+
+Tests derived from some poking at the E-on-Java repl
+
+  ? def t := "abc\ndef".asFrom("foo:bar")
+  # value: "abc
+  #        def"
+  
+  ? t.getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:2>
+  
+  ? t.split("\n")[0].getOptSpan()
+  # value: <foo:bar#:span::1:0::1:2>
+  
+  ? "abcdef".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:span::1:0::1:5>
+  
+  ? "abcdef\n".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:span::1:0::1:6>
+  
+  ? "abcdef\nghijkl".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:5>
+  
+  ? "abcdef\nghijkl".asFrom("foo:bar")(0, 6).getOptSpan()
+  # value: <foo:bar#:span::1:0::1:5>
+  
+  ? 
