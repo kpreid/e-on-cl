@@ -20,28 +20,32 @@
               :displaced-to string
               :displaced-index-offset start))
 
-(defun newline-op (function text &rest options)
+;; XXX make this make sense
+(defun drop-newline-op (function text  &rest options)
   (apply function #\Newline text :end (1- (length text)) options))
+(defun all-newline-op (function text  &rest options)
+  (apply function #\Newline text options))
 
-(defun moved-text-position (line column text)
+(defun moved-text-position (line column text &optional (newline-op #'all-newline-op))
   (flet ()
     (cond
       ((= (length text) 0) 
        (values line column))
-      ((not (newline-op #'find text)) 
+      ((not (funcall newline-op #'find text)) 
        (values line (+ column (length text))))
       (t
-       (values (+ line (newline-op #'count text))
-               (- (length text) (1+ (newline-op #'position text :from-end t))))))))
+       (values (+ line (funcall newline-op #'count text))
+               (- (length text) (1+ (funcall newline-op #'position text :from-end t))))))))
 
 (defun source-span-for-string (text uri)
-  (multiple-value-bind (end-line end-col)
-      (moved-text-position 1 0 text)
-    (e. +the-make-source-span+ |run| 
-      uri
-      (as-e-boolean (not (newline-op #'find text)))
-      1        0
-      end-line (1- end-col))))
+  (when (plusp (length text))
+    (multiple-value-bind (end-line end-col)
+        (moved-text-position 1 0 text #'drop-newline-op)
+      (e. +the-make-source-span+ |run| 
+        uri
+        (as-e-boolean (not (drop-newline-op #'find text)))
+        1        0
+        end-line (1- end-col)))))
 
 ; --- SourceSpan for Twine ---
 
@@ -264,19 +268,25 @@
   (:|run| (this start end)
     (e-coercef start 'integer)
     (e-coercef end 'integer)
-    (make-instance 'leaf-twine 
-      :string (e. (twine-string this) |run| start end)
-      :span (let* ((span (slot-value this 'span))
-                   (string (twine-string this))
-                   (nsl (+ (e. span |getStartLine|) (count #\Newline string :end start)))
-                   (nel (- (e. span |getEndLine|) (count #\Newline string :start end))))
+    (e. +the-make-twine+ |fromString|
+      (e. (twine-string this) |run| start end)
+      (when (plusp (- end start))
+        (let* ((span (slot-value this 'span))
+               (string (twine-string this))
+               (drun (displaced-subseq string start end)))
+          (multiple-value-bind (run-start-line run-start-col)
+              (moved-text-position (span-start-line span) 
+                                   (span-start-col span) 
+                                   (displaced-subseq string 0 start))
+            (multiple-value-bind (run-end-line run-end-col)
+                (moved-text-position run-start-line run-start-col drun)
+              ;(print (list run-start-line run-start-col run-end-line run-end-col))
+              ;(force-output)
               (e. +the-make-source-span+ |run| 
                 (e. span |getUri|)
-                (as-e-boolean (= nsl nel))
-                nsl
-                (+ (e. span |getStartCol|) (- start (1+ (or (position #\Newline string :from-end t :end start) -1))))
-                nel
-                (- (e. span |getEndCol|) (- (or (position #\Newline string :from-end t :start end) 0) end)))))))
+                (as-e-boolean (not (all-newline-op #'find drun)))
+                run-start-line run-start-col
+                run-end-line (1- run-end-col)))))))))
 
 
 (defglobal +the-make-twine+ (e-lambda "org.erights.e.elib.tables.makeTwine"
@@ -295,12 +305,17 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (coerce (nreverse values) 'string)))
   (:|fromString| (string span)
     (e-coercef string 'string)
-    (e-coercef span 'source-span)
-    (unless (or (not (span-one-to-one-p span))
-                (= (length string) (- (1+ (span-end-col span)) 
-                                      (span-start-col span))))
-      (error "the source span, ~A, must match the size of the string, ~S, or be not one-to-one" (e-quote span) (length string)))
-    (make-instance 'leaf-twine :string string :span span))))
+    (e-coercef span '(or null source-span))
+    (if span
+      (progn 
+        (unless (length string)
+          (error "an empty twine may not have a source span"))
+        (unless (or (not (span-one-to-one-p span))
+                    (= (length string) (- (1+ (span-end-col span)) 
+                                          (span-start-col span))))
+          (error "the source span, ~A, must match the size of the string, ~S, or be not one-to-one" (e-quote span) (length string)))
+        (make-instance 'leaf-twine :string string :span span))
+      string))))
 
 ; --- Primitive safe mutable array access ---
 
