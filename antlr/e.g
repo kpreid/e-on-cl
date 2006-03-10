@@ -93,6 +93,9 @@ tokens {
     CatchExpr;
     FinallyExpr;
 
+    FunCallExpr;
+    FunSendExpr;
+    GetExpr;
     ExitExpr;
     WhileExpr;
     SwitchExpr;
@@ -537,19 +540,19 @@ postfix:        call
             // TODO deal with properties
             ;
 
-call:   p:prim
-        (!  a:parenArgs         { ##=#([CallExpr,"run"], p, [STRING,"run"], a); }
+call:   prim
+        (   { ##=#([FunCallExpr], ##); } parenArgs
         // XXX reformat this to be clearer
         |   "."^ verb  { ##.setType(CallExpr); } 
                        (("(") => parenArgs
                        | { ##=#([CurryExpr], ##);})
-        |!  "["^ l:argList "]"! { ##=#([CallExpr,"get"], p, [STRING,"get"], l); }
+        |   "["^ argList "]"! {##.setType(GetExpr);}
         |   "<-"^ { ##.setType(SendExpr); }
-                  (! a2:parenArgs { ##=#([SendExpr,"run"], p, [STRING,"run"], a2); }
+                  ( parenArgs { ##.setType(FunSendExpr); }
                   | verb (("(") => parenArgs
                          | { ##=#([CurryExpr], ##);}) 
-                  | "::" ("&")? prop)
-        |   "::" ("&")? prop
+                  | "::"^ ("&")? prop)
+        |   "::"^ ("&")? prop
         )*
     ;
 

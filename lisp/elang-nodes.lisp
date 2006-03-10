@@ -812,13 +812,13 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defmethod require-kernel-e progn ((node |DefineExpr|) ejector
     &aux (pattern (funcall (opt-node-property-getter node :|pattern|)))
-         (r-value (funcall (opt-node-property-getter node :|pattern|)))
+         (r-value (funcall (opt-node-property-getter node :|rValue|)))
          (opt-ejector-expr (funcall (opt-node-property-getter node :|optEjectorExpr|))))
   (when (usesp r-value pattern)
-    (ejerror ejector "define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
+    (ejerror ejector "kernel define expr may not use definitions from r-value expr (~A) in pattern (~A)" (e-quote r-value) (e-quote pattern)))
   (when (and opt-ejector-expr
              (usesp opt-ejector-expr pattern))
-    (ejerror ejector "define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
+    (ejerror ejector "kernel define expr may not use definitions from ejector expr (~A) in pattern (~A)" (e-quote opt-ejector-expr) (e-quote pattern))))
 
 (define-kernel-e-type-constraints |AssignExpr|
   (:|noun| |NounExpr|))

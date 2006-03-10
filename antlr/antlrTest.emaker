@@ -1,0 +1,56 @@
+/** For debugging. Usage:
+
+$ rlwrap rune -cpa e-on-cl/antlr/
+? def [pp, c] := <import:antlrTest>(<unsafe>, stdout, println)
+? c(pp("E.code(goes, here)"))
+
+*/
+def setup(<unsafe>, stdout, println) :any {
+  #def <eantlr> := <unsafe:org.erights.e.elang.syntax.antlr.*>
+  def <eantlr> := <unsafe>
+  def <antlr> := <unsafe:antlr.*>
+  def makeEParser := <eantlr:makeEParser>
+  def makeEALexer := <eantlr:makeEALexer>
+  def makeQuasiLexer := <eantlr:makeQuasiLexer>
+  def makeTokenMultiBuffer := <antlr:makeTokenMultiBuffer>
+  def makeTokenStreamSelector := <antlr:makeTokenStreamSelector>
+  def makeDumpASTVisitor := <antlr:makeDumpASTVisitor>
+    
+  def pp(text) :any {
+    def fname := "ktest"
+    def elexer := makeEALexer(<import:java.io.StringReader>(text))
+    def qlexer := makeQuasiLexer(elexer.getInputState())
+    def tb := makeTokenMultiBuffer(["e", "quasi"], [elexer, qlexer])
+    elexer.setSelector(tb)
+    qlexer.setSelector(tb)
+    elexer.setFilename(fname)
+    qlexer.setFilename(fname)
+    
+    def parser := makeEParser(tb)
+    parser.setFilename(fname)
+    
+    parser.start()
+    def ast := parser.getAST()
+    def visitor := makeDumpASTVisitor()
+    visitor.visit(ast)
+    if (ast != null) {
+      println(ast.toStringTree())
+    }
+    return ast
+  }
+  
+  pragma.enable("accumulator")
+  def tokenSymbols := accum [] for tn in makeEParser.get_tokenNames() { _.with("|" + tn.replaceAll("\\", "\\\\").replaceAll("|", "\\|") + "|") }; null
+  
+  def c(var ast) :void {
+    while (ast != null) {
+      stdout.print(" ((", tokenSymbols[ast.getType()], " ")
+      stdout.quote(ast.getText())
+      stdout.print(")")
+      c(ast.getFirstChild())
+      stdout.print(")")
+      ast := ast.getNextSibling()
+    }
+  }
+  return [pp, c]
+}

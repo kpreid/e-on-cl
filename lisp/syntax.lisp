@@ -794,7 +794,10 @@ XXX make precedence values available as constants"
           e.grammar::|CoerceExpr|
           e.grammar::|CurryExpr|
           e.grammar::|ForExpr|
-          e.grammar::|ForwardExpr| 
+          e.grammar::|ForwardExpr|
+          e.grammar::|FunCallExpr|
+          e.grammar::|FunSendExpr|
+          e.grammar::|GetExpr|
           e.grammar::|HideExpr|
           e.grammar::|IfExpr|
           e.grammar::|If1Expr|
@@ -1000,7 +1003,8 @@ XXX make precedence values available as constants"
                              (coerce (nreverse matchers) 'vector)))))
         ((e.grammar::|EMethod|)
           (let ((doc-comment ""))
-            (ast-node-bind (stag stext schildren) (first in-children) tag
+            (ast-node-bind (stag stext schildren) (first in-children)
+              (declare (ignore schildren))
               (when (eql stag 'e.grammar::|DOC_COMMENT|)
                 ;; ick
                 (setf doc-comment stext)
@@ -1025,7 +1029,7 @@ XXX make precedence values available as constants"
                   (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 1)) "\"")
                   (null out-children))
               (cons 'op text))
-            (t (error "don't know what to do with ~S <- ~A" expr (write-to-string path :length 5))))))))))
+            (t (error "don't know what to do with ~S <- ~A" ast-node (write-to-string path :length 5))))))))))
 
 ; --- Parse cache files ---
  

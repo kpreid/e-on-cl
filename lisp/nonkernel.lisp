@@ -15,6 +15,9 @@
     :|ExitExpr|
     :|ForExpr|
     :|ForwardExpr|
+    :|FunCallExpr|
+    :|FunSendExpr|
+    :|GetExpr|
     :|If1Expr|
     :|InterfaceExpr|
     :|ListExpr|
@@ -465,6 +468,21 @@
       (make-instance '|SeqExpr| :elements (list
         (mn '|PromiseVarExpr| |noun| resolver-noun)
         resolver-noun))))
+
+(defemacro |FunCallExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+                                    (|args| t (e-list |EExpr|)))
+                               (:rest-slot t)
+  (apply #'mn '|CallExpr| |recipient| "run" |args|))
+
+(defemacro |FunSendExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+                                    (|args| t (e-list |EExpr|)))
+                               (:rest-slot t)
+  (apply #'mn '|SendExpr| |recipient| "run" |args|))
+
+(defemacro |GetExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+                                (|args| t (e-list |EExpr|)))
+                               (:rest-slot t)
+  (apply #'mn '|CallExpr| |recipient| "get" |args|))
 
 (defemacro |If1Expr| (|EExpr|) ((|test| t |EExpr|) 
                                 (|then| t |EExpr|))
