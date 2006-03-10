@@ -110,12 +110,12 @@
           (when (e-is-true (e. sub |exists|))
             sub)))
       (:|getText| ()
-        ;; XXX doesn't actually add twine info
         (read-entire-file pathname))
       (:|getTwine| ()
-        ;; XXX doesn't actually add twine info
-        ;; (e. (e. |file| |getText|) |asFrom| ...)
-        (read-entire-file pathname))
+        (e. (e. |file| |getText|)
+            |asFrom| 
+            ;; XXX we should have a formal way to retrieve the URL
+            (concatenate 'string "file://" (e. |file| |getPath|))))
       (:|textReader| (&aux (stream (open pathname :if-does-not-exist :error)))
         ; XXX external format, etc.
         (e-lambda "textReader" (:doc "Java-E compatibility")

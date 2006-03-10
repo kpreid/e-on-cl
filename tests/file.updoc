@@ -31,6 +31,9 @@
   ? runeScriptFile.getTwine().split("\n")[0]
   # value: "#!/bin/bash"
 
+  ? E.toQuote(runeScriptFile.getTwine().split("\n")[0].getOptSpan()).replaceAll(homeFragment, "<home>")
+  # value: "<file:///<home>/clrune#:span::1:0::1:10>"
+
  directory listing
  
   ? for name ? (name !~ `.@_`) => subfile in home["jlib"] { 
