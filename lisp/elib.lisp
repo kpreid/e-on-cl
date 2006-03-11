@@ -445,8 +445,8 @@ If there is no current vat at initialization time, captures the current vat at t
            :type runner)
    (in-turn :initform nil
             :accessor vat-in-turn
-            :type boolean
-            :documentation "Whether some type of top-level turn is currently being executed in this vat. Used for consistency checking.")
+            :type t
+            :documentation "Whether some type of top-level turn is currently being executed in this vat; if not NIL, is a label for the turn. Used for consistency checking.")
    (safe-scope :initform (e.knot:make-safe-scope)
                :accessor vat-safe-scope)
    (label :initarg :label

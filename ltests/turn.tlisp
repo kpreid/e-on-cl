@@ -25,7 +25,7 @@
 
 
 (defun stream-handler-target (stream &key strict)
-  ;; XXX this belongs in e.util
+  ;; XXX this belongs in e.util with the rest of the serve-event layer
   #+sbcl 
     (etypecase stream
       (synonym-stream
@@ -33,7 +33,7 @@
           (error "can't strictly make a target from synonym stream ~S" stream)
           (stream-handler-target (symbol-value (synonym-stream-symbol stream)))))
       (sb-sys:fd-stream (sb-sys:fd-stream-fd stream)))
-  #-sbcl (error "not implemented"))
+  #-sbcl stream)
 
 #-(and) ;; XXX *TEMPORARILY* disabled because it leaks fds
 (deftest exclusive-io-handler-pound
@@ -93,7 +93,7 @@
           (enqueue-turn vat 
             (lambda ()
               #+(or) (warn "in send turn with ~S" unseen)
-              (sb-sys:serve-event 0.1) ;; allow the IO handler to possibly execute
+              (e.util:serve-event 0.1) ;; allow the IO handler to possibly execute
               (decf unseen)
               (unless (plusp unseen)
                 (return-from done)))))
