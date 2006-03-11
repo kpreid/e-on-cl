@@ -5,6 +5,7 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def root := <import:org.cubik.cle.root>
 
 def makeListShell
 
@@ -39,7 +40,7 @@ bind makeListShell implements EventuallyDeepFrozen {
   }
 
   to run(self, impl) {
-    def list {
+    def list extends root[self] {
     
       method get(i) { impl.get(i) }
       method size() { impl.size() }

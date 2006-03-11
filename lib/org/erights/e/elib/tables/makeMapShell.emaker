@@ -7,6 +7,7 @@ pragma.disable("explicit-result-guard")
 def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def root := <import:org.cubik.cle.root>
 
 def makeMapShell
 
@@ -42,7 +43,7 @@ bind makeMapShell implements EventuallyDeepFrozen {
   }
 
   to run(self, impl) {
-    def map { # implements Map
+    def map extends root[self] { # implements Map
       
       # XXX implement returning Map interface documentation in our alleged type?
       

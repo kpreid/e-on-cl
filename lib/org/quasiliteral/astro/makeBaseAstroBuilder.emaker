@@ -6,6 +6,7 @@ pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def root := <import:org.cubik.cle.root>
 
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 def AstroTag := makeAstroTag.asType()
@@ -20,7 +21,7 @@ def makeBaseAstroBuilder implements DeepFrozen {
          [=> BAstroArg := any,
           => BAstro := any]) {
 
-    def baseAstroBuilder implements EventuallyDeepFrozen { # implements AstroBuilder
+    def baseAstroBuilder extends root[self] implements EventuallyDeepFrozen { # implements AstroBuilder
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

@@ -1,0 +1,21 @@
+# Copyright 2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+'root' is used to produce more helpful no-such-method errors in objects using delegation. Without it, the error report uses the FQN of the last object in the 'extends' chain, making it more difficult to understand the error (especially in the presence of tail-call elimination).
+
+  ? def root := <import:org.cubik.cle.root>
+  # value: <root>
+  
+  ? def self; def r := root[self]; def a1 extends r {}
+  # value: <a1>
+  
+  ? bind self := def a2 extends a1 {}
+  # value: <a2>
+  
+  ? r
+  # value: <delegation root for <a2>>
+  
+  XXX wording of message to be revised
+  ? a2.aardvarks(9)
+  # problem: the __main$a2__C <a2> does not understand aardvarks/1 [9]
+  
