@@ -407,23 +407,20 @@
         ;; if we reach here, the ejector was used
         ,remaining-code))))
 
-(define-sequence-expr |ObjectExpr| (layout result doc-comment qualified-name auditor-exprs script
+(define-inline-expr |ObjectExpr| (layout doc-comment qualified-name auditor-exprs script
     &aux (auditor-vars (loop for nil across auditor-exprs collect (gensym "AUDITOR")))
          (fqn (updating-fully-qualify-name layout qualified-name)))
-  (values
-    (append
-      (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
-            for auditor-var-cell on auditor-vars
-            append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
-      `((,result
-         ,(object-form +seq-object-generators+
-                       layout 
-                       (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs script))
-                       doc-comment
-                       auditor-vars
-                       script
-                       fqn))))
-    layout))
+  (sequence-to-form
+    (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
+          for auditor-var-cell on auditor-vars
+          append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
+    (object-form +seq-object-generators+
+                 layout 
+                 (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs script))
+                 doc-comment
+                 auditor-vars
+                 script
+                 fqn)))
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values

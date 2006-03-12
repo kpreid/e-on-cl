@@ -679,7 +679,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (! (e. builder |scopeRead| node)))
 
 (def-scope-rule |ObjectExpr|
-  (seq (flatten :|auditorExprs|) :|script|))
+  (hide (seq (flatten :|auditorExprs|) :|script|)))
 
 (def-scope-rule |SeqExpr|
   (flatten :|subs|))

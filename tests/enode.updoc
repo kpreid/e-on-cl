@@ -295,6 +295,10 @@ ObjectExpr, EScript
   ? emptyObject.staticScope()
   # value: <[] := [] =~ [] + var []>
   
+  Implements expression is not visible
+  ? makeObjectExpr(null, "foo", "bar", [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null)], emptyScript, null).staticScope()
+  # value: <[] := ["b"] =~ [] + var []>
+  
   ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
   # value: e??` {
   #            
