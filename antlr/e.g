@@ -190,6 +190,10 @@ public void reportError(RecognitionException ex) {
 // pocket mechanisms: add a boolean, and test in the grammar with {foo}?
 private java.util.Properties myPocket = new java.util.Properties();
 
+protected boolean is(String v) {
+    return returnAST.getText().equals(v);
+}
+
 }
 
 
@@ -219,6 +223,7 @@ setPocket![Token key, String value]: {
 } ;
 
 
+
 start:     br (topSeq)? ;
 //start:     (module (";"! | LINESEP!) | LINESEP!)* (topSeq)? ;
 //module: !;// placeholder for expressions that must be at the top of the file
@@ -227,15 +232,17 @@ topSeq:     topExpr (((";"! | LINESEP!) (topExpr)?)+ {##=#([SeqExpr],##);}  )? ;
 
 topExpr:    eExpr | pragma ;
 
-pragma!:     "pragma"^ "."!
-            ( "enable" "("! en:STRING ")"!    setPocket[en, "enable"]!
-            | "disable" "("! dis:STRING ")"!  setPocket[dis, "disable"]!
-            | "warn" "("! wn:STRING ")"!      setPocket[wn, "warn"]!
-            | "syntax" pocket["syntax"]!  );
+pragma!:     "pragma"^ "."! verb
+            ( {is("enable")}? "("! en:STRING ")"!    setPocket[en, "enable"]!
+            | {is("disable")}? "("! dis:STRING ")"!  setPocket[dis, "disable"]!
+            | {is("warn")}? "("! wn:STRING ")"!      setPocket[wn, "warn"]!
+            | {is("syntax")}? pocket["syntax"]!  );
 
-metaExpr:  "meta"^ "."!
-            (("getState"! | "scope"!) {##=#([MetaStateExpr,"MetaScope"]);}
-             | "context"! {##=#([MetaContextExpr,"MetaContext"]);} ) "("! ")"! ;
+metaExpr:  "meta"^ "."! verb
+            (   {is("getState")}? {##=#([MetaStateExpr,"MetaScope"]);}
+            |   {is("scope")}?    {##=#([MetaStateExpr,"MetaScope"]);}
+            |   {is("context")}?  {##=#([MetaContextExpr,"MetaContext"]);} )
+            "("! ")"! ;
 
 br:         (LINESEP!)* ;
 
@@ -248,7 +255,7 @@ basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
 
 ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
             ("else"! (ifExpr | body ) {##.setType(IfExpr);}
-             |                        {##.setType(If1Expr);})              
+             |                        {##.setType(If1Expr);})
             ;
 
 forExpr:    "for"^ forPatt "in"! br assign body (catcher)?
@@ -260,7 +267,7 @@ forPatt:        pattern br
                               |   {##=#([Assoc], [Absent], ##);})
             ;
 
-accumExpr:      "accum"^ call accumulator pocket["accumulator"]! 
+accumExpr:      "accum"^ call accumulator pocket["accumulator"]!
                 {##.setType(AccumExpr);};
 
 accumulator:
@@ -270,7 +277,7 @@ accumulator:
  ;
 
 accumBody:                      // XXX full set of binary ops
-        "{"! ( accumPlaceholder (("+"^ | "*"^ | "&"^ | "|"^) assign 
+        "{"! ( accumPlaceholder (("+"^ | "*"^ | "&"^ | "|"^) assign
                                                       {##.setType(BinaryExpr);}
                                 | "."^ verb parenArgs {##.setType(CallExpr);})
             | accumulator
@@ -310,7 +317,7 @@ slotNamer:      "&"^ nounExpr (":"! guard )?    {##.setType(SlotPattern);} ;
 // should forward declaration allow types?
 //docoDef:    doco (defExpr | interfaceExpr | thunkExpr) ;
 docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
-            defExpr | interfaceExpr | thunkExpr ;
+            (defExpr | interfaceExpr | thunkExpr) ;
 
 //so ObjectExpr(doc, fqn, auditors, script|method|matcher)
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
@@ -389,7 +396,6 @@ params:         "("! patterns br ")"!  {##=#([List],##);} ;
 patterns:    (pattern (","! patterns)?)? ;
 
 // ("throws" guardList)? ;
- //TODO what's the right default for a missing guard?
 resultGuard:    ":"! guard | {##=#([Absent]);} ;
 
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
@@ -400,7 +406,7 @@ interfaceExpr:  //doco below is a hack.  it should be here...
                 //(":"! guard)?
                 (   ("guards" pattern)?
                     ("extends"! br order ("," order)* {##=#([Extends],##);}
-                    | {##=#([Absent],##);})?
+                    | {##=#([Absent],##);})
                     // trailing comma would be ambiguous with HideExpr
                     ("implements"! br order ("," order)* {##=#([Implements],##);}
                     | {##=#([Absent],##);})
@@ -453,16 +459,16 @@ assignOp:       "//=" | "+=" | "-=" | "*=" | "/="
             |   "^=" | "|="
             ;
 
-ejector:        (   "break"^         
-                |   "continue"^      
-                |   "return"^        
+ejector:        (   "break"^
+                |   "continue"^
+                |   "return"^
                 ) ejectorArg         {##.setType(ExitExpr);}
             |   "^"^ assign          {##.setType(ExitExpr);##.setText("return");}
                                      warn["Smalltalk-style '^' deprecated"]!
             ;
 
-ejectorArg: ("(" ")") => "("! ")"! {##=#([Absent], ##);} 
-            | assign              
+ejectorArg: ("(" ")") => "("! ")"! {##=#([Absent], ##);}
+            | assign
             | {##=#([Absent],##);}
             ;
 
@@ -543,14 +549,14 @@ postfix:        call
 call:   prim
         (   { ##=#([FunCallExpr], ##); } parenArgs
         // XXX reformat this to be clearer
-        |   "."^ verb  { ##.setType(CallExpr); } 
+        |   "."^ verb  { ##.setType(CallExpr); }
                        (("(") => parenArgs
                        | { ##=#([CurryExpr], ##);})
         |   "["^ argList "]"! {##.setType(GetExpr);}
         |   "<-"^ { ##.setType(SendExpr); }
                   ( parenArgs { ##.setType(FunSendExpr); }
                   | verb (("(") => parenArgs
-                         | { ##=#([CurryExpr], ##);}) 
+                         | { ##=#([CurryExpr], ##);})
                   | "::"^ ("&")? prop)
         |   "::"^ ("&")? prop
         )*
@@ -569,13 +575,13 @@ prim:           literal
             |   nounExpr  (quasiString   {##=#([QuasiLiteralExpr],##);}  )?
             |   parenExpr (quasiString   {##=#([QuasiLiteralExpr],##);}  )?
             |   quasiString              {##=#([QuasiLiteralExpr,"simple"],
-                                               [STRING,"simple"],##);}
+                                               [Absent],##);}
             |   URI                      {##=#([URIExpr],##);}
             |   URIStart add ">"!        {##=#([URIExpr],##);}
                                          warn["computed URIExpr is deprecated"]!
             //|   "<"^ nounExpr (":"! add)? ">"! {##.setType(URIExpr);}
             |   "["^
-                (   (eExpr br "=>" | "=>") => mapList  
+                (   (eExpr br "=>" | "=>") => mapList
                                                 {##.setType(MapExpr);}
                 |   argList                     {##.setType(ListExpr);}
                 )  "]"!
@@ -681,7 +687,7 @@ mapPatts:       (mapPattern (","! mapPatts)?)? ;
 
 mapPattern:       mapPatternAddressing (":="^ order {##.setType(MapPatternOptional);}
                                        |            {##=#([MapPatternRequired],##);}) ;
-            
+
 mapPatternAddressing: key br "=>"^ pattern {##.setType(MapPatternAssoc);}
                     | "=>"^ namePatt       {##.setType(MapPatternImport);}
                     ;

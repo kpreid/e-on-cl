@@ -62,17 +62,19 @@ tokens {
 }
 
 // OPERATORS
+QUASIOPEN:        '`' {selector.push("quasi");}  ;
+RCURLY:              '}'    {selector.exitBrace();} ;
 
 OPERATOR options {testLiterals=true;} :
-        '`' {selector.push("quasi");}
-    |   '('    BR
+//        '`' {selector.push("quasi");}  |
+       '('    BR
     |   ')'
     |   '['    BR
     |   ']'
     |   '{'    BR  {selector.enterBrace();}
-    |   '}'    {selector.exitBrace();}
+//    |   '}'    {selector.exitBrace();}
     |   '@'
-    |   "@{"
+    |   "@{" 
     |   "${"
 	// a question at the beginning of a line indicates an updoc line, and the line
     // is ignored.
