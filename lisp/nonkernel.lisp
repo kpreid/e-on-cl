@@ -271,9 +271,8 @@
                                         (|left| t |EExpr|)
                                         (|right| t |EExpr|))
                                        ()
-
-  (let* ((kernel-left  (e-macroexpand |left|))
-         (kernel-right (e-macroexpand |right|))
+  (let* ((kernel-left  (e-macroexpand-all |left|))
+         (kernel-right (e-macroexpand-all |right|))
          (left-map  (e. (e. kernel-left |staticScope|) |outNames|))
          (right-map (e. (e. kernel-right |staticScope|) |outNames|))
          (left-nouns  (names-to-nouns (e. left-map |getKeys|)))
