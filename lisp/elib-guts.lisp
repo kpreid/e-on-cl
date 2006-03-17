@@ -296,8 +296,9 @@
     ;; XXX this is making assumptions about what the function will do out of scope
     ; xxx should define vtable for cant-throw-error instead of making a new condition?
     ;     (of course, we must make a new condition if the implementation doesn't have such a distinct condition type)
+    ;; XXX why are we not restricting to control-error in general? some lisp that doesn't signal it when it should?
     (#+ccl ccl::cant-throw-error 
-     #+sbcl control-error
+     #+(or sbcl allegro) control-error
      #-(or ccl sbcl) t
       ()
       (error "ejector ~S no longer in scope" label))))

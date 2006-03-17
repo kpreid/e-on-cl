@@ -33,6 +33,8 @@
     (unix:unix-exit status)
   #+abcl
     (ext:quit :status status)
+  #+allegro
+    (excl:exit status :quiet t)
   (cl-user::quit))
 
 

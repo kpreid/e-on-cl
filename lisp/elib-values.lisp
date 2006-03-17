@@ -863,10 +863,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX cmucl support not tested, just written from the same documentation as for sbcl
 
-#+(or ccl clisp)
+#+(or ccl clisp allegro)
 (defclass weak-ref-impl (vat-checking)
   (#+ccl (table :initarg :table)
-   #+clisp (weak-pointer :initarg :weak-pointer)))
+   #+clisp (weak-pointer :initarg :weak-pointer)
+   #+allegro (vector :initarg :vector)))
 
 (defglobal +the-make-weak-ref+ (e-lambda "org.erights.e.elib.vat.makeWeakRef" ()
   ; XXX run/4
@@ -890,8 +891,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     
     ; CLISP's ext:weak-pointer is not a class, so we can't define a vtable for it.
     #+clisp (make-instance 'weak-ref-impl :weak-pointer (ext:make-weak-pointer referent))
+
+    #+allegro
+      (let ((vector (weak-vector 1)))
+        (setf (aref vector 0) referent)
+        (make-instance 'weak-ref-impl :vector vector))
     
-    #-(or sbcl cmu ccl clisp) (error "sorry, no weak reference implementation for this Lisp yet"))))
+    #-(or sbcl cmu ccl clisp allegro) (error "sorry, no weak reference implementation for this Lisp yet"))))
 
 #+(or sbcl cmu ccl clisp) (def-vtable 
     #+sbcl sb-ext:weak-pointer
@@ -912,6 +918,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     #+cmu   (extensions:weak-pointer-value this)
     #+ccl   (gethash 't (slot-value this 'table) nil)
     #+clisp (ext:weak-pointer-value (slot-value this 'weak-pointer))
+    #+allegro (aref (slot-value this 'vector) 0)
     ))
 
 ; --- "E" object ---

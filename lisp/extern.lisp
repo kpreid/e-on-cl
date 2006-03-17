@@ -10,7 +10,7 @@
     (cond
       ((and (f :clisp) (f :unicode))
         #+clisp (ext:make-encoding :charset "UTF-8"))
-      ((f :sb-unicode)
+      ((or (f :sb-unicode) (f :allegro))
         :utf-8)
       (t 
         :default)))
@@ -174,7 +174,7 @@
     #+cmu   (extensions:gc) ; other documentation claimed SYSTEM:GC
     #+ccl   (ccl:gc)
     #+clisp (ext:gc)
-    #+allegro (excl:gc t nil) ; XXX untested
+    #+allegro (excl:gc t nil)
     #+abcl  (ext:gc)
     (values))))
 
