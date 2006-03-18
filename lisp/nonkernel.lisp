@@ -915,6 +915,13 @@
           (map-pattern-value assoc)
           (build-incremental-map-pattern (first rest) (rest rest)))))))
 
+(define-node-class |MapPatternRest| (|MapPatternPart|)
+  ((:|pattern| t |Pattern|)))
+
+(defmethod build-incremental-map-pattern ((first |MapPatternRest|) rest)
+  (check-type rest null)
+  (e. first |getPattern|))
+
 (defmethod build-incremental-map-pattern ((first null) rest)
   (check-type rest null)
   (let ((map-var (gennoun "map")))
@@ -923,12 +930,12 @@
       (mn '|CompareExpr| "<=>" (mn '|CallExpr| map-var "size") 
                                (mn '|LiteralExpr| 0)))))
 
-#| (define-node-class |MapPatternRest| (|MapPatternPart|) ...) |#
+(defun expand-map-pattern (pairs)
+  (build-incremental-map-pattern (first pairs) (rest pairs)))
 
 (defemacro |MapPattern| (|Pattern|) ((|pairs| t (e-list |MapPatternPart|)))
                                     (:rest-slot t)
-  (let ((pairs (coerce |pairs| 'list)))
-    (build-incremental-map-pattern (first pairs) (rest pairs))))
+  (expand-map-pattern (coerce |pairs| 'list)))
 
 
 
@@ -967,8 +974,13 @@
 (defemacro |TailPattern| (|Pattern|) ((|fixedPatt| t |Pattern|)
                                       (|tailPatt| t |Pattern|))
                                      ()
-  ;; will be less trivial once we support map patterns
-  (mn '|CdrPattern| |fixedPatt| |tailPatt|))
+  ;; XXX should probably expand the fixedPatt until it becomes something we handle
+  (etypecase |fixedPatt|
+    (|ListPattern|
+     (mn '|CdrPattern| |fixedPatt| |tailPatt|))
+    (|MapPattern|
+     (expand-map-pattern (nconc (coerce (e. |fixedPatt| |getPairs|) 'list)
+                                (list (mn '|MapPatternRest| |tailPatt|)))))))
 
 (defemacro |FunctionScript| (|EScriptoid|) 
     ((|patterns| t (e-list |Pattern|))

@@ -491,7 +491,7 @@ XXX make precedence values available as constants"
                     do (e. tw |write| sep)
                        (if (e-is-true subnode-flag)
                          ;; XXX subprint doesn't handle nil/vector subnodes
-                         (subprint sub nil)
+                         (subprint sub +precedence-atom+)
                          (e. tw |quote| sub)))
               (e. tw |write| ">$")))))))
   

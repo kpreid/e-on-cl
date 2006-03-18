@@ -584,7 +584,22 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? tp("==x")
   # value: epatt`__1 ? __equalizer.sameEver(__1, x)`
 
-'TailPattern': not testable
+'TailPattern'
+
+  list-pattern variety
+    XXX this test is trivial as long as we're working at the E-syntax layer
+    ? tp("[a] + b")
+    # value: epatt`[a] + b`
+    
+    ? tp("[] + a")
+    # value: epatt`[] + a`
+
+  map-pattern variety
+    ? tp("[\"a\" => b] | c")
+    # value: epatt`map__1 ? (map__1.optExtract("a") =~ [b, c])`
+    
+    x ? tp("[] | a")
+    x # syntax error: 
 
 'FunctionScript'
 
