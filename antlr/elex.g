@@ -131,7 +131,6 @@ OPERATOR options {testLiterals=true;} :
     |   "=~"   BR
     |   "!~"   BR
     |   "::"   BR
-    |   "::&"  BR
     //SR:                  ">>"   BR
 	//GE:                  ">="   BR
 	//SR_ASSIGN       :    ">>="  BR

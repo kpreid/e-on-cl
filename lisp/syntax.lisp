@@ -819,7 +819,6 @@ XXX make precedence values available as constants"
           e.grammar::|SendExpr|
           e.grammar::|SlotExpr|
           e.grammar::|SwitchExpr|
-          e.grammar::|ThunkExpr|
           e.grammar::|ParamDescExpr|
           e.grammar::|URIExpr|
           e.grammar::|WhileExpr|
@@ -1053,7 +1052,8 @@ XXX make precedence values available as constants"
         ;; -- quasi stuff --
         ((e.grammar::|QUASIBODY|) 
           (assert (null out-children))
-          (mn '|QuasiText| (e. text |replaceAll|)))
+          ;; XXX parser or this level needs to unescape quasi syntax escapes
+          (mn '|QuasiText| text))
         ((e.grammar::|QuasiLiteralExpr|)
           (apply #'mn '|QuasiExpr| out-children))
         

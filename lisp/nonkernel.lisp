@@ -29,6 +29,7 @@
     :|ParamDescExpr|
     :|PrefixExpr|
     :|PropertyExpr|
+    :|PropertySlotExpr|
     :|QuasiExpr|
     :|RangeExpr|
     :|SameExpr|
@@ -520,37 +521,51 @@
                                       (|auditors| t (e-list |EExpr|)) 
                                       (|messages| t (e-list |MessageDescExpr|)))
                                      ()
-  (etypecase |name|
-    (|Pattern|
+  (labels ((whatever-to-qn (whatever)
+             (etypecase whatever
+               (string whatever)
+               (|LiteralExpr| (e. whatever |getValue|))
+               (null "$_")
+               (|Pattern|
+                 (let ((noun-string (e.elang::pattern-opt-noun whatever)))
+                         (if noun-string
+                             ;; XXX remove the __T once we're out of the compatibility phase
+                             (format nil "$~A__T" noun-string)
+                             "_")))))
+           (nodify-seq (seq)
+             (apply #'mn '|ListExpr| (coerce seq 'list)))
+           (make-expr (qn verb)
+             (mn '|HideExpr|
+               (mn '|CallExpr|
+                 (mn '|NounExpr| "__makeProtocolDesc")
+                 verb
+                 (node-quote |docComment|)
+                 (let ((pqn (without-prefix qn "$")))
+                   (if pqn
+                     (mn '|CallExpr| (mn '|CallExpr| (mn '|MetaContextExpr|) "getFQNPrefix") "add" (node-quote pqn))
+                     (node-quote qn)))
+                 (nodify-seq |parents|)
+                 (nodify-seq |auditors|)
+                 (nodify-seq |messages|)))))
+  (cond
+    (|optStamp|
+      (mn '|CallExpr|
+        (mn '|DefrecExpr|
+          (mn '|ListPattern|
+            (if (typep |name| '|Pattern|)
+              |name|
+              (mn '|IgnorePattern|))
+            |optStamp|)
+          (make-expr (whatever-to-qn |name|) "makePair")
+          nil)
+        "get" (node-quote 0)))
+    ((typep |name| '|Pattern|)
       (mn '|DefrecExpr|
         |name| 
-        (mn '|InterfaceExpr| 
-          |docComment|
-          (let ((noun-string (e.elang::pattern-opt-noun |name|)))
-            (node-quote
-              (if noun-string
-                ;; XXX remove the __T once we're out of the compatibility phase
-                (format nil "$~A__T" noun-string)
-                "_")))
-          |optStamp|
-          |parents|
-          |auditors|
-          |messages|)
+        (make-expr (whatever-to-qn |name|) "run")
         nil))
-    ((or null |LiteralExpr|)
-      (mn '|HideExpr|
-        (mn '|CallExpr|
-          (mn '|NounExpr| "__makeProtocolDesc")
-          "run"
-          (node-quote |docComment|)
-          (let* ((qn (e. (or |name| (mn '|LiteralExpr| "$_")) |getValue|))
-                 (pqn (without-prefix qn "$")))
-            (if pqn
-              (mn '|CallExpr| (mn '|CallExpr| (mn '|MetaContextExpr|) "getFQNPrefix") "add" (node-quote pqn))
-              (node-quote qn)))
-          (apply #'mn '|ListExpr| (coerce |parents| 'list))
-          (apply #'mn '|ListExpr| (coerce |auditors| 'list))
-          (apply #'mn '|ListExpr| (coerce |messages| 'list)))))))
+    ((typep |name| '(or null |LiteralExpr|))
+      (make-expr (whatever-to-qn |name|) "run")))))
   
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
@@ -732,14 +747,14 @@
                         specimen-var)))))
           (match-chain (coerce |matchers| 'list)))))))
 
-(defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil string)
+(defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil (or null string))
                                   (|body| t |EExpr|))
                                  ()
   (mn '|ObjectExpr|
       ""
       "_"
       #()
-      (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
+      (mn '|EScript| (vector (mn '|EMethod| (or |docComment| "" #| XXX support propagating nils |#) "run" #() nil |body|)) 
                              #())))
 
 (defemacro |UpdateExpr| (|EExpr|) ((|call| t (or |CallExpr| |BinaryExpr|)))

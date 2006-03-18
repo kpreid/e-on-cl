@@ -568,13 +568,13 @@ call:   prim
         // XXX reformat this to be clearer
         |   "."^ verb  { ##.setType(CallExpr); }
                        (("(") => parenArgs
-                       | { ##=#([CurryExpr], ##);})
+                       | pocket["verb-curry"]! { ##=#([CurryExpr], ##);})
         |   "["^ argList "]"! {##.setType(GetExpr);}
         |   "<-"^ { ##.setType(SendExpr); }
                   ( parenArgs { ##.setType(FunSendExpr); }
-                  | verb (("(") => parenArgs
-                         | { ##=#([CurryExpr], ##);})
-                  | "::"^ ("&")? prop
+                  | verb (("(") => parenArgs // )
+                         | pocket["verb-curry"]! { ##=#([CurryExpr], ##);}) 
+                  | "::"^ ("&")? prop // XXX bad AST
                   )
         |   "::"^ ( "&"! prop {##.setType(PropertySlotExpr);}
                   | prop      {##.setType(PropertyExpr);} )
@@ -619,8 +619,7 @@ map:            eExpr br "=>"^ eExpr {##.setType(Assoc);}
             ;
 
 //Property names for use e.g., with the :: syntax.
-// Should the "&" handling be here?
-prop:           IDENT | STRING  ;
+prop:           pocket["dot-props"]! ( IDENT | STRING ) ;
 
 // a method selector
 verb:           IDENT | STRING  ;
@@ -738,7 +737,7 @@ exprHole:       DOLLARCURLY^
 pattHole:       ATCURLY!
                 br pattern br {##.setType(QuasiPatternHole);}
                 "}"!
-            |   ATHOLE {##.setType(STRING);##=#([QuasiPatternHole],#([FinalPattern],##,#([Absent])));}
+            |   ATHOLE {##.setType(STRING);##=#([QuasiPatternHole],#([FinalPattern],#([NounExpr], ##),#([Absent])));}
             ;
 
 // makes grammar compilation take too long

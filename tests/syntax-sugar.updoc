@@ -249,6 +249,11 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            }))
   #        }).get(0)`
 
+  ? t("interface \"a\" guards b {}")
+  # value: e`(def [_, b] := {
+  #            __makeProtocolDesc.makePair(null, "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }).get(0)`
+
 'ListExpr'
 
   ? t("[]")
@@ -336,17 +341,17 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
 'PropertyExpr'
 
-  ? t("pragma.enable(\"dot-props\"); foo::bar")
-  # value: e`foo.__getPropertySlot("bar").getValue()`
+  ? t("pragma.enable(\"dot-props\"); a::b")
+  # value: e`a.__getPropertySlot("b").getValue()`
   
-  ? t("pragma.enable(\"dot-props\"); foo::&bar")
-  # value: e`foo.__getPropertySlot("bar")`
+  ? t("pragma.enable(\"dot-props\"); a::&b")
+  # value: e`a.__getPropertySlot("b")`
   
-  ? t("pragma.enable(\"dot-props\"); foo::\"bar\"")
-  # value: e`foo.__getPropertySlot("bar").getValue()`
+  ? t("pragma.enable(\"dot-props\"); a::\"b\"")
+  # value: e`a.__getPropertySlot("b").getValue()`
   
-  ? t("pragma.enable(\"dot-props\"); foo::&\"bar\"")
-  # value: e`foo.__getPropertySlot("bar")`
+  ? t("pragma.enable(\"dot-props\"); a::&\"b\"")
+  # value: e`a.__getPropertySlot("b")`
 
 'QuasiExpr'
 
@@ -355,12 +360,12 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #         $$ ` @@ ").substitute(__makeList.run(b, "c"))`
 
   ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
-  # value: epatt`context__1 :__MatchContext ? (def [sp__3, ej__5] := context__1
+  # value: epatt`co__1 :__MatchContext ? (def [sp__3, ej__5] := co__1
   #        simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
   #         $$ ` @@ ").matchBind(__makeList.run(b, "c"), wp__3, ej__5) =~ [d, [e]])`
 
-  ? t("foo`bar`")
-  # value: e`foo__quasiParser.valueMaker("bar").substitute(__makeList.run())`
+  ? t("a`b`")
+  # value: e`a__quasiParser.valueMaker("b").substitute(__makeList.run())`
 
 'RangeExpr': see 'BinaryExpr' for now
 
@@ -422,10 +427,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   x ? t("thunk implements a { b }")
   x # syntax error: 
   
-  ? t("/** foo */ thunk { b }")
+  ? t("/** a */ thunk { b }")
   # value: e`def _ {
   #            
-  #            /** foo */
+  #            /** a */
   #            method run() {
   #                b
   #            }
