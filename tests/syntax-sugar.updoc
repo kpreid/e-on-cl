@@ -78,8 +78,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a + b")
   # value: e`a.add(b)`
   
-  ? t("a + (b, c)")
-  # value: e`a.add(b, c)`
+  Disabled for now till the final fate of +(,) is decided
+  x ? t("a + (b, c)")
+  x # value: e`a.add(b, c)`
   
   ? t("a..b")
   # value: e`__makeOrderedSpace.op__thru(a, b)`
@@ -278,6 +279,32 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a !~ b")
   # value: e`(a =~ b).not()`
 
+'NKAssignExpr'
+
+  ? t("a := b")
+  # value: e`a := b`
+  
+  ? t("a(b, c) := d")
+  # value: e`a.setRun(b, c, def ares__1 := d)
+  #        ares__1`
+  
+  ? t("a[b, c] := d")
+  # value: e`a.put(b, c, def ares__1 := d)
+  #        ares__1`
+  
+  ? t("a.getFoo(b, c) := d")
+  # value: e`a.setFoo(b, c, def ares__1 := d)
+  #        ares__1`
+  
+  ? t("a.e(b, c) := d")
+  # problem: assignment can only be done to nouns and collection elements (not "e" call)
+  
+  ? t("<a:b> := c")
+  # value: e`a__uriGetter.put("b", def ares__1 := c)
+  #        ares__1`
+  
+  XXX unary-star assignments?
+
 'NKObjectExpr'
 
   base case
@@ -360,9 +387,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #         $$ ` @@ ").substitute(__makeList.run(b, "c"))`
 
   ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
-  # value: epatt`co__1 :__MatchContext ? (def [sp__3, ej__5] := co__1
+  # value: epatt`co__1 :__MatchContext ? (def [sp__2, ej__3] := co__1
   #        simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
-  #         $$ ` @@ ").matchBind(__makeList.run(b, "c"), wp__3, ej__5) =~ [d, [e]])`
+  #         $$ ` @@ ").matchBind(__makeList.run(b, "c"), sp__2, ej__3) =~ [d, [e]])`
 
   ? t("a`b`")
   # value: e`a__quasiParser.valueMaker("b").substitute(__makeList.run())`
@@ -441,8 +468,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a += b")
   # value: e`a := a.add(b)`
   
-  ? t("a += (b, c)")
-  # value: e`a := a.add(b, c)`
+  See above about the related BinaryExpr
+  x ? t("a += (b, c)")
+  x # value: e`a := a.add(b, c)`
   
   ? t("a b= c")
   # value: e`a := a.b(c)`

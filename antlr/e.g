@@ -61,7 +61,7 @@ options {
 }
 
 tokens {
-    AssignExpr;
+    NKAssignExpr;
     UpdateExpr;
     CallExpr;
     DefrecExpr;
@@ -461,7 +461,7 @@ body:       "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 //  x(i...) := ...  converts to x.setRun(i..., ...)
 // Based on the above patterns, only nounExpr, nounExpr
 assign:         cond
-                (   ":="^ assign                  {##.setType(AssignExpr);}
+                (   ":="^ assign                  {##.setType(NKAssignExpr);}
                 |   assignOp assign               {##=#([UpdateExpr], ##);}
                 |   verb "="!   // deal with deprecated single case
                     ( ("(")=> parenArgs
@@ -734,7 +734,7 @@ exprHole:       DOLLARCURLY^
             |   DOLLARHOLE {##.setType(STRING);##=#([QuasiExprHole],#([NounExpr],##));}
             ;
 
-pattHole:       ATCURLY!
+pattHole:       ATCURLY^
                 br pattern br {##.setType(QuasiPatternHole);}
                 "}"!
             |   ATHOLE {##.setType(STRING);##=#([QuasiPatternHole],#([FinalPattern],#([NounExpr], ##),#([Absent])));}

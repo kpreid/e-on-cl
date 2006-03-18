@@ -24,6 +24,7 @@
     :|MapExpr|
     :|MessageDescExpr|
     :|MismatchExpr|
+    :|NKAssignExpr|
     :|NKObjectExpr|
     :|NullExpr|
     :|ParamDescExpr|
@@ -599,6 +600,38 @@
                                     ()
   (mn '|CallExpr| (mn '|MatchBindExpr| |specimen| |pattern|) "not"))
 
+(defemacro |NKAssignExpr| (|EExpr|) ((|place| t |EExpr|)
+                                     (|value| t |EExpr|))
+                                    ()
+  (setf |place| (e-macroexpand-all |place|)) ;; expand function calls, etc.
+  (typecase |place|
+    (|CallExpr|
+     (let* ((verb (e. |place| |getVerb|))
+            (value-noun (gennoun "ares"))
+            (definer (mn '|DefineExpr| (mn '|FinalPattern| value-noun nil) |value| nil)))
+       (flet ((make-call (out-verb)
+                (apply #'mn '|CallExpr| (e. |place| |getRecipient|) 
+                                        out-verb
+                                        `(,@(coerce (e. |place| |getArgs|) 
+                                                    'list)
+                                          ,definer))))
+         (mn '|SeqExpr|
+           (cond
+             ((string= verb "get")
+              (make-call "put"))
+             ((string= verb "run")
+              (make-call "setRun"))
+             ((let ((s (without-prefix verb "get")))
+                (when s
+                  (make-call (format nil "set~A" s)))))
+             (t
+              (error "assignment can only be done to nouns and collection elements (not ~A call)" (e-quote verb) #| XXX ejector? |#)))
+           value-noun))))
+    ((or |NounExpr| |TemporaryExpr|)
+     (mn '|AssignExpr| |place| |value|))
+    (t
+     (error "Assignment can only be done to nouns and collection elements (not ~A)" (e-quote |place|) #| XXX ejector? |#))))
+
 (defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil string)
                                      (|name| nil (or null |Pattern| string))
                                      (|parent| t (or null |EExpr|))
@@ -620,7 +653,7 @@
           |auditors|
           |script|) 
         nil))
-    ((or nil string)
+    ((or null string)
       (if |parent|
         (mn '|HideExpr|
           (mn '|SeqExpr|
@@ -1008,7 +1041,7 @@
           pattern-index))
 
 (defmethod quasi-part-description ((part |QuasiPatternHole|) value-index pattern-index)
-  (values (format nil "@{~A}" value-index)
+  (values (format nil "@{~A}" pattern-index)
           value-index
           (1+ pattern-index)))
 
