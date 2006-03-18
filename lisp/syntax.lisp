@@ -775,11 +775,13 @@ XXX make precedence values available as constants"
       ((integer 2)  
         (apply #'mn '|SeqExpr| enodes)))))
 
-(defun build-antlr-nodes (ast-node &key path)
+(defun build-antlr-nodes (ast-node &key path enclosing-doc-comment)
   (ast-node-bind (tag text in-children) ast-node
     (let* ((next-path (cons ast-node path))
-           (out-children (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
-                                 in-children)))
+           (out-children 
+             (unless (eql tag 'e.grammar::|DocComment|)
+               (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
+                       in-children))))
      (labels ((make-from-tag (&rest elements)
                 (make-instance (or (find-symbol (symbol-name tag) :e.kernel)
                                    (find-symbol (symbol-name tag) :e.nonkernel))
@@ -801,17 +803,24 @@ XXX make precedence values available as constants"
           e.grammar::|HideExpr|
           e.grammar::|IfExpr|
           e.grammar::|If1Expr|
-          e.grammar::|InterfaceExpr|
           e.grammar::|ListExpr|
           e.grammar::|LiteralExpr|
           e.grammar::|MatchBindExpr|
+          e.grammar::|MessageDescExpr|
           e.grammar::|MetaContextExpr|
           e.grammar::|MetaStateExpr|
           e.grammar::|MismatchExpr|
+          e.grammar::|PropertyExpr|
+          e.grammar::|PropertySlotExpr|
+          e.grammar::|QuasiExpr|
+          e.grammar::|QuasiExprHole|
+          e.grammar::|QuasiParserExpr|
+          e.grammar::|QuasiPatternHole|
           e.grammar::|SendExpr|
           e.grammar::|SlotExpr|
           e.grammar::|SwitchExpr|
           e.grammar::|ThunkExpr|
+          e.grammar::|ParamDescExpr|
           e.grammar::|URIExpr|
           e.grammar::|WhileExpr|
           e.grammar::|MapPattern|
@@ -820,22 +829,38 @@ XXX make precedence values available as constants"
           e.grammar::|MapPatternOptional|
           e.grammar::|MapPatternRequired|
           e.grammar::|ListPattern|
+          e.grammar::|QuasiPattern|
           e.grammar::|SuchThatPattern|
-          e.grammar::|TailPattern|)
+          e.grammar::|TailPattern|
+          e.grammar::|EMatcher|)
           (pass))
       
         ;; -- misc. leaves and 'special' nodes --
-        ((e.grammar::|DOC_COMMENT| e.grammar::|IDENT|) 
+        ((e.grammar::|IDENT|) 
           (assert (null out-children))
           text)
+        ((e.grammar::|DOC_COMMENT|) 
+          (assert (null out-children))
+          ; XXX the lexer should do this stripping
+          (if (string= text "")
+            ""
+            (string-trim " 	
+" (subseq text 3 (- (length text) 2)))))
         ((e.grammar::|DocComment|) 
-          ;; XXX capture and pass downward
-          (destructuring-bind (comment body) out-children
-            (declare (ignore comment))
-            body))
+          (destructuring-bind (comment-node body) in-children
+            (build-antlr-nodes body 
+              :path next-path 
+              :enclosing-doc-comment (build-antlr-nodes comment-node
+                                       :path next-path))))
         ((e.grammar::|INT|) 
           (assert (null out-children))
-          (let ((*read-eval* nil)) 
+          (let ((*read-eval* nil))
+            (read-from-string text)))
+        ((e.grammar::|HEX|)
+          (assert (null out-children))
+          (let ((*read-eval* nil)
+                (*read-base* 16))
+            ;; XXX some input validation wouldn't hurt here
             (read-from-string text)))
         ((e.grammar::|FLOAT64|) 
           (assert (null out-children))
@@ -855,13 +880,15 @@ XXX make precedence values available as constants"
           (assert (null out-children))
           text)
         (e.grammar::|Absent|
+          (assert (null out-children))
           nil)
         (e.grammar::|URIGetter| 
           (assert (null out-children))
           (cons tag text))
 
         ;; -- special-purpose branches ---
-        ((e.grammar::|List| e.grammar::|Implements|) out-children)
+        ((e.grammar::|List| e.grammar::|Implements|)
+          (coerce out-children 'vector))
         (e.grammar::|Extends|
           (destructuring-bind (&optional extends) out-children
             extends))
@@ -898,6 +925,10 @@ XXX make precedence values available as constants"
           e.grammar::|ExitExpr|)
           (apply #'make-from-tag text out-children))
 
+        ;; -- doc-comment introduction --
+        ((e.grammar::|ThunkExpr|)
+          (apply #'make-from-tag enclosing-doc-comment out-children))
+
         ;; -- de-optioning --
         ((e.grammar::|IgnorePattern|)
           (destructuring-bind (&optional guard) out-children
@@ -929,9 +960,6 @@ XXX make precedence values available as constants"
                                        (:== +e-false+)))))
 
         ;; -- other --
-        (e.grammar::|"interface"|
-          ;; XXX don't know why this is needed
-          (apply #'mn '|InterfaceExpr| out-children))
         (e.grammar::|SeqExpr|
           ;; XXX this is more like an expansion issue
           (if (null out-children)
@@ -974,17 +1002,25 @@ XXX make precedence values available as constants"
                 (t
                   (error "unexpected TryExpr element: ~S" thing))))
             expr))
+        ((e.grammar::|InterfaceExpr|)
+          (destructuring-bind (name &rest rest) out-children
+            (apply #'mn '|InterfaceExpr| 
+              enclosing-doc-comment
+              (if (typep name 'string)
+                (mn '|LiteralExpr| name)
+                name)
+              rest)))
 
         ;; -- object-expr stuff --
         ((e.grammar::|ObjectExpr|)
-          (destructuring-bind (doc-comment qualified-name (extends implements script)) out-children
-            (mn '|NKObjectExpr| doc-comment qualified-name extends (coerce implements 'vector) script)))
+          (destructuring-bind (qualified-name (extends implements script)) out-children
+            (mn '|NKObjectExpr| (or enclosing-doc-comment "") qualified-name extends implements script)))
         ((e.grammar::|MethodObject|)
           (destructuring-bind (extends implements script) out-children
             (list extends implements script)))
         ((e.grammar::|FunctionObject| e.grammar::|MethodObject|)
           (destructuring-bind (parameters result-guard body) out-children
-            (list nil nil (mn '|FunctionScript| (coerce parameters 'vector) 
+            (list nil #() (mn '|FunctionScript| (coerce parameters 'vector) 
                                                 result-guard body))))
         ((e.grammar::|PlumbingObject|)
           (destructuring-bind (implements matcher) out-children
@@ -1014,11 +1050,13 @@ XXX make precedence values available as constants"
                     ((:|to| :|fn|) '|ETo|) 
                     ((:|method|) '|EMethod|)) 
                   doc-comment verb-ident (coerce param-list 'vector) return-guard body))))
-        (e.grammar::|EMatcher|
-          (destructuring-bind (doc-comment pattern body) out-children
-            (declare (ignore doc-comment))
-            (mn '|EMatcher| pattern body)))
-
+        ;; -- quasi stuff --
+        ((e.grammar::|QUASIBODY|) 
+          (assert (null out-children))
+          (mn '|QuasiText| (e. text |replaceAll|)))
+        ((e.grammar::|QuasiLiteralExpr|)
+          (apply #'mn '|QuasiExpr| out-children))
+        
         (otherwise
           (cond
             ((and (string= (aref (symbol-name tag) 0) "\"") 

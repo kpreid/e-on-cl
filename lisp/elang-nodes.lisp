@@ -207,7 +207,7 @@
   ((:|subs| t (e-list |EExpr|)))
   :rest-slot t)
 (define-node-class |SlotExpr|        (|EExpr|)
-  ((:|noun| t (or |NounExpr| |QuasiExpr|))))
+  ((:|noun| t |EExpr|)))
 
 (defclass |EMethodoid| (|ENode|) ()) ;; to support "to"
 (define-node-class |EMethod|         (|EMethodoid|)

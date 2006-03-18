@@ -585,7 +585,7 @@ Trinary DefineExpr
   >     <evm:NounExpr>(null, "true", null), 
   >     null,
   >     null), 
-  >   null).eval(safeScope.with("y" => "false").nestOuter())
+  >   null).eval(safeScope.with("y", "false").nestOuter())
   # problem: define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
 
 SlotExpr, SlotPattern, AssignExpr

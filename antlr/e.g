@@ -82,9 +82,11 @@ tokens {
     MismatchExpr;
     NounExpr;
     ObjectExpr;
-    InterfaceExpr;
+    InterfaceExpr; 
+    QuasiExpr;           // XXX unconfuse names: this is the `...` syntax, the following two are the holes-in-source-code syntax. same fix for *Pattern.
     QuasiLiteralExpr;
     QuasiPatternExpr;
+    QuasiParserExpr;
     MetaStateExpr;
     MetaContextExpr;
     SeqExpr;
@@ -97,6 +99,8 @@ tokens {
     FunSendExpr;
     GetExpr;
     ExitExpr;
+    PropertyExpr;
+    PropertySlotExpr;
     WhileExpr;
     SwitchExpr;
     TryExpr;
@@ -122,6 +126,7 @@ tokens {
     IgnorePattern;
     SamePattern;
     SuchThatPattern;
+    QuasiPattern;
     QuasiLiteralPattern;
     QuasiPatternPattern;
     URI;
@@ -137,6 +142,12 @@ tokens {
     MethodObject;
     PlumbingObject;
     FunctionObject;
+
+    QuasiExprHole;
+    QuasiPatternHole;
+
+    MessageDescExpr;
+    ParamDescExpr;
 
     List;
     Assoc;
@@ -296,8 +307,7 @@ whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
 
 escapeExpr:     "escape"^ pattern body (catcher)?   {##.setType(EscapeExpr);} ;
 
-thunkExpr:     //doco
-                "thunk"^ doco body    {##.setType(ThunkExpr);}  ;
+thunkExpr:      "thunk"^ body    {##.setType(ThunkExpr);}  ;
 
 switchExpr:     "switch"^ parenExpr
                 "{"! (matcher br)* "}"!    {##.setType(SwitchExpr);}
@@ -323,8 +333,7 @@ docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
 // var x := ... should produce a DefrecExpr with a VarPattern
 // bind x := ... should produce a DefrecExpr with a BindPattern
-defExpr:    //doco
-            "def"^  (  (objectPredict) => doco objName objectTail
+defExpr:    "def"^  (  (objectPredict) => objName objectTail
                                                       {##.setType(ObjectExpr);}
                     |  (pattern ":=") => pattern ":="! defRightSide
                                                       {##.setType(DefrecExpr);}
@@ -366,6 +375,11 @@ oImplements: "implements"^ br order (","! order)* {##.setType(Implements);}
              | {##=#([Implements],##);} ;
             // trailing comma would be ambiguous with HideExpr
 
+// used in interface expressions
+multiExtends: "extends"^ br order (","! order)* {##.setType(List);}
+             | {##=#([List],##);} ;
+            // trailing comma would be ambiguous with HideExpr
+
 objName:        nounExpr         {##=#([FinalPattern],##);}
             |   "_"^             {##.setType(IgnorePattern);}
             |   "bind"^ noun     {##.setType(BindPattern);}
@@ -388,12 +402,12 @@ method: doco  ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
                 {##.setType(EMethod);}
     ;
 
-optVerb:      verb | {##=#([IDENT,""]);} ;
+optVerb:        verb | {##=#([IDENT,""]);} ;
 
-matcher:      doco "match"^ pattern body  {##.setType(EMatcher);} ;
+matcher:        "match"^ pattern body  {##.setType(EMatcher);} ;
 
 params:         "("! patterns br ")"!  {##=#([List],##);} ;
-patterns:    (pattern (","! patterns)?)? ;
+patterns:       (pattern (","! patterns)?)? ;
 
 // ("throws" guardList)? ;
 resultGuard:    ":"! guard | {##=#([Absent]);} ;
@@ -401,27 +415,30 @@ resultGuard:    ":"! guard | {##=#([Absent]);} ;
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
 
-interfaceExpr:  //doco below is a hack.  it should be here...
-                "interface"^  doco objName
+interfaceExpr:  "interface"! objName 
                 //(":"! guard)?
-                (   ("guards" pattern)?
-                    ("extends"! br order ("," order)* {##=#([Extends],##);}
-                    | {##=#([Absent],##);})
-                    // trailing comma would be ambiguous with HideExpr
-                    ("implements"! br order ("," order)* {##=#([Implements],##);}
-                    | {##=#([Absent],##);})
-                    "{"^ (imethod br)* "}"!
-                |   mtypes (":"! guard)?   // function
+                iguards // XXX within or outside the alternation below?
+                (   
+                    multiExtends
+                    oImplements
+                    iscript
+                |   mtypes (":"! guard)?   // function -- XXX wrong tree
                 )
-                {##.setType(InterfaceExpr);}
+                {##=#([InterfaceExpr],##);}
             ;
+
+iguards:        ("guards"! pattern)
+            |   ({##=#([Absent]);})
+            ;
+            
+iscript:    "{"^ (imethod br)* "}"! {##.setType(List);} ;
 
 imethod:    doco ("to"^ | "method"^ | "on"^) optVerb mtypes resultGuard
-                 {##.setType(EMethod);}
+                 {##.setType(MessageDescExpr);}
             ;
 
-ptype:      nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
-            |   "_"^ (":"! guard)?    {##.setType(IgnorePattern);}
+ptype:          justNoun (":"! guard)?    {##=#([ParamDescExpr],##);}
+            |   "_"      (":"! guard)?    {##=#([ParamDescExpr],##);}
             ;
 typeList:   (ptype (","! typeList)?)? ;
 mtypes:     "("! typeList br ")"!   {##=#([List],##);} ;
@@ -557,8 +574,10 @@ call:   prim
                   ( parenArgs { ##.setType(FunSendExpr); }
                   | verb (("(") => parenArgs
                          | { ##=#([CurryExpr], ##);})
-                  | "::"^ ("&")? prop)
-        |   "::"^ ("&")? prop
+                  | "::"^ ("&")? prop
+                  )
+        |   "::"^ ( "&"! prop {##.setType(PropertySlotExpr);}
+                  | prop      {##.setType(PropertyExpr);} )
         )*
     ;
 
@@ -572,9 +591,11 @@ argList:        (eExpr br (","! argList)?)? ;
 
 prim:           literal
             |   basic
-            |   nounExpr  (quasiString   {##=#([QuasiLiteralExpr],##);}  )?
-            |   parenExpr (quasiString   {##=#([QuasiLiteralExpr],##);}  )?
-            |   quasiString              {##=#([QuasiLiteralExpr,"simple"],
+            |   (IDENT QUASIOPEN) =>
+                quasiParser quasiString  {##=#([QuasiExpr],##);}
+            |   nounExpr
+            |   parenExpr (quasiString   {##=#([QuasiExpr],##);}  )?
+            |   quasiString              {##=#([QuasiExpr,"simple"],
                                                [Absent],##);}
             |   URI                      {##=#([URIExpr],##);}
             |   URIStart add ">"!        {##=#([URIExpr],##);}
@@ -630,18 +651,16 @@ listPatt:
         )
     ;
 
-eqPatt:         nounExpr
-                (   (":"! guard)?       {##=#([FinalPattern],##);}
-                |   quasiString         {##=#([QuasiLiteralPattern],##);}
-                                                       // was IDENT quasiString
-                )
+eqPatt:         (IDENT QUASIOPEN) =>
+                quasiParser quasiString {##=#([QuasiPattern],##);}
+            |   nounExpr (":"! guard)?  {##=#([FinalPattern],##);}
             |   "_"^ (":"! guard)?      {##.setType(IgnorePattern);}
             |   "=="^ prim              {##.setType(SamePattern);}
             |   "!="^ prim              {##.setType(SamePattern);}
             |   compareOp prim
-            |   quasiString             {##=#([QuasiLiteralPattern,"simple"],
-                                              [STRING,"simple"],##);}
-            |   parenExpr quasiString   {##=#([QuasiLiteralPattern],##);}
+            |   quasiString             {##=#([QuasiPattern,"simple"],
+                                              [Absent],##);}
+            |   parenExpr quasiString   {##=#([QuasiPattern],##);}
             |   binder
             |   varNamer
             |   slotNamer
@@ -657,12 +676,16 @@ namePatt:       nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
             |   slotNamer
             ;
 
-noun:       IDENT                           {##=#([NounExpr],##);}
-            |  "::"^ pocket["noun-string"]!
-                (STRING | IDENT)            {##=#([NounExpr],##);}
-            |   URIGetter                   {##=#([NounExpr],##);}
+justNoun:       IDENT
+            |   "::"^ pocket["noun-string"]!
+                (STRING | IDENT)
+            |   URIGetter
             ;
 
+// XXX rename sensibly
+noun:       justNoun {##=#([NounExpr],##);} ;
+
+// XXX rename sensibly
 nounExpr:       noun
             |   dollarHole                   {##.setType(QuasiLiteralPattern);}
             |   atHole                       {##.setType(QuasiPatternPattern);}
@@ -693,25 +716,29 @@ mapPatternAddressing: key br "=>"^ pattern {##.setType(MapPatternAssoc);}
                     ;
 
 // QUASI support
+quasiParser:    parenExpr
+            |   IDENT {##=#([QuasiParserExpr],##);}
+            ;
+
 quasiString:    QUASIOPEN!
                 (   exprHole
                 |   pattHole
                 |   QUASIBODY
-                |   DOLLARHOLE
-                |   ATHOLE
-                )* {##=#([QuasiContent],##);}
+                )* // {##=#([QuasiContent],##);}
                 QUASICLOSE!  // NOTE: '`' is the QUASICLOSE token in the quasi
                              // lexer
             ;
 
 exprHole:       DOLLARCURLY^
-                br eExpr br {##.setType(DOLLARHOLE);}
+                br eExpr br {##.setType(QuasiExprHole);}
                 "}"!
+            |   DOLLARHOLE {##.setType(STRING);##=#([QuasiExprHole],#([NounExpr],##));}
             ;
 
 pattHole:       ATCURLY!
-                br pattern br {##.setType(ATHOLE);}
+                br pattern br {##.setType(QuasiPatternHole);}
                 "}"!
+            |   ATHOLE {##.setType(STRING);##=#([QuasiPatternHole],#([FinalPattern],##,#([Absent])));}
             ;
 
 // makes grammar compilation take too long

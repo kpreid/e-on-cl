@@ -22,10 +22,14 @@
     :|InterfaceExpr|
     :|ListExpr|
     :|MapExpr|
+    :|MessageDescExpr|
     :|MismatchExpr|
     :|NKObjectExpr|
     :|NullExpr|
+    :|ParamDescExpr|
     :|PrefixExpr|
+    :|PropertyExpr|
+    :|QuasiExpr|
     :|RangeExpr|
     :|SameExpr|
     :|SendExpr|
@@ -37,6 +41,8 @@
     :|WhileExpr|
     :|BindPattern|
     :|MapPattern|
+    :|QuasiParserExpr|
+    :|QuasiPattern|
     :|SamePattern|
     :|TailPattern|
     :|FunctionScript|
@@ -44,7 +50,11 @@
     :|MapPatternAssoc|
     :|MapPatternImport|
     :|MapPatternRequired|
-    :|MapPatternOptional|))
+    :|MapPatternOptional|
+    :|QuasiText|
+    :|QuasiExprHole|
+    :|QuasiPatternHole|
+    :|QuasiEscape|))
 
 (cl:defpackage :e.nonkernel.impl
   (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :e.nonkernel)
@@ -153,6 +163,11 @@
 
 (defun mn (name &rest elements)
   (make-instance name :elements elements))
+
+(defun node-quote (value)
+  (if value
+    (mn '|LiteralExpr| value) 
+    (mn '|NullExpr|)))
 
 (defmacro defemacro (node-class-name (&rest superclasses) (&rest properties) (&rest options) &body body
     &aux (node (gensym "NODE")) (stop (gensym "STOP")))
@@ -265,7 +280,12 @@
 (defun conditional-op-p (x) (member x '("&&" "||") :test #'equal))
 
 (defun names-to-nouns (names)
-  (map 'list (lambda (name) (mn '|NounExpr| name)) names))
+  (map 'list (lambda (name) 
+               ;; XXX the need for this test demonstrates that /something/ is broken; most likely, that StaticScopes unwrap their Noun-or-TemporaryExprs
+               (etypecase name
+                 (string (mn '|NounExpr| name))
+                 (symbol (mn '|TemporaryExpr| name)))) 
+             names))
 
 (defemacro |ConditionalExpr| (|EExpr|) ((|op| nil (satisfies conditional-op-p))
                                         (|left| t |EExpr|)
@@ -492,33 +512,45 @@
   (destructuring-bind (test then) (e.elang::node-visitor-arguments body)
     (mn '|If1Expr| test (expand-accum-body then accum-var))))
 
-(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil string) 
-                                      (|name| nil (or null |Pattern| string))
-                                      (|parent| t (or null |EExpr|))
+;; using LiteralExpr for the name is a bit clunky but necessary: when it's a pattern the slot must be marked as a subnode. XXX come up with a better solution, and apply it to NKObjectExpr too
+(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil (or null string))
+                                      (|name| t (or null |Pattern| |LiteralExpr|))
+                                      (|optStamp| t (or null |Pattern|))
+                                      (|parents| t (e-list |EExpr|))
                                       (|auditors| t (e-list |EExpr|)) 
-                                      (|messages| nil (e-list |MessageExpr|)))
+                                      (|messages| t (e-list |MessageDescExpr|)))
                                      ()
   (etypecase |name|
     (|Pattern|
-      (mn '|DefrecExpr| |name| 
-        (mn '|InterfaceExpr| |docComment|
-                             (let ((noun-string (e.elang::pattern-opt-noun |name|)))
-                               (if noun-string
-                                 ;; XXX remove the __T once we're out of the compatibility phase
-                                 (format nil "$~A__T" noun-string)
-                                 "_"))
-                             |parent|
-                             |auditors|
-                             |messages|)))
-    ((or null string)
-      (mn '|CallExpr|
-        (mn '|NounExpr| "__makeProtocolDesc")
-        "run"
-        |docComment|
-        |name| ;; XXX qualify
-        (mn '|ListExpr|)
-        (mn '|ListExpr|)
-        (mn '|ListExpr|)))))
+      (mn '|DefrecExpr|
+        |name| 
+        (mn '|InterfaceExpr| 
+          |docComment|
+          (let ((noun-string (e.elang::pattern-opt-noun |name|)))
+            (node-quote
+              (if noun-string
+                ;; XXX remove the __T once we're out of the compatibility phase
+                (format nil "$~A__T" noun-string)
+                "_")))
+          |optStamp|
+          |parents|
+          |auditors|
+          |messages|)
+        nil))
+    ((or null |LiteralExpr|)
+      (mn '|HideExpr|
+        (mn '|CallExpr|
+          (mn '|NounExpr| "__makeProtocolDesc")
+          "run"
+          (node-quote |docComment|)
+          (let* ((qn (e. (or |name| (mn '|LiteralExpr| "$_")) |getValue|))
+                 (pqn (without-prefix qn "$")))
+            (if pqn
+              (mn '|CallExpr| (mn '|CallExpr| (mn '|MetaContextExpr|) "getFQNPrefix") "add" (node-quote pqn))
+              (node-quote qn)))
+          (apply #'mn '|ListExpr| (coerce |parents| 'list))
+          (apply #'mn '|ListExpr| (coerce |auditors| 'list))
+          (apply #'mn '|ListExpr| (coerce |messages| 'list)))))))
   
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
@@ -531,6 +563,21 @@
   (mn '|CallExpr| (mn '|NounExpr| "__makeMap") 
                   "fromPairs" 
                   (apply #'mn '|ListExpr| (coerce |pairs| 'list))))
+
+(defemacro |MessageDescExpr| (|EExpr|)
+    ((|docComment| nil string)
+     (|verb| nil string)
+     (|params| t (e-list |ParamDescExpr|))
+     (|optResultType| t (or null |EExpr|)))
+    ()
+  ;; XXX justify the HideExpr
+  (mn '|HideExpr|
+    (mn '|CallExpr| (mn '|NounExpr| "__makeMessageDesc")
+                    "run"
+                    (mn '|LiteralExpr| |docComment|)
+                    (mn '|LiteralExpr| |verb|)
+                    (apply #'mn '|ListExpr| (coerce |params| 'list))
+                    (or |optResultType| (mn '|NullExpr|)))))
 
 (defemacro |MismatchExpr| (|EExpr|) ((|specimen| t |EExpr|)
                                      (|pattern| t |Pattern|))
@@ -582,6 +629,15 @@
 (defemacro |NullExpr| (|EExpr|) () ()
   (mn '|NounExpr| "null"))
 
+(defemacro |ParamDescExpr| (|EExpr|)
+    ((|name| nil string)
+     (|optGuard| t |EExpr|))
+    ()
+  (mn '|CallExpr| (mn '|NounExpr| "__makeParamDesc")
+                  "run"
+                  (mn '|LiteralExpr| |name|)
+                  (or |optGuard| (mn '|NullExpr|))))
+
 (defemacro |PrefixExpr| (|EExpr|) ((|op| nil string)
                                    (|argument| t |EExpr|))
                                   ()
@@ -592,6 +648,31 @@
         (:~ "complement")
         (:- "negate")
         (otherwise |op|))))
+
+(defemacro |PropertyExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+                                     (|key| nil string))
+                                    ()
+  (mn '|CallExpr| (mn '|PropertySlotExpr| |recipient| |key|) "getValue"))
+
+(defemacro |PropertySlotExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+                                         (|key| nil string))
+                                    ()
+  (mn '|CallExpr| |recipient| "__getPropertySlot" (node-quote |key|)))
+
+(defemacro |QuasiExpr| (|EExpr|) 
+    ((|optParser| t (or null |EExpr|))
+     (|parts| t (e-list (and |QuasiPart| 
+                             (not |QuasiPatternHole|)))))
+    (:rest-slot t)
+  (mn '|CallExpr|
+    (mn '|CallExpr| (quasi-deopt-parser |optParser|)
+                    "valueMaker"
+                    (quasi-description |parts|))
+    "substitute"
+    (quasi-value-list |parts|)))
+
+(defemacro |QuasiParserExpr| (|EExpr|) ((|name| nil string)) ()
+  (mn '|NounExpr| (format nil "~A__quasiParser" |name|)))
 
 (defemacro |RangeExpr| (|EExpr|) ((|start| t |EExpr|)
                                   (|end| t |EExpr|)
@@ -801,6 +882,31 @@
 
 
 
+(defemacro |QuasiPattern| (|Pattern|)
+    ((|optParser| t (or null |EExpr|))
+     (|parts| t (e-list (and |QuasiPart|))))
+    (:rest-slot t)
+  (let ((context-noun (gennoun "co"))
+        (specimen-noun (gennoun "sp"))
+        (ejector-noun (gennoun "ej")))
+    ;; NOTE: once we have the generalized guard change we can put the pair pattern directly in the SuchThatPattern
+    (mn '|SuchThatPattern|
+      (mn '|FinalPattern| context-noun (mn '|NounExpr| "__MatchContext"))
+      (mn '|SeqExpr|
+        (mn '|DefineExpr| (mn '|ListPattern| (mn '|FinalPattern| specimen-noun nil)
+                                             (mn '|FinalPattern| ejector-noun nil)) 
+                          context-noun nil)
+        (mn '|MatchBindExpr|
+          (mn '|CallExpr|
+            (mn '|CallExpr| (quasi-deopt-parser |optParser|)
+                            "matchMaker"
+                            (quasi-description |parts|))
+            "matchBind"
+            (quasi-value-list |parts|)
+            specimen-noun
+            ejector-noun)
+          (quasi-subpattern-list |parts|))))))
+
 (defemacro |SamePattern| (|Pattern|) ((|value| t |EExpr|)
                                       (|invert| nil e-boolean))
                                      ()
@@ -835,5 +941,71 @@
                    (mn '|FinalPattern| (mn '|NounExpr| "__return") nil) 
                    |body| 
                    nil nil)))
-  
+
+;;; --- Quasi-* nodes and support ---
+
+(define-node-class |QuasiPart| (|ENode|) ())
+
+(define-node-class |QuasiText| (|QuasiPart|)
+  ((:|text| nil string)))
+
+(define-node-class |QuasiExprHole| (|QuasiPart|)
+  ((:|expr| t |EExpr|)))
+
+(define-node-class |QuasiPatternHole| (|QuasiPart|)
+  ((:|pattern| t |Pattern|)))
+
+(define-node-class |QuasiEscape| (|QuasiPart|)
+  ((:|char| nil character)))
+
+
+(defun quasi-deopt-parser (opt-parser)
+ (or opt-parser (mn '|QuasiParserExpr| "simple")))
+
+(defun quasi-description (parts)
+  (mn '|LiteralExpr|
+    (with-output-to-string (s)
+      (let ((value-index 0) (pattern-index 0))
+        (map nil (lambda (part &aux text)
+                   (setf (values text value-index pattern-index)
+                     (quasi-part-description part value-index pattern-index))
+                   (write-string text s))
+             parts)))))
+
+(defgeneric quasi-part-description (part value-index pattern-index))
+
+(defmethod quasi-part-description ((part |QuasiText|) value-index pattern-index)
+  ;; xxx icky/inefficient
+  (values (e. (e. (e. part |getText|) |replaceAll| "$" "$$") |replaceAll| "@" "@@") 
+          value-index
+          pattern-index))
+
+(defmethod quasi-part-description ((part |QuasiEscape|) value-index pattern-index)
+  (values (let ((char (e. part |getChar|)))
+            (case char
+              ((#\@ #\$) (make-array 2 :element-type (type-of char) :initial-element char))
+              (t (string char))))
+          pattern-index))
+
+(defmethod quasi-part-description ((part |QuasiExprHole|) value-index pattern-index)
+  (values (format nil "${~A}" value-index)
+          (1+ value-index)
+          pattern-index))
+
+(defmethod quasi-part-description ((part |QuasiPatternHole|) value-index pattern-index)
+  (values (format nil "@{~A}" value-index)
+          value-index
+          (1+ pattern-index)))
+
+(defun quasi-value-list (parts)
+  (apply #'mn '|ListExpr| (loop for part in (coerce parts 'list)
+                                when (typep part '|QuasiExprHole|)
+                                  collect (e. part |getExpr|))))
+
+(defun quasi-subpattern-list (parts)
+  (apply #'mn '|ListPattern| (loop for part in (coerce parts 'list)
+                                   when (typep part '|QuasiPatternHole|)
+                                     collect (e. part |getPattern|))))
+
+
 ;; XXX general AssignExpr (assigning to runs and gets and unary-stars)

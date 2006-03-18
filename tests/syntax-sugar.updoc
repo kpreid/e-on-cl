@@ -129,6 +129,18 @@ Where headings are in quotes, it indicates that the names are those I invented f
   
   XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
 
+  Bug test: temporary names inside a ConditionalExpr would fail
+  ? t("(def ==x := x) && true")
+  # value: e`if (def __1 ? __equalizer.sameEver(__1, x) := x) {
+  #            if (true) {
+  #                __makeList.run(&__1)
+  #            } else {
+  #                null
+  #            }
+  #        } else {
+  #            null
+  #        } =~ [&__1]`
+
 'CurryExpr'
 
   ? t("pragma.enable(\"verb-curry\"); a.b")
@@ -194,20 +206,48 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   ? t("interface a {}")
   # value: e`def a := {
-  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run())
+  #            __makeProtocolDesc.run(null, meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+    
+  ? t("interface \"a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run(null, "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+  
+  ? t("interface \"$a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run(null, meta.context().getFQNPrefix().add("a"), __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+    
+  ? t("/**hi*/ interface \"a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run("hi", "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+
+  ? t("/***/ interface \"a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run("", "a", __makeList.run(), __makeList.run(), __makeList.run())
   #        }`
     
   ? t("interface a { to b(c :d) :e
   >                  to f() }")
   # value: e`def a := {
-  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #            __makeProtocolDesc.run(null, meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
   #                __makeMessageDesc.run("", "b", __makeList.run(__makeParamDesc.run("c", d)), e)
   #            }, {
-  #                __makeMessageDesc.run("", "f", __makeList.run(), void)
+  #                __makeMessageDesc.run("", "f", __makeList.run(), null)
   #            }))
   #        }`
 
-  XXX interfaces with preceding doc-comments currently don't parse so aren't tested
+  ? t("interface a guards b { to c(d :e) :f 
+  >                           to g() }")
+  # value: e`(def [a, b] := {
+  #            __makeProtocolDesc.makePair(null, meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #                __makeMessageDesc.run("", "c", __makeList.run(__makeParamDesc.run("d", e)), f)
+  #            }, {
+  #                __makeMessageDesc.run("", "g", __makeList.run(), null)
+  #            }))
+  #        }).get(0)`
 
 'ListExpr'
 
@@ -294,6 +334,34 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("!a")
   # value: e`a.not()`
 
+'PropertyExpr'
+
+  ? t("pragma.enable(\"dot-props\"); foo::bar")
+  # value: e`foo.__getPropertySlot("bar").getValue()`
+  
+  ? t("pragma.enable(\"dot-props\"); foo::&bar")
+  # value: e`foo.__getPropertySlot("bar")`
+  
+  ? t("pragma.enable(\"dot-props\"); foo::\"bar\"")
+  # value: e`foo.__getPropertySlot("bar").getValue()`
+  
+  ? t("pragma.enable(\"dot-props\"); foo::&\"bar\"")
+  # value: e`foo.__getPropertySlot("bar")`
+
+'QuasiExpr'
+
+  ? t("` a $b ${\"c\"} $\\n $$ `` @@ `")
+  # value: e`simple__quasiParser.valueMaker(" a ${0} ${1} 
+  #         $$ ` @@ ").substitute(__makeList.run(b, "c"))`
+
+  ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
+  # value: epatt`context__1 :__MatchContext ? (def [sp__3, ej__5] := context__1
+  #        simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
+  #         $$ ` @@ ").matchBind(__makeList.run(b, "c"), wp__3, ej__5) =~ [d, [e]])`
+
+  ? t("foo`bar`")
+  # value: e`foo__quasiParser.valueMaker("bar").substitute(__makeList.run())`
+
 'RangeExpr': see 'BinaryExpr' for now
 
 'SameExpr'
@@ -309,7 +377,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a <- b(c)")
   # value: e`E.send(a, "b", __makeList.run(c))`
 
-  ? t("a <- "b"(c)")
+  ? t("a <- \"b\"(c)")
   # value: e`E.send(a, "b", __makeList.run(c))`
 
   ? t("a <- (b)")
