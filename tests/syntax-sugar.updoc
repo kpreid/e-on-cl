@@ -202,6 +202,17 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        }`
 
   XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
+  
+'ForwardExpr'
+
+  ? t("def a")
+  # value: e`def [a, a__Resolver] := Ref.promise()
+  #        a__Resolver`
+  
+  Anything that expands to a noun is allowed.
+  ? t("def <a>")
+  # value: e`def [a__uriGetter, a__uriGetter__Resolver] := Ref.promise()
+  #        a__uriGetter__Resolver`
 
 'InterfaceExpr'
 
@@ -545,6 +556,12 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? tp("bind a :b")
   # value: epatt`a__1 :b ? (a__Resolver.resolve(a__1)
   #        true)`
+
+  Anything that expands to a noun is allowed.
+  ? tp("bind <a> :b")
+  # value: epatt`a__uriGetter__1 :b ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
+  #        true)`
+
 
 'MapPattern'
   

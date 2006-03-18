@@ -484,10 +484,11 @@
   (destructuring-bind (patterns collection body) (e.elang::node-visitor-arguments node)
     (mn '|ForExpr| patterns collection (expand-accum-body body accum-var))))
 
-(defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |NounExpr|)) ()
-  (let* ((resolver-noun (noun-to-resolver-noun |noun|)))
+(defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |EExpr|)) ()
+  (let* ((real-noun (e-macroexpand-all |noun|))
+         (resolver-noun (noun-to-resolver-noun real-noun)))
       (make-instance '|SeqExpr| :elements (list
-        (mn '|PromiseVarExpr| |noun| resolver-noun)
+        (mn '|PromiseVarExpr| real-noun resolver-noun)
         resolver-noun))))
 
 (defemacro |FunCallExpr| (|EExpr|) ((|recipient| t |EExpr|) 
@@ -835,17 +836,18 @@
   (destructuring-bind (test body) (e.elang::node-visitor-arguments node)
     (mn '|WhileExpr| test (expand-accum-body body accum-var))))
     
-(defemacro |BindPattern| (|Pattern|) ((|noun| t |NounExpr|)
+(defemacro |BindPattern| (|Pattern|) ((|noun| t |EExpr|)
                                       (|optGuard| t (or null |EExpr|)))
                                      ()
-  (let ((temp (gennoun (e. |noun| |getName|))))
+  (let* ((real-noun (e-macroexpand-all |noun|))
+         (temp (gennoun (e. real-noun |getName|))))
     (make-instance '|SuchThatPattern| :elements (list
       (make-instance '|FinalPattern| :elements (list
         temp
         |optGuard|))
       (make-instance '|SeqExpr| :elements (list
         (make-instance '|CallExpr| :elements (list
-          (noun-to-resolver-noun |noun|)
+          (noun-to-resolver-noun real-noun)
           "resolve"
           temp))
         (make-instance '|NounExpr| :elements '("true"))))))))
