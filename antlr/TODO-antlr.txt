@@ -10,7 +10,6 @@ Parsing bugs:
 
   Bad parse trees:
     "pragma.enable(\"dot-props\"); a <- ::b"
-    Escapes in quasi-literals should be unescaped (`a$$b` -> text node "a$b")
 
 Meta:
   Allow retrieving pragma change information, or have a state object which holds it, for persistence across REPL inputs as E-on-Java does

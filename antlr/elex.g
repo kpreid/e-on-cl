@@ -74,7 +74,7 @@ OPERATOR options {testLiterals=true;} :
     |   '{'    BR  {selector.enterBrace();}
 //    |   '}'    {selector.exitBrace();}
     |   '@'
-    |   "@{" 
+    |   "@{"
     |   "${"
 	// a question at the beginning of a line indicates an updoc line, and the line
     // is ignored.
