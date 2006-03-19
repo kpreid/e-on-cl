@@ -1038,18 +1038,11 @@ XXX make precedence values available as constants"
               (mn '|EScript| (coerce (nreverse methods) 'vector)
                              (coerce (nreverse matchers) 'vector)))))
         ((e.grammar::|EMethod|)
-          (let ((doc-comment ""))
-            (ast-node-bind (stag stext schildren) (first in-children)
-              (declare (ignore schildren))
-              (when (eql stag 'e.grammar::|DOC_COMMENT|)
-                ;; ick
-                (setf doc-comment stext)
-                (pop out-children)))
-            (destructuring-bind (verb-ident param-list return-guard body) out-children
-              (mn (ecase (intern text :keyword) 
-                    ((:|to| :|fn|) '|ETo|) 
-                    ((:|method|) '|EMethod|)) 
-                  doc-comment verb-ident (coerce param-list 'vector) return-guard body))))
+          (destructuring-bind (doc-comment verb-ident param-list return-guard body) out-children
+            (mn (ecase (intern text :keyword) 
+                  ((:|to| :|fn|) '|ETo|) 
+                  ((:|method|) '|EMethod|)) 
+                doc-comment verb-ident (coerce param-list 'vector) return-guard body)))
         ;; -- quasi stuff --
         ((e.grammar::|QUASIBODY|) 
           (assert (null out-children))

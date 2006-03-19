@@ -672,8 +672,12 @@
                                                         "callWithPair"
                                                         (mn '|NounExpr| "super")
                                                         msg-noun))))))))
-        ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
-        (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))
+        (let ((functionp (typep |script| '|FunctionScript|)))
+          ;; XXX devise a means for this which does not involve this type check
+          (if functionp
+            (mn '|ObjectExpr| "" (or |name| "_") |auditors| (e. |script| |withFunctionDocumentation| |docComment|))
+            ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
+            (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))))
 
 (defemacro |NullExpr| (|EExpr|) () ()
   (mn '|NounExpr| "null"))
@@ -873,7 +877,7 @@
   ((:|keyValue| t |Pattern|)))
 
 (defmethod map-pattern-key ((keyer |MapPatternImport|))
-  (let ((key-value (e. keyer |getKeyValue|)))
+  (let ((key-value (e-macroexpand-all (e. keyer |getKeyValue|))))
     (mn '|LiteralExpr|
       (etypecase key-value
         ((or |FinalPattern| |VarPattern|) (e. (e. key-value |getNoun|) |getName|))
@@ -927,8 +931,10 @@
   (let ((map-var (gennoun "map")))
     (mn '|SuchThatPattern|
       (mn '|FinalPattern| map-var nil)
-      (mn '|CompareExpr| "<=>" (mn '|CallExpr| map-var "size") 
-                               (mn '|LiteralExpr| 0)))))
+      ;; NOTE: I once had this using CompareExpr instead of SameExpr, which seems more sensible, but it turned out to be a cyclic dependency: __comparer uses DeepFrozen uses map-patterns uses __comparer.
+      (mn '|SameExpr| (mn '|CallExpr| map-var "size") 
+                      (mn '|LiteralExpr| 0)
+                      +e-false+))))
 
 (defun expand-map-pattern (pairs)
   (build-incremental-map-pattern (first pairs) (rest pairs)))
@@ -987,9 +993,16 @@
      (|optResultGuard| t (or null |EExpr|))
      (|body| t |EExpr|))
     ()
+  ;; XXX reduce duplication
   (mn '|EScript| 
     (vector (mn '|ETo| "" "run" |patterns| |optResultGuard| |body|))
     #()))
+
+(def-vtable |FunctionScript|
+  (:|withFunctionDocumentation| (this doc)
+    (mn '|EScript| 
+      (vector (apply #'mn '|ETo| doc "run" (e.elang::node-elements this)))
+      #())))
 
 (defemacro |ETo| (|EMethodoid|) 
     ((|docComment| nil string)

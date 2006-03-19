@@ -586,7 +586,7 @@ Trinary DefineExpr
   >     null,
   >     null), 
   >   null).eval(safeScope.with("y", "false").nestOuter())
-  # problem: define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
+  # problem: kernel define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
 
 SlotExpr, SlotPattern, AssignExpr
 
