@@ -218,17 +218,17 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   ? t("interface a {}")
   # value: e`def a := {
-  #            __makeProtocolDesc.run(null, meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run())
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run())
   #        }`
     
   ? t("interface \"a\" {}")
   # value: e`{
-  #            __makeProtocolDesc.run(null, "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #            __makeProtocolDesc.run("", "a", __makeList.run(), __makeList.run(), __makeList.run())
   #        }`
   
   ? t("interface \"$a\" {}")
   # value: e`{
-  #            __makeProtocolDesc.run(null, meta.context().getFQNPrefix().add("a"), __makeList.run(), __makeList.run(), __makeList.run())
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a"), __makeList.run(), __makeList.run(), __makeList.run())
   #        }`
     
   ? t("/**hi*/ interface \"a\" {}")
@@ -244,7 +244,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("interface a { to b(c :d) :e
   >                  to f() }")
   # value: e`def a := {
-  #            __makeProtocolDesc.run(null, meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
   #                __makeMessageDesc.run("", "b", __makeList.run(__makeParamDesc.run("c", d)), e)
   #            }, {
   #                __makeMessageDesc.run("", "f", __makeList.run(), null)
@@ -254,7 +254,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("interface a guards b { to c(d :e) :f 
   >                           to g() }")
   # value: e`(def [a, b] := {
-  #            __makeProtocolDesc.makePair(null, meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #            __makeProtocolDesc.makePair("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
   #                __makeMessageDesc.run("", "c", __makeList.run(__makeParamDesc.run("d", e)), f)
   #            }, {
   #                __makeMessageDesc.run("", "g", __makeList.run(), null)
@@ -263,7 +263,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   ? t("interface \"a\" guards b {}")
   # value: e`(def [_, b] := {
-  #            __makeProtocolDesc.makePair(null, "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #            __makeProtocolDesc.makePair("", "a", __makeList.run(), __makeList.run(), __makeList.run())
   #        }).get(0)`
 
 'ListExpr'
@@ -527,6 +527,102 @@ Where headings are in quotes, it indicates that the names are those I invented f
   
   ? t("<a+90-.>")
   # value: e`::"a+90-.__uriGetter"`
+
+'WhenExpr'
+
+  ? t("when (a) -> b(c) :d { e }")
+  # problem: (): The optional "easy-when" syntax is currently off.
+  XXX message needs improvement
+  
+  ? t("when (a) -> b(c) :d { e } catch f { g }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        try {
+  #                            def c := Ref.fulfillment(resolution__1)
+  #                            e
+  #                        } catch f {
+  #                            g
+  #                        }
+  #                    }
+  #                }
+  #            })
+  #        }`
+  
+  ? t("when (a) -> b(c) :d { e } catch f { g } catch h { i } finally { j }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        try {
+  #                            try {
+  #                                try {
+  #                                    def c := Ref.fulfillment(resolution__1)
+  #                                    e
+  #                                } catch f {
+  #                                    g
+  #                                }
+  #                            } catch h {
+  #                                i
+  #                            }
+  #                        } finally {
+  #                            j
+  #                        }
+  #                    }
+  #                }
+  #            })
+  #        }`
+  
+  ? t("pragma.enable(\"easy-when\"); when (a) -> b(c) :d { e }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        def c := Ref.fulfillment(resolution__1)
+  #                        e
+  #                    }
+  #                }
+  #            })
+  #        }`
+
+  ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d) :e { f }")
+  # problem: must have same number of expressions and patterns
+  XXX should be syntax error
+  
+  ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d, e) :e { f }")
+  # value: e`{
+  #            Ref.whenResolved(promiseAllFulfilled.run(__makeList.run(a, b)), def c := def "$c__C" {
+  #                
+  #                method run(resolution__1) :e {
+  #                    escape __return {
+  #                        def [d, e] := Ref.fulfillment(resolution__1)
+  #                        f
+  #                    }
+  #                }
+  #            })
+  #        }`
+
+  ? t("pragma.enable(\"easy-return\"); when (a) -> b(c) :d { e } catch f { g }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        try {
+  #                            def c := Ref.fulfillment(resolution__1)
+  #                            e
+  #                        } catch f {
+  #                            g
+  #                        }
+  #                        null
+  #                    }
+  #                }
+  #            })
+  #        }`
 
 'WhileExpr'
 

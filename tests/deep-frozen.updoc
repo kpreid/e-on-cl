@@ -105,7 +105,13 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer8__C: __optSealedDispatch body is not an if
+  # problem: EventuallyDeepFrozen: $lazyFailer8__C: __optSealedDispatch body is not an if, but the EscapeExpr e`escape __return {
+  #              if (__equalizer.sameEver(brand, EventuallyDeepFrozen.getPeekBrand())) {
+  #                  EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  #              } else {
+  #                  null
+  #              }
+  #          }`
   
   ? def lazyFailer9 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand ? (def EventuallyDeepFrozen := 43; true)) :any {

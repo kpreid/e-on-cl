@@ -40,6 +40,8 @@
     :|UpdateExpr|
     :|URIExpr|
     :|URISchemeExpr|
+    :|WhenExpr|
+    :|WhenFnExpr|
     :|WhileExpr|
     :|BindPattern|
     :|MapPattern|
@@ -272,9 +274,9 @@
       (case (find-symbol |op| :keyword)
         (:<=> "asBigAs")
         (:< "lessThan")
-        (:<= "ltEq")
+        (:<= "leq")
         (:> "greaterThan")
-        (:>= "gtEq")
+        (:>= "geq")
         (otherwise |op|))
       |left|
       |right|))
@@ -516,7 +518,7 @@
     (mn '|If1Expr| test (expand-accum-body then accum-var))))
 
 ;; using LiteralExpr for the name is a bit clunky but necessary: when it's a pattern the slot must be marked as a subnode. XXX come up with a better solution, and apply it to NKObjectExpr too
-(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil (or null string))
+(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil string)
                                       (|name| t (or null |Pattern| |LiteralExpr|))
                                       (|optStamp| t (or null |Pattern|))
                                       (|parents| t (e-list |EExpr|))
@@ -785,14 +787,14 @@
                         specimen-var)))))
           (match-chain (coerce |matchers| 'list)))))))
 
-(defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil (or null string))
+(defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil string)
                                   (|body| t |EExpr|))
                                  ()
   (mn '|ObjectExpr|
       ""
       "_"
       #()
-      (mn '|EScript| (vector (mn '|EMethod| (or |docComment| "" #| XXX support propagating nils |#) "run" #() nil |body|)) 
+      (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
                              #())))
 
 (defemacro |UpdateExpr| (|EExpr|) ((|call| t (or |CallExpr| |BinaryExpr|)))
@@ -812,6 +814,53 @@
 (defemacro |URISchemeExpr| (|EExpr|) ((|scheme| nil string))
                                      ()
   (mn '|NounExpr| (format nil "~A__uriGetter" (string-downcase |scheme|))))
+
+(defemacro |WhenExpr| (|EExpr|) ((|args| t (e-list |EExpr|))
+                                 (|reactor| t |WhenFnExpr|)) ;; loosen?
+                                ()
+  (assert (= (length |args|) (length (ref-shorten (e. |reactor| |getParams|)))) ()
+          "must have same number of expressions and patterns")
+  (mn '|HideExpr|
+    (mn '|CallExpr|
+      (mn '|NounExpr| "Ref")
+      "whenResolved"
+      (if (= 1 (length |args|))
+        (elt |args| 0)
+        (mn '|CallExpr| (mn '|NounExpr| "promiseAllFulfilled") "run"
+                        (apply #'mn '|ListExpr| (coerce |args| 'list))))
+      |reactor|)))
+
+(defemacro |WhenFnExpr| (|EExpr|) ((|name| t |Pattern|)
+                                   (|params| t (e-list |Pattern|))
+                                   (|optResultGuard| t (or null |EExpr|))
+                                   (|body| t |EExpr|)
+                                   (|catchers| t (e-list |EMatcher|))
+                                   (|optFinally| t (or null |EExpr|)))
+                                  ()
+  (let ((resolution (gennoun "resolution")))
+    (mn '|NKObjectExpr|
+      "" |name| nil #()
+      (mn '|FunctionScript| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard|
+        ;; XXX replace finally/catch handling with expansion to TryExpr, once that's nonkernel instead of syntax layer
+        (labels ((do-finally (e)
+                   (if |optFinally|
+                     (mn '|FinallyExpr| e |optFinally|)
+                     e))
+                 (do-catchers (c e)
+                   (if c
+                     (let ((catcher (first c)))
+                       (do-catchers (rest c) (mn '|CatchExpr| e (e. catcher |getPattern|) (e. catcher |getBody|))))
+                     e)))
+        (do-finally 
+          (do-catchers (coerce |catchers| 'list) 
+            (mn '|SeqExpr|
+              (mn '|DefineExpr|
+                (if (= 1 (length |params|))
+                  (elt |params| 0)
+                  (apply #'mn '|ListPattern| (coerce |params| 'list)))
+                (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution)
+                nil)
+              |body|))))))))
 
 (defemacro |WhileExpr| (|EExpr|) ((|test| t |EExpr|)
                                   (|body| t |EExpr|))

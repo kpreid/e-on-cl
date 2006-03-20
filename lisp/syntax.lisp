@@ -822,6 +822,8 @@ XXX make precedence values available as constants"
           e.grammar::|SwitchExpr|
           e.grammar::|ParamDescExpr|
           e.grammar::|URIExpr|
+          e.grammar::|WhenExpr|
+          e.grammar::|WhenFnExpr|
           e.grammar::|WhileExpr|
           e.grammar::|MapPattern|
           e.grammar::|MapPatternAssoc|
@@ -882,6 +884,10 @@ XXX make precedence values available as constants"
         (e.grammar::|Absent|
           (assert (null out-children))
           nil)
+        (e.grammar::|FunctionVerb|
+          (assert (null out-children))
+          ;; XXX should be handled by the expansion layer instead
+          "run")
         (e.grammar::|URIGetter| 
           (assert (null out-children))
           (cons tag text))
@@ -894,7 +900,7 @@ XXX make precedence values available as constants"
             extends))
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
-            (list 'e.grammar::|"catch"| pattern body)))
+            (mn '|EMatcher| pattern body)))
         (e.grammar::|Assoc|
           (list* 'assoc out-children))
         (e.grammar::|Export|
@@ -927,7 +933,7 @@ XXX make precedence values available as constants"
 
         ;; -- doc-comment introduction --
         ((e.grammar::|ThunkExpr|)
-          (apply #'make-from-tag enclosing-doc-comment out-children))
+          (apply #'make-from-tag (or enclosing-doc-comment "") out-children))
 
         ;; -- de-optioning --
         ((e.grammar::|IgnorePattern|)
@@ -940,9 +946,11 @@ XXX make precedence values available as constants"
           (destructuring-bind (l r &optional ejector) out-children
             (mn '|DefrecExpr| l r ejector)))
         (e.grammar::|EscapeExpr|
-          (destructuring-bind (patt body &optional ((catch-marker catch-patt catch-body) '(nil nil nil))) out-children
-            (declare (ignore catch-marker))
-            (mn '|EscapeExpr| patt body catch-patt catch-body)))
+          (destructuring-bind (patt body &optional catcher) out-children
+            (mn '|EscapeExpr| 
+              patt body 
+              (when catcher (e. catcher |getPattern|)) 
+              (when catcher (e. catcher |getBody|)))))
         ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
           (destructuring-bind (noun &optional guard) out-children
             (make-from-tag noun guard)))
@@ -994,8 +1002,8 @@ XXX make precedence values available as constants"
           (destructuring-bind (expr &rest stuff) out-children
             (loop for thing in stuff do
               (cond 
-                ((typep thing '(cons (eql e.grammar::|"catch"|) t))
-                  (setf expr (mn '|CatchExpr| expr (second thing) (third thing))))
+                ((typep thing '|EMatcher|)
+                  (setf expr (mn '|CatchExpr| expr (e. thing |getPattern|) (e. thing |getBody|))))
                 ((typep thing '|EExpr|)
                   ;; GRUMBLE: this is a finally block, and it isn't marked
                   (setf expr (mn '|FinallyExpr| expr thing)))
@@ -1005,7 +1013,7 @@ XXX make precedence values available as constants"
         ((e.grammar::|InterfaceExpr|)
           (destructuring-bind (name &rest rest) out-children
             (apply #'mn '|InterfaceExpr| 
-              enclosing-doc-comment
+              (or enclosing-doc-comment "")
               (if (typep name 'string)
                 (mn '|LiteralExpr| name)
                 name)

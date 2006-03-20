@@ -61,6 +61,9 @@ options {
 }
 
 tokens {
+    // XXX organize this list
+    
+    // various expressions
     NKAssignExpr;
     UpdateExpr;
     CallExpr;
@@ -95,6 +98,7 @@ tokens {
     CatchExpr;
     FinallyExpr;
 
+    // non-kernel expressions
     FunCallExpr;
     FunSendExpr;
     GetExpr;
@@ -118,6 +122,7 @@ tokens {
     AccumExpr;
     AccumPlaceholderExpr;
 
+    // patterns
     FinalPattern;
     VarPattern;
     SlotPattern;
@@ -129,6 +134,7 @@ tokens {
     QuasiPattern;
     QuasiLiteralPattern;
     QuasiPatternPattern;
+    
     URI;
     URIStart;
     URIGetter;
@@ -136,23 +142,28 @@ tokens {
     ThunkExpr;
     IndexExpr;
 
+    // object parts
     EScript;
     EMethod;
     EMatcher;
     MethodObject;
     PlumbingObject;
     FunctionObject;
+    FunctionVerb;
 
+    // quasi parts
     QuasiExprHole;
     QuasiPatternHole;
 
+    // expression nodes that only occur as part of other syntaxes
     MessageDescExpr;
     ParamDescExpr;
+    WhenFnExpr;
 
+    // miscellaneous structure
     List;
     Assoc;
     Export;
-    WhenFn;
     Implements;
     Extends;
     Absent;
@@ -222,8 +233,9 @@ pocket![String key]: {
     if ("warn".equals(v)) {
         reportWarning(key + " in pocket");
     } else if (!v.equals("enable")) {
-        reportError(key + " not allowed");
-        throw new RecognitionException(key + " not allowed");
+        String error = "The optional \"" + key + "\" syntax is currently off.";
+        reportError(error);
+        throw new RecognitionException(error);
     }
 } ;
 
@@ -297,11 +309,12 @@ accumBody:                      // XXX full set of binary ops
 
 accumPlaceholder: "_" {##.setType(AccumPlaceholderExpr);} ;
 
-whenExpr:       "when"^ parenArgs br "->"!  whenFn
-                (catcher)* ("finally" body)?   {##.setType(WhenExpr);}
-            ;
+whenExpr:       "when"^ parenArgsList br "->"!  whenFn   {##.setType(WhenExpr);} ;
 
-whenFn:         objName params (":"! guard)? body   {##=#([WhenFn],##);}  ;
+whenFn:         objName params resultGuard body whenCatchers optFinally  {##=#([WhenFnExpr],##);}  ;
+
+whenCatchers:   (catcher)+ {##=#([List],##);} 
+            |   pocket["easy-when"] {##=#([List],##);} ;
 
 whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
 
@@ -402,12 +415,16 @@ method: doco  ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
                 {##.setType(EMethod);}
     ;
 
-optVerb:        verb | {##=#([IDENT,""]);} ;
+optVerb:        verb | {##=#([FunctionVerb]);} ;
 
 matcher:        "match"^ pattern body  {##.setType(EMatcher);} ;
 
 params:         "("! patterns br ")"!  {##=#([List],##);} ;
 patterns:       (pattern (","! patterns)?)? ;
+
+optFinally:     "finally"! body
+            |   {##=#([Absent],##);}
+            ;
 
 // ("throws" guardList)? ;
 resultGuard:    ":"! guard | {##=#([Absent]);} ;
@@ -583,6 +600,8 @@ call:   prim
 
 parenArgs:      "("! argList ")"!  ;
 lambdaArgs:      "("! argList ")"! (sepword! body)?  ; //(body)? | body  ;
+
+parenArgsList:  parenArgs {##=#([List],##);} ;
 
 sepword:    IDENT | reserved | "else" | "catch" | "finally"
             |  "try" | "->" ;
