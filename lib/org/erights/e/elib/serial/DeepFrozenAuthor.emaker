@@ -49,12 +49,13 @@ def [=> NounExpr, => EExpr, => ENode, => FinalPattern, => IfExpr, => SeqExpr] :=
 # }
 
 def exprShorten(expr) {
-  switch (expr) {
-    match s :Really[SeqExpr] ? (s.getSubs() =~ [single]) {
-      single
+  return \
+    switch (expr) {
+      match s :Really[SeqExpr] ? (s.getSubs() =~ [single]) {
+        single
+      }
+      match _ { expr }
     }
-    match _ { expr }
-  }
 }
 
 def DeepFrozenAuthor(DeepFrozenStamp) {

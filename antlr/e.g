@@ -145,6 +145,7 @@ tokens {
     // object parts
     EScript;
     EMethod;
+    ETo;
     EMatcher;
     MethodObject;
     PlumbingObject;
@@ -167,6 +168,8 @@ tokens {
     Implements;
     Extends;
     Absent;
+    True;
+    False;
     DocComment;
 
     //for lexer
@@ -216,6 +219,18 @@ protected boolean is(String v) {
     return returnAST.getText().equals(v);
 }
 
+protected boolean isPocket(String key) {
+    // XXX clean this up
+    String v = myPocket.getProperty(key, "disable");
+    if ("disable".equals(v)) {
+        return false;
+    } else if ("enable".equals(v)) {
+        return true;
+    } else {
+        throw new RuntimeException("can't convert " + v + " to boolean for: " + key);
+    }
+}
+
 }
 
 
@@ -244,6 +259,10 @@ setPocket![Token key, String value]: {
     myPocket.put(key.getText(), value);
     if (false) {throw new RecognitionException("warn");}
 } ;
+
+getPocket![String key]: 
+                {isPocket(key)}? {##=#([True],##);}
+            |                    {##=#([False],##);} ;
 
 
 
@@ -311,7 +330,7 @@ accumPlaceholder: "_" {##.setType(AccumPlaceholderExpr);} ;
 
 whenExpr:       "when"^ parenArgsList br "->"!  whenFn   {##.setType(WhenExpr);} ;
 
-whenFn:         objName params resultGuard body whenCatchers optFinally  {##=#([WhenFnExpr],##);}  ;
+whenFn:         objName params resultGuard body whenCatchers optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
 
 whenCatchers:   (catcher)+ {##=#([List],##);} 
             |   pocket["easy-when"] {##=#([List],##);} ;
@@ -376,7 +395,7 @@ objectTail:     //(typeParams)?
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
-        |   params resultGuard body      // function
+        |   params resultGuard body getPocket["easy-return"]
             {##=#([FunctionObject], ##);}
     ;
 
@@ -411,9 +430,10 @@ script:  "{"^ methods  "}"! {##.setType(EScript);} ;
 
 methods: (methodPredict) => method br methods | (matcher br )* ;
 methodPredict: doco ("to"|"method"|"on") ;
-method: doco  ("to"^ | "method"^ | "on"^) optVerb params resultGuard body
-                {##.setType(EMethod);}
-    ;
+
+method:         doco ( "method"^ methodTail {##.setType(EMethod);}
+                     | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;
+methodTail:     optVerb params resultGuard body ;
 
 optVerb:        verb | {##=#([FunctionVerb]);} ;
 

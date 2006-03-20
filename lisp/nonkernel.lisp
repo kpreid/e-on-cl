@@ -835,7 +835,8 @@
                                    (|optResultGuard| t (or null |EExpr|))
                                    (|body| t |EExpr|)
                                    (|catchers| t (e-list |EMatcher|))
-                                   (|optFinally| t (or null |EExpr|)))
+                                   (|optFinally| t (or null |EExpr|))
+                                   (|isEasyReturn| nil e-boolean))
                                   ()
   (let ((resolution (gennoun "resolution")))
     (mn '|NKObjectExpr|
@@ -860,7 +861,8 @@
                   (apply #'mn '|ListPattern| (coerce |params| 'list)))
                 (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution)
                 nil)
-              |body|))))))))
+              |body|))))
+        |isEasyReturn|))))
 
 (defemacro |WhileExpr| (|EExpr|) ((|test| t |EExpr|)
                                   (|body| t |EExpr|))
@@ -1040,11 +1042,12 @@
 (defemacro |FunctionScript| (|EScriptoid|) 
     ((|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
-     (|body| t |EExpr|))
+     (|body| t |EExpr|)
+     (|isEasyReturn| nil e-boolean))
     ()
   ;; XXX reduce duplication
   (mn '|EScript| 
-    (vector (mn '|ETo| "" "run" |patterns| |optResultGuard| |body|))
+    (vector (mn '|ETo| "" "run" |patterns| |optResultGuard| |body| |isEasyReturn|))
     #()))
 
 (def-vtable |FunctionScript|
@@ -1058,12 +1061,19 @@
      (|verb| nil string)
      (|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
-     (|body| t |EExpr|))
+     (|body| t |EExpr|)
+     (|isEasyReturn| nil e-boolean))
     ()
-  (mn '|EMethod| |docComment| |verb| |patterns| |optResultGuard| 
+  (mn '|EMethod| |docComment| |verb| |patterns| 
+                 (or |optResultGuard|
+                   (if (e-is-true |isEasyReturn|)
+                     (mn '|NounExpr| "any")
+                     (mn '|NounExpr| "void")))
                  (mn '|EscapeExpr| 
                    (mn '|FinalPattern| (mn '|NounExpr| "__return") nil) 
-                   |body| 
+                   (if (e-is-true |isEasyReturn|)
+                     (mn '|SeqExpr| |body| (mn '|NullExpr|))
+                     |body|)
                    nil nil)))
 
 ;;; --- Quasi-* nodes and support ---

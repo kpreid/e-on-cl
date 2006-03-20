@@ -683,7 +683,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
 'TailPattern'
 
   list-pattern variety
-    XXX this test is trivial as long as we're working at the E-syntax layer
+    XXX this test is trivial as long as we're working at the E-syntax layer '
     ? tp("[a] + b")
     # value: epatt`[a] + b`
     
@@ -710,6 +710,18 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            }
   #        }`
 
+  ? t("pragma.enable(\"easy-return\"); /** a */ def b() :c { d }")
+  # value: e`def b := def "$b__C" {
+  #            
+  #            /** a */
+  #            method run() :c {
+  #                escape __return {
+  #                    d
+  #                    null
+  #                }
+  #            }
+  #        }`
+
 'ETo'
 
   ? t("def a { to b() :c { d } }")
@@ -718,6 +730,27 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            method b() :c {
   #                escape __return {
   #                    d
+  #                }
+  #            }
+  #        }`
+  
+  ? t("pragma.disable(\"explicit-result-guard\"); def a { to b() { d } }")
+  # value: e`def a := def "$a__C" {
+  #            
+  #            method b() :void {
+  #                escape __return {
+  #                    d
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"easy-return\"); def a { to b() :c { d } }")
+  # value: e`def a := def "$a__C" {
+  #            
+  #            method b() :c {
+  #                escape __return {
+  #                    d
+  #                    null
   #                }
   #            }
   #        }`

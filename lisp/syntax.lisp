@@ -834,6 +834,8 @@ XXX make precedence values available as constants"
           e.grammar::|QuasiPattern|
           e.grammar::|SuchThatPattern|
           e.grammar::|TailPattern|
+          e.grammar::|EMethod|
+          e.grammar::|ETo|
           e.grammar::|EMatcher|)
           (pass))
       
@@ -884,6 +886,12 @@ XXX make precedence values available as constants"
         (e.grammar::|Absent|
           (assert (null out-children))
           nil)
+        (e.grammar::|True|
+          (assert (null out-children))
+          +e-true+)
+        (e.grammar::|False|
+          (assert (null out-children))
+          +e-false+)
         (e.grammar::|FunctionVerb|
           (assert (null out-children))
           ;; XXX should be handled by the expansion layer instead
@@ -1026,10 +1034,11 @@ XXX make precedence values available as constants"
         ((e.grammar::|MethodObject|)
           (destructuring-bind (extends implements script) out-children
             (list extends implements script)))
-        ((e.grammar::|FunctionObject| e.grammar::|MethodObject|)
-          (destructuring-bind (parameters result-guard body) out-children
+        ((e.grammar::|FunctionObject|)
+          (destructuring-bind (parameters result-guard body is-easy-return) out-children
             (list nil #() (mn '|FunctionScript| (coerce parameters 'vector) 
-                                                result-guard body))))
+                                                result-guard body
+                                                is-easy-return))))
         ((e.grammar::|PlumbingObject|)
           (destructuring-bind (implements matcher) out-children
             (list nil implements (mn '|EScript| nil (vector matcher)))))
@@ -1045,12 +1054,7 @@ XXX make precedence values available as constants"
                 (error "unexpected element type or misplaced method in EScript: ~S remaining (whole is ~S)" todo out-children))
               (mn '|EScript| (coerce (nreverse methods) 'vector)
                              (coerce (nreverse matchers) 'vector)))))
-        ((e.grammar::|EMethod|)
-          (destructuring-bind (doc-comment verb-ident param-list return-guard body) out-children
-            (mn (ecase (intern text :keyword) 
-                  ((:|to| :|fn|) '|ETo|) 
-                  ((:|method|) '|EMethod|)) 
-                doc-comment verb-ident (coerce param-list 'vector) return-guard body)))
+
         ;; -- quasi stuff --
         ((e.grammar::|QUASIBODY|) 
           (assert (null out-children))
