@@ -799,9 +799,30 @@
 
 (defemacro |UpdateExpr| (|EExpr|) ((|call| t (or |CallExpr| |BinaryExpr|)))
                                   ()
-  (let ((exp (e-macroexpand |call|)))
+  (let ((exp (e-macroexpand-all |call|)))
     (check-type exp |CallExpr|)
-    (mn '|AssignExpr| (e. exp |getRecipient|) exp)))
+    (let ((target (e-macroexpand-all (ref-shorten (e. exp |getRecipient|)))))
+      (etypecase target
+        ((or |NounExpr| |TemporaryExpr|)
+          ;; update of noun
+          (mn '|NKAssignExpr| target exp))
+        (|CallExpr|
+          ;; update of complex access (a[b] += c)
+          (let ((defs '()))
+            (flet ((nsub (node label)
+                     (let ((temp (gennoun label)))
+                       (push (mn '|DefineExpr| (mn '|FinalPattern| temp nil) node nil) defs)
+                       temp)))
+              (let* ((onceized (apply #'mn '|CallExpr| 
+                                 (nsub (e. target |getRecipient|) "recip") 
+                                 (e. target |getVerb|)
+                                 (map 'list (lambda (x) (nsub x "arg")) 
+                                            (e. target |getArgs|)))))
+                (apply #'mn '|SeqExpr|
+                  `(,@(nreverse defs)
+                    ,(mn '|NKAssignExpr|
+                       onceized
+                       (apply #'mn '|CallExpr| onceized (e. exp |getVerb|) (coerce (e. exp |getArgs|) 'list)))))))))))))
 
 (defemacro |URIExpr| (|EExpr|) ((|uri| nil string))
                                ()

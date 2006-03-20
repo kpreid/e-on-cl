@@ -495,6 +495,13 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a b= a")
   # value: e`a := a.b(a)`
   
+  ? t("a[b, c] += d")
+  # value: e`def recip__1 := a
+  #        def arg__2 := b
+  #        def arg__3 := c
+  #        recip__1.put(arg__2, arg__3, def ares__4 := recip__1.get(arg__2, arg__3).add(d))
+  #        ares__4`
+  
   XXX these syntax-level tests don't test the result of arbitrary children to UpdateExpr '
 
 'URIExpr'
