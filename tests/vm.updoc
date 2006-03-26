@@ -390,6 +390,17 @@ Plumbing
   ? one.__conformTo(any) == 1
   # value: true
 
+  Plumbing expressions can have auditors
+  ? def auditor { method audit(_,_) :any {true} }
+  > def x implements auditor match msg { E.callWithPair("x", msg) }
+  # value: "x"
+  
+  ? __auditedBy(auditor, x)
+  # value: true
+  
+  ? __auditedBy(DeepFrozen, x)
+  # value: false
+  
 Alleged type
 
   ? /** object doc */

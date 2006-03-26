@@ -278,7 +278,7 @@ XXX make precedence values available as constants"
                   (e. tw |print| "(")
                   (subprint specimen +precedence-outer+)
                   (e. tw |print| ", ")
-                  (subprint specimen +precedence-outer+)
+                  (subprint opt-ejector +precedence-outer+)
                   (e. tw |print| ")"))
                 (subprint specimen +precedence-define-right+))))
           
@@ -352,7 +352,10 @@ XXX make precedence values available as constants"
             (declare (ignore opt-original))
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
-            (e. +e-printer+ |printString| tw qualified-name)
+            (if (string= qualified-name "_")
+              ;; XXX is this condition correct?
+              (e. tw |print| "_")
+              (e. +e-printer+ |printString| tw qualified-name))
             (when (> (length auditors) 0)
               (e. tw |print| " implements ")
               (loop for sep = "" then ", "
@@ -572,23 +575,26 @@ XXX make precedence values available as constants"
         (progn
           (call-to-java verb args :trying-again t))))))
 
-(defun query-to-java (verb arg)
+(defun query-to-java (verb &rest args)
   "Memoized version of call-to-java"
-  ; XXX multiple arg support eventually
-
-  (e-coercef arg 'string) ; XXX Twine
   
-  ; Ensure that the source string is printable under *print-readably*, and therefore won't hose the parse cache. (simple-base-strings are not, in SBCL.)
-  ; XXX check if this works on implementations other than SBCL 
-  (setf arg (coerce arg '(vector character)))
+  ;; Ensure that the arguments are acceptable for passing, and printable under *print-readably* so they won't hose the parse cache.
+  ;; xxx discarding twine information: we can't pass it currently anyway, and we would need to store it in the parse cache
+  (setf args (mapcar (lambda (arg)
+                       (e-coercef arg '(or string e-boolean))
+                       (if (stringp arg)
+                         (coerce arg '(vector character))
+                         arg))
+                     args))
   
-  (let* ((args (list arg))
-         (key (list verb args)))
+  (let* ((key (list verb args)))
     (multiple-value-bind (cached present-p) (gethash key *parse-cache-hash*)
     (if present-p
       cached
       (e. e.knot:+sys-trace+ |doing|
-        (format nil "~&; query-to-java: ~A(~A...)" verb (subseq arg 0 (position #\Newline arg)))
+        (format nil "query-to-java: ~A(~{~A...~^, ~})"
+          verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg)) 
+                       args))
         (efun ()
           (let ((answer (call-to-java verb args)))
             (setf (gethash key *parse-cache-hash*) answer)

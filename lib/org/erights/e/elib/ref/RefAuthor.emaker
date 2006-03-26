@@ -4,6 +4,8 @@
 pragma.disable("easy-return")
 pragma.disable("explicit-result-guard")
 
+def Throwable := <import:org.cubik.cle.prim.Throwable>
+
 def RefAuthor {
   # XXX map args?
   # Stamped rather than audited deep-frozen since DeepFrozen is nonprimitive and uses Ref itself in the course of auditing. XXX have DeepFrozenAuthor use primitives?
@@ -18,7 +20,7 @@ def RefAuthor {
       
       to broken(p) :any { 
         # The new exception-sealing system means that broken references must be able to hold arbitrary values. However, current E programs (and our test suite) expect Ref.broken("foo") to make an exception object. Thus this guard.
-        makeUnconnectedRef(p :<import:org.cubik.cle.prim.Throwable>)
+        makeUnconnectedRef(p :Throwable)
       }
       
       to isPassByCopy(r) :any { refIsPassByCopy(r) }

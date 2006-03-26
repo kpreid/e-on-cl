@@ -77,6 +77,10 @@ DefineExpr
   ? def expr := makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null, null)
   # value: e`def a := 1`
   
+  print of trinary
+  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), makeNounExpr(null, "ej", null), null)
+  # value: e`def a := (1, ej)`
+  
   ? expr.getRValue()
   # value: e`1`
   
@@ -328,6 +332,11 @@ ObjectExpr, EScript
   printing implements
   ? makeObjectExpr(null, "", "audited", [makeNounExpr(null, "auditor", null)], emptyScript, null)
   # value: e`def "audited" implements auditor {
+  #        }`
+  
+  printing _
+  ? makeObjectExpr(null, "", "_", [], def emptyScript := makeEScript(null, [], [], null), null)
+  # value: e`def _ {
   #        }`
 
  script printing with matchers

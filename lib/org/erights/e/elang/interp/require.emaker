@@ -25,7 +25,7 @@ def require0 { # implements DeepFrozen
     to (cond, problem) :void {
         EE.require(cond, problem)
     }
-    match [`run`, [cond, prob0] + probRest] {
+    match [=="run", [cond, prob0] + probRest] {
         if (! cond) {
             var problem := prob0
             for prob in probRest {

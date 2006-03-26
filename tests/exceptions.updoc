@@ -68,7 +68,7 @@ An exception may be explicitly thrown unsealed. This is used for mechanisms usin
 
 Broken references are essentially unaffected; they may be created as usual:
 
-  ? def aProblem := "splat" :<type:java.lang.Exception>
+  ? def aProblem := "splat" :(<type:java.lang.Exception>)
   # value: problem: splat
 
   ? def b := Ref.broken(aProblem)

@@ -204,14 +204,9 @@
 
 ;; note: this *could* be placed later
 (defmethod print-object ((bool e-boolean) stream)
-  (flet ((var (name)
-          (if (or *read-eval* (not *print-readably*))
-            (format stream "#.+e-~A+" name)
-            (error 'print-not-readable :object bool))))
-  (case bool
-    (#.+e-true+  (var "true"))
-    (#.+e-false+ (var "false"))
-    (otherwise
-      (print-unreadable-object (bool stream :type t :identity t)
-        (format stream "!!!BOGUS!!!"))))))
+  (if (or *read-eval* (not *print-readably*))
+    (format stream "#.~S" (if (e-is-true bool)
+                            '+e-true+
+                            '+e-false+))
+    (error 'print-not-readable :object bool)))
 

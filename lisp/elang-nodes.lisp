@@ -48,33 +48,40 @@
             `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))
             `(list ,@param-syms)))))))
 
-(defun %setup-node-class (node-type)
+(defun %setup-node-class (node-type rest-slot property-names dnm-types normal-prop-count)
+  (declare (ignore dnm-types))
   (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
-      fqn)))
+      fqn)
+   
+    (defmethod node-class-arity ((node-class (eql (find-class node-type))))
+      (values normal-prop-count
+              (if rest-slot nil normal-prop-count)))))
 
 (defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key rest-slot)
   (let ((normal-prop-count (- (length property-defs) (if rest-slot 1 0)))
+        property-names
         subnode-flags 
         dnm-types)
     (loop for pd in property-defs do
       (destructuring-bind (property-name subnode-flag type &key) pd
-        (declare (ignore property-name))
+        (push property-name property-names)
         (push subnode-flag subnode-flags)
         (push type dnm-types)))
+    (nreverse-here property-names)
     (nreverse-here subnode-flags)
     (nreverse-here dnm-types)
     `(progn
       (defclass ,class-name ,superclasses ())
       
-      (%setup-node-class ',class-name)
+      (%setup-node-class ',class-name ',rest-slot ',property-names ',dnm-types ',normal-prop-count)
       
       (%def-node-maker ,class-name
         ,subnode-flags
         ,dnm-types
         ,rest-slot)
       
-      ,@(loop for (property-name) in property-defs
+      ,@(loop for property-name in property-names
               for i below normal-prop-count
               collect
                  `(defmethod opt-node-property-getter 
@@ -98,11 +105,7 @@
              (append (subseq elements 0 ',normal-prop-count)
                      (list (coerce (subseq elements ',normal-prop-count) 'vector))))
           `(node-elements node)))
-      
-      (defmethod node-class-arity ((node-class (eql (find-class ',class-name))))
-        (values ',normal-prop-count
-                ',(if rest-slot nil normal-prop-count)))
-      
+            
       (defmethod opt-node-property-getter 
           ((node ,class-name) 
            (field-keyword t))
