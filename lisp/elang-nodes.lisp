@@ -751,13 +751,11 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defun make-scope-checker (ejector) 
   (labels ((make (finals assigns)
              ;; XXX use hash tables?
-             ;(format *trace-output* "~&scope checker ~S ~S~%" finals assigns)
              (e-lambda |kernelScopeCheckerValue| ()
                (:|_getFinals| () finals)
                (:|_getAssigns| () assigns)
                (:|hide| () (make nil nil))
                (:|add| (other &aux (bad (intersection finals (e. other |_getAssigns|) :test #'string=)))
-               ;(format *trace-output* "~&scope check ~S ~S ~S ~%" finals (e. other |_getAssigns|) bad)
                  (if bad
                    ;; XXX message could use some improvement
                    (ejerror ejector "~A is not an assignable variable" (first bad))

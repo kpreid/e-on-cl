@@ -578,7 +578,7 @@
           (when (sb-c::constant-lvar-p guardl)
             (let ((guard (sb-c::lvar-value guardl)))
               (when (typep guard 'cl-type-guard)
-                ;(format t "~&deriving guard call type ~S~%" (cl-type-specifier guard))
+                #+(or) (e. e.knot:+sys-trace+ |run| (format nil "~&deriving guard call type ~S~%" (cl-type-specifier guard)))
                 (sb-c::ir1-transform-specifier-type 
                   (cl-type-specifier guard))))))))))
 

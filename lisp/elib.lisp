@@ -499,13 +499,16 @@ If there is no current vat at initialization time, captures the current vat at t
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
   (multiple-value-bind (promise resolver) (make-promise)
     (enqueue-turn *vat* (lambda ()
-      ; XXX direct this into a configurable tracing system once we have one
-      ;(format *trace-output* "~&; running ~A ~A <- ~A ~A~%" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)))
+      ; XXX direct this into a *configurable* tracing system once we have one
+      ;(e. e.knot:+sys-trace+ |run| (format nil "running ~A ~A <- ~A ~A" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector))))
       (e. resolver |resolve| 
         (handler-case 
           (apply #'e-call-dispatch rec mverb args)
           (error (p)
-            (format *trace-output* "~&; problem in send ~A <- ~A ~A: ~A~%" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p)
+            ;; XXX using e printing routines here is invoking objects outside a proper turn; do one of:
+            ;;   (a) CL print instead
+            ;;   (b) make printing the error done in yet another turn (possible object's-print-representation-has-changed problem)
+            (e. e.knot:+sys-trace+ |run| (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
             (make-unconnected-ref (transform-condition-for-e-catch p)))))))
     promise))
 

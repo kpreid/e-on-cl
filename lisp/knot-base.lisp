@@ -460,7 +460,7 @@
         (loop for sub across fetchpath thereis
           (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))
                (progn
-                 ;(format t "~&; ~A for optUnget of ~A querying sub ~A~%" (e-quote |loader|) (e-quote specimen) (e-quote sub))
+                 #+(or) (e. e.knot:+sys-trace+ |run| (format nil "~A for optUnget of ~A querying sub ~A" (e-quote |loader|) (e-quote specimen) (e-quote sub)))
                  (unget-to-uncall |loader| (e. sub |optUnget| specimen))))))
       (:|optUnget| (specimen)
         ; xxx this is how Java-E does it, and claims a justification, but *what*?

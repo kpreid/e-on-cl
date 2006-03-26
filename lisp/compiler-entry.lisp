@@ -161,14 +161,19 @@
                          expr 
                          layout
                          initial-scope-var))))))
-    (multiple-value-bind (truename warnings-p failure-p)
-        (compile-file (merge-pathnames
-                        #p"lisp/universal.lisp"
-                        (asdf:component-pathname 
-                          (asdf:find-system +the-asdf-system+)))
-                      :output-file output-file)
-      (declare (ignore truename warnings-p))
-      (assert (not failure-p) () "Compilation for ~A failed." output-file))))
+    (e. e.knot:+sys-trace+ |doing|
+      (format nil "compiling ~A" output-file)
+      (efun ()
+        (multiple-value-bind (truename warnings-p failure-p)
+            (compile-file (merge-pathnames
+                            #p"lisp/universal.lisp"
+                            (asdf:component-pathname 
+                              (asdf:find-system +the-asdf-system+)))
+                          :output-file output-file
+                          :verbose nil
+                          :print nil)
+          (declare (ignore truename warnings-p))
+          (assert (not failure-p) () "Compilation for ~A failed." output-file))))))
 
 (defun load-compiled-e (file scope)
   (let ((*efasl-result* nil))

@@ -199,9 +199,7 @@
                                  (e. (e. ejector-patt |getNoun|) |getName|))))
              (not (e-is-true (e. body-scope |hasMetaStateExpr|))))
     #+(or) 
-    (progn 
-      (format t "~&triggered ejector optimization for ~S in ~S~%" ejector-patt (scope-layout-fqn-prefix layout))
-      (force-output))
+    (e. e.knot:+sys-trace+ |run| (format nil "triggered ejector optimization for ~S in ~S" ejector-patt (scope-layout-fqn-prefix layout)))
     (return-from sequence-expr ;; XXX dependence on existence of block
       (values `((,result ,(hide-sequence body layout))) layout)))
   (values

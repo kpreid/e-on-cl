@@ -143,11 +143,20 @@
       (ensure-directories-exist fasl-path :verbose t))
     fasl-path))
 
+(defun scope-for-fqn (scope fqn)
+  (let* ((trace (make-tracer :label fqn))
+         (scope (e. scope |nestOuter|))
+         (scope (e. scope |withPrefix| (concatenate 'string fqn "$")))
+         (scope (e. scope |with| "trace" trace))
+         (scope (e. scope |with| "traceln" trace))
+         (scope (e. scope |nestOuter|)))
+    scope))
+
 ;;; XXX arrange to also fall back to eval-e if we fail to compile or to load
 (defun load-emaker-from-file (file fqn scope compile-target-fn)
   (let* ((fqn-prefix (concatenate 'string fqn "$"))
          (compile-target (e-coerce (funcall compile-target-fn file fqn) '(or null pathname)))
-         (scope (e. scope |withPrefix| fqn-prefix)))
+         (scope (scope-for-fqn scope fqn)))
     (if compile-target
       (progn
         (when (or (not (probe-file compile-target))
@@ -337,30 +346,52 @@
     +deep-frozen-stamp+
     (e-lambda "org.cubik.cle.prim.deepFrozenIfEveryStubAuditor" () (:|audit/2| (constantly +e-false+)))))
 
-; this could be less primitive, but then it would have more dependencies
-(defglobal +traceln+ (e-lambda "org.cubik.cle.prim.traceln"
-    (:stamped +deep-frozen-stamp+)
-  (:|run| (message)
-    ; xxx use stream writer on *trace-output*?
-    ; xxx Should we tag traceln according to the FQN-prefix of the safe scope, or in nested scopes such as emakers' FQN-prefix-scopes?
-    (format *trace-output* "~&~A"
-      (with-text-writer-to-string (tw)
-        (e. tw |print|      "; trace: ")
-        (e. (e. tw |indent| ";        ") |print| message)
-        (e. tw |println|))))))
+(defun make-tracer (&key (label "UNDEFINED TRACE LABEL") (stream *trace-output*))
+  (let* ((first-prefix (format nil "; ~A " (e-print label)))
+         (rest-prefix (format nil "; ~v@T" (- (length first-prefix) 3))))
+    (labels ((make-trace-writer ()
+               ;; TextWriters are vat-specific
+               (e. (e.elib::make-text-writer-to-cl-stream stream :autoflush t) |indent| rest-prefix)))
+      (e-lambda |trace|
+          (:stamped +deep-frozen-stamp+ #|XXX must remove this or make it conditional/privileged if we ever let the stream be user-suppliable|#)
+        (:|run| (message)
+          ; xxx use stream writer on *trace-output*?
+          ; xxx Should we tag traceln according to the FQN-prefix of the safe scope, or in nested scopes such as emakers' FQN-prefix-scopes?
+          (fresh-line stream)
+          (let ((tw (make-trace-writer)))
+            (e. tw |print| first-prefix "trace: ")
+            (e. (e. tw |indent|         "       ") |print| message)
+            (fresh-line stream))
+          (force-output stream))
+        (:|doing| (message thunk)
+          ;; XXX make nested doings, other traces while doing, etc. look good
+          (fresh-line stream)
+          (let ((tw (make-trace-writer)))
+            (e. tw |print| first-prefix "doing: ")
+            (e. (e. tw |indent|         "       ") |print| message)
+            (e. tw |write| "..."))
+          (unwind-protect
+            (e. thunk |run|)
+            (format stream "done.~%")))
+        (:|runAsTurn| (thunk context-thunk)
+          "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
+    
+    If a log message is produced, context-thunk is run to produce a string describing the origin of the failure."
+          (handler-case
+            (e. thunk |run|)
+            (error (condition)
+              (e. |trace| |run|
+                (e-lambda nil ()
+                  (:|__printOn| (tw)
+                    (e-coercef tw +the-text-writer-guard+)
+                    (e. tw |print| "caught problem in ")
+                    (e. tw |quote| (e. context-thunk |run|))
+                    (e. tw |print| ": " (e-print condition)))))
+              (make-unconnected-ref (transform-condition-for-e-catch condition)))))))))
 
-; XXX merge with traceln? (I imagine this becoming something with many little useful methods)
-(defglobal +trace+ (e-lambda "org.cubik.cle.prim.trace"
-    (:stamped +deep-frozen-stamp+)
-  (:|runAsTurn| (thunk context-thunk)
-    "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
-
-If a log message is produced, context-thunk is run to produce a string describing the origin of the failure."
-    (handler-case
-      (e. thunk |run|)
-      (error (condition)
-        (format *trace-output* "~&; caught problem in ~A: ~A" (e-quote (e. context-thunk |run|)) (e-print condition))
-        (make-unconnected-ref (transform-condition-for-e-catch condition)))))))
+;; XXX threading: if tracers have state they need to become nonglobal
+(defglobal +trace+ (make-tracer :label "misc"))
+(defglobal +sys-trace+ (make-tracer :label ""))
 
 ; XXX merge these two: make lazy-apply robust in the presence of failure, and make lazy-eval use lazy-apply with a particular thunk
 
@@ -525,7 +556,7 @@ If a log message is produced, context-thunk is run to produce a string describin
           
           ; --- primitive: tracing ---
           ("trace"      ,+trace+)
-          ("traceln"    ,+traceln+)
+          ("traceln"    ,+trace+)
 
           ; --- nonprimitive flow control ---
           ("&require"   ,(lazy-import "org.erights.e.elang.interp.require"))

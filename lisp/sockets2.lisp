@@ -56,7 +56,7 @@
                            (decf end-of-buffer n)
                            (wait-for-available))
                        (error)
-                         (e. e.knot:+traceln+ |run| error)
+                         (e. e.knot:+trace+ |run| error)
                          (e. stream |fail| error))
                      nil)
                    (:|terminate| (terminator)

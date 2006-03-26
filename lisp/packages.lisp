@@ -296,7 +296,12 @@
     :found-e-on-java-home
     :*emaker-search-list*
     
-    :+traceln+))
+    :+trace+
+    :+sys-trace+))
+  
+(e.util:defglobals
+  e.knot:+trace+
+  e.knot:+sys-trace+)
   
 (cl:defvar e.knot:*emaker-search-list*)
 
