@@ -20,7 +20,7 @@
     (let ((entries (maphash #'list e.elib::*instrument-ref-shorten-kinds*)))
       (mapcar #'(lambda (l) (destructuring-bind (key times) l
                (when (> times 0)
-                 (format *trace-output* "~&; XXX profiling: ~A shortened ~A times ~%" key times))))
+                 (e. e.knot:+sys-trace+ |run| (format nil "profiling: ~A shortened ~A times" key times)))))
               (sort entries #'< :key #'second)))
 
   #+sbcl
@@ -33,6 +33,8 @@
     (unix:unix-exit status)
   #+abcl
     (ext:quit :status status)
+  #+allegro
+    (excl:exit status :quiet t)
   (cl-user::quit))
 
 

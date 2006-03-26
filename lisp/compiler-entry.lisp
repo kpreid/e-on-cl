@@ -62,7 +62,9 @@
 
 (defun e-to-cl (expr outer-scope)
   (e-coercef outer-scope 'e.knot:scope)
+  (e-coercef expr 'e.elang.vm-node::|ENode|)
   (require-kernel-e expr nil)
+  (e.knot:require-node-fits-scope expr outer-scope nil)
   (during ("e-to-cl")
     (funcall (if *trace-loading* #'print #'identity)
       `(locally
@@ -118,6 +120,9 @@
 (defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
   "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope."
   (require-kernel-e expr nil)
+  (when opt-scope
+    ;; XXX this is wrongish: we should execute the check *always*
+    (e.knot:require-node-fits-scope expr opt-scope nil))
   (let* ((all-nouns (coerce (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector) 'list))
          (needed-nouns '())
          (needed-syms '())
@@ -156,14 +161,19 @@
                          expr 
                          layout
                          initial-scope-var))))))
-    (multiple-value-bind (truename warnings-p failure-p)
-        (compile-file (merge-pathnames
-                        #p"lisp/universal.lisp"
-                        (asdf:component-pathname 
-                          (asdf:find-system +the-asdf-system+)))
-                      :output-file output-file)
-      (declare (ignore truename warnings-p))
-      (assert (not failure-p) () "Compilation for ~A failed." output-file))))
+    (e. e.knot:+sys-trace+ |doing|
+      (format nil "compiling ~A" output-file)
+      (efun ()
+        (multiple-value-bind (truename warnings-p failure-p)
+            (compile-file (merge-pathnames
+                            #p"lisp/universal.lisp"
+                            (asdf:component-pathname 
+                              (asdf:find-system +the-asdf-system+)))
+                          :output-file output-file
+                          :verbose nil
+                          :print nil)
+          (declare (ignore truename warnings-p))
+          (assert (not failure-p) () "Compilation for ~A failed." output-file))))))
 
 (defun load-compiled-e (file scope)
   (let ((*efasl-result* nil))

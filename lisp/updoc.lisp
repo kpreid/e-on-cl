@@ -114,7 +114,7 @@
                     (funcall finalizer accumulator)))
                 (error (condition backtrace)
                   (let ((*print-level* 5))
-                    (format *trace-output* "~&; caught problem in updoc chaining: ~A~%~S" (e-print condition) backtrace))
+                    (e. e.knot:+sys-trace+ |run| (format nil "caught problem in updoc chaining: ~A~%~S" (e-print condition) backtrace)))
                   (e. result-resolver |smash| (transform-condition-for-e-catch condition))))))
       (proceed))
     result-promise))

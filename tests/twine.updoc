@@ -105,3 +105,61 @@ Matching composite twine
 
   ? (twine + __makeTwine.fromString("$aardvark$", makeSourceSpan("http://example.org/t", true, 1, 10, 1, 19))).getOptSpan()
   # value: <http://example.org/t#:span::1:0::1:19>
+
+
+--- asFrom
+
+Tests derived from some poking at the E-on-Java repl
+
+  ? "abc\ndef".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:2>
+
+  ? "abcdef".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:span::1:0::1:5>
+  
+  ? "abcdef\n".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:span::1:0::1:6>
+  
+  ? "abcdef\nghijkl".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:5>
+  
+  ? "abcdef\nghijkl".asFrom("foo:bar")(0, 6).getOptSpan()
+  # value: <foo:bar#:span::1:0::1:5>
+  
+  ? ["".asFrom("foo:bar").getOptSpan()]
+  # value: [null]
+
+  ? "\n".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:span::1:0::1:0>
+  
+  ? "\n\n".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:0>
+  
+  ? "abcdef\n\n".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:0>
+  
+  ? "abcdef\ng\n".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:1>
+  
+  ? "abcdef\ng".asFrom("foo:bar").getOptSpan()
+  # value: <foo:bar#:blob::1:0::2:0>
+
+--- run
+
+  ? "abc\ndef\n\nghij\n\n".asFrom("foo:bar").run(0, 3).getOptSpan()
+  # value: <foo:bar#:span::1:0::1:2>
+
+--- split
+
+  ? "abc\ndef".asFrom("foo:bar").split("\n")[0].getOptSpan()
+  # value: <foo:bar#:span::1:0::1:2>
+  
+  ? for x in "abc\ndef\n\nghij\n\n".asFrom("foo:bar").split("\n") { println(x.getOptSpan()) }
+  # stdout: <foo:bar#:span::1:0::1:2>
+  #         <foo:bar#:span::2:0::2:2>
+  #         null
+  #         <foo:bar#:span::4:0::4:3>
+  #         null
+  #         null
+  #
+  

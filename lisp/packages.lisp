@@ -8,13 +8,11 @@
   (:use :cl)
   
   #.(cl:let ((cl:package (cl:some #'cl:find-package '( 
-               #+(or allegro clisp lispworks) :clos
-               #+(or cmu abcl) :mop
                #+sbcl :sb-mop
                #+openmcl :openmcl-mop
                #+ccl :ccl
-               :mop
-               :clos))))
+               :mop #| allegro, cmucl, abcl |#
+               :clos #| allegro, clisp, lispworks |#))))
     (cl:when cl:package
       `(:import-from ,(cl:package-name cl:package)
          :class-precedence-list)))
@@ -290,13 +288,20 @@
   (:export
     :scope
     :make-scope
+    :require-node-fits-scope
+    
     :make-safe-scope
     :make-io-scope
     
     :found-e-on-java-home
     :*emaker-search-list*
     
-    :+traceln+))
+    :+trace+
+    :+sys-trace+))
+  
+(e.util:defglobals
+  e.knot:+trace+
+  e.knot:+sys-trace+)
   
 (cl:defvar e.knot:*emaker-search-list*)
 

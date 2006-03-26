@@ -28,6 +28,9 @@
 ? def makeIgnorePattern := <import:org.erights.e.elang.evm.IgnorePattern>
 # value: <makeIgnorePattern>
 
+  ? def makeSuchThatPattern := <elang:evm.SuchThatPattern>
+  # value: <makeSuchThatPattern>
+
 ? <elang:visitors.KernelECopyVisitor>
 # value: <import:org.erights.e.elang.visitors.makeKernelECopyVisitor>
 
@@ -87,6 +90,25 @@ DefineExpr
   # problem: the int 1 doesn't coerce to a Pattern
 
   XXX trinary-define scope
+
+ Reject pseudo-self-reference
+ 
+  ? def nounA := makeNounExpr(null, "a", null); null
+  ? def nounB := makeNounExpr(null, "b", null); null
+  
+  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounA, null, null)}.eval(safeScope)
+  # problem: kernel define expr may not use definitions from pattern (epatt`a`) in r-value expr (e`a`)
+
+  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), makeNounExpr(null, "null", null), nounA, null)}.eval(safeScope)
+  # problem: kernel define expr may not use definitions from pattern (epatt`a`) in ejector expr (e`a`)
+
+  ? {makeDefineExpr(null, makeSuchThatPattern(null, makeIgnorePattern(null, null), nounA, null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null, null)}.eval(safeScope)
+  # problem: kernel define expr may not use definitions from r-value expr (e`def a := b`) in pattern (epatt`_ ? a`)
+
+  ? {makeDefineExpr(null, makeSuchThatPattern(null, makeIgnorePattern(null, null), nounA, null), nounB, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null)}.eval(safeScope)
+  # problem: kernel define expr may not use definitions from ejector expr (e`def a := b`) in pattern (epatt`_ ? a`)
+
+  XXX more specifically test what part of the system does this check rather than just 'somewhere in the eval process'
 
 FinalPattern
 
@@ -273,6 +295,10 @@ ObjectExpr, EScript
   ? emptyObject.staticScope()
   # value: <[] := [] =~ [] + var []>
   
+  Implements expression is not visible
+  ? makeObjectExpr(null, "foo", "bar", [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null)], emptyScript, null).staticScope()
+  # value: <[] := ["b"] =~ [] + var []>
+  
   ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
   # value: e??` {
   #            
@@ -399,9 +425,6 @@ SlotPattern
 
 
 SuchThatPattern printing
-
-  ? def makeSuchThatPattern := <elang:evm.SuchThatPattern>
-  # value: <makeSuchThatPattern>
 
   ? makeSuchThatPattern(null, makeIgnorePattern(null, null), makeNounExpr(null, "false", null), null)
   # value: epatt`_ ? false`

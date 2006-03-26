@@ -35,23 +35,7 @@ def Number := any[int, float64] # XXX better definition
 
 def memoize := <import:org.cubik.cle.memoize>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
-
-def root implements DeepFrozen {
- /** Produces an object to serve as the root of 'extends' chains. It responds 'no such method' to everything, but refers to 'self' in the error instead of the  parent-most object. */
- to get(self) {
-  return def root implements EventuallyDeepFrozen {
-    method __optSealedDispatch(brand) :any {
-      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
-        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
-      }
-    }
-    
-    match [verb, args] {
-      # XXX typed exception
-      throw(`the ${self.__getAllegedType().getFQName()} ${E.toQuote(self)} does not understand $verb/${args.size()} $args`)
-    }
-  } 
-}}
+def root := <import:org.cubik.cle.root>
 
 def qtPrint implements DeepFrozen { to run(tw :TextWriter, what :QAstroArg) {
   tw.write("qterm`")

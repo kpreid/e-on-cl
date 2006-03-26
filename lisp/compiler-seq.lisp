@@ -199,9 +199,7 @@
                                  (e. (e. ejector-patt |getNoun|) |getName|))))
              (not (e-is-true (e. body-scope |hasMetaStateExpr|))))
     #+(or) 
-    (progn 
-      (format t "~&triggered ejector optimization for ~S in ~S~%" ejector-patt (scope-layout-fqn-prefix layout))
-      (force-output))
+    (e. e.knot:+sys-trace+ |run| (format nil "triggered ejector optimization for ~S in ~S" ejector-patt (scope-layout-fqn-prefix layout)))
     (return-from sequence-expr ;; XXX dependence on existence of block
       (values `((,result ,(hide-sequence body layout))) layout)))
   (values
@@ -407,23 +405,20 @@
         ;; if we reach here, the ejector was used
         ,remaining-code))))
 
-(define-sequence-expr |ObjectExpr| (layout result doc-comment qualified-name auditor-exprs script
+(define-inline-expr |ObjectExpr| (layout doc-comment qualified-name auditor-exprs script
     &aux (auditor-vars (loop for nil across auditor-exprs collect (gensym "AUDITOR")))
          (fqn (updating-fully-qualify-name layout qualified-name)))
-  (values
-    (append
-      (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
-            for auditor-var-cell on auditor-vars
-            append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
-      `((,result
-         ,(object-form +seq-object-generators+
-                       layout 
-                       (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs script))
-                       doc-comment
-                       auditor-vars
-                       script
-                       fqn))))
-    layout))
+  (sequence-to-form
+    (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
+          for auditor-var-cell on auditor-vars
+          append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
+    (object-form +seq-object-generators+
+                 layout 
+                 (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs script))
+                 doc-comment
+                 auditor-vars
+                 script
+                 fqn)))
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values

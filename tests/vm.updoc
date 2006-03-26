@@ -97,11 +97,11 @@ Non-contagion:
 More AssignExpr:
 
   ? y := 3
-  # problem: not an assignable slot: <& 2>
+  # problem: y is not an assignable variable
 
   confirm static rejection  
   ? if (false) { y := 3 }
-  # problem: not an assignable slot: <& 2>
+  # problem: y is not an assignable variable
   
   ? x := (x + 3)
   # value: 3
@@ -301,6 +301,10 @@ ObjectExpr
   ? thing.foo()
   # value: 13
   
+ Scope of 'implements' includes the object, but not after it
+  ? { def x := 1; { def thing implements (def x {to audit(_,_) :any {return true}}) { to run() :any {x} }; [x, thing()] }}
+  # value: [1, <x>]
+  
 Matcher
 
   ? def matches {
@@ -387,7 +391,8 @@ Plumbing
   # value: true
 
   Plumbing expressions can have auditors
-  ? def x implements (def auditor {method audit(_,_):any{true}}) match msg { E.callWithPair("x", msg) }
+  ? def auditor { method audit(_,_) :any {true} }
+  > def x implements auditor match msg { E.callWithPair("x", msg) }
   # value: "x"
   
   ? __auditedBy(auditor, x)
@@ -604,8 +609,12 @@ SlotExpr, SlotPattern, AssignExpr
   ? (&pi).__optUncall()
   # value: [<makeFinalSlot>, "run", [3.14159]]
   
+  Since this is not an AssignExpr but a SlotExpr and call, the error is that which results from FinalSlot#setValue, and is not statically caught.
+  
   ? [(&pi).setValue(3)]
   # problem: not an assignable slot: <& 3.14159>
+  
+  ? if (false) { [(&pi).setValue(3)] }
   
  outer normal slot
  
@@ -709,6 +718,7 @@ SlotExpr, SlotPattern, AssignExpr
   >   def perverseSlot {
   >     to getValue() :any { return v += 1 }
   >     to setValue(new :tint) :void { v += new * 100 }
+  >     to isFinal() :any { return false }
   >   }
   > }
   # value: <perverseSlot>

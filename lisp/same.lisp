@@ -18,14 +18,11 @@
   ; XXX translation of Java
   ;(declare (optimize (speed 3) (safety 3)))
   (when (nth-value 1 (gethash original sofar))
-    ;(format t "original in sofar: ~S" original)
     (return-from sameness-fringe t))
   (let ((obj (ref-shorten original)))
     (when (nth-value 1 (gethash obj sofar))
-      ;(format t "shortened in sofar: ~S" obj)
       (return-from sameness-fringe t))
     (when (transparent-selfless-p obj)
-      ;(format t "selfless: ~S" obj)
       (setf (gethash original sofar) nil)
       (return-from sameness-fringe
         (loop
@@ -37,10 +34,8 @@
           finally (return result))))
     (if (ref-is-resolved obj)
       (progn
-        ;(format t "resolved: ~S" obj)
         t)
       (progn
-        ;(format t "fallthru: ~S" obj)
         (when opt-fringe
           (setf (gethash obj opt-fringe) nil))
         nil))))

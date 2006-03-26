@@ -524,7 +524,7 @@ XXX make precedence values available as constants"
 (defun start-parser ()
   (assert (not (boundp '*parser-process*)))
   ; XXX pipe this through common tracing architecture
-  (format *trace-output* "~&; starting Java-E parsing subprocess~%")
+  (e. e.knot:+sys-trace+ |run| "starting Java-E parsing subprocess")
   (asdf:operate 'asdf:compile-op :e-on-cl.antlr-parser)
   (setf *parser-process* (e.util:run-program
     "/usr/bin/env" ;; XXX platform assumption - we should have a way of telling our portable-run-program to "search" with unspecified means
@@ -620,10 +620,9 @@ XXX make precedence values available as constants"
                 (read (e-util:external-process-output-stream *parser-process*)))))
         (unless (eql *parse-counter* return-serial) 
           (error 'link-out-of-sync-error))
-        ;(format t "got back: ~S~%" tree-expr)
         tree-expr)
     ((or end-of-file link-out-of-sync-error) (condition)
-      (format *trace-output* "~&; error in parser communication: ~A (second time: ~A)~%" condition trying-again)
+      (e. e.knot:+sys-trace+ |run| (format nil "error in parser communication: ~A (second time: ~A)" condition trying-again))
       (kill-parser)
       (if trying-again
         (error condition)
@@ -647,15 +646,14 @@ XXX make precedence values available as constants"
     (multiple-value-bind (cached present-p) (gethash key *parse-cache-hash*)
     (if present-p
       cached
-      (progn
-        (format *trace-output* "~&; query-to-java: ~A(~{~A...~^, ~})" 
+      (e. e.knot:+sys-trace+ |doing|
+        (format nil "query-to-java: ~A(~{~A...~^, ~})"
           verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg)) 
                        args))
-        (force-output *trace-output*)
-        (let ((answer (call-to-java verb args)))
-          (setf (gethash key *parse-cache-hash*) answer)
-          (format *trace-output* " done~%")
-          answer))))))
+        (efun ()
+          (let ((answer (call-to-java verb args)))
+            (setf (gethash key *parse-cache-hash*) answer)
+            answer)))))))
 
 #+(or)
 (defun parse-to-expr (source)
@@ -1079,27 +1077,27 @@ XXX make precedence values available as constants"
  
 (defun load-parse-cache (stream)
   ; XXX options to disable this output
-  (format *trace-output* "~&; Loading parse cache from ~A..." (enough-namestring (pathname stream)))
-  (force-output *trace-output*)
-  (loop
-    for (source tree) in
-      (with-standard-io-syntax
-        (let ((*package* (find-package :e.elang.vm-node))) 
-          (read stream)))
-    do (setf (gethash source *parse-cache-hash*) tree))
-  (format *trace-output* "done~%")
-  (values))
+  (e. e.knot:+sys-trace+ |doing| 
+    (format nil "Loading parse cache from ~A" (enough-namestring (pathname stream)))
+    (efun ()
+      (loop
+        for (source tree) in
+          (with-standard-io-syntax
+            (let ((*package* (find-package :e.elang.vm-node))) 
+              (read stream)))
+        do (setf (gethash source *parse-cache-hash*) tree))
+      (values))))
     
 (defun save-parse-cache (stream)
-  (format *trace-output* "~&; Writing parse cache to ~A..." (enough-namestring (pathname stream)))
-  (force-output *trace-output*)
-  (let ((data (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
-                    collect (list source tree))))
-    (with-standard-io-syntax
-      (let ((*package* (find-package :e.elang.vm-node)))
-        (write data :stream stream))))
-  (format *trace-output* "done~%")
-  (values))
+  (e. e.knot:+sys-trace+ |doing| 
+    (format nil "Writing parse cache to ~A" (enough-namestring (pathname stream)))
+    (efun ()
+      (let ((data (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
+                        collect (list source tree))))
+        (with-standard-io-syntax
+          (let ((*package* (find-package :e.elang.vm-node)))
+            (write data :stream stream))))
+      (values))))
 
 (defun load-parse-cache-file (file)
   "Returns T if the file exists and therefore was loaded, or nil if it does not exist or could not be loaded."

@@ -388,13 +388,18 @@ DeepFrozenness
   ? false :DeepFrozen
   # value: false
   
-traceln
+trace
+
+  ? trace
+  # value: <trace>
 
   ? traceln
-  # value: <traceln>
+  # value: <trace>
   
   ? traceln.__respondsTo("run", 1)
   # value: true
+  
+  XXX more tests of trace
 
 __makeVerbFacet
 

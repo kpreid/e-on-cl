@@ -36,7 +36,8 @@
      (:file "knot-base"
             :depends-on ("elib" "sugar"))
      (:file "knot"
-            :depends-on ("knot-base" "extern" "elib-guts" "tables2"))
+            :depends-on ("knot-base" "extern" "elib-guts" "tables2"
+                         "print" #| constructing global tracers |#))
      (:file "elang-nodes"
             :depends-on ("elib" 
                          "util"

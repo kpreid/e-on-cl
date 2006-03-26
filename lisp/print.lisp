@@ -144,7 +144,6 @@
                       (e. delegate |close|))
                     (e. (first open-flags) |setValue| nil)
                     (setf delegate nil)
-                    ;(format *trace-output* "~&;~A closed~%" tw)
                     nil)
                   (:|flush| ()
                     (assert-open)
@@ -159,7 +158,6 @@
                     nil)
                   (:|printSame| (thing)
                     ; XXX lousy name
-                    ;(format *trace-output* "~&;~A printSame ~A~%" tw thing)
                     (setf thing (ref-shorten thing))
                     (assert-open)
                     (let ((key (make-traversal-key thing)))

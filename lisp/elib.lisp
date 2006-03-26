@@ -76,7 +76,7 @@
 (defgeneric e-call-dispatch (rec mverb &rest args)
   (:documentation "Main dispatch function for E calls and other call-like operations.
 
-Shortens REC if needed. MVERB must be either a mangled verb as in E.UTIL:MANGLE-VERB, or a non-keyword symbol that is a magic verb (such as AUDITED-BY-MAGIC-VERB); if a mangled verb, its arity must be equal to the number of ARGS.
+Shortens REC if needed. MVERB must be either a mangled verb as in E.UTIL:MANGLE-VERB, or a non-keyword symbol that is a magic verb (such as AUDITED-BY-MAGIC-VERB); if a mangled verb, its arity must be equal to the number of ARGS. A non-mangled-verb keyword symbol is erroneous.
 
 Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and not expose non-keyword mverbs to untrusted code. XXX This list of requirements is probably not complete.")
   (declare (optimize (speed 3))))
@@ -445,8 +445,8 @@ If there is no current vat at initialization time, captures the current vat at t
            :type runner)
    (in-turn :initform nil
             :accessor vat-in-turn
-            :type boolean
-            :documentation "Whether some type of top-level turn is currently being executed in this vat. Used for consistency checking.")
+            :type t
+            :documentation "Whether some type of top-level turn is currently being executed in this vat; if not NIL, is a label for the turn. Used for consistency checking.")
    (safe-scope :initform (e.knot:make-safe-scope)
                :accessor vat-safe-scope)
    (label :initarg :label
@@ -499,13 +499,16 @@ If there is no current vat at initialization time, captures the current vat at t
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
   (multiple-value-bind (promise resolver) (make-promise)
     (enqueue-turn *vat* (lambda ()
-      ; XXX direct this into a configurable tracing system once we have one
-      ;(format *trace-output* "~&; running ~A ~A <- ~A ~A~%" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)))
+      ; XXX direct this into a *configurable* tracing system once we have one
+      ;(e. e.knot:+sys-trace+ |run| (format nil "running ~A ~A <- ~A ~A" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector))))
       (e. resolver |resolve| 
         (handler-case 
           (apply #'e-call-dispatch rec mverb args)
           (error (p)
-            (format *trace-output* "~&; problem in send ~A <- ~A ~A: ~A~%" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p)
+            ;; XXX using e printing routines here is invoking objects outside a proper turn; do one of:
+            ;;   (a) CL print instead
+            ;;   (b) make printing the error done in yet another turn (possible object's-print-representation-has-changed problem)
+            (e. e.knot:+sys-trace+ |run| (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
             (make-unconnected-ref (transform-condition-for-e-catch p)))))))
     promise))
 
@@ -1045,7 +1048,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
 
 (defun reffify-args (args)
   "See *EXERCISE-REFFINESS*."
-  (map-into args (lambda (x) (make-instance 'forwarding-ref :target x)) args))
+  (mapcar (lambda (x) (make-instance 'forwarding-ref :target x)) args))
 
 (defmacro def-vtable (type-spec &body smethods
     &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))
@@ -1092,8 +1095,8 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     
     ; XXX gensymify 'args
     (defmethod e-call-dispatch ((rec ,evaluated-specializer) mverb &rest args)
-      (when *exercise-reffiness*
-        (reffify-args args))
+      (when (and *exercise-reffiness* (keywordp mverb))
+        (setf args (reffify-args args)))
       (case mverb
         ,@(loop for smethod in smethods collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information

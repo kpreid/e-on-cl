@@ -209,11 +209,11 @@
     (or
       #+sbcl
         (list (sb-introspect:function-arglist function))
-      #+allegro ; XXX appropriate feature test?
+      #+excl ; xx is this the most appropriate feature test?
         (list (nth-value 0 (excl:arglist function)))
       #+(or abcl clisp)
         (list (ext:arglist function))
-      #+ccl ; XXX appropriate feature test? should this be restricted to #+openmcl?
+      #+ccl ; xxx appropriate feature test? should this be restricted to #+openmcl?
         (list (ccl:arglist function))
       #+cmu
         (list

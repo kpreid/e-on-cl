@@ -10,7 +10,7 @@
     (cond
       ((and (f :clisp) (f :unicode))
         #+clisp (ext:make-encoding :charset "UTF-8"))
-      ((f :sb-unicode)
+      ((or (f :sb-unicode) (f :allegro))
         :utf-8)
       (t 
         :default)))
@@ -110,12 +110,12 @@
           (when (e-is-true (e. sub |exists|))
             sub)))
       (:|getText| ()
-        ;; XXX doesn't actually add twine info
         (read-entire-file pathname))
       (:|getTwine| ()
-        ;; XXX doesn't actually add twine info
-        ;; (e. (e. |file| |getText|) |asFrom| ...)
-        (read-entire-file pathname))
+        (e. (e. |file| |getText|)
+            |asFrom| 
+            ;; XXX we should have a formal way to retrieve the URL
+            (concatenate 'string "file://" (e. |file| |getPath|))))
       (:|textReader| (&aux (stream (open pathname :if-does-not-exist :error)))
         ; XXX external format, etc.
         (e-lambda "textReader" (:doc "Java-E compatibility")
@@ -174,7 +174,7 @@
     #+cmu   (extensions:gc) ; other documentation claimed SYSTEM:GC
     #+ccl   (ccl:gc)
     #+clisp (ext:gc)
-    #+allegro (excl:gc t nil) ; XXX untested
+    #+allegro (excl:gc t nil)
     #+abcl  (ext:gc)
     (values))))
 

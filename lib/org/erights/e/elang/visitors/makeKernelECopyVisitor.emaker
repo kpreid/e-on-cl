@@ -6,6 +6,7 @@ pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
 #def vmMakers := <elang:evm.*>
+def root := <import:org.cubik.cle.root>
 
 def makeKernelECopyVisitor implements DeepFrozen { # XXX write tests and documentation for this
   to __printOn(out :TextWriter) {
@@ -13,7 +14,7 @@ def makeKernelECopyVisitor implements DeepFrozen { # XXX write tests and documen
   }
   
   to run(self) {
-    def kernelECopyVisitor {
+    def kernelECopyVisitor extends root[self] {
       to run(node) {
         return switch (node) {
           match list :List {
