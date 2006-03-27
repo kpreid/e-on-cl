@@ -142,6 +142,21 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            null
   #        } =~ [&__1]`
 
+  Bug test: reusing names would cause them to be null =~ bound on both sides
+  ? t("1 =~ x || 2 =~ x")
+  # value: e`if (1 =~ x) {
+  #            null =~ []
+  #            __makeList.run(&x)
+  #        } else {
+  #            if (2 =~ x) {
+  #                null =~ []
+  #                __makeList.run(&x)
+  #            } else {
+  #                null
+  #            }
+  #        } =~ [&x]`
+
+
 'CurryExpr'
 
   ? t("pragma.enable(\"verb-curry\"); a.b")

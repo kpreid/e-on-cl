@@ -283,13 +283,13 @@
 
 (defun conditional-op-p (x) (member x '("&&" "||") :test #'equal))
 
-(defun names-to-nouns (names)
+(defun keys-to-nouns (map)
   (map 'list (lambda (name) 
                ;; XXX the need for this test demonstrates that /something/ is broken; most likely, that StaticScopes unwrap their Noun-or-TemporaryExprs
                (etypecase name
                  (string (mn '|NounExpr| name))
                  (symbol (mn '|TemporaryExpr| name)))) 
-             names))
+             (ref-shorten (e. map |getKeys|))))
 
 (defemacro |ConditionalExpr| (|EExpr|) ((|op| nil (satisfies conditional-op-p))
                                         (|left| t |EExpr|)
@@ -299,9 +299,7 @@
          (kernel-right (e-macroexpand-all |right|))
          (left-map  (e. (e. kernel-left |staticScope|) |outNames|))
          (right-map (e. (e. kernel-right |staticScope|) |outNames|))
-         (left-nouns  (names-to-nouns (e. left-map |getKeys|)))
-         (right-nouns (names-to-nouns (e. right-map |getKeys|)))
-         (both-nouns (names-to-nouns (e. (e. left-map |or| right-map) |getKeys|)))
+         (both-nouns (keys-to-nouns (e. left-map |or| right-map)))
          (slot-list (apply #'mn '|ListExpr| 
                       (map 'list (lambda (noun) (mn '|SlotExpr| noun))
                                  both-nouns))))
@@ -314,20 +312,24 @@
                                     (slot-patterns nouns))))
       (mn '|MatchBindExpr|
         (ecase (find-symbol |op| :keyword)
-          (:\|\| (mn '|IfExpr| kernel-left 
-                               (mn '|SeqExpr|
-                                 (bind-failure right-nouns)
-                                 slot-list)
-                               (mn '|IfExpr| kernel-right
-                                 (mn '|SeqExpr|
-                                   (bind-failure left-nouns)
-                                   slot-list)
-                                 (mn '|NullExpr|))))
-          (:&&   (mn '|IfExpr| kernel-left
-                               (mn '|IfExpr| kernel-right
-                                             slot-list
-                                             (mn '|NullExpr|))
-                               (mn '|NullExpr|))))
+          (:\|\|
+           (let* ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
+                  (right-only (keys-to-nouns (e. right-map |butNot| left-map))))
+             (mn '|IfExpr| kernel-left 
+                           (mn '|SeqExpr|
+                             (bind-failure right-only)
+                             slot-list)
+                           (mn '|IfExpr| kernel-right
+                             (mn '|SeqExpr|
+                               (bind-failure left-only)
+                               slot-list)
+                             (mn '|NullExpr|)))))
+          (:&&   
+           (mn '|IfExpr| kernel-left
+                         (mn '|IfExpr| kernel-right
+                                       slot-list
+                                       (mn '|NullExpr|))
+                         (mn '|NullExpr|))))
         (slot-patterns both-nouns)))))
 
 (defemacro |CurryExpr| (|EExpr|) ((|expr| t (or |CallExpr| |SendExpr|)))
