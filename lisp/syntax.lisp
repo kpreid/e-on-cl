@@ -635,12 +635,14 @@ XXX make precedence values available as constants"
   
   ; Ensure that the source string is printable under *print-readably*, and therefore won't hose the parse cache. (simple-base-strings are not, in SBCL.)
   ; XXX check if this works on implementations other than SBCL 
-  (setf args (mapcar (lambda (arg)
-                       (e-coercef arg '(or twine e-boolean))
-                       (if (stringp arg)
-                         (coerce arg '(vector character))
-                         arg))
-                     args))
+  (labels ((convert (x) (e-coercef x '(or string e-boolean null vector))
+                        (typecase x
+                          (string
+                            (coerce x '(vector character)))
+                          (vector
+                            (map 'vector #'convert x))
+                          (t x))))
+    (setf args (mapcar #'convert args)))
   
   (let* ((key (list verb args)))
     (multiple-value-bind (cached present-p) (gethash key *parse-cache-hash*)
@@ -685,10 +687,13 @@ XXX make precedence values available as constants"
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
   (:|run| (source syntax-ejector)
+    (e-coercef source 'twine)
     (e-source-to-tree source :syntax-ejector syntax-ejector))
   (:|run| (source)
+    (e-coercef source 'twine)
     (e-source-to-tree source))
   (:|pattern| (source syntax-ejector)
+    (e-coercef source 'twine)
     (e-source-to-tree source :syntax-ejector syntax-ejector :pattern t))))
 
 ;;; --- Antlr parser support ---
