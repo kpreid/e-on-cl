@@ -38,3 +38,21 @@
 (deftest e-print-class-guard
   (e-print (type-specifier-to-guard (find-class 'integer)))
   "int")
+  
+(deftest boolean-print-readably-package
+  (with-output-to-string (*standard-output*)
+    (with-standard-io-syntax
+      (dolist (*print-readably* '(nil t))
+        (dolist (*read-eval* '(nil t))
+          (terpri)
+          (dolist (*package* '(#.*package* #.(find-package :keyword)))
+            (dolist (b (list +e-true+ +e-false+))
+              (princ " ")
+              (handler-case
+                (prin1 b)
+                (print-not-readable (c) (prin1 ':NR)))))))))
+  "
+ #.+E-TRUE+ #.+E-FALSE+ #.E.ELIB:+E-TRUE+ #.E.ELIB:+E-FALSE+
+ #.+E-TRUE+ #.+E-FALSE+ #.E.ELIB:+E-TRUE+ #.E.ELIB:+E-FALSE+
+ :NR :NR :NR :NR
+ #.+E-TRUE+ #.+E-FALSE+ #.E.ELIB:+E-TRUE+ #.E.ELIB:+E-FALSE+")

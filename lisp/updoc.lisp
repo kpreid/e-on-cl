@@ -316,24 +316,26 @@
                                  answers-vector)) script)
                 nil)))
            (scope (if confine
-                    (e. (e. (vat-safe-scope *vat*) |withPrefix| "__main$") |or| (e.knot:make-scope "updocAdditions$"
-                      `(("updoc" ,runner)
-                        ("interp" ,interp)
-                        ("print"
-                         ,(e-lambda |print| ()
-                            (otherwise (mverb &rest args)
-                              (if (mverb-verb= mverb "run")
-                                (loop for a in args do
-                                  (princ (e-print a) eval-out-stream))
-                                (no-such-method |print| mverb args)))))
-                        ("println"
-                         ,(e-lambda |println| ()
-                            (otherwise (mverb &rest args)
-                              (if (mverb-verb= mverb "run")
-                                (loop for a in args do
-                                  (princ (e-print a) eval-out-stream)
-                                  finally (terpri eval-out-stream))
-                                (no-such-method |println| mverb args))))))))
+                    (e.
+                      (e. (e-import "org.cubik.cle.makeIOScope")
+                          |run| 
+                          "__main$"
+                          (vat-safe-scope *vat*)
+                          (make-scope "__updocConfinedPowers$"
+                            `(("interp" ,interp)
+                              ("stdout" ,(make-text-writer-to-cl-stream
+                                          eval-out-stream
+                                          :autoflush t
+                                          :should-close-underlying nil))
+                              ("stderr" ,(make-text-writer-to-cl-stream
+                                          eval-err-stream
+                                          :autoflush t
+                                          :should-close-underlying nil))
+                              ("props"  ,e.knot::+eprops+)
+                              #||#)))
+                      |or| 
+                      (e.knot:make-scope "updocAdditions$"
+                        `(("updoc" ,runner))))
                     (e. (e. (make-io-scope :stdout eval-out-stream 
                                            :stderr eval-err-stream
                                            :interp interp) 

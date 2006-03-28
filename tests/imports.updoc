@@ -128,3 +128,14 @@ simplifyFQName
 
   ? simplifyFQName :DeepFrozen
   # value: <simplifyFQName>
+  XXX test operation
+
+FirstCharSplitter
+
+  ? def makeFirstCharSplitter :DeepFrozen := <import:org.quasiliteral.text.FirstCharSplitter>
+  # value: <makeFirstCharSplitter>
+  
+  ? def abSplitter :DeepFrozen := makeFirstCharSplitter("ab")
+  # value: <finds any of "ab">
+  
+  XXX just testing DeepFrozenness for now

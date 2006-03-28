@@ -205,8 +205,8 @@
 ;; note: this *could* be placed later
 (defmethod print-object ((bool e-boolean) stream)
   (if (or *read-eval* (not *print-readably*))
-            (format stream "#.~S" (if (e-is-true bool)
-                                    '+e-true+
-                                    '+e-false+))
-            (error 'print-not-readable :object bool)))
+    (format stream "#.~S" (if (e-is-true bool)
+                            '+e-true+
+                            '+e-false+))
+    (error 'print-not-readable :object bool)))
 
