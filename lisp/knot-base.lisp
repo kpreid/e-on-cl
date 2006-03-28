@@ -369,11 +369,20 @@
         (assert (string= fqn ""))
         nil))))
 
-(defglobal +make-first-char-splitter+ (e-lambda "org.quasiliteral.text.makeFirstCharSplitter" ()
+(defglobal +make-first-char-splitter+ (e-lambda
+    "org.quasiliteral.text.makeFirstCharSplitter"
+    (:stamped +deep-frozen-stamp+)
+  ;; In the future, this might become part of something for working with character sets in general, and Unicode character categories. Consider Cocoa's NSCharacterSet and NSScanner.
   (:|run| (specials)
     (e-coercef specials 'string)
     (flet ((match (ch) (position ch specials)))
-      (e-lambda "org.quasiliteral.text.FirstCharSplitter" ()
+      (e-lambda "org.quasiliteral.text.FirstCharSplitter" 
+          (:stamped +deep-frozen-stamp+)
+        (:|__printOn| (out)
+          (e-coercef out +the-text-writer-guard+)
+          (e. out |write| "<finds any of ")
+          (e. out |quote| specials)
+          (e. out |write| ">"))
         (:|findIn| (str)
           "Equivalent to .findInFrom(str, 0)."
           (e-coercef str 'string)
