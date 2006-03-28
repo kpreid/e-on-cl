@@ -672,17 +672,18 @@ XXX make precedence values available as constants"
       (error-from-e-error-string ejector (second result))
       result)))
 
+(defun parse-to-kernel (source &rest options)
+  (kernelize (apply #'e-source-to-tree source options)))
+
 (defun e-source-to-tree (source &key syntax-ejector pattern)
-  ;; XXX this isn't really the relevant package
-  (e.nonkernel.impl:kernelize
-    (antlr-root 
-      #-e.syntax::local-parser
-        (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) +e-false+)
-      #+e.syntax::local-parser
-        (handler-case
-          (antlr-parse "unknown" source pattern nil)
-          (error (c)
-            (eject-or-ethrow syntax-ejector c))))))
+  (antlr-root 
+    #-e.syntax::local-parser
+      (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) +e-false+)
+    #+e.syntax::local-parser
+      (handler-case
+        (antlr-parse "unknown" source pattern nil)
+        (error (c)
+          (eject-or-ethrow syntax-ejector c)))))
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)

@@ -406,11 +406,12 @@
 
 NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced."
     (e-coercef args 'vector)
-    (if (zerop (length args))
-      this
-      (e. this |welcome|
-          (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
-              |run| args))))
+    (kernelize
+      (if (zerop (length args))
+        this
+        (e. this |welcome|
+            (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
+                |run| args)))))
   (:|welcome| (this visitor)
     (e-call
       visitor

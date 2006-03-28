@@ -172,12 +172,12 @@
           ;; If we have a compile-target, then we have the authority
           ;; to write to it.
           (e.compiler:compile-e-to-file
-            (e.syntax:e-source-to-tree (e. file |getTwine|))
+            (e.syntax:parse-to-kernel (e. file |getTwine|))
             compile-target
             fqn-prefix
             scope))
         (e.compiler:load-compiled-e compile-target scope))
-      (elang:eval-e (e.syntax:e-source-to-tree (e. file |getTwine|))
+      (elang:eval-e (e.syntax:parse-to-kernel (e. file |getTwine|))
                     scope))))
 
 (defun make-emaker-loader (search-list-slot scope-fn compile-target-fn
@@ -411,7 +411,7 @@
                   source nil)
             (handler-case
               (progn
-                (setf value (elang:eval-e (e.syntax:e-source-to-tree source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|)))))
+                (setf value (elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|)))))
                 (e. resolver |resolve| value))
               (error (p)
                 (e. resolver |smash| p))))))

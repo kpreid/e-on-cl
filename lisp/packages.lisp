@@ -377,6 +377,11 @@
     :get-translation
     :require-kernel-e
     
+    :e-macroexpand-1
+    :e-macroexpand
+    :e-macroexpand-all
+    :kernelize
+    
     :+the-make-static-scope+
     
     :node-elements ;; XXX shouldn't really be exported
@@ -403,6 +408,7 @@
     +e-printer+
     
     :e-source-to-tree
+    :parse-to-kernel
     
     :load-parse-cache
     :save-parse-cache
