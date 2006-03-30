@@ -78,7 +78,48 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   ? t("a + b")
   # value: e`a.add(b)`
+
+  ? t("a - b")
+  # value: e`a.subtract(b)`
+
+  ? t("a * b")
+  # value: e`a.multiply(b)`
+
+  ? t("a / b")
+  # value: e`a.approxDivide(b)`
+
+  ? t("a // b")
+  # value: e`a.floorDivide(b)`
+
+  ? t("a % b")
+  # value: e`a.mod(b)`
+
+  ? t("a %% b")
+  # value: e`a.remainder(b)`
+
+  ? t("a ** b")
+  # value: e`a.pow(b)`
+  XXX test modPow behaviors
+
+  ? t("a & b")
+  # value: e`a.and(b)`
+
+  ? t("a | b")
+  # value: e`a.or(b)`
   
+  ? t("a &! b")
+  # value: e`a.butNot(b)`
+
+  ? t("a ^ b")
+  # value: e`a.xor(b)`
+
+  ? t("a >> b")
+  # value: e`a.shiftRight(b)`
+  
+  ? t("a << b")
+  # value: e`a.shiftLeft(b)`
+
+
   Disabled for now till the final fate of +(,) is decided
   x ? t("a + (b, c)")
   x # value: e`a.add(b, c)`
@@ -88,6 +129,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   ? t("a..!b")
   # value: e`__makeOrderedSpace.op__till(a, b)`
+  
   
   XXX test all binary ops for correct matching verbs
 
