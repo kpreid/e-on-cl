@@ -3,8 +3,9 @@
 
 These are tests specifically of the text->Kernel-E stages, skipping evaluation and the intermediate unexpanded form; however, the intent is primarily to test expansion, not the parser.
 
-  ? def t := <import:org.cubik.cle.prim.parser>; null
-  ? def tp(pat) :any { return t.pattern(pat, null) }; null
+  ? def pp := <import:org.cubik.cle.prim.parser>; null
+  ? def t(s) :any { return pp.run(s).asKernelE() }; null
+  ? def tp(pat) :any { return pp.pattern(pat, null).asKernelE() }; null
 
 Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
 
@@ -89,6 +90,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`__makeOrderedSpace.op__till(a, b)`
   
   XXX test all binary ops for correct matching verbs
+
 
 'CoerceExpr'
 

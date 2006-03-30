@@ -403,7 +403,8 @@ Plumbing
   
   Plumbing expressions can't have super '
   ? def x extends y match msg {}
-  # syntax error: expecting "{", found 'match'
+  # problem: (unknown:1)@17: expecting "{", found 'match'
+  XXX will be 'syntax error', wording to change, gain file position info
 
 Alleged type
 

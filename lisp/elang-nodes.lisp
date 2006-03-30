@@ -412,6 +412,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         (e. this |welcome|
             (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
                 |run| args)))))
+  (:|asKernelE/0| 'kernelize)
   (:|welcome| (this visitor)
     (e-call
       visitor
