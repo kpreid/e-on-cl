@@ -34,19 +34,20 @@ def [=> NounExpr, => EExpr, => ENode, => FinalPattern, => IfExpr, => SeqExpr] :=
                      to optExtract(key) { return [<import>["org.erights.e.elang.evm.type." + key], nodeTypeMap] }}}
 
 
-# /** Version of e__quasiParser that doesn't depend on DeepFrozen itself. */
-# def makeSubstituter := importCode["org.erights.e.elang.visitors.makeQuasiSubstituteVisitor"].eval(safeScope.with("DeepFrozen" => def stubAuditor {to audit(_, _) {return false}}))
-# def ep__quasiParser {
-#   to valueMaker(text) {
-#     def parsed := primParser(text)
-#     def substituter {
-#       to substitute(args) {
-#         return makeSubstituter(args)(parsed)
-#       }
-#     }
-#     return substituter
-#   }
-# }
+def primParser := <import:org.cubik.cle.prim.parser>
+/** Version of e__quasiParser that doesn't do proper substitution, so has fewer dependencies. */
+def eDF__quasiParser {
+  to valueMaker(text) {
+    requireDF(text.indexOf1('$') == -1 && text.indexOf1('@') == -1, thunk{"eDF`` doesn't support holes or escapes"})
+    def parsed := primParser(text)
+    def substituter {
+      to substitute(_) {
+        return parsed
+      }
+    }
+    return substituter
+  }
+}
 
 def exprShorten(expr) {
   return \
@@ -230,20 +231,20 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
               thunk{label + ": __optSealedDispatch argument pattern is not simple"})
             # XXX We haven't implemented node pattern matching yet. Once EventuallyDeepFrozen is working, test and implement pattern matching and reenable this.
             # requireDF(methd.getBody() =~ \
-            #     e`if ($brandPattern == @{auditorExpr ? expressionWillHaveValue(auditorExpr, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard) {[optResultGuard]} else {[]})}.getPeekBrand()) { meta.getState() }`, 
+            #     eDF`if ($brandPattern == @{auditorExpr ? expressionWillHaveValue(auditorExpr, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard) {[optResultGuard]} else {[]})}.getPeekBrand()) { meta.getState() }`, 
             #   thunk{`$label: __optSealedDispatch body is not suitably formed`})
             def methodBody := exprShorten(methd.getBody())
             requireDF(methodBody =~ ifExpr :Really[IfExpr], thunk{label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody)})
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
-            requireDF(exprShorten(ifExpr.getTest()) == makeCallExpr(null, e`__equalizer`, "sameEver", [brandPattern.getNoun(), e`EventuallyDeepFrozen.getPeekBrand()`], null) \
-                      && expressionWillHaveValue(e`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
-                      && expressionWillHaveValue(e`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
+            requireDF(exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null) \
+                      && expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
+                      && expressionWillHaveValue(eDF`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
               thunk{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
               
             # overly restrictive in the same way as the previous
-            requireDF(exprShorten(ifExpr.getThen()) == e`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())` \
-                    && expressionWillHaveValue(e`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
+            requireDF(exprShorten(ifExpr.getThen()) == eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())` \
+                    && expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
               thunk{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
             
             break true

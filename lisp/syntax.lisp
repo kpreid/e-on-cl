@@ -633,9 +633,10 @@ XXX make precedence values available as constants"
 (defun query-to-java (verb &rest args)
   "Memoized version of call-to-java"
   
-  ; Ensure that the source string is printable under *print-readably*, and therefore won't hose the parse cache. (simple-base-strings are not, in SBCL.)
-  ; XXX check if this works on implementations other than SBCL 
-  (labels ((convert (x) (e-coercef x '(or string e-boolean null vector))
+  ;; This does two things:
+  ;; 1. Only objects which print parseably in E may pass this point, since the objects are passed by sending (e-print object) over a pipe.
+  ;; 2. Ensures that the arguments are printable under *print-readably*, and therefore won't hose the parse cache. In particular, strings must be general strings, not base-strings.
+  (labels ((convert (x) (e-coercef x '(or string e-boolean null vector integer float64))
                         (typecase x
                           (string
                             (coerce x '(vector character)))
@@ -662,8 +663,8 @@ XXX make precedence values available as constants"
   (query-to-java "run" source))
 
 #+(or)
-(defun e-source-to-tree (source &key syntax-ejector)
-  (build-nodes (query-or-die syntax-ejector "run" source)))
+(defun e-source-to-tree (source &key syntax-ejector quasi-info)
+  (build-nodes (query-or-die syntax-ejector "run" source quasi-info)))
 
 #-e.syntax::local-parser
 (defun query-or-die (ejector &rest msg)
@@ -675,27 +676,43 @@ XXX make precedence values available as constants"
 (defun parse-to-kernel (source &rest options)
   (kernelize (apply #'e-source-to-tree source options)))
 
-(defun e-source-to-tree (source &key syntax-ejector pattern)
+(defun e-source-to-tree (source &key syntax-ejector pattern quasi-info)
   (antlr-root 
     #-e.syntax::local-parser
-      (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) +e-false+)
+      (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) quasi-info)
     #+e.syntax::local-parser
       (handler-case
         (antlr-parse "unknown" source pattern nil)
         (error (c)
           (eject-or-ethrow syntax-ejector c)))))
 
+(declaim (inline e-coercer))
+(defun e-coercer (type-or-guard)
+  (lambda (x) (e-coerce x type-or-guard)))
+
+(defun map-e-list (function list)
+  (map 'vector function (e-coerce list 'vector)))
+
+(defun mapper-e-list (function)
+  (lambda (x) (map-e-list function x)))
+
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
-  (:|run| (source syntax-ejector)
+  (:|run| (source quasi-info syntax-ejector)
     (e-coercef source 'twine)
-    (e-source-to-tree source :syntax-ejector syntax-ejector))
+    (setf quasi-info (ref-shorten quasi-info))
+    (when quasi-info
+      ;; vector of vectors of integers ([valueHoles, patternHoles])
+      (setf quasi-info 
+        (map-e-list (mapper-e-list (e-coercer 'integer)) 
+                    quasi-info)))
+    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector))
   (:|run| (source)
     (e-coercef source 'twine)
     (e-source-to-tree source))
-  (:|pattern| (source syntax-ejector)
+  (:|pattern| (source quasi-info syntax-ejector)
     (e-coercef source 'twine)
-    (e-source-to-tree source :syntax-ejector syntax-ejector :pattern t))))
+    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t))))
 
 ;;; --- Antlr parser support ---
 
@@ -840,7 +857,12 @@ XXX make precedence values available as constants"
           e.grammar::|TailPattern|
           e.grammar::|EMethod|
           e.grammar::|ETo|
-          e.grammar::|EMatcher|)
+          e.grammar::|EMatcher|
+          
+          e.grammar::|QuasiLiteralExpr|
+          e.grammar::|QuasiLiteralPattern|
+          e.grammar::|QuasiPatternExpr|
+          e.grammar::|QuasiPatternPattern|)
           (pass))
       
         ;; -- misc. leaves and 'special' nodes --

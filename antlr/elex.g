@@ -39,6 +39,37 @@ tokens {
     SR_ASSIGN;
 }
 {
+    // quasi-E-source hole marker indexes
+    
+    static final int NO_HOLE_INDEX = -1;
+    protected int[] valueHoles = {};
+    protected int[] patternHoles = {};
+    public void setHoles(int[] vh, int[] ph) {
+      valueHoles = vh;
+      patternHoles = ph;
+    }
+
+    protected int holeThere(String key, int offset) {
+      int[] table = "$".equals(key) ? valueHoles : "@".equals(key) ? patternHoles : null;
+      if (inputState instanceof CountingLexerSharedInputState) {
+        int pos = ((CountingLexerSharedInputState)inputState).getPosition()
+                  + offset;
+        // XXX use a hash table or something
+        for (int i = 0; i < table.length; i++) {
+          if (table[i] == pos) {
+            return i;
+          }
+        }
+        return NO_HOLE_INDEX;
+      } else {
+        if (table.length == 0) {
+          return NO_HOLE_INDEX;
+        } else {
+          throw new RuntimeException("E lexer provided with nonempty hole table but no CountingLexerSharedInputState; cannot proceed.");
+        }
+      }
+    }
+
     // set isFirstInLine whenever we produce a token, and reset it at the
     // beginning of every line
     protected boolean isFirstInLine = true;
@@ -73,9 +104,19 @@ OPERATOR options {testLiterals=true;} :
     |   ']'
     |   '{'    BR  {selector.enterBrace();}
 //    |   '}'    {selector.exitBrace();}
-    |   '@'
-    |   "@{"
-    |   "${"
+
+    // quasi-in-E-source
+    | ('$'|'@') ( {holeThere($getText, -1) != NO_HOLE_INDEX}?
+                  {int i = holeThere($getText, NO_HOLE_INDEX);
+                   int type = "$".equals($getText) ? SOURCE_VALUE_HOLE : 
+                              "@".equals($getText) ? SOURCE_PATTERN_HOLE :
+                              -1; // XXX most appropriate bad-token value?
+                   $setType(type);
+                   $setText(Integer.toString(i));}
+                | {throw new TokenStreamException("A literal " + $getText + " is not meaningful in E source."); /*XXX most appropriate exception type?*/}
+                )
+    // XXX todo: everywhere a $ can appear, make sure that holeness is checked
+
 	// a question at the beginning of a line indicates an updoc line, and the line
     // is ignored.
     |   '?'    ({isFirstInLine}? UPDOC {$setType(Token.SKIP);} | BR)

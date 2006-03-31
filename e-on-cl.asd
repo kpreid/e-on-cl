@@ -34,7 +34,8 @@
      (:file "extern"
             :depends-on ("elib"))
      (:file "knot-base"
-            :depends-on ("elib" "sugar"))
+            :depends-on ("elib" "sugar"
+                         "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
      (:file "knot"
             :depends-on ("knot-base" "extern" "elib-guts" "tables2"
                          "print" #| constructing global tracers |#))

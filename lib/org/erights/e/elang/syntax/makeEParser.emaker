@@ -5,14 +5,21 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 def primParser := <import:org.cubik.cle.prim.parser>
+def convertQuasiInput := <import:org.cubik.cle.convertQuasiInput>
 
 def makeEParser implements DeepFrozen {
   to __printOn(out :TextWriter) {
     out.print("<import:org.erights.e.elang.syntax.makeEParser>")
   }
 
-  to valueMaker(quasiSource) {
-    return primParser(quasiSource)
+  to valueMaker(quasi1Source) {
+    def [quasi2Source, valueHoles, patternHoles] := convertQuasiInput.inlineHoles_to_holeCharacterIndexes(quasi1Source)
+    return primParser.run(quasi2Source, [valueHoles, patternHoles], null)
+  }
+
+  to matchMaker(quasi1Source) {
+    def [quasi2Source, valueHoles, patternHoles] := convertQuasiInput.inlineHoles_to_holeCharacterIndexes(quasi1Source)
+    return primParser.run(quasi2Source, [valueHoles, patternHoles], null)
   }
 
   to run(source) {
@@ -46,6 +53,6 @@ def makeEParser implements DeepFrozen {
     * 
     * XXX To be renamed once we have a uniform and compatible naming scheme for EParser methods. */
   to xTryParse(source :Twine, optEjector) :any {
-    return primParser(source, optEjector)
+    return primParser(source, null, optEjector)
   }
 }

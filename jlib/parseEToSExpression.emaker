@@ -48,6 +48,7 @@ def author(<unsafe>) {
   def <antlr> := <unsafe:antlr.*>
   def makeEParser := <eantlr:makeEParser>
   def makeEALexer := <eantlr:makeEALexer>
+  def makeCountingLexerSharedInputState := <eantlr:makeCountingLexerSharedInputState>
   def makeQuasiLexer := <eantlr:makeQuasiLexer>
   def makeTokenMultiBuffer := <antlr:makeTokenMultiBuffer>
   def makeTokenStreamSelector := <antlr:makeTokenStreamSelector>
@@ -55,8 +56,8 @@ def author(<unsafe>) {
   
   def tokenSymbols := accum [] for tn in makeEParser.get_tokenNames() { _.with("e.grammar::|" + tn.replaceAll("\\", "\\\\").replaceAll("|", "\\|") + "|") }
   
-  def antlrParse(fname, text, isPattern, isQuasi) {
-    def elexer := makeEALexer(<import:java.io.StringReader>(text))
+  def antlrParse(fname, text, isPattern, quasiInfo) {
+    def elexer := makeEALexer(makeCountingLexerSharedInputState(<import:java.io.StringReader>(text), 0))
     def qlexer := makeQuasiLexer(elexer.getInputState())
     def tb := makeTokenMultiBuffer(["e", "quasi"], [elexer, qlexer])
     elexer.setSelector(tb)
@@ -66,6 +67,11 @@ def author(<unsafe>) {
   
     def parser := makeEParser(tb)
     parser.setFilename(fname)
+    
+    switch (quasiInfo) {
+      match [vh, ph] { elexer.setHoles(vh, ph) }
+      match ==null {}
+    }
     parser.setPocket(<antlr:CommonToken>(-1, "plumbing"), "enable")
     
     if (isPattern) {

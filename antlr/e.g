@@ -725,18 +725,13 @@ noun:       justNoun {##=#([NounExpr],##);} ;
 
 // XXX rename sensibly
 nounExpr:       noun
-            |   dollarHole                   {##.setType(QuasiLiteralPattern);}
-            |   atHole                       {##.setType(QuasiPatternPattern);}
+            |   dollarHole                   {##=#([QuasiLiteralExpr],##);}
+            |   atHole                       {##=#([QuasiPatternExpr],##);}
             ;
 
-dollarHole:     "${" POSINT "}"
-            |   "$" POSINT
-            |   "$$"
-            ;
-
-atHole:         "@{"^ POSINT "}"!
-            |   "@" POSINT
-            ;
+// returns the index; the parent must take care of wrapping the quasi node
+dollarHole:     SOURCE_VALUE_HOLE   {##.setType(INT);} ;
+atHole:         SOURCE_PATTERN_HOLE {##.setType(INT);} ;
 
 key:            parenExpr | literal  ;
 

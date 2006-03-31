@@ -6,11 +6,12 @@ pragma.disable("explicit-result-guard")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def makeKernelECopyVisitor := <elang:visitors.makeKernelECopyVisitor>
+def makeENodeCopyVisitor := <elang:visitors.makeENodeCopyVisitor>
 
 def makeQuasiSubstituteVisitor implements DeepFrozen {
   to run(args) {
-    def substituteVisitor extends makeKernelECopyVisitor(substituteVisitor) implements EventuallyDeepFrozen {
+    def substituteVisitor extends makeENodeCopyVisitor(substituteVisitor) \
+                          implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
