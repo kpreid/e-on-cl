@@ -94,8 +94,7 @@ def author(<unsafe>) {
         out.print(" ")
         parentheses(thunk{
           parentheses(thunk{
-            out.print(tokenSymbols[ast.getType()], " ")
-            out.quote(ast.getText())
+            out.print(tokenSymbols[ast.getType()], " ", clQuote(ast.getText()))
           })
           printChain(ast.getFirstChild())
         })
