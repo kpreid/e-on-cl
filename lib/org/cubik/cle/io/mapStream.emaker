@@ -27,7 +27,7 @@ def chunkedMapStream implements DeepFrozen {
         tw.quote(sourceStream)
       }
       
-      to semiObtain(count :EIO::Range, proceed, report) {
+      to semiObtain(count :(EIO::Range), proceed, report) {
         def original := sourceStream.obtain(count, count, NOW, proceed, report)
         return if (report == ELEMENTS) {
                  func(original)

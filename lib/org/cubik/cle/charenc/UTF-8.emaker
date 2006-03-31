@@ -80,16 +80,16 @@ def "UTF-8" { # implements CharacterEncoding, DeepFrozen
         def out := [].diverge(int) # XXX int8
         for ch in inn {
           switch (ch.getCodepoint()) {
-            match one :0..0x7F \
+            match one :(0..0x7F) \
               { out.push(one) }
-            match two :0x80..0x7FF \
+            match two :(0x80..0x7FF) \
               { out.push(0xC0 | ( two   >> 6         ))
                 out.push(0x80 | ( two          & 0x3F)) }
-            match three :0x800..0xFFFF \
+            match three :(0x800..0xFFFF) \
               { out.push(0xE0 | ( three >> 12        ))
                 out.push(0x80 | ((three >> 6 ) & 0x3F))
                 out.push(0x80 | ( three        & 0x3F)) }
-            match four :0x10000..0x10FFFF \
+            match four :(0x10000..0x10FFFF) \
               { out.push(0xF0 | ( four  >> 18        ))
                 out.push(0x80 | ((four  >> 12) & 0x3F))
                 out.push(0x80 | ((four  >> 6 ) & 0x3F))
