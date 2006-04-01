@@ -1,0 +1,71 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+XXX todo: move everything else that should be here here
+
+This file contains tests for the E parser's grammar; specifically excluding expansion, parser protocol, etc. '
+
+  ? def makeVisitor(writer, depth) :any {
+  >   return def condensedDumpVisitor {
+  >     match [`visit@name`, [_] + elements] {
+  >       def single := elements.size() <=> 1
+  >       def step := if (single) { "" } else { "  " }
+  >       writer.print(name.replaceAll("Expr", "E.").replaceAll("Pattern", "P."))
+  >       def nextWriter := writer.indent(step)
+  >       for element in elements {
+  >         if (single) { nextWriter.write(" ") } else { nextWriter.println() }
+  >         if (element.__respondsTo("welcome", 1)) { element.welcome(makeVisitor(nextWriter, depth + 1)) 
+  >         } else if (element =~ l :List ? (l !~ s :String)) { E.call(makeVisitor(nextWriter, depth + 1), "visit[]", [null] + l) 
+  >         } else {
+  >           nextWriter.print(element)
+  >         }
+  >       }
+  >     }
+  >   }
+  > }; null
+
+? def pp := <import:org.cubik.cle.prim.parser>; null
+? def rootVisitor := makeVisitor(stdout, 0); null
+? def t(s) :any { return pp.run(s).welcome(rootVisitor) }; null
+
+--- Acceptance of sequences everywhere they should be ---
+
+NOTE: these tests were produced by inspection of antlr/e.g. They are not complete.
+
+? t("__makeList(1;2)")
+# stdout: FunCallE.
+#           NounE. __makeList
+#           [] SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+
+xxx Should we change the grammar so that pragmas don't create SeqExprs? '
+? t("pragma.enable(\"trinary-define\"); def a := (1;2,3;4)")
+# stdout: SeqE. [] DefrecE.
+#           FinalP.
+#             NounE. a
+#             null
+#           SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+#           SeqE. []
+#             LiteralE. 3
+#             LiteralE. 4
+
+XXX ListExpr doesn't really belong here '
+? t("[1;2 => 3]")
+# stdout: MapE. [] ListE. []
+#           SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+#           LiteralE. 3
+
+? t("`${1;2}`")
+# stdout: QuasiE.
+#           null
+#           [] QuasiE.Hole SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+
+XXX test acceptance of line breaks everywhere
+XXX general parser tests for everything

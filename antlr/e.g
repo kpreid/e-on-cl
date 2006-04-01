@@ -378,8 +378,8 @@ defExpr:    "def"^  (  (objectPredict) => objName objectTail
             ;
 
 // trinary-define support
-defRightSide:  ( "("! eExpr ","! ) =>
-                 "("! eExpr ","! eExpr ")"! pocket["trinary-define"]!
+defRightSide:  ( "("! seq ","! ) =>
+                 "("! seq ","! seq ")"! pocket["trinary-define"]!
                | assign
                ;
 
@@ -626,7 +626,7 @@ parenArgsList:  parenArgs {##=#([List],##);} ;
 sepword:    IDENT | reserved | "else" | "catch" | "finally"
             |  "try" | "->" ;
 
-argList:        (eExpr br (","! argList)?)? ;
+argList:        (seq (","! argList)?)? ;
 
 prim:           literal
             |   basic
@@ -641,16 +641,16 @@ prim:           literal
                                          warn["computed URIExpr is deprecated"]!
             //|   "<"^ nounExpr (":"! add)? ">"! {##.setType(URIExpr);}
             |   "["^
-                (   (eExpr br "=>" | "=>") => mapList
+                (   (seq "=>" | "=>") => mapList
                                                 {##.setType(MapExpr);}
                 |   argList                     {##.setType(ListExpr);}
                 )  "]"!
             |   body          {##=#([HideExpr],##);} warn["hide deprecated"]!
             ;
 
-mapList:    (map br (","! mapList)?)?   ;
+mapList:    (map (","! mapList)?)?   ;
 
-map:            eExpr br "=>"^ eExpr {##.setType(Assoc);}
+map:            seq "=>"^ seq {##.setType(Assoc);}
             |   "=>"^ (nounExpr
                       | slotExpr
                       // | "def" nounExpr // XXX should be an explicit error; EoJ says: reserved: Forward exporter
@@ -763,7 +763,7 @@ quasiString:    QUASIOPEN!
             ;
 
 exprHole:       DOLLARCURLY^
-                br eExpr br {##.setType(QuasiExprHole);}
+                seq {##.setType(QuasiExprHole);}
                 "}"!
             |   DOLLARHOLE {##.setType(STRING);##=#([QuasiExprHole],#([NounExpr],##));}
             ;
