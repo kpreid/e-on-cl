@@ -416,6 +416,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (:|welcome| (this visitor)
     (e-call
       visitor
+      ;; XXX need to decide on a policy about nonkernel nodes
       ; xxx should we use our alleged type method instead of observable-type-of?
       (concatenate 'string "visit" (symbol-name (observable-type-of this))) 
       (cons this (node-visitor-arguments this))))

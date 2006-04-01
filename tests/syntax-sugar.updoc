@@ -131,7 +131,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`__makeOrderedSpace.op__till(a, b)`
   
   
-  XXX test all binary ops for correct matching verbs
+  XXX check that we've tested and implemented all non-simple binary verbs '
 
 
 'CoerceExpr'
