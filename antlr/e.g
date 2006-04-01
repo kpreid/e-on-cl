@@ -454,8 +454,7 @@ guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
 
 interfaceExpr:  "interface"! objName 
                 //(":"! guard)?
-                iguards // XXX within or outside the alternation below?
-                (   
+                (   iguards
                     multiExtends
                     oImplements
                     iscript
@@ -463,6 +462,11 @@ interfaceExpr:  "interface"! objName
                 )
                 {##=#([InterfaceExpr],##);}
             ;
+// XXX NOTE: Placing 'iguards' outside the alternation above, allowing it for function interfaces, creates a pseudo-ambiguity: 
+//   e`interface a guards b ? c () {}` could be either: 
+//     a function-interface with 'guards b ? c' followed by a syntax error
+//     or a general interface with 'guards b ? c()'
+// E-on-Java's parser does not allow 'guards' in function interfaces, so I have imitated it, but I know of no /semantic/ reason to exclude it.
 
 iguards:        ("guards"! pattern)
             |   ({##=#([Absent]);})
