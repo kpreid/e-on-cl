@@ -3,10 +3,6 @@ Parsing bugs:
   Fails to parse:
     N-ary infix operators and update forms ("a + (b, c)") -- deprecated? if so, should report a specific error
     Object expressions in atomic and high-precedence positions:
-      x & def y{}
-      x & thunk{}
-      def x implements def auditor {} {}
-      def x {} :y
 
   Bad parse trees:
     "pragma.enable(\"dot-props\"); a <- ::b"
