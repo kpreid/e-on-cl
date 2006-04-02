@@ -62,7 +62,7 @@ options {
 
 tokens {
     // XXX organize this list
-    
+
     // various expressions
     NKAssignExpr;
     UpdateExpr;
@@ -85,7 +85,7 @@ tokens {
     MismatchExpr;
     NounExpr;
     ObjectExpr;
-    InterfaceExpr; 
+    InterfaceExpr;
     QuasiExpr;           // XXX unconfuse names: this is the `...` syntax, the following two are the holes-in-source-code syntax. same fix for *Pattern.
     QuasiLiteralExpr;
     QuasiPatternExpr;
@@ -134,7 +134,7 @@ tokens {
     QuasiPattern;
     QuasiLiteralPattern;
     QuasiPatternPattern;
-    
+
     URI;
     URIStart;
     URIGetter;
@@ -260,7 +260,7 @@ setPocket![Token key, String value]: {
     if (false) {throw new RecognitionException("warn");}
 } ;
 
-getPocket![String key]: 
+getPocket![String key]:
                 {isPocket(key)}? {##=#([True],##);}
             |                    {##=#([False],##);} ;
 
@@ -293,7 +293,8 @@ seq:        eExpr (((";"! | LINESEP!) (eExpr)?)+ {##=#([SeqExpr],##);}  )? ;
 eExpr:      assign | ejector ;
 
 basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
-            |   escapeExpr | whenExpr | metaExpr | accumExpr ;
+            |   escapeExpr | whenExpr | metaExpr | accumExpr
+            |   docoDef ;
 
 ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
             ("else"! (ifExpr | body ) {##.setType(IfExpr);}
@@ -332,7 +333,7 @@ whenExpr:       "when"^ parenArgsList br "->"!  whenFn   {##.setType(WhenExpr);}
 
 whenFn:         objName params resultGuard body whenCatchers optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
 
-whenCatchers:   (catcher)+ {##=#([List],##);} 
+whenCatchers:   (catcher)+ {##=#([List],##);}
             |   pocket["easy-when"] {##=#([List],##);} ;
 
 whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
@@ -359,22 +360,25 @@ slotNamer:      "&"^ nounExpr (":"! guard )?    {##.setType(SlotPattern);} ;
 // should forward declaration allow types?
 //docoDef:    doco (defExpr | interfaceExpr | thunkExpr) ;
 docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
-            (defExpr | interfaceExpr | thunkExpr) ;
+            (objectExpr | interfaceExpr | thunkExpr) ;
 
 //so ObjectExpr(doc, fqn, auditors, script|method|matcher)
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
 // var x := ... should produce a DefrecExpr with a VarPattern
 // bind x := ... should produce a DefrecExpr with a BindPattern
-defExpr:    "def"^  (  (objectPredict) => objName objectTail
-                                                      {##.setType(ObjectExpr);}
-                    |  (pattern ":=") => pattern ":="! defRightSide
+objectExpr:     "def"^ objName objectTail           {##.setType(ObjectExpr);}
+                | (binder | varNamer) objectTail    {##=#([ObjectExpr],##);}
+            ;
+
+//so ObjectExpr(doc, fqn, auditors, script|method|matcher)
+//<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
+// var x := ... should produce a DefrecExpr with a VarPattern
+// bind x := ... should produce a DefrecExpr with a BindPattern
+defExpr:    "def"^  (  (pattern ":=") => pattern ":="! defRightSide
                                                       {##.setType(DefrecExpr);}
                     |  nounExpr {##.setType(ForwardExpr);}
                     )
-            | (binder | varNamer)
-                    (   ":="! defRightSide {##=#([DefrecExpr],##);}
-                    |   objectTail  {##=#([ObjectExpr],##);}
-                    )
+            | (binder | varNamer) ":="! defRightSide {##=#([DefrecExpr],##);}
             ;
 
 // trinary-define support
@@ -384,7 +388,8 @@ defRightSide:  ( "("! seq ","! ) =>
                ;
 
 // minimize the look-ahead for objectTail
-objectPredict:    objName ("extends" | "implements" | "match" | "{"| "(" ) ;
+objectPredict:    ("def" objName | varNamer | binder)
+                  ("extends" | "implements" | "match" | "{"| "(" ) ;
 objectTail:     //(typeParams)?
                 //(":"! guard)?
             extender
@@ -452,26 +457,30 @@ resultGuard:    ":"! guard | {##=#([Absent]);} ;
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
 
-interfaceExpr:  "interface"! objName 
+interfaceExpr:  "interface"! objName
                 //(":"! guard)?
                 (   iguards
                     multiExtends
                     oImplements
                     iscript
-                |   mtypes (":"! guard)?   // function -- XXX wrong tree
+                |   // NOTE this greedily consumes a following guard, thereby
+                    // accepting things e.y cannot
+                    mtypes ((":") => ":"! guard | ) // function -- XXX wrong tree
                 )
                 {##=#([InterfaceExpr],##);}
             ;
-// XXX NOTE: Placing 'iguards' outside the alternation above, allowing it for function interfaces, creates a pseudo-ambiguity: 
-//   e`interface a guards b ? c () {}` could be either: 
+// XXX NOTE: Placing 'iguards' outside the alternation above, allowing
+// it for function interfaces, creates a pseudo-ambiguity:
+//   e`interface a guards b ? c () {}` could be either:
 //     a function-interface with 'guards b ? c' followed by a syntax error
 //     or a general interface with 'guards b ? c()'
-// E-on-Java's parser does not allow 'guards' in function interfaces, so I have imitated it, but I know of no /semantic/ reason to exclude it.
+// E-on-Java's parser does not allow 'guards' in function interfaces, so
+// I have imitated it, but I know of no /semantic/ reason to exclude it.
 
 iguards:        ("guards"! pattern)
             |   ({##=#([Absent]);})
             ;
-            
+
 iscript:    "{"^ (imethod br)* "}"! {##.setType(List);} ;
 
 imethod:    doco ("to"^ | "method"^ | "on"^) optVerb mtypes resultGuard
@@ -501,15 +510,14 @@ body:       "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 //  x::name := ...  converts to x.setName(...)
 //  x(i...) := ...  converts to x.setRun(i..., ...)
 // Based on the above patterns, only nounExpr, nounExpr
-assign:         cond
-                (   ":="^ assign                  {##.setType(NKAssignExpr);}
+assign:     (("def"|"var"|"bind") => objectPredict|) => cond (  ":="^ assign  {##.setType(NKAssignExpr);}
                 |   assignOp assign               {##=#([UpdateExpr], ##);}
                 |   verb "="!   // deal with deprecated single case
                     ( ("(")=> parenArgs
                      | assign warn["Parentheses expected on verb= argument"]!)
                     {##=#([UpdateExpr], ##);}
                 )?
-            |   docoDef
+            |   defExpr
             ;
 
 assignOp:       "//=" | "+=" | "-=" | "*=" | "/="
@@ -614,7 +622,7 @@ call:   prim
         |   "<-"^ { ##.setType(SendExpr); }
                   ( parenArgs { ##.setType(FunSendExpr); }
                   | verb (("(") => parenArgs // )
-                         | pocket["verb-curry"]! { ##=#([CurryExpr], ##);}) 
+                         | pocket["verb-curry"]! { ##=#([CurryExpr], ##);})
                   | "::"^ ("&")? prop // XXX bad AST
                   )
         |   "::"^ ( "&"! prop {##.setType(PropertySlotExpr);}
@@ -674,7 +682,8 @@ literal:    (STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL)
 // a valid guard is a nounExpr or parenExpr, optionally followed by [argList]*
 guard:
     (nounExpr | parenExpr)
-    ("["! {##=#([CallExpr,"get"], ##, [STRING,"get"]);} argList "]"! )*
+    // NOTE the greedy consumption of getters.  This accepts more than e.y
+    (options{greedy=true;}: "["^ argList "]"! {##.setType(GetExpr);})*
     ;
 
 catcher:        "catch"^ pattern body ;
