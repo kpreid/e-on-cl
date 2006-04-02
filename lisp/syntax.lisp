@@ -481,19 +481,18 @@ XXX make precedence values available as constants"
           
           (otherwise (mverb opt-original &rest args)
             (check-type opt-original (not null))
-            (precedential (+precedence-outer+)
-              (e. tw |write| "$<")
-              (e. tw |print| (subseq (unmangle-verb mverb) 5))
-              (loop with maker = (get (class-name (class-of opt-original)) 'static-maker)
-                    for subnode-flag across (e. maker |getParameterSubnodeFlags|)
-                    for sep = " " then ", "
-                    for sub in args
-                    do (e. tw |write| sep)
-                       (if (e-is-true subnode-flag)
-                         ;; XXX subprint doesn't handle nil/vector subnodes
-                         (subprint sub +precedence-atom+)
-                         (e. tw |quote| sub)))
-              (e. tw |write| ">$")))))))
+            (e. tw |write| "$<")
+            (e. tw |print| (subseq (unmangle-verb mverb) 5))
+            (loop with maker = (get (class-name (class-of opt-original)) 'static-maker)
+                  for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+                  for sep = " " then ", "
+                  for sub in args
+                  do (e. tw |write| sep)
+                     (if (and (e-is-true subnode-flag) (typep sub '|ENode|))
+                       ;; XXX subprint doesn't handle nil/vector subnodes
+                       (subprint sub +precedence-atom+)
+                       (e. tw |quote| sub)))
+            (e. tw |write| ">$"))))))
   
   ))
 

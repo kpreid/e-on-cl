@@ -270,6 +270,15 @@ CdrPattern, ListPattern
   ? epatt`[car, cadr] + cddr`
   # value: epatt`[car, cadr] + cddr`
 
+Testing printing of nodes with no specific print code yet:
+
+  ? <import:org.cubik.cle.prim.parser>.run("{[a.run()]}")
+  # value: e`{
+  #            $<ListExpr [e`a.run()`]>$
+  #        }`
+  XXX these dollar signs are inappropriate
+  xxx this test will break as soon as ListExpr gets appropriate printing
+
 Precedence parenthesization tests
 
   ? e`((a) =~ b ? ((c) =~ d))`
