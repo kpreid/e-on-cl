@@ -319,6 +319,12 @@
                (node-class-arity (attempted-node-class condition))))))
 
 (defmethod shared-initialize ((node |ENode|) slot-names &rest initargs &key elements &allow-other-keys)
+  (let ((arity (length elements)))
+    (multiple-value-bind (min max) (node-class-arity (class-of node))
+      (unless (and (>= arity min)
+                   (or (null max) (<= arity max)))
+        (error 'node-arity-error :class (class-of node)
+                                 :elements elements))))
   (apply #'call-next-method node slot-names
     :elements (loop for element in elements
                     for name in (node-class-element-names (class-of node))
@@ -327,15 +333,6 @@
                                       (efun (condition-ref)
                                         (error "the ~S of a ~S must be a ~S (~A)" name (class-name (class-of node)) type condition-ref))))
     initargs))
-
-(defmethod shared-initialize :after ((node |ENode|) slot-names &key &allow-other-keys)
-  (declare (ignore slot-names))
-  (let ((arity (length (node-elements node))))
-    (multiple-value-bind (min max) (node-class-arity (class-of node))
-      (unless (and (>= arity min)
-                   (or (null max) (<= arity max)))
-        (error 'node-arity-error :class (class-of node)
-                                 :elements (node-elements node))))))
 
 (defun usesp (defining using)
   "Return whether 'using' uses nouns defined by 'defining'."
