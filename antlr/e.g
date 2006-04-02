@@ -215,6 +215,10 @@ public void reportError(RecognitionException ex) {
 // pocket mechanisms: add a boolean, and test in the grammar with {foo}?
 private java.util.Properties myPocket = new java.util.Properties();
 
+public java.util.Properties getPockets() {
+    return myPocket;
+}
+
 protected boolean is(String v) {
     return returnAST.getText().equals(v);
 }
