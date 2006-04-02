@@ -101,7 +101,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
           
           sub(null, uncall[0])
           sub(null, uncall[1])
-          ConstList.coerce(uncall[2]).iterate(sub)
+          ConstList.coerce(uncall[2], null).iterate(sub)
           
           rtrace("--rDF selfless")
           return

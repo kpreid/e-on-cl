@@ -172,7 +172,7 @@ Integer coercion
 
   Bug: integer's __conformTo would infintely recurse given a typical non-native guard '
   ? List.coerce(1)
-  # problem: the int 1 doesn't coerce to a ConstList
+  # problem: the int 1 doesn't coerce to a List
 
 floor, ceil
 

@@ -237,6 +237,7 @@
 
     (:|makeException|    +the-make-exception+)
     (:|StructureException| (make-instance 'cl-type-guard :type-specifier 'e-structure-exception))
+    (:|makeCoercionFailure| e.elib::+the-make-coercion-failure+)
   
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeVarSlot|      +the-make-var-slot+)

@@ -6,6 +6,7 @@ pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def List0 extends __makeGuard(List0) implements EventuallyDeepFrozen {
@@ -24,9 +25,7 @@ def List0 extends __makeGuard(List0) implements EventuallyDeepFrozen {
     if (specimen =~ [] + list) {
       return list
     } else {
-      # XXX exception type?
-      # XXX this won't be quite the same behavior as builtin type-errors
-      throw.eject(optEjector, "the " + simplifyFQName(specimen.__getAllegedType().getFQName()) + " " + E.toQuote(specimen) + " doesn't coerce to a ConstList")
+      throw.eject(optEjector, makeCoercionFailure(specimen, List))
     }
   }
 
