@@ -11,11 +11,23 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *scope*
     (e.knot::make-scope "seqCompilerDemoScope"
-      `(("any" +the-any-guard+))))
+      `(("any" ,+the-any-guard+)
+        ("true" ,+e-true+)
+        ("nullOk" ,(type-specifier-to-guard 'null))
+        ("throw" ,e.knot::+the-thrower+))))
   (defparameter *layout*
     (list (cons "any"
                 (make-instance 'e.compiler:value-binding :value 
-                  +the-any-guard+)))))
+                  +the-any-guard+))
+          (cons "true"
+                (make-instance 'e.compiler:value-binding :value 
+                  +e-true+))
+          (cons "nullOk"
+                (make-instance 'e.compiler:value-binding :value 
+                  (type-specifier-to-guard 'null)))
+          (cons "throw"
+                (make-instance 'e.compiler:value-binding :value 
+                  e.knot::+the-thrower+)))))
 
 (deftest e.literal
   (e.compiler.seq::sequence-expr (n '(|LiteralExpr| 1)) nil 'r)
@@ -58,7 +70,7 @@
   0)
 
 (deftest eval.if.simple1
-  (ev '(|IfExpr| (|LiteralExpr| #.+e-true+)
+  (ev '(|IfExpr| (|NounExpr| "true")
                  (|LiteralExpr| "a")
                  (|LiteralExpr| "b")))
   "a")
@@ -66,7 +78,7 @@
 (deftest eval.if.elaborate
   (ev '(|SeqExpr|
          (|DefineExpr| (|FinalPattern| (|NounExpr| "x") nil)
-                       (|LiteralExpr| #.+e-true+) nil)
+                       (|NounExpr| "true") nil)
          (|IfExpr| (|DefineExpr| (|FinalPattern| (|NounExpr| "y") nil)
                                  (|NounExpr| "x") nil)
                    (|NounExpr| "x")
@@ -74,10 +86,10 @@
   #.+e-true+)
 
 (deftest eval.call
-  (ev '(|CallExpr| (|LiteralExpr| #(1))
+  (ev '(|CallExpr| (|LiteralExpr| "a")
                    "add"
-                   (|LiteralExpr| #(2))))
-  #(1 2))
+                   (|LiteralExpr| "b")))
+  "ab")
 
 (deftest eval.match-bind.ok
   (ev '(|SeqExpr| 
@@ -92,7 +104,7 @@
            (|MatchBindExpr| (|LiteralExpr| 0) 
                             (|FinalPattern| 
                               (|NounExpr| "x") 
-                              (|LiteralExpr| ,(type-specifier-to-guard 'null))))
+                              (|NounExpr| "nullOk")))
            (|NounExpr| "x"))))
   "<ref broken by problem: the int 0 doesn't coerce to a Null>")
   
@@ -104,7 +116,7 @@
 
 (deftest eval.catch.nok
   (e-quote
-    (ev `(|CatchExpr| (|CallExpr| (|LiteralExpr| ,e.knot::+the-thrower+)
+    (ev `(|CatchExpr| (|CallExpr| (|NounExpr| "throw")
                                   "run"
                                   (|LiteralExpr| "biff"))
                       (|FinalPattern| (|NounExpr| "p") nil)
