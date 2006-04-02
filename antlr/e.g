@@ -378,9 +378,9 @@ objectExpr:     "def"^ objName objectTail           {##.setType(ObjectExpr);}
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
 // var x := ... should produce a DefrecExpr with a VarPattern
 // bind x := ... should produce a DefrecExpr with a BindPattern
-defExpr:    "def"^  (  (pattern ":=") => pattern ":="! defRightSide
-                                                      {##.setType(DefrecExpr);}
-                    |  nounExpr {##.setType(ForwardExpr);}
+defExpr:    "def"^  ( (nounExpr ":=") => pattern ":="! defRightSide  {##.setType(DefrecExpr);}
+                    | (nounExpr) => nounExpr {##.setType(ForwardExpr);}
+                    | pattern ":="! defRightSide  {##.setType(DefrecExpr);}
                     )
             | (binder | varNamer) ":="! defRightSide {##=#([DefrecExpr],##);}
             ;
