@@ -67,5 +67,56 @@ XXX ListExpr doesn't really belong here '
 #             LiteralE. 1
 #             LiteralE. 2
 
+--- Object expressions in high-precedence positions ---
+
+Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
+? t("1 + def a := 2")
+# problem: (unknown:1)@11: unexpected token: [":=",<155>,line=1,col=11]
+XXX produce a nice error for this?
+
+? t("a & def _ {}")
+# stdout: BinaryE.
+#           &
+#           NounE. a
+#           [] NKObjectE.
+#             
+#             IgnoreP.
+#             null
+#             []
+#             EScript
+#               []
+#               []
+
+? t("a & /**b*/def _ {}")
+# stdout: BinaryE.
+#           &
+#           NounE. a
+#           [] NKObjectE.
+#             b
+#             IgnoreP.
+#             null
+#             []
+#             EScript
+#               []
+#               []
+
+? t("a & thunk {}")
+# stdout: BinaryE.
+#           &
+#           NounE. a
+#           [] ThunkE.
+#             
+#             NullE.
+
+--- Miscellaneous ---
+
+? t("a :b[c]")
+# stdout: CoerceE.
+#           NounE. a
+#           GetE.
+#             NounE. b
+#             [] NounE. c
+
+
 XXX test acceptance of line breaks everywhere
 XXX general parser tests for everything

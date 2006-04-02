@@ -106,7 +106,7 @@
 
 (defsystem e-on-cl.antlr-parser
   :depends-on (:e-on-cl)
-  :pathname #.(merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
+  :pathname (merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
   :components
     ((:java-source-file "CountingCharBuffer")
      (:java-source-file "CountingLexerSharedInputState")
