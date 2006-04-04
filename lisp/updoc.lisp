@@ -492,7 +492,7 @@
 (defun make-repl-handler ()
   (e-lambda "$replHandler" ()
     (:|begin| (step)
-      (e.syntax:e-source-to-tree step))
+      (e.syntax:parse-to-kernel step))
     (:|takeStreams| () nil)
     (:|answer/1| #'print-answer)
     (:|backtrace/1| (constantly nil))
