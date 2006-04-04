@@ -933,6 +933,9 @@
           temp))
         (make-instance '|NounExpr| :elements '("true"))))))))
 
+(defmethod e.elang::pattern-opt-noun ((patt |BindPattern|))
+  (e. (e. patt |getNoun|) |getName|))
+
 ;; XXX lousy name
 (define-node-class |MapPatternKeyer| (|ENode|) ())
 

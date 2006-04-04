@@ -424,6 +424,12 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        aR__2.resolve(a)
   #        value__3`
   
+  named by bind-expr
+  ? t("bind a {}")
+  # value: e`def a__1 ? (a__Resolver.resolve(a__1)
+  #        true) := def "$a__C" {
+  #        }`
+
 'NullExpr'
 
   ? t("{}")

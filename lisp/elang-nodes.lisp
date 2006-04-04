@@ -472,11 +472,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   nil)
 
 (defmethod pattern-opt-noun ((patt |SuchThatPattern|))
-  (pattern-opt-noun (first (node-elements patt))))
+  (pattern-opt-noun (e. patt |getPattern|)))
 
 (defmethod pattern-opt-noun ((patt |NounPattern|))
-  ; XXX use method of noun expr once we have it
-  (first (node-elements (e. patt |getNoun|))))
+  (e. (e. patt |getNoun|) |getName|))
 
 
 (defgeneric pattern-to-param-desc (pattern))
@@ -490,7 +489,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
 
 (defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
-  (pattern-to-param-desc (first (node-elements patt))))
+  (pattern-to-param-desc (e. patt |getPattern|)))
 
 ;; This is a class so that instances may be written to a compiled file.
 (defclass false-guard ()
