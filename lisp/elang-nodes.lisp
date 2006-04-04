@@ -363,8 +363,6 @@
   (unless (or methods (> (length matchers) 0))
       (error "EScript must have methods or at least one matcher")))
 
-;; XXX reject NounPatterns that use their noun in the guard
-
 ; --- E-level methods ---
 
 (def-vtable |ENode|
@@ -816,7 +814,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defmacro define-kernel-e-check-method (node-class &body body)
   `(defmethod require-kernel-e-recursive progn ((node ,node-class) ejector)
-     (macrolet ((check-property-types (node-var &rest rules)
+     (macrolet ((check-property-types (&rest rules)
                   `(%check-property-types node ejector ',rules)))
        (flet ((reject-usage (definer user)
                 (%reject-usage node ejector 
@@ -824,6 +822,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                   (funcall (opt-node-property-getter node definer))
                   (symbol-name user)
                   (funcall (opt-node-property-getter node user)))))
+         (declare (ignorable #'reject-usage))
          ,@body))))
 
 (defun require-kernel-e (node ejector)
@@ -888,8 +887,15 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (define-kernel-e-type-constraints |AssignExpr|
   (:|noun| |NounExpr|))
 
-(define-kernel-e-type-constraints |NounPattern|
-  (:|noun| |NounExpr|))
+(define-kernel-e-check-method |NounPattern|
+  (check-property-types
+    (:|noun| |NounExpr|))
+  (let ((guard (e. node |getOptGuardExpr|)))
+    (when (and guard (usesp node guard))
+      (ejerror ejector "kernel ~A may not use its own noun (~A) in its guard (~A)"
+                       (observable-type-of node)
+                       (e-quote (e. node |getNoun|))
+                       (e-quote guard)))))
 
 (define-kernel-e-type-constraints |ObjectExpr|
   (:|script| |EScript|))
@@ -897,3 +903,4 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (define-kernel-e-type-constraints |EScript|
   (:|optMethods| (or null (e-list |EMethod|)))
   (:|matchers| (e-list |EMatcher|)))
+  

@@ -857,9 +857,9 @@ Miscellaneous scoping
   ? {[outerDefined + 1, def outerDefined := 2]}
   # value: [45, 2]
   
-  XXX this is being rejected by the parser, but it really needs to be rejected at eval time as a constraint, so we should test it with explicit node construction (which usually goes in enode.updoc, but ???)
+  XXX this should be tested with explicit node construction
   ? { def x :x := 1 }
-  # problem: kernel FinalPattern may not use definitions from noun (e`x`) in optGuardExpr (e`x`)
+  # problem: kernel FinalPattern may not use its own noun (e`x`) in its guard (e`x`)
 
 XXX test perverse scoping cases:
   recursive defines pre-transform (raw-node-input case)
