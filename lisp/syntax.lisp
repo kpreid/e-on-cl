@@ -237,6 +237,15 @@ XXX make precedence values available as constants"
                 (subprint-block (expr)
                   ; XXX call back to self once we have a self to preserve
                   (e. +e-printer+ |printExprBlock| tw expr))
+                (subprint-guard (expr &key (tw tw))
+                  "special rule for guard positions: NounExpr, GetExpr, or parenthesized"
+                  ;; XXX handle GetExpr (will be recursive)
+                  (if (typep (ref-shorten expr) '|NounExpr|)
+                    (subprint expr +precedence-atom+)
+                    (progn
+                      (e. tw |write| "(" #|)|#)
+                      (subprint expr +precedence-outer+)
+                      (e. tw |write| #|(|# ")"))))
                 (noun-pattern-printer (tag)
                   (lambda (opt-original noun-expr opt-guard-expr)
                     (declare (ignore opt-original))
@@ -244,7 +253,7 @@ XXX make precedence values available as constants"
                     (subprint noun-expr nil)
                     (when opt-guard-expr
                       (e. tw |print| " :")
-                      (subprint opt-guard-expr +precedence-in-guard+))))
+                      (subprint-guard opt-guard-expr))))
                 (quasi-printer (tag)
                   (lambda (opt-original index)
                     (declare (ignore opt-original))
@@ -432,7 +441,7 @@ XXX make precedence values available as constants"
               (when opt-result-guard
                 (e-lambda "syntax-printer" () (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
-                  (subprint opt-result-guard +precedence-in-guard+ :tw tw)))))
+                  (subprint-guard opt-result-guard :tw tw)))))
             (e. tw |print| " ")
             (subprint-block body))
           
