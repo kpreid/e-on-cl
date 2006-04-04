@@ -592,7 +592,7 @@ Trinary DefineExpr
   >     null,
   >     null), 
   >   null).eval(safeScope.with("y", "false").nestOuter())
-  # problem: kernel define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
+  # problem: kernel DefineExpr may not use definitions from optEjectorExpr (e`def y := true`) in pattern (epatt`x ? y`)
 
 SlotExpr, SlotPattern, AssignExpr
 
@@ -859,8 +859,7 @@ Miscellaneous scoping
   
   XXX this is being rejected by the parser, but it really needs to be rejected at eval time as a constraint, so we should test it with explicit node construction (which usually goes in enode.updoc, but ???)
   ? { def x :x := 1 }
-  # problem: Failed: kernel definer cycle not allowed: x
-
+  # problem: kernel FinalPattern may not use definitions from noun (e`x`) in optGuardExpr (e`x`)
 
 XXX test perverse scoping cases:
   recursive defines pre-transform (raw-node-input case)

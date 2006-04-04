@@ -101,16 +101,16 @@ DefineExpr
   ? def nounB := makeNounExpr(null, "b", null); null
   
   ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounA, null, null)}.eval(safeScope)
-  # problem: kernel define expr may not use definitions from pattern (epatt`a`) in r-value expr (e`a`)
+  # problem: kernel DefineExpr may not use definitions from pattern (epatt`a`) in rValue (e`a`)
 
   ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), makeNounExpr(null, "null", null), nounA, null)}.eval(safeScope)
-  # problem: kernel define expr may not use definitions from pattern (epatt`a`) in ejector expr (e`a`)
+  # problem: kernel DefineExpr may not use definitions from pattern (epatt`a`) in optEjectorExpr (e`a`)
 
   ? {makeDefineExpr(null, makeSuchThatPattern(null, makeIgnorePattern(null, null), nounA, null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null, null)}.eval(safeScope)
-  # problem: kernel define expr may not use definitions from r-value expr (e`def a := b`) in pattern (epatt`_ ? a`)
+  # problem: kernel DefineExpr may not use definitions from rValue (e`def a := b`) in pattern (epatt`_ ? a`)
 
   ? {makeDefineExpr(null, makeSuchThatPattern(null, makeIgnorePattern(null, null), nounA, null), nounB, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null)}.eval(safeScope)
-  # problem: kernel define expr may not use definitions from ejector expr (e`def a := b`) in pattern (epatt`_ ? a`)
+  # problem: kernel DefineExpr may not use definitions from optEjectorExpr (e`def a := b`) in pattern (epatt`_ ? a`)
 
   XXX more specifically test what part of the system does this check rather than just 'somewhere in the eval process'
 

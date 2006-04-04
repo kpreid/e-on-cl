@@ -796,12 +796,35 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (typep value type))
 
 (defmacro define-kernel-e-type-constraints (node-class &rest rules)
+  `(define-kernel-e-check-method ,node-class
+     (check-property-types ,@rules)))
+
+(defun %check-property-types (node ejector rules)
+  (loop for (property ptype) in rules collect
+    (let ((value (funcall (opt-node-property-getter node property))))
+      (unless (unmagical-typep value ptype)
+        (ejerror ejector "~S must have ~S of type ~S, but had ~S" 
+                         node property ptype value)))))
+
+(defun %reject-usage (node ejector name-d node-d name-u node-u)
+  (when (and node-d node-u (usesp node-d node-u))
+    (ejerror ejector "kernel ~A may not use definitions ~
+                      from ~A (~A) in ~A (~A)"
+                     (observable-type-of node)
+                     name-d (e-quote node-d)
+                     name-u (e-quote node-u))))
+
+(defmacro define-kernel-e-check-method (node-class &body body)
   `(defmethod require-kernel-e-recursive progn ((node ,node-class) ejector)
-    ,@(loop for (property ptype) in rules collect
-      `(let ((value (funcall (opt-node-property-getter node ',property))))
-         (unless (unmagical-typep value ',ptype)
-           (ejerror ejector "~S ~S must have ~S of type ~S, but had ~S" 
-                            ',node-class node ',property ',ptype value))))))
+     (macrolet ((check-property-types (node-var &rest rules)
+                  `(%check-property-types node ejector ',rules)))
+       (flet ((reject-usage (definer user)
+                (%reject-usage node ejector 
+                  (symbol-name definer)
+                  (funcall (opt-node-property-getter node definer))
+                  (symbol-name user)
+                  (funcall (opt-node-property-getter node user)))))
+         ,@body))))
 
 (defun require-kernel-e (node ejector)
   "Verify that the node is a valid Kernel-E tree."
@@ -855,20 +878,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         when (e-is-true subnode-flag)
           do (require-kernel-e-recursive maybe-subnode ejector)))
 
-(defmethod require-kernel-e-recursive progn ((node |DefineExpr|) ejector
-    &aux (pattern (e. node |getPattern|))
-         (r-value (e. node |getRValue|))
-         (opt-ejector-expr (e. node |getOptEjectorExpr|)))
-  (labels ((reject (name-d node-d name-u node-u)
-             (when (and node-d node-u (usesp node-d node-u))
-               (ejerror ejector "kernel define expr may not use definitions ~
-                                 from ~A (~A) in ~A (~A)" 
-                                 name-d (e-quote node-d) 
-                                 name-u (e-quote node-u)))))
-    (reject "pattern" pattern               "r-value expr" r-value)
-    (reject "pattern" pattern               "ejector expr" opt-ejector-expr)
-    (reject "r-value expr" r-value          "pattern" pattern)
-    (reject "ejector expr" opt-ejector-expr "pattern" pattern)))
+
+(define-kernel-e-check-method |DefineExpr|
+  (reject-usage :|pattern|        :|rValue|)
+  (reject-usage :|pattern|        :|optEjectorExpr|)
+  (reject-usage :|rValue|         :|pattern|)
+  (reject-usage :|optEjectorExpr| :|pattern|))
 
 (define-kernel-e-type-constraints |AssignExpr|
   (:|noun| |NounExpr|))
