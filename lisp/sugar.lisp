@@ -67,6 +67,21 @@
                     ,try-form)))))
         ,@catch-forms))))
 
+(declaim (inline to-condition))
+(defun to-condition (defaulted-type datum &rest arguments)
+  "Implements CLHS 9.1.2.1."
+  (etypecase datum
+    (symbol
+      (apply #'make-condition datum arguments))
+    ((or string function)
+      (make-condition defaulted-type :format-control datum :format-arguments arguments))
+    (condition
+      datum)))
+
+(declaim (inline ejerror))
+(defun ejerror (ejector &rest args)
+  (eject-or-ethrow ejector (apply #'to-condition 'simple-error args)))
+
 (defun call-with-vat (function &rest initargs)
   (assert (null *vat*))
   ; xxx eventually we will need a shutdown operation on the vat to break inter-vat refs, do some sort of shutdown on registered input streams, etc.

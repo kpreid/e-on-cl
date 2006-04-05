@@ -703,9 +703,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (let ((index (hashref key table)))
         (if index
           (if (e-is-true strict)
-            (eject-or-ethrow opt-ejector (make-condition 'simple-error
-              :format-control "~A already in map"
-              :format-arguments (list (e-quote key))))
+            (ejerror opt-ejector "~A already in map" (e-quote key))
             (setf (aref values index) value))
           (progn 
             (setf (hashref key table) (length keys))
@@ -731,9 +729,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             (decf (fill-pointer values))
             (hashrem key table))
           (when (e-is-true strict)
-            (eject-or-ethrow opt-ejector (make-condition 'simple-error
-              :format-control "~A not in map"
-              :format-arguments (list (e-quote key))))))))
+            (ejerror opt-ejector "~A not in map" (e-quote key))))))
     nil)
 
   ; XXX to be moved to flexmap shell?
@@ -818,7 +814,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                 (vector-push-extend key keys)
                 (vector-push-extend value values))
               (strict
-                (eject-or-ethrow opt-ejector (make-condition 'simple-error :format-control "~A already in under-construction ConstMap as ~A" :format-arguments (list (e-quote key) (e-quote (aref values (hashref key table)))))))
+                (ejerror opt-ejector "~A already in under-construction ConstMap as ~A" (e-quote key) (e-quote (aref values (hashref key table)))))
               (t
                 (setf (aref values (hashref key table)) value)))
             nil)))

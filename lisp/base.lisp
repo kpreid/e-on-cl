@@ -7,7 +7,7 @@
   "If true, allows thrown exceptions to be caught unsealed, for compatibility with the Java implementation.")
 
 (defvar *break-on-ejections* nil
-  "Equivalent to CL:*BREAK-ON-SIGNALS*, but applies to ejection. When an ejector is invoked with a value whose type is a subtype of the type specified by this variable's value, (break) will be called.")
+  "Analogous to CL:*BREAK-ON-SIGNALS*, but applies to ejection. When an ejector is invoked with a value whose type is a subtype of the type specified by this variable's value, (break) will be called.")
 
 
 (defun unexternalizable-optimization-p (environment)
@@ -22,7 +22,7 @@
      ,@body))
 
 
-; xxx Assuming things about the implementation. Perhaps we should produce a warning if we don't know that the implementation uses these sizes.
+;; xxx Assuming things about the implementation. Perhaps we should produce a warning if we don't know that the implementation uses these sizes.
 (deftype float64 () 'double-float) 
 (deftype float32 () 'single-float)
 
@@ -135,9 +135,12 @@
 
 ; --- fine-grain universal time ---
 
+;; XXX this will break if we make an image after the time base is computed
+;;   - add hook in rune::%revive-start to reset this
+;;   - on lisps with adequate builtins or FFI, use a sane time-getting function (e.g. gettimeofday())
+
 (defvar *apparent-internal-time-base*)
 
-; XXX will this be executed at all the right times?
 (loop with first-utime = (get-universal-time)
       for  next-utime  = (get-universal-time)
       until (/= first-utime next-utime)
@@ -202,7 +205,6 @@
     +e-true+
     +e-false+))
 
-;; note: this *could* be placed later
 (defmethod print-object ((bool e-boolean) stream)
   (if (or *read-eval* (not *print-readably*))
     (format stream "#.~S" (if (e-is-true bool)

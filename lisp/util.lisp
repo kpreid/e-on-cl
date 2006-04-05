@@ -79,52 +79,50 @@
   (defconstant +arity-limit+ call-arguments-limit))
 (deftype arity () `(integer 0 ,+arity-limit+))
 
-(locally ;; XXX stale
+(declaim (inline mangle-verb)
+         (ftype (function (string arity) keyword) mangle-verb))
+(defun mangle-verb (verb arity)
+  (declare (string verb)
+           (type arity arity)
+           (optimize (safety 3)))
+  (intern (let* ((sep (length verb))
+                 (digits (max (loop for n of-type arity = arity
+                                                   then (floor n 10)
+                                    while (> n 0)
+                                    count t)
+                              1))
+                 (mv-string (make-array (+ sep 1 digits) 
+                              :element-type 'character 
+                              :fill-pointer nil
+                              :adjustable nil)))
+            (replace mv-string verb :end1 sep)
+            (setf (aref mv-string sep) #\/)
+            (loop for pos from (1- (length mv-string)) above sep
+                  for n of-type arity = arity then (floor n 10)
+                  do (setf (aref mv-string pos) 
+                             (digit-char (mod n 10) 10)))
+            mv-string)
+          "KEYWORD"))
 
-  (declaim (inline mangle-verb)
-           (ftype (function (string arity) keyword) mangle-verb))
-  (defun mangle-verb (verb arity)
-    (declare (string verb)
-             (type arity arity)
-             (optimize (safety 3)))
-    (intern (let* ((sep (length verb))
-                   (digits (max (loop for n of-type arity = arity
-                                                     then (floor n 10)
-                                      while (> n 0)
-                                      count t)
-                                1))
-                   (mv-string (make-array (+ sep 1 digits) 
-                                :element-type 'character 
-                                :fill-pointer nil
-                                :adjustable nil)))
-              (replace mv-string verb :end1 sep)
-              (setf (aref mv-string sep) #\/)
-              (loop for pos from (1- (length mv-string)) above sep
-                    for n of-type arity = arity then (floor n 10)
-                    do (setf (aref mv-string pos) 
-                               (digit-char (mod n 10) 10)))
-              mv-string)
-            "KEYWORD"))
-  
-  (declaim (inline unmangle-verb)
-           (ftype (function (keyword) (values string (integer 0))) unmangle-verb))
-  (defun unmangle-verb (mverb
-      &aux (mv-string (symbol-name mverb))
-           (slash     (position #\/ mv-string)))
-    (declare (optimize (safety 3)))
-    (assert slash)
-    (values
-      (subseq mv-string 0 slash)
-      (parse-integer mv-string :start (1+ slash))))
+(declaim (inline unmangle-verb)
+         (ftype (function (keyword) (values string (integer 0))) unmangle-verb))
+(defun unmangle-verb (mverb
+    &aux (mv-string (symbol-name mverb))
+         (slash     (position #\/ mv-string)))
+  (declare (optimize (safety 3)))
+  (assert slash)
+  (values
+    (subseq mv-string 0 slash)
+    (parse-integer mv-string :start (1+ slash))))
 
-  (declaim (inline mverb-verb)
-           (ftype (function (keyword string) t) mverb-verb))
-  (defun mverb-verb= (mverb verb)
-    "Return whether the verb of MVERB is equal to VERB."
-    (let ((mv-string (symbol-name mverb)))
-      (string= mv-string 
-               verb
-               :end1 (position #\/ mv-string :from-end t)))))
+(declaim (inline mverb-verb)
+         (ftype (function (keyword string) t) mverb-verb))
+(defun mverb-verb= (mverb verb)
+  "Return whether the verb of MVERB is equal to VERB."
+  (let ((mv-string (symbol-name mverb)))
+    (string= mv-string 
+             verb
+             :end1 (position #\/ mv-string :from-end t))))
     
 (declaim (inline without-suffix)
          (ftype (function (string string) (or null string)) without-suffix))
@@ -255,15 +253,6 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 (defun function-responds-to (function arity)
   (multiple-value-bind (min max) (function-arguments-range function)
     (<= min arity max)))
-
-; XXX delete this log fragment once all approaches mentioned have been investigated/implemented
-; [11:00] kpreid: Are there any semi-portable interfaces to get the argument and return types/names/arity of a function?
-; [11:01] dan_b: kp: there's some stuff in clocc, i think.  but iirc it's pretty poor
-; [11:02] piso: kpreid: you might look at sb-introspect.lisp, in sbcl/src/contrib/sb-introspect
-; [11:03] dan_b: although it's a long way from "semi-portable"
-; [11:03] piso: it would be more semi-portable if other implementations implemented it :)
-; [11:04] piso: kpreid: allegro and abcl have ARGLIST
-; [11:05] rtoy_: function-lambda-expression might work, but it's not required to return anything useful.
 
 ; --- function declarations ---
 

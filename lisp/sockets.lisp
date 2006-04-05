@@ -336,9 +336,9 @@
                   buf)
                 (otherwise
                   ; XXX typed error with errno slot
-                  (eject-or-ethrow error-ejector (format nil "file descriptor read error: ~A (~A)" errno (sb-int:strerror errno))))))
+                  (ejerror error-ejector "file descriptor read error: ~A (~A)" errno (sb-int:strerror errno)))))
             ((0)
-              (eject-or-ethrow eof-ejector "socket EOF"))
+              (ejerror eof-ejector "socket EOF"))
             (otherwise
               (setf (fill-pointer buf) n-read)
               buf)))))))

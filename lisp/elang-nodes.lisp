@@ -730,19 +730,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 ;;; --- Kernel-E checking ---
 
-;; utility, to be moved
-(defun to-condition (defaulted-type datum &rest arguments)
-  "Implements CLHS 9.1.2.1."
-  (etypecase datum
-    (symbol
-      (apply #'make-condition datum arguments))
-    ((or string function)
-      (make-condition defaulted-type :format-control datum :format-arguments arguments))
-    (condition
-      datum)))
-(defun ejerror (ejector &rest args)
-  (eject-or-ethrow ejector (apply #'to-condition 'simple-error args)))
-
 ;; XXX the following is a stub of a more elaborate mechanism which will be introduced when the ANTLR parser is merged in, having nonkernel nodes. For now, it exists only for checking simple inter-node constraints.
 
 (defun require-kernel-e (node ejector)
