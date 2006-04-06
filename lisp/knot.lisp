@@ -702,6 +702,8 @@
              ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
             ("&getSocketLocalRef"
              ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-LOCAL-REF+" :e.sockets :e-on-cl.sockets)))))
+            ("&makePipe"        
+             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-MAKE-PIPE+" :e.sockets :e-on-cl.sockets)))))
             #||#)))))
 
 ;;; --- end ---

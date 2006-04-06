@@ -1,0 +1,53 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+This test exists for the purpose of exercising the general file-descriptor-stream code in E-on-CL.
+
+  ? pragma.enable("dot-props")
+  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
+  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
+  > null
+
+XXX to be reviewed: makePipe should probably not be in the privilegedScope top level, but we have no suitable namespace for it as yet
+
+  x ? makePipe
+  x # value: <Far ref>
+
+  ? interp.waitAtTop(def pipe := makePipe <- run(throw))
+  
+  ? def [i, o] := pipe
+  # value: [<-<system pipe>, -><system pipe>]
+  
+  ? [i.available(), o.available()]
+  # value: [0, 4096]
+
+  ? o.write([9])
+  ? o.flush()
+  ? interp.waitAtTop(i.whenAvailable(1, thunk{}))
+  
+  ? [i.available(), i.read(0, ALL)]
+  # value: [1, [9]]
+  
+  ? o.close(); null
+  ? interp.waitAtTop(i.whenAvailable(1, thunk{}))
+
+  ? i.terminates()
+  # value: true
+
+
+  ? interp.waitAtTop(def pipe := makePipe <- run(throw))
+  
+  ? def [i, o] := pipe
+  # value: [<-<system pipe>, -><system pipe>]
+  
+  ? i.close(); null
+
+  ? o.write([10]); o.flush() # XXX done solely to trigger a write which will notice the failure -- necessary?
+  
+  ? interp.waitAtTop(o.terminates())
+
+  ? o.terminates()
+  # value: <ref broken by problem: error 32 (Broken pipe)>
+  XXX review wording of error (this one is inherited from SBCL errno handling)
+
+

@@ -45,6 +45,11 @@ def makeFDInStreamAuthor {
 
         def inBuffer := [].diverge(Element)
 
+        def inFDHandler
+        def removeHandler() {
+          fooRemoveReceiveHandler((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
+        }
+        
         def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
           to __printOn(out :TextWriter) {
             out.printSame(nameObj)
@@ -59,16 +64,13 @@ def makeFDInStreamAuthor {
             }
           }
           
-          to terminate(t) { traceln(`XXX should be closing the fd $fdRef but that isn't implemented yet (makeFDInStreamAuthor)`) }
+          to terminate(t) { 
+            # XXX proper error handling?
+            removeHandler()
+            fdRef.shutdown(l`:input`, throw)
+          }
           
         })
-        
-        var eof := false
-        
-        def inFDHandler
-        def removeHandler() {
-          fooRemoveReceiveHandler((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
-        }
         
         def vat := lisp["E.ELIB", "*VAT*"]::value
         
@@ -80,12 +82,12 @@ def makeFDInStreamAuthor {
               #traceln(`$inStream: read $elements from fd $fdRef`)
               inBuffer.append(elements)
             } catch _ {
-              traceln(`$inStream: eof`)
+              traceln(`$inStream: eof from $fdRef`)
               removeHandler()
-              eof := true
+              inStream.close() # XXX does this need to be a backend op?
             }
           } catch p {
-            traceln(`$inStream: error $p`)
+            traceln(`$inStream: error $p from $fdRef`)
             removeHandler()
             inStream.fail(p)
           }

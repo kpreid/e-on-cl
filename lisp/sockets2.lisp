@@ -18,16 +18,21 @@
       (eject-or-ethrow opt-ejector (make-e-type-error specimen +peer-ref-guard+))))))
 
 (defun make-socket-out-stream (our-socket impl-socket)
+  (make-fd-out-stream our-socket
+                      impl-socket ;; XXX is this correct for non-sbcl?
+                      (foo-sockopt-receive-buffer impl-socket)))
+
+(defun make-fd-out-stream (name fd-ref buffer-size)
   (with-result-promise (stream)
     (multiple-value-bind (backend backend-resolver) (make-promise)
       (let* ((buffer (make-array 
-                       (foo-sockopt-receive-buffer impl-socket) 
+                       buffer-size 
                        :element-type '(unsigned-byte 8)))
              ;; UNIX-WRITE doesn't like non-simple arrays
              (end-of-buffer 0))
         (flet ((wait-for-available ()
                  (with-result-promise (handler)
-                   (vr-add-io-handler *vat* (%convert-handler-target impl-socket) :output (lambda (target)
+                   (vr-add-io-handler *vat* (%convert-handler-target fd-ref) :output (lambda (target)
                      (declare (ignore target))
                      (e. backend |setAvailable| (- (array-dimension buffer 0) end-of-buffer))
                      (vr-remove-io-handler handler)
@@ -38,7 +43,7 @@
                  (e-lambda "$outImpl" ()
                    (:|__printOn| (tw)
                      (e-coercef tw +the-text-writer-guard+)
-                     (e. tw |print| our-socket))
+                     (e. tw |print| name))
                    (:|write| (elements)
                      (e-coercef elements 'vector)
                      (let ((mark end-of-buffer))
@@ -47,10 +52,10 @@
                        (replace buffer elements :start1 mark)))
                    (:|flush| ()
                      (escape-bind (write-error-ej)
-                         (let ((n (foo-write impl-socket 
-                                             buffer 
-                                             write-error-ej 
-                                             :end end-of-buffer)))
+                         (let ((n (e. fd-ref |write|
+                                    buffer ;; XXX passing mutated vector - use array-wrapper instead
+                                    write-error-ej 
+                                    0 end-of-buffer)))
                            
                            (replace buffer buffer :start2 n)
                            (decf end-of-buffer n)
@@ -60,9 +65,8 @@
                          (e. stream |fail| error))
                      nil)
                    (:|terminate| (terminator)
-                     ;; XXX to do this right we need shutdown(2)
-                     ;; for now we'll hope GC will clean up after us
-                     nil))))
+                     ;; XXX what should happen upon an error?
+                     (e. fd-ref |shutdown| :input nil)))))
             (wait-for-available)
             (e. (e-import "org.erights.e.elib.eio.makeOutStreamShell")
                 |run|
@@ -213,3 +217,32 @@
   (socket-address-ref-maker +local-ref-guard+ "local"))
 (defglobal +the-get-socket-peer-ref+ 
   (socket-address-ref-maker +peer-ref-guard+ "peer"))
+
+(defmacro with-ejection ((ejector) &body body &aux (condition (gensym)))
+  ;; XXX review for more general use of this macro
+  "Expose any CL:ERROR signaled in BODY via EJECTOR."
+  `(handler-case
+     (progn ,@body)
+     (error (,condition) (eject-or-ethrow ,ejector ,condition))))
+
+;; XXX this is not really about sockets
+(defglobal +the-make-pipe+ (e-lambda "$makePipe" ()
+  (:|run| (ejector)
+    #-sbcl (error "makePipe not yet implemented for ~A" (lisp-implementation-type))
+    (multiple-value-bind (read write)
+        (with-ejection (ejector) 
+          #+sbcl (sb-posix:pipe)
+          #-sbcl nil)
+      ;; XXX arrange for finalization of streams to close the fds
+      ;; XXX set nonblocking
+      (vector
+        (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
+                |run|
+                e.knot::+lisp+) 
+            |run| 
+            (e-lambda "system pipe" ())
+            (make-fd-ref read) 
+            4096)
+        (make-fd-out-stream (e-lambda "system pipe" ())
+                            (make-fd-ref write)
+                            4096))))))

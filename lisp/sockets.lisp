@@ -7,7 +7,6 @@
   #+openmcl (:import-from :openmcl-socket :socket-error)
   (:documentation "Taming the Lisp's socket interface, if it has one.")
   (:export
-    :foo-write
     :foo-connect-tcp
     :get-addr-info))
 
@@ -37,6 +36,8 @@
       (socket-error (condition)
         (eject-or-ethrow opt-ejector condition))))
   
+  (:|shutdown/2| 'foo-shutdown)
+  
   ; XXX implement vtable macros then write one for this get-and-setf template
   (:|getNonBlocking| (this) (as-e-boolean (non-blocking-mode this)))
   (:|setNonBlocking| (this new) (setf (non-blocking-mode this) (e-is-true new)))
@@ -46,6 +47,9 @@
   (:|getSockoptReceiveBuffer/0| 'sockopt-receive-buffer)
   (:|setSockoptReceiveBuffer| (this new) (setf (sockopt-receive-buffer this) new))
   
+  (:|write| (this vector error-ejector start end)
+    ;; XXX document
+    (e. (make-fd-ref (socket-file-descriptor this)) |write| vector error-ejector start end))
   (:|read| (this max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the socket, and return them as a ConstList."
     (e. (make-fd-ref (socket-file-descriptor this)) |read| max-octets error-ejector eof-ejector))
@@ -58,21 +62,6 @@
   (make-instance 'simple-error
     :format-control "error ~A (~A)"
     :format-arguments (list errno (sb-impl::strerror errno))))
-
-#+sbcl
-(defun foo-write (target vector error-ejector &key (start 0) (end (length vector)))
-  "half-baked function used from IPAuthor"
-  (setf target (ref-shorten target))
-  (e-coercef vector '(vector (unsigned-byte 8)))
-  (multiple-value-bind (n errno)
-      (sb-unix::unix-write (socket-file-descriptor target) vector start end)
-    (if (zerop errno)
-      n
-      (eject-or-ethrow error-ejector (errno-to-condition errno)))))
-
-#-(or sbcl)
-(defun foo-write (target vector error-ejector)
-  (error "foo-write not implemented"))
 
 #+sbcl
 (defun in-progress-socket-error-p (error)
@@ -169,6 +158,23 @@
   ;; XXX proper backlog value
   ;; XXX errors?
   (socket-listen socket (or opt-backlog 64)))
+
+#+sbcl
+(defun foo-shutdown (socket direction opt-ejector)
+  ;; XXX submit patch for sb-bsd-sockets
+  (handler-case
+      (if (= (sb-alien:alien-funcall
+               (sb-alien:extern-alien "shutdown" 
+                 (function sb-alien:int sb-alien:int sb-alien:int))
+               (socket-file-descriptor socket)
+               (ecase (ref-shorten direction)
+                 ;; XXX should sb-grovel for these
+                 (:input  0)
+                 (:output 1)
+                 (:io     2)))
+             -1)
+        (sb-bsd-sockets:socket-error "shutdown"))
+    (error (c) (eject-or-ethrow opt-ejector c))))
 
 ; --- ---
 
@@ -313,6 +319,26 @@
 (defun make-fd-ref (fd)
   (e-lambda "org.cubik.cle.io.FDRef" ()
     (:|getFD| () fd)
+
+    (:|shutdown| (direction ejector)
+      ;; XXX embedding the assumption that this is a unidirectional, non-socket fd
+      (sb-posix:close fd))
+
+    #+sbcl
+    (:|write| (vector error-ejector start length)
+      (e-coercef vector 'vector)
+      (e-coercef start 'integer)
+      (e-coercef length '(or null integer))
+      (setf vector (coerce vector '(vector (unsigned-byte 8))))
+      (multiple-value-bind (n errno)
+          ;; XXX this is probably wrong in the presence of threads
+          (let ((old (sb-sys:ignore-interrupt sb-unix:SIGPIPE)))
+            (unwind-protect
+              (sb-unix::unix-write fd vector start (or length (length vector)))
+              (sb-sys:enable-interrupt sb-unix:SIGPIPE old)))
+        (if (zerop errno)
+          n
+          (eject-or-ethrow error-ejector (errno-to-condition errno)))))
 
     #+sbcl
     (:|read| (max-octets error-ejector eof-ejector)
