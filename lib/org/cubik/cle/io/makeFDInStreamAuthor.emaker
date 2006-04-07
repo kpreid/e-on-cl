@@ -84,11 +84,12 @@ def makeFDInStreamAuthor {
             } catch _ {
               traceln(`$inStream: eof from $fdRef`)
               removeHandler()
-              inStream.close() # XXX does this need to be a backend op?
+              inBackend.resolveRemaining(inBuffer.size())
             }
           } catch p {
             traceln(`$inStream: error $p from $fdRef`)
             removeHandler()
+            # XXX this effectively discards any input that's been buffered
             inStream.fail(p)
           }
           

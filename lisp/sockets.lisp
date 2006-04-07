@@ -316,13 +316,25 @@
   (make-fd-ref (sb-sys:fd-stream-fd stream)))
   
 ; XXX this should not be in sockets but in something more general
-(defun make-fd-ref (fd)
-  (e-lambda "org.cubik.cle.io.FDRef" ()
-    (:|getFD| () fd)
+(defun make-fd-ref (opt-fd)
+  (e-lambda |FDRef| ()
+    (:|__printOn| (out)
+      (e-coercef out +the-text-writer-guard+)
+      (if opt-fd
+        (progn
+          (e. out |write| "<file descriptor ")
+          (e. out |print| opt-fd)
+          (e. out |write| ">"))
+        (e. out |write| "<closed file descriptor>")))
+  
+    (:|getFD| () (or opt-fd (error "this fd-ref has been closed.")))
 
     (:|shutdown| (direction ejector)
       ;; XXX embedding the assumption that this is a unidirectional, non-socket fd
-      (sb-posix:close fd))
+      (when opt-fd
+        (sb-posix:close opt-fd))
+      (setf fd nil)
+      (values))
 
     #+sbcl
     (:|write| (vector error-ejector start length)
@@ -334,7 +346,7 @@
           ;; XXX this is probably wrong in the presence of threads
           (let ((old (sb-sys:ignore-interrupt sb-unix:SIGPIPE)))
             (unwind-protect
-              (sb-unix::unix-write fd vector start (or length (length vector)))
+              (sb-unix::unix-write (e. |FDRef| |getFD|) vector start (or length (length vector)))
               (sb-sys:enable-interrupt sb-unix:SIGPIPE old)))
         (if (zerop errno)
           n
@@ -352,7 +364,7 @@
                                         :adjustable nil)))
         (multiple-value-bind (n-read errno)
             ; XXX SBCL internal package. Show me something more appropriate and I'll use it
-            (sb-unix:unix-read fd
+            (sb-unix:unix-read (e. |FDRef| |getFD|)
                                (sb-sys:vector-sap (sb-impl::%array-data-vector buf))
                                max-octets)
           (case n-read

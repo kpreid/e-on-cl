@@ -28,12 +28,15 @@ XXX to be reviewed: makePipe should probably not be in the privilegedScope top l
   ? [i.available(), i.read(0, ALL)]
   # value: [1, [9]]
   
+closure propagation, write-to-read
+  
   ? o.close(); null
   ? interp.waitAtTop(i.whenAvailable(1, thunk{}))
 
   ? i.terminates()
   # value: true
 
+closure propagation, read-to-write
 
   ? interp.waitAtTop(def pipe := makePipe <- run(throw))
   
@@ -50,4 +53,31 @@ XXX to be reviewed: makePipe should probably not be in the privilegedScope top l
   # value: <ref broken by problem: error 32 (Broken pipe)>
   XXX review wording of error (this one is inherited from SBCL errno handling)
 
+closing write end does not discard data
 
+  ? interp.waitAtTop(def pipe := makePipe <- run(throw))
+  ? def [i, o] := pipe; null
+  
+  attempt to stuff all buffers
+  ? var written := 0
+  > def t := timer.now() + 2000
+  > while (def a := o.available(); a > 0 || timer.now() < t) {
+  >   written += a
+  >   o.write([233] * a)
+  >   o.flush()
+  > }
+  > o.close()
+  > trace(`$written elements stuffed`)
+  > null
+  
+  ? var read := 0
+  > def r() :any {
+  >  trace(`$read`)
+  >  if (i.remaining() != 0) {
+  >    return i.whenAvailable(1, thunk { read += i.read(0, ALL).size(); r() })
+  >  }
+  > }
+  > interp.waitAtTop(r())
+  
+  ? [i.terminates(), read - written]
+  # value: [true, 0]

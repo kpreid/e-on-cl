@@ -79,7 +79,7 @@
    (excluded :initform '() :accessor exclusion-group-excluded)))
 
 (defclass exclusive-io-handler ()
-  ((group :initarg :group :accessor %eih-group)
+  ((group :initarg :group :reader %eih-group)
    (current-base :initform nil :accessor %eih-base)
    (installer :initarg :installer :accessor %eih-installer)))
 
@@ -104,30 +104,36 @@
   (let ((wrap-handler (make-instance 'exclusive-io-handler 
                         :group group)))
     (with-slots ((current-base-handler current-base)) wrap-handler
-      (labels ((install () 
-                 (setf current-base-handler
-                   (add-io-handler target 
-                     direction
-                     (lambda (target)
-                       (if (exclusion-group-active group)
-                         (progn
-                           (push #'install (exclusion-group-excluded group))
-                           (remove-io-handler (the (not null) current-base-handler))
-                           (setf current-base-handler nil))
-                         (with-io-handler-exclusion (group wrap-handler)
-                           (funcall function target))))))))
-        (setf (%eih-installer wrap-handler) #'install)
-        (install)
-        wrap-handler))))
+      (let (installer)
+        (labels ((install ()
+                   (if (null (%eih-installer wrap-handler))
+                     (warn "attempted to reinstall ~S for ~S ~S" wrap-handler target direction)
+                     (setf current-base-handler
+                       (add-io-handler target 
+                         direction
+                         (lambda (target)
+                           (if (exclusion-group-active group)
+                             (progn
+                               (push installer (exclusion-group-excluded group))
+                               (remove-io-handler (the (not null) current-base-handler))
+                               (setf current-base-handler nil))
+                             (with-io-handler-exclusion (group wrap-handler)
+                               (funcall function target)))))))))
+          (setf installer #'install)
+          (setf (%eih-installer wrap-handler) installer)
+          (install)
+          wrap-handler)))))
 
 (defun remove-exclusive-io-handler (handler)
   (let ((base-handler (slot-value handler 'current-base)))
     (when base-handler
       (e.util:remove-io-handler base-handler)))
   (setf (exclusion-group-excluded (%eih-group handler))
-        (delete
+        (remove
           (%eih-installer handler)
-          (exclusion-group-excluded (%eih-group handler)))))
+          (exclusion-group-excluded (%eih-group handler))))
+  (setf (%eih-installer handler) nil)
+  (values))
 
 ;;; --- pathname handling ---
 

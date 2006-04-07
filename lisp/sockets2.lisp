@@ -29,16 +29,42 @@
                        buffer-size 
                        :element-type '(unsigned-byte 8)))
              ;; UNIX-WRITE doesn't like non-simple arrays
-             (end-of-buffer 0))
-        (flet ((wait-for-available ()
-                 (with-result-promise (handler)
-                   (vr-add-io-handler *vat* (%convert-handler-target fd-ref) :output (lambda (target)
-                     (declare (ignore target))
-                     (e. backend |setAvailable| (- (array-dimension buffer 0) end-of-buffer))
-                     (vr-remove-io-handler handler)
-                     (when (> end-of-buffer 0)
-                       (e. stream |flush|)))))
-                 (values)))
+             (end-of-buffer 0)
+             (should-shutdown nil)
+             (is-waiting))
+        (labels ((wait-for-available ()
+                   (unless is-waiting
+                     (with-result-promise (handler)
+                       (setf is-waiting t)
+                       (vr-add-io-handler *vat* (%convert-handler-target fd-ref) :output (lambda (target)
+                         (declare (ignore target))
+                         (vr-remove-io-handler handler)
+                         (setf is-waiting nil)
+                         (e<- backend |setAvailable| (- (array-dimension buffer 0) end-of-buffer))
+                         (when should-shutdown
+                           ;; doing this at a time when we don't have a
+                           ;; handler installed
+                           ;; XXX this looks wrong - not giving the buffer a
+                           ;; chance to be emptied - but we haven't proven it
+                           ;; wrong yet
+                           (e. fd-ref |shutdown| :output nil))
+                         (when (> end-of-buffer 0)
+                           (flush))))))
+                   (values))
+                 (flush ()
+                   (escape-bind (write-error-ej)
+                         (let ((n (e. fd-ref |write|
+                                    buffer 
+                                    write-error-ej 
+                                    0 end-of-buffer)))
+                           
+                           (replace buffer buffer :start2 n)
+                           (decf end-of-buffer n)
+                           (wait-for-available))
+                       (error)
+                         #+(or) (e. e.knot:+trace+ |run| error)
+                         (unless (ref-is-resolved (e. stream |terminates|))
+                           (e. stream |fail| error)))))
           (let ((impl
                  (e-lambda "$outImpl" ()
                    (:|__printOn| (tw)
@@ -47,26 +73,16 @@
                    (:|write| (elements)
                      (e-coercef elements 'vector)
                      (let ((mark end-of-buffer))
-                       (assert (< (length elements) (- (array-dimension buffer 0) mark)))
+                       (assert (<= (length elements) (- (array-dimension buffer 0) mark)))
                        (incf end-of-buffer (length elements))
                        (replace buffer elements :start1 mark)))
                    (:|flush| ()
-                     (escape-bind (write-error-ej)
-                         (let ((n (e. fd-ref |write|
-                                    buffer ;; XXX passing mutated vector - use array-wrapper instead
-                                    write-error-ej 
-                                    0 end-of-buffer)))
-                           
-                           (replace buffer buffer :start2 n)
-                           (decf end-of-buffer n)
-                           (wait-for-available))
-                       (error)
-                         (e. e.knot:+trace+ |run| error)
-                         (e. stream |fail| error))
+                     (flush)
                      nil)
                    (:|terminate| (terminator)
-                     ;; XXX what should happen upon an error?
-                     (e. fd-ref |shutdown| :input nil)))))
+                     (declare (ignore terminator))
+                     (setf should-shutdown t)
+                     (flush)))))
             (wait-for-available)
             (e. (e-import "org.erights.e.elib.eio.makeOutStreamShell")
                 |run|
