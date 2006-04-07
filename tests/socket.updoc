@@ -86,7 +86,7 @@ In order to preserve E semantics by default:
   ? [ins.close(), outs.close()]
   # value: [true, true]
 
---- Listening socket (incomplete)
+--- Listening socket
 
   ? pragma.enable("dot-props")
   > def listener := makeSocket(makeSocket::internet, makeSocket::stream)
@@ -108,8 +108,52 @@ In order to preserve E semantics by default:
   ? [r, listener]
   # value: [null, <internet stream socket on 0.0.0.0:35037>]
   
+  XXX return value is null-or-broken - test and document
+  ? listener.listen(null, def handler(serverEnd) :void {
+      XXX address return from socket accept()
+  >   print("Accepted")
+  >   #EIO.join(serverEnd.getIn(), serverEnd.getOut())
+  >   def ins := serverEnd.getIn()
+  >   def outs := serverEnd.getOut()
+  >   ins.whenAvailable(1, thunk {outs.write(ins.read(0, ALL)); outs.close()})
+  > })
+  
+  no portable way to check whether a socket is listening
+  x ? listener
+  x # value: <internet stream socket listening on 0.0.0.0:35037>
+  
+  ? pragma.enable("dot-props")
+  > def client := makeSocket(makeSocket::internet, makeSocket::stream)
+  > client.connect(loop)
+  # value: <Promise>
+  
+  ? interp.waitAtTop(0 <- add(0) <- add(0)) # XXX arbitrary delaying - should be a timeout instead
+  # stdout: Accepted
+  
+  ? def outs := client.getOut(); def ins := client.getIn(); null
+  
+  ? Ref.whenResolved(ins.terminates(), def _(v) :void { print(`client ins terminated: $v`) })
+  # value: <Promise>
+  
+  ? outs.write([1, 2, 3]); outs.close()
+  # value: true
+  
+  ? interp.waitAtTop(ins.whenAvailable(1, thunk { 
+  >   print(ins.read(0, ALL))
+  > }))
 
-XXX listen() and accepting
+  # stdout: [1, 2, 3]
+  
+  # stdout: client ins terminated: true
+  
+  ? outs.close()
+  # value: true
+  
+  ? interp.waitAtTop(ins.terminates())
+
+  ? ins.terminates()
+  # value: true
+
 XXX bind()ing of connect sockets
 XXX errors:
   name lookup failures
@@ -124,4 +168,4 @@ XXX bind on already bound
 XXX connect on already connected/listening
 XXX general support for null addr-info input
 XXX listen without bind must fail since no authority to recieve outside data has been given; support a totally-unspecific local ref to enable this
-XXX running out of sockets must kill the vat, since it's nondeterministic
+XXX make making sockets privileged, since (among other things), you can run out of them, and (without extra code) sockets can listen-on-unspecified-port, ...

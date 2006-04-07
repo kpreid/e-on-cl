@@ -160,6 +160,12 @@
   (socket-listen socket (or opt-backlog 64)))
 
 #+sbcl
+(defun foo-accept (socket opt-ejector)
+  (handler-case
+      (socket-accept (socket-shorten socket))
+    (error (c) (eject-or-ethrow opt-ejector c))))
+
+#+sbcl
 (defun foo-shutdown (socket direction opt-ejector)
   ;; XXX submit patch for sb-bsd-sockets
   (handler-case
