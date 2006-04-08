@@ -154,6 +154,8 @@ In order to preserve E semantics by default:
   ? ins.terminates()
   # value: true
 
+XXX Design change: make making sockets privileged. you can run out of sockets, and it would be nice not to have it be a vat-killing error; we might want to allow listen without bind to Just Work; probably others I haven't thought of. generally, less error-prone to implement. '
+
 XXX bind()ing of connect sockets
 XXX errors:
   name lookup failures
@@ -168,4 +170,3 @@ XXX bind on already bound
 XXX connect on already connected/listening
 XXX general support for null addr-info input
 XXX listen without bind must fail since no authority to recieve outside data has been given; support a totally-unspecific local ref to enable this
-XXX make making sockets privileged, since (among other things), you can run out of them, and (without extra code) sockets can listen-on-unspecified-port, ...
