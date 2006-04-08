@@ -241,6 +241,23 @@
      (progn ,@body)
      (error (,condition) (eject-or-ethrow ,ejector ,condition))))
 
+;; NOTE: used by e.extern:+spawn+
+(defun cl-to-eio-in-stream (stream name)
+  (fd-to-eio-in-stream (sb-sys:fd-stream-fd stream) name 4096 #| XXX arbitrary buffer size |#))
+
+;; NOTE: used by e.extern:+spawn+
+(defun cl-to-eio-out-stream (stream name)
+  (make-fd-out-stream name (make-fd-ref (sb-sys:fd-stream-fd stream)) 4096))
+
+(defun fd-to-eio-in-stream (fd name buffer)
+  (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
+          |run|
+          e.knot::+lisp+) 
+      |run| 
+      name
+      (make-fd-ref fd)
+      buffer))
+
 ;; XXX this is not really about sockets
 (defglobal +the-make-pipe+ (e-lambda "$makePipe" ()
   (:|run| (ejector)
@@ -252,13 +269,7 @@
       ;; XXX arrange for finalization of streams to close the fds
       ;; XXX set nonblocking
       (vector
-        (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
-                |run|
-                e.knot::+lisp+) 
-            |run| 
-            (e-lambda "system pipe" ())
-            (make-fd-ref read) 
-            4096)
+        (fd-to-eio-in-stream read (e-lambda "system pipe" ()) 4096)
         (make-fd-out-stream (e-lambda "system pipe" ())
                             (make-fd-ref write)
                             4096))))))

@@ -677,6 +677,7 @@
             ("file__uriGetter" ,(e.extern:make-file-getter '#()))
             ("gc"              ,e.extern:+gc+)
             ("makeWeakRef"     ,+the-make-weak-ref+)
+            ("spawn"      ,e.extern:+spawn+)
             ("&stdin"     ,(make-lazy-apply-slot (lambda ()
                              (warn "making stdin")
                              (e. (e. (e-import "org.cubik.cle.charsets") |get| e.extern:+standard-external-format-common-name+) |decode| (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")

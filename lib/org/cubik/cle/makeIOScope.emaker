@@ -128,10 +128,14 @@ def makeIOScope implements DeepFrozen {
       
   
     }
-    
+
     if (exits =~ [=> makeWeakRef] | _) {
       unsafeImports with= ("org.erights.e.elib.vat.makeWeakRef", makeWeakRef)
       unsafeImports with= ("org.erights.e.elib.vat.WeakPtr", makeWeakRef)
+    }
+    
+    if (exits =~ [=> spawn] | _) {
+      unsafeImports with= ("org.cubik.cle.spawn", spawn)
     }
     
     if (exits =~ [=> <file>] | _) {

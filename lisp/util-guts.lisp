@@ -255,6 +255,15 @@
       #+cmu  #'extensions:process-output
       #-(or sbcl ccl cmu)
         (error "Don't know where to find external-process-output-stream")
+      args))
+
+  (defun external-process-error-stream (&rest args)
+    (apply 
+      #+ccl  #'ccl:external-process-error-stream
+      #+sbcl #'sb-ext:process-error
+      #+cmu  #'extensions:process-error
+      #-(or sbcl ccl cmu)
+        (error "Don't know where to find external-process-error-stream")
       args)))
 
 (unless (fboundp 'run-program)

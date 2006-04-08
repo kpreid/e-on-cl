@@ -61,6 +61,18 @@
     :name (first name-and-type)
     :type (second name-and-type))))
 
+(defglobal +file-pathname-brand+ (e-lambda "filePathnameBrand" 
+  (:stamped +deep-frozen-stamp+)))
+
+(defclass cheap-sealed-box () 
+  ((value :initarg :value)))
+(defclass file-pathname-box (cheap-sealed-box) ())
+(defun unseal (box type)
+  (slot-value (coerce box type) 'value))
+(defun file-ref-pathname (file)
+  (unseal (e. file |__optSealedDispatch| +file-pathname-brand+) 
+          'file-pathname-box))
+
 (defun make-file-getter (path-components)
   ;; XXX prohibit slashes? what are our consistency rules?
   (let ((pathname (path-components-to-pathname path-components)))
@@ -70,10 +82,15 @@
         (e. tw |print| "<file://")
         (if (not (zerop (length path-components)))
           (loop for x across path-components do
+            ;; XXX URI escaping
             (e. tw |print| "/" x))
           (e. tw |print| "/"))
         (e. tw |print| ">")
         nil)
+      (:|__optSealedDispatch| (brand)
+        (cond
+          ((samep brand +file-pathname-brand+)
+            (make-instance 'file-pathname-box :value pathname))))
       (:|getPath| ()
         ;; XXX move to URI syntax?
         (with-text-writer-to-string (tw)
@@ -265,3 +282,58 @@
           (as-e-boolean result-obj)))
       (:|getMatch| ()
         result-obj)))))
+
+;;; --- External processes ---
+
+;; XXX remove SBCLisms
+
+(defun convert-stream-option (option which)
+  (cond
+    ((samep option "PIPE")
+     :stream)
+    ((samep option t)
+     t)
+    (t
+     (error "unrecognized ~(~A~) option: ~A" which (e-quote option)))))
+
+(defun convert-stream (stream which)
+  (when stream
+    (funcall 
+      (system-symbol (if (eql which :stdin) "CL-TO-EIO-OUT-STREAM" 
+                                            "CL-TO-EIO-IN-STREAM") 
+                     :e.sockets :e-on-cl.sockets)
+      stream
+      (format nil "process ~(~A~)" which))))
+
+(defglobal +spawn+ (e-lambda "org.cubik.cle.prim.spawn" ()
+  (:|run| (file args)
+    (e. +spawn+ |run| file args (e. #() |asMap|)))
+  (:|run| (file args options)
+    (e-coercef args 'vector)
+    (mapping-bind options
+                  ((in-o "stdin" t) ;; XXX using t for these isn't right
+                   (out-o "stdout" t)
+                   (err-o "stderr" t))
+      (setf out-o (ref-shorten out-o))
+      (multiple-value-bind (exit-promise exit-resolver) (make-promise)
+        (let* ((u-process (run-program (file-ref-pathname file)
+                            (map 'list #'ref-shorten args) ; XXX coerce
+                            :wait nil
+                            :input (convert-stream-option in-o :stdin)
+                            :output (convert-stream-option out-o :stdout)
+                            :error (convert-stream-option err-o :stderr)
+                            :status-hook
+                              (lambda (u-process)
+                                ;; XXX this is a signal handler in sbcl - make safe 
+                                (when (member (sb-ext:process-status u-process) 
+                                              '(:exited :signaled))
+                                  (e<- exit-resolver |resolve| (sb-ext:process-exit-code u-process))))))
+               (e-stdin (convert-stream (external-process-input-stream u-process) :stdin))
+               (e-stdout (convert-stream (external-process-output-stream u-process) :stdout))
+               (e-stderr (convert-stream (external-process-error-stream u-process) :stderr)))
+          ;; XXX should be far ref
+          (e-lambda |process| ()
+            (:|getExitValue| () exit-promise)
+            (:|getOptStdin| () e-stdin)
+            (:|getOptStdout| () e-stdout)
+            (:|getOptStderr| () e-stderr))))))))
