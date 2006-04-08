@@ -1,0 +1,82 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+
+  XXX FQN, concept name to be considered
+  ? def makePseudoFarRef := <import:org.cubik.cle.makePseudoFarRefAuthor>(makeProxyResolver)
+  # value: <makePseudoFarRef>
+  
+  ? def nearThing {
+  >   to run(a) :any { return a + 1 }
+  >   to __optSealedDispatch(brand) :any { return if (brand == 43) { 42 } else { null } }
+  >   to __optUncall() :any { return [__identityFunc, "run", [nearThing]] }
+  > }
+  # value: <nearThing>
+  
+  ? def pf := makePseudoFarRef(nearThing)
+  # value: <Far ref>
+  
+  ? pf(2)
+  # problem: not synchronously callable: <Far ref>.run(2)
+  
+  ? def x := pf <- (2)
+  # value: <Promise>
+  
+  ? interp.waitAtTop(x)
+  ? x
+  # value: 3
+  
+Checking for leakage of the near ref
+
+  ? interp.waitAtTop(def x := pf <- __conformTo(any))
+  ? [x, x == pf]
+  # value: [<Far ref>, true]
+  
+  ? interp.waitAtTop(def x := pf <- __getAllegedType())
+  ? x
+  # value: NearThing
+  
+  XXX is passing __optSealedDispatch the thing to do?
+  ? interp.waitAtTop(def x := pf <- __optSealedDispatch(44))
+  ? [x]
+  # value: [null]
+
+  ? interp.waitAtTop(def x := pf <- __optSealedDispatch(43))
+  ? [x]
+  # value: [42]
+
+  passing __optUncall would possibly allow bypassing the pseudo-far proxy by reconstructing the object, so we refuse it always
+  ? interp.waitAtTop(def x := pf <- __optUncall())
+  ? [x]
+  # value: [null]
+
+  ? interp.waitAtTop(def x := pf <- __order("run", [10]))
+  ? [x, x[1] == pf]
+  # value: [[11, <Far ref>], true]
+
+  ? interp.waitAtTop(def x := pf <- __printOn(stdout))
+  # stdout: <nearThing>
+  
+  ? [x]
+  # value: [null]
+  
+  ? interp.waitAtTop(def x := pf <- __reactToLostClient(escape e{int.coerce("a",e)}))
+  ? [x]
+  # value: [null]
+
+  ? interp.waitAtTop(def x := pf <- __respondsTo("run", 0))
+  ? x
+  # value: false
+
+  ? interp.waitAtTop(def x := pf <- __respondsTo("run", 1))
+  ? x
+  # value: true
+
+  ? interp.waitAtTop(def x := pf <- __whenBroken(thunk{print("whenBroken happened")}))
+  ? [x]
+  # value: [null]
+
+  ? pragma.enable("verb-curry")
+  > interp.waitAtTop(def x := pf <- __whenMoreResolved((def y).resolve))
+  ? [x, y, y == pf]
+  # value: [null, <Far ref>, true]

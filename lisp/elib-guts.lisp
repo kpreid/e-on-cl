@@ -460,7 +460,8 @@
   (values 'eventual nil))
 
 
-(defglobal +the-make-proxy-resolver+ (e-lambda "org.erights.e.elib.ref.makeProxyResolver" ()
+(defglobal +the-make-proxy-resolver+ (e-lambda "org.erights.e.elib.ref.makeProxyResolver" 
+    (:stamped +deep-frozen-stamp+)
   (:|run| (opt-handler opt-identity &aux ref-slot)
     ; XXX ref-slot will eventually be a weak reference
     (unless opt-handler

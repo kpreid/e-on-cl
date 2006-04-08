@@ -1,0 +1,59 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("exporter")
+pragma.enable("importer")
+
+pragma.enable("accumulator")
+
+def nonPassedMiranda := \
+  accum [].asSet() for messageDesc in \
+      null.__getAllegedType().getMessageTypes().without("__getAllegedType/0") \
+        .without("__respondsTo/2").without("__reactToLostClient/1") \
+        .without("__optSealedDispatch/1").without("__printOn/1") {
+    _.with([messageDesc.getVerb(), messageDesc.getParams().size()])
+  }
+
+def makePseudoFarRefAuthor implements DeepFrozen {
+  to run(makeProxyResolver) {
+    
+    def makePseudoFarRef implements DeepFrozen {
+      /** Make a Far reference out of a Near reference from the same vat. It does not modify arguments and return values, so is not a membrane. XXX document miranda method choices */
+      to run(nearRef) {
+
+        def resolver
+
+        def farHandler {
+          method handleSendAll(verb, args) :any {
+            switch ([verb, args]) {
+              match [=="__order", [nv, na]] { 
+                [farHandler.handleSendAll(nv, na), resolver.getProxy()]
+              }
+              match [=="__optUncall", []] { null }
+              match [=="__conformTo", [_]] { resolver.getProxy() }
+              match [=="__whenBroken", [_]] { null }
+              match [=="__whenMoreResolved", [reactor]] { 
+                E.send(reactor, "run", [resolver.getProxy()])
+                null
+              }
+              match _ ? nonPassedMiranda.contains(def pairName := [verb, args.size()]) {
+                throw(`unhandled unpassed miranda method: $pairName`)
+              }
+              match _ { E.send(nearRef, verb, args) }
+            }
+          }
+          to handleResolution(newTarget) :any {
+            throw("shouldn't happen: handleResolution on pseudo-far")
+          }
+        }
+
+        bind resolver := makeProxyResolver(farHandler, farHandler)
+        return resolver.getProxy()
+      }
+    }
+    
+    return makePseudoFarRef
+  }
+}
