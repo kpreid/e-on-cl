@@ -5,9 +5,8 @@ I haven't thought through what E-on-CL's general external process interface shou
 
 Basic test, and exit status.
 
-  ? def spawn := <unsafe:org.cubik.cle.spawn>; null
-  x # value: <Far ref>
-  XXX make this actually a far ref. for now it is in the same vat
+  ? def spawn := <unsafe:org.cubik.cle.spawn>
+  # value: <Far ref>
   
   XXX assumption of particular paths in this test
   ? interp.waitAtTop(def process := spawn <- (<file:///usr/bin/true>, []))
@@ -17,8 +16,7 @@ Basic test, and exit status.
   # value: [null, null]
 
   ? [process, def exit := process <- getExitValue()]
-  # value: [<process>, <Promise>]
-  x # value: [<Far ref>, <Promise>]
+  # value: [<Far ref>, <Promise>]
   
   ? interp.waitAtTop(exit)
   ? exit
@@ -79,4 +77,3 @@ XXX TODO:
  - environment control
  - PATH search
  - killing process
- - spawn and processes should be far refs, to avoid synchronous state leakage

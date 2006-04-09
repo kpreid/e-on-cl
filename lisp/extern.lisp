@@ -287,6 +287,10 @@
 
 ;; XXX remove SBCLisms
 
+(defun make-pseudo-far (near)
+  ;; XXX avoid using the author every time
+  (e. (e. (e-import "org.cubik.cle.makePseudoFarRefAuthor") |run| e.elib:+the-make-proxy-resolver+) |run| near))
+
 (defun convert-stream-option (option which)
   (cond
     ((samep option "PIPE")
@@ -314,7 +318,6 @@
                   ((in-o "stdin" t) ;; XXX using t for these isn't right
                    (out-o "stdout" t)
                    (err-o "stderr" t))
-      (setf out-o (ref-shorten out-o))
       (multiple-value-bind (exit-promise exit-resolver) (make-promise)
         (let* ((u-process (run-program (file-ref-pathname file)
                             (map 'list #'ref-shorten args) ; XXX coerce
@@ -331,9 +334,9 @@
                (e-stdin (convert-stream (external-process-input-stream u-process) :stdin))
                (e-stdout (convert-stream (external-process-output-stream u-process) :stdout))
                (e-stderr (convert-stream (external-process-error-stream u-process) :stderr)))
-          ;; XXX should be far ref
-          (e-lambda |process| ()
-            (:|getExitValue| () exit-promise)
-            (:|getOptStdin| () e-stdin)
-            (:|getOptStdout| () e-stdout)
-            (:|getOptStderr| () e-stderr))))))))
+          (make-pseudo-far
+            (e-lambda |process| ()
+              (:|getExitValue| () exit-promise)
+              (:|getOptStdin| () e-stdin)
+              (:|getOptStdout| () e-stdout)
+              (:|getOptStderr| () e-stderr)))))))))
