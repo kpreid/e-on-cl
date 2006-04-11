@@ -360,7 +360,8 @@
 
     #+sbcl
     (:|read| (max-octets error-ejector eof-ejector)
-    "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
+      "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
+      (e-coercef max-octets '(integer 0))
       ; XXX be able to avoid allocating the buffer
       ; thanks to nyef on irc://irc.freenode.net/lisp for this code --
       ;   http://paste.lisp.org/display/7891

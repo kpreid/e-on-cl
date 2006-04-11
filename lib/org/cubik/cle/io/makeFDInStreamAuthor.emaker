@@ -28,7 +28,7 @@ def makeFDInStreamAuthor {
       asdfOperate(load_op, intern("E-ON-CL.SOCKETS", "KEYWORD"))
     }
     def l__quasiParser {
-      to valueMaker(t) {
+      to valueMaker(t :String) {
         return def vm {
           to substitute(values) { return read(simple__quasiParser.valueMaker(t).substitute(values)) }
         } 

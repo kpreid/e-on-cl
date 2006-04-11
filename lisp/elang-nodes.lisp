@@ -32,7 +32,7 @@
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
           (e-util:mangle-verb "run" (+ 2 (length param-types))))
         (,span-sym ,@param-syms ,jlayout-sym)
-        (assert (null ,jlayout-sym))
+        (assert (null (ref-shorten ,jlayout-sym)))
         (e-coercef ,span-sym '(or null source-span))
         ,@(loop for param in param-syms
                 for type in param-types

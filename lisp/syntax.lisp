@@ -169,7 +169,7 @@
           for element across params
           do (e. tw |print| sep element))
     (e. tw |print| #|(|# ")")
-    (when opt-result-guard
+    (when (ref-shorten opt-result-guard)
       (e. tw |print| " :")
       (e. tw |print| opt-result-guard)))
   
@@ -179,7 +179,7 @@
     (if opt-name
       (e. +e-printer+ |printNoun| tw opt-name)
       (e. tw |print| "_"))
-    (when opt-guard
+    (when (ref-shorten opt-guard)
       (e. tw |print| " :")
       (e. tw |print| opt-guard)))
 
@@ -224,7 +224,7 @@ XXX make precedence values available as constants"
                     (declare (ignore opt-original))
                     (e. tw |print| tag)
                     (subprint noun-expr nil)
-                    (when opt-guard-expr
+                    (when (ref-shorten opt-guard-expr)
                       (e. tw |print| " :")
                       (subprint opt-guard-expr +precedence-in-guard+))))
                 (quasi-printer (tag)
@@ -252,7 +252,7 @@ XXX make precedence values available as constants"
             (e. +e-printer+ |printVerb| tw verb)
             (e. tw |print| "(" #|)|#)
             (loop for sep = "" then ", "
-                  for arg across args
+                  for arg across (e-coerce args 'vector)
                   do (e. tw |print| sep)
                      (subprint arg +precedence-outer+))
             (e. tw |print| #|(|# ")"))
@@ -273,7 +273,7 @@ XXX make precedence values available as constants"
               (e. tw |print| "def ")
               (subprint pattern nil)
               (e. tw |print| " := ")
-              (if opt-ejector
+              (if (ref-shorten opt-ejector)
                 (progn
                   (e. tw |print| "(")
                   (subprint specimen +precedence-outer+)
@@ -288,7 +288,7 @@ XXX make precedence values available as constants"
             (subprint ejector-patt nil)
             (e. tw |print| " ")
             (subprint-block body)
-            (when catch-patt
+            (when (ref-shorten catch-patt)
               (e. tw |print| " catch ")
               (subprint catch-patt nil)
               (e. tw |print| " ")
@@ -312,7 +312,7 @@ XXX make precedence values available as constants"
             (subprint cond +precedence-outer+)
             (e. tw |print| #|(|# ") ")
             (subprint-block true-block)
-            (when false-block
+            (when (ref-shorten false-block)
               (e. tw |print| " else ")
               (subprint-block false-block)))
           
@@ -350,6 +350,9 @@ XXX make precedence values available as constants"
           
           (:|visitObjectExpr| (opt-original doc-comment qualified-name auditors script)
             (declare (ignore opt-original))
+            (e-coercef doc-comment 'string)
+            (e-coercef qualified-name 'string)
+            (e-coercef auditors 'vector)
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
             (if (string= qualified-name "_")
@@ -359,7 +362,7 @@ XXX make precedence values available as constants"
             (when (> (length auditors) 0)
               (e. tw |print| " implements ")
               (loop for sep = "" then ", "
-                    for sub across auditors
+                    for sub across (e-coerce auditors 'vector)
                     do (e. tw |print| sep)
                        (subprint sub nil)))
             (subprint script nil))
@@ -368,7 +371,7 @@ XXX make precedence values available as constants"
             (declare (ignore opt-original))
             (precedential (+precedence-seq+)
               (loop for sep = "" then #\Newline
-                    for sub across subs
+                    for sub across (e-coerce subs 'vector)
                     do (e. tw |print| sep)
                        (subprint sub +precedence-in-seq+))))
           
@@ -401,6 +404,8 @@ XXX make precedence values available as constants"
             
           (:|visitEMethod| (opt-original doc-comment verb patterns opt-result-guard body)
             (declare (ignore opt-original))
+            (e-coercef doc-comment 'string)
+            (e-coercef patterns 'vector)
             (e. tw |println|)
             (e. +e-printer+ |printMethodHeader| tw +e-true+
               doc-comment
@@ -411,7 +416,7 @@ XXX make precedence values available as constants"
                     (e-coercef tw +the-text-writer-guard+)
                     (subprint pattern +precedence-outer+ :tw tw))))
                 patterns) 
-              (when opt-result-guard
+              (when (ref-shorten opt-result-guard)
                 (e-lambda "syntax-printer" () (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
                   (subprint opt-result-guard +precedence-in-guard+ :tw tw)))))
@@ -443,7 +448,7 @@ XXX make precedence values available as constants"
             (declare (ignore opt-original))
             (e. tw |print| "[" #|]|#)
             (loop for sep = "" then ", "
-                  for patt across subpatts
+                  for patt across (e-coerce subpatts 'vector)
                   do (e. tw |print| sep)
                      (subprint patt nil))
             (e. tw |print| #|[|# "]"))

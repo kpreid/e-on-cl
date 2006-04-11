@@ -179,6 +179,7 @@
     &aux (load-counts (make-hash-table :test #'equal)))
   (e-lambda "$emakerLoader" ()
     (:|fetch| (fqn absent-thunk)
+      (e-coercef fqn 'string)
       (block fetch
         (let* ((file
                  (loop with subpath = (fqn-to-slash-path fqn)
@@ -306,15 +307,16 @@
                      "org.erights.e.elang.evm.")))
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
-      (:|fetch| (fqn absent-thunk
-          &aux (local-name (some (lambda (p) (without-prefix fqn p)) 
-                                 prefixes)))
-        (if local-name
-          (let* ((sym (find-symbol local-name :e.elang.vm-node)))
-            (or (and sym
-                     (get sym 'static-maker))
-                (e. absent-thunk |run|)))
-          (e. absent-thunk |run|)))
+      (:|fetch| (fqn absent-thunk)
+        (e-coercef fqn 'string)
+        (let ((local-name (some (lambda (p) (without-prefix fqn p)) 
+                                prefixes)))
+          (if local-name
+            (let* ((sym (find-symbol local-name :e.elang.vm-node)))
+              (or (and sym
+                       (get sym 'static-maker))
+                  (e. absent-thunk |run|)))
+            (e. absent-thunk |run|))))
       (:|optUnget| (specimen)
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
@@ -328,14 +330,15 @@
 ;; XXX support optUnget
 (defglobal +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
     (:stamped +deep-frozen-stamp+)
-  (:|fetch| (fqn absent-thunk
-      &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
-    (if local-name
-      (let* ((sym (find-symbol local-name :e.elang.vm-node)))
-        (if sym
-          (make-instance 'cl-type-guard :type-specifier sym)
-          (e. absent-thunk |run|)))
-      (e. absent-thunk |run|)))))
+  (:|fetch| (fqn absent-thunk)
+    (e-coercef fqn 'string)
+    (let ((local-name (without-prefix fqn "org.erights.e.elang.evm.type.")))
+      (if local-name
+        (let* ((sym (find-symbol local-name :e.elang.vm-node)))
+          (if sym
+            (make-instance 'cl-type-guard :type-specifier sym)
+            (e. absent-thunk |run|)))
+        (e. absent-thunk |run|))))))
 
 ; XXX move this utility function elsewhere
 ; XXX avoiding loading deep-frozen auditor because we need this during the construction of the path loader - so we reject some we could accept. the Right Solution is to add lazy auditing as MarkM suggested

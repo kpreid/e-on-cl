@@ -216,15 +216,16 @@
     nil)
   (:|now| ()
     (cl-to-java-time (get-fine-universal-time)))
-  (:|whenPast| (time thunk
-      &aux (utime (java-to-cl-time time)))
-    (multiple-value-bind (p r) (make-promise)
-      (enqueue-timed *vat* utime (lambda ()
-        (e. r |resolve|
-          (e. (e. (vat-safe-scope *vat*) |get| "trace") |runAsTurn|
-            thunk
-            (efun () (format nil "timer whenPast at ~A" time))))))
-      p))))
+  (:|whenPast| (time thunk)
+    (e-coercef time 'real)
+    (let ((utime (java-to-cl-time time)))
+      (multiple-value-bind (p r) (make-promise)
+        (enqueue-timed *vat* utime (lambda ()
+          (e. r |resolve|
+            (e. (e. (vat-safe-scope *vat*) |get| "trace") |runAsTurn|
+              thunk
+              (efun () (format nil "timer whenPast at ~A" time))))))
+        p)))))
 
 ; --- CL-PPCRE interface ---
 

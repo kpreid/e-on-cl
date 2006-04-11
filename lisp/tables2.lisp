@@ -407,6 +407,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (:stamped +deep-frozen-stamp+)
   (:|fromSequence| (seq adjustable)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
+    (e-coercef seq 'sequence)
     (make-flex-array (make-array (length seq) 
                                  :initial-contents seq
                                  :adjustable (e-is-true adjustable)

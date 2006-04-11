@@ -164,6 +164,7 @@
     
     (e-lambda |updocHandler| ()
       (:|begin| (nstep)
+        (setf nstep (ref-shorten nstep))
         (destructuring-bind (expr answers) nstep
           (declare (ignore answers))
           (setf step nstep)
@@ -194,11 +195,11 @@
               unless (string= string "") 
                 do (e. |updocHandler| |answer| (list label string))))
       (:|answer| (answer)
-        (push answer new-answers)
+        (push (ref-shorten answer) new-answers)
         (when print-steps
           (print-answer answer)))
       (:|backtrace| (bt)
-        (setf backtrace bt))
+        (setf backtrace (ref-shorten bt)))
       (:|finish| ()
         (nreverse-here new-answers)
         (flet ((adjust-liveness (live)

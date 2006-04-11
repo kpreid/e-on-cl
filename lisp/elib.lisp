@@ -707,7 +707,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       ,(smethod-function-form (rest smethod) :type-name type-name :verb-name mverb)))
 
   (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
-    `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args ,args-sym))
+    `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args (if (and ',(keywordp verb-name) *exercise-reffiness*) (reffify-args ,args-sym) ,args-sym)))
   
   (defun smethod-function-form (body &key type-name verb-name)
     "XXX transfer the relevant portions of smethod-case-entry's documentation here"
@@ -1044,7 +1044,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (vtable-collect-message-types instance type))))
 
 (defvar *exercise-reffiness* nil
-  "Set this true to test for code which is inappropriately sensitive to the presence of forwarding refs, by placing them around each argument to DEF-VTABLE methods.")
+  "Set this true to test for code which is inappropriately sensitive to the presence of forwarding refs, by placing them around each argument to methods written in Lisp.")
 
 (defun reffify-args (args)
   "See *EXERCISE-REFFINESS*."
@@ -1095,8 +1095,6 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     
     ; XXX gensymify 'args
     (defmethod e-call-dispatch ((rec ,evaluated-specializer) mverb &rest args)
-      (when (and *exercise-reffiness* (keywordp mverb))
-        (setf args (reffify-args args)))
       (case mverb
         ,@(loop for smethod in smethods collect
             ; :type-name is purely a debugging hint, not visible at the E level, so it's OK that it might reveal primitive-type information
