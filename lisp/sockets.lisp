@@ -349,7 +349,7 @@
       (e-coercef length '(or null integer))
       (setf vector (coerce vector '(vector (unsigned-byte 8))))
       (multiple-value-bind (n errno)
-          ;; XXX this is probably wrong in the presence of threads
+          ;; This signal handling is unnecessary as of SBCL 0.9.11.27, which ignores SIGPIPE globally. XXX when 0.9.12 is released, remove this code
           (let ((old (sb-sys:ignore-interrupt sb-unix:SIGPIPE)))
             (unwind-protect
               (sb-unix::unix-write (e. |FDRef| |getFD|) vector start (or length (length vector)))
