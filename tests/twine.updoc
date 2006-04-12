@@ -58,6 +58,11 @@ Twine that is a String
   ? twine.isBare()
   # value: true
 
+Error cases
+
+  ? __makeTwine.fromString("", span)
+  # problem: an empty twine may not have a source span
+
 Complex Twine
 
   ? def twine := __makeTwine.fromString("aardvark", span)

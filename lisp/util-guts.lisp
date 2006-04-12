@@ -3,23 +3,31 @@
 
 (cl:in-package :e.util)
 
-(defun %define-if-available (packages symbols copier)
-  (dolist (nd symbols)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun %define-if-available-parse-mapping (nd)
     (let* ((name (if (listp nd)
                    (string (second nd))
                    (string nd)))
            (here-symbol (if (listp nd)
                           (first nd)
                           (intern name #.*package*))))
+      (values here-symbol name))))
+
+(defun %define-if-available (packages symbols copier)
+  (dolist (nd symbols)
+    (multiple-value-bind (here-symbol name) (%define-if-available-parse-mapping nd)
       (dolist (package (remove-if-not #'find-package packages))
         (multiple-value-bind (other-symbol found) (find-symbol name package)
           (when (eql found :external)
             (funcall copier here-symbol other-symbol)))))))
 
 (defmacro define-if-available (packages symbols &key (accessor 'fdefinition))
-  `(%define-if-available ',packages ',symbols 
-     (lambda (.out. .in.)
-       (setf (,accessor .out.) (,accessor .in.)))))
+  `(progn
+     ,(when (member accessor '(fdefinition symbol-function))
+        `(declaim (ftype function ,@(mapcar #'%define-if-available-parse-mapping symbols))))
+     (%define-if-available ',packages ',symbols 
+       (lambda (.out. .in.)
+         (setf (,accessor .out.) (,accessor .in.))))))
 
 (defun default-alias (alias original)
   (unless (fboundp alias)

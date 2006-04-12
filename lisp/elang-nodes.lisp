@@ -49,7 +49,7 @@
             `(list ,@param-syms)))))))
 
 (defun %setup-node-class (node-type rest-slot property-names dnm-types normal-prop-count)
-  (declare (ignore dnm-types))
+  (declare (ignore dnm-types property-names))
   (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
       fqn)
@@ -741,7 +741,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defun make-scope-checker (ejector) 
   (labels ((make (finals assigns)
              ;; XXX use hash tables?
-             (e-lambda |kernelScopeCheckerValue| ()
+             (e-lambda "$kernelScopeCheckerValue" ()
                (:|_getFinals| () finals)
                (:|_getAssigns| () assigns)
                (:|hide| () (make nil nil))

@@ -248,6 +248,7 @@
 (defun require-node-fits-scope (node scope ejector)
   (let ((ss (e. node |staticScope|)))
     (e. (e. ss |namesUsed|) |iterate| (efun (k v)
+      (declare (ignore v))
       (unless (e-is-true (e. scope |maps| k))
         ;; XXX message to be revised
         (ejerror ejector "undefined variable: ~A" k))))

@@ -1314,7 +1314,8 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (defvar *instrument-ref-shorten-kinds* (make-hash-table))
 
 (defun ref-shorten (x)
-  (declare (optimize (speed 3) (space 3) (safety 3) (compilation-speed 0)))
+  (declare (optimize (speed 3) (space 3) (safety 3) (compilation-speed 0))
+           #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
   #+e.instrument.ref-shorten-uses
     (incf (gethash (class-of x) *instrument-ref-shorten-kinds* 0))
   (typecase x

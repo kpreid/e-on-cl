@@ -308,7 +308,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (e-coercef span '(or null source-span))
     (if span
       (progn 
-        (unless (length string)
+        (unless (plusp (length string))
           (error "an empty twine may not have a source span"))
         (unless (or (not (span-one-to-one-p span))
                     (= (length string) (- (1+ (span-end-col span)) 

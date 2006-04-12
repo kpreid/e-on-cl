@@ -336,7 +336,7 @@
                (e-stdout (convert-stream (external-process-output-stream u-process) :stdout))
                (e-stderr (convert-stream (external-process-error-stream u-process) :stderr)))
           (make-pseudo-far
-            (e-lambda |process| ()
+            (e-lambda "$process" ()
               (:|getExitValue| () exit-promise)
               (:|getOptStdin| () e-stdin)
               (:|getOptStdout| () e-stdout)
