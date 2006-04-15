@@ -10,6 +10,8 @@
   (when *parse-cache-name*
     (e.syntax:save-parse-cache-file *parse-cache-name*))
 
+  ;; XXX TODO: restore the load counting mechanism
+  #+(or)
   (maphash #'(lambda (fqn times)
              (when (> times 1)
                (warn "note: ~A loaded ~A times" fqn times)))
@@ -239,7 +241,10 @@
       (("--boe" "--break-on-ejections")
         (setf *break-on-ejections* (read-from-string (pop args))))
       (("--resources" "-R")
-        (push (e.extern:pathname-to-file (merge-pathnames (native-pathname (pop args))))
+        ;; we'll eventually want a way to specify a different (or no) compiled file location
+        (push (make-list 2 :initial-element
+                (e.extern:pathname-to-file
+                  (merge-pathnames (native-pathname (pop args)))))
               e.knot:*emaker-search-list*))
       (otherwise
         (let ((tl (assoc (first args) *toplevels* :test #'equal)))
