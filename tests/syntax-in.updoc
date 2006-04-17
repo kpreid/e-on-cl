@@ -5,28 +5,9 @@ XXX todo: move everything else that should be here here
 
 This file contains tests for the E parser's grammar; specifically excluding expansion, parser protocol, etc. '
 
-  ? def makeVisitor(writer, depth) :any {
-  >   return def condensedDumpVisitor {
-  >     match [`visit@name`, [_] + elements] {
-  >       def single := elements.size() <=> 1
-  >       def step := if (single) { "" } else { "  " }
-  >       writer.print(name.replaceAll("Expr", "E.").replaceAll("Pattern", "P."))
-  >       def nextWriter := writer.indent(step)
-  >       for element in elements {
-  >         if (single) { nextWriter.write(" ") } else { nextWriter.println() }
-  >         if (element.__respondsTo("welcome", 1)) { element.welcome(makeVisitor(nextWriter, depth + 1)) 
-  >         } else if (element =~ l :List ? (l !~ s :String)) { E.call(makeVisitor(nextWriter, depth + 1), "visit[]", [null] + l) 
-  >         } else {
-  >           nextWriter.print(element)
-  >         }
-  >       }
-  >     }
-  >   }
-  > }; null
-
 ? def pp := <import:org.cubik.cle.prim.parser>; null
-? def rootVisitor := makeVisitor(stdout, 0); null
-? def t(s) :any { return pp.run(s).welcome(rootVisitor) }; null
+? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
+? def t(s) :any { return dumpENodes(pp.run(s), stdout) }; null
 
 --- Sequence separators ---
 
@@ -154,7 +135,6 @@ XXX produce a nice error for this?
 #           GetE.
 #             NounE. b
 #             [] NounE. c
-
 
 XXX test acceptance of line breaks everywhere
 XXX general parser tests for everything

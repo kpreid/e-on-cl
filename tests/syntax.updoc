@@ -1,6 +1,8 @@
 # Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
+
 --- ePrinter ---
 
   ? def ePrinter := <import:org.erights.e.elang.syntax.ePrinter>
@@ -351,11 +353,14 @@ Universal precedence-proper print-parenthesization tester:
   >     escape fail {
   >       def result := e__quasiParser.xTryParse(sb.snapshot(), fail).asKernelE()
   >       if (result != whole) {
-  >         # XXX should print kernel node structure instead of E-syntax
-  >         println(`difference: $whole ===> $result`)
+  >         println("difference: ")
+  >         dumpENodes(whole, stdout)
+  >         println("===>")
+  >         dumpENodes(result, stdout)
   >       }
   >     } catch p {
-  >       println(`parse error: $whole ===> ${sb.snapshot()} ($p)`)
+  >       println("parse error: ")
+  >       println(` ===> ${sb.snapshot()} ($p)`)
   >     }
   >   }
   > }
