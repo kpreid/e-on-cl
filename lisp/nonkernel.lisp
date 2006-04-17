@@ -934,7 +934,9 @@
         (make-instance '|NounExpr| :elements '("true"))))))))
 
 (defmethod e.elang::pattern-opt-noun ((patt |BindPattern|))
-  (e. (e. patt |getNoun|) |getName|))
+  (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
+    (when (typep kernel-noun '|NounExpr|)
+      (e. kernel-noun |getName|))))
 
 ;; XXX lousy name
 (define-node-class |MapPatternKeyer| (|ENode|) ())

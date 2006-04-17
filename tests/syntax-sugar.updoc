@@ -730,6 +730,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: epatt`a__uriGetter__1 :b ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
   #        true)`
 
+  ? t("def bind <a> {}")
+  # value: e`def a__uriGetter__1 ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
+  #        true) := def "$a__uriGetter__C" {
+  #        }`
 
 'MapPattern'
   
