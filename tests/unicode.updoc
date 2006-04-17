@@ -30,7 +30,7 @@ Using Unicode letters in nouns
 
 Codepoints
 
-  ? for c in " !Az~ ¡þÿ" { print(" ", c.getCodepoint().toString("base" => 16)) }
+  ? for c in " !Az~ ¡þÿ" { print(" ", c.getCodepoint().toString(["base" => 16])) }
   # stdout:  20 21 41 7a 7e a0 a1 fe ff
 
 XXX more general unicode tests as I think of them
