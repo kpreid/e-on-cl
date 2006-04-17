@@ -599,6 +599,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   
   ? t("<a+90-.>")
   # value: e`::"a+90-.__uriGetter"`
+  
+  ? pp.pattern("<a>", null, null).getOptPrincipalNoun()
+  # value: "a__uriGetter"
 
 'WhenExpr'
 

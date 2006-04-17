@@ -475,7 +475,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (pattern-opt-noun (e. patt |getPattern|)))
 
 (defmethod pattern-opt-noun ((patt |NounPattern|))
-  (e. (e. patt |getNoun|) |getName|))
+  (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
+    (when (typep kernel-noun '|NounExpr|)
+      (e. kernel-noun |getName|))))
 
 
 (defgeneric pattern-to-param-desc (pattern))

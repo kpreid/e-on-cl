@@ -934,6 +934,7 @@
         (make-instance '|NounExpr| :elements '("true"))))))))
 
 (defmethod e.elang::pattern-opt-noun ((patt |BindPattern|))
+  ;; XXX this is identical code to pattern-opt-noun of NounPattern
   (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
     (when (typep kernel-noun '|NounExpr|)
       (e. kernel-noun |getName|))))

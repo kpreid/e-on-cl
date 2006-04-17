@@ -161,7 +161,7 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   # problem: <opaqueButDeepFrozen> is not DeepFrozen because <opaqueButDeepFrozen> contains references that are unsettled or not DeepFrozen
   
   ? bind secret implements DeepFrozen { to run() :void {} }
-  # value: <secret__1>
+  # value: <secret>
   
   ? opaqueButDeepFrozen :DeepFrozen
   # value: <opaqueButDeepFrozen>
