@@ -180,7 +180,7 @@ rechecking readOnly's contents, testing its methods '
   # value: [1 => 33, 3 => 3, 2 => 44].diverge().readOnly()
   
   ? rofm.removeKey(1)
-  # problem: the org.erights.e.elib.tables.makeMapShell$makeMapShell__7__C$map__C [1 => 33, 3 => 3, 2 => 44].diverge().readOnly() does not understand removeKey/1 [1]
+  # problem: the org.erights.e.elib.tables.makeMapShell$makeMapShell__C$map__C [1 => 33, 3 => 3, 2 => 44].diverge().readOnly() does not understand removeKey/1 [1]
   
   ? rofm[1]
   # value: 33

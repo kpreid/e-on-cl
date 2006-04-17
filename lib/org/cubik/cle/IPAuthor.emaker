@@ -118,7 +118,7 @@ def IPAuthor implements DeepFrozen {
                     outBackend.setAvailable(maxOutAvailable - outBuffer.size())
                   } catch error {
                     # XXX typed exception; javaism
-                    def p := `file descriptor write error for $outStream: $error` :<type:java.lang.Exception>
+                    def p := `file descriptor write error for $outStream: $error` :(<type:java.lang.Exception>)
                     traceln(p)
                     outStream.fail(p)
                   }

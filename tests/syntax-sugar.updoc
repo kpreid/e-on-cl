@@ -92,10 +92,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`a.floorDivide(b)`
 
   ? t("a % b")
-  # value: e`a.mod(b)`
+  # value: e`a.remainder(b)`
 
   ? t("a %% b")
-  # value: e`a.remainder(b)`
+  # value: e`a.mod(b)`
 
   ? t("a ** b")
   # value: e`a.pow(b)`
