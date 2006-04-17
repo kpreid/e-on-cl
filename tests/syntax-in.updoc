@@ -28,6 +28,44 @@ This file contains tests for the E parser's grammar; specifically excluding expa
 ? def rootVisitor := makeVisitor(stdout, 0); null
 ? def t(s) :any { return pp.run(s).welcome(rootVisitor) }; null
 
+--- Sequence separators ---
+
+No SeqExprs around single terminated exprs
+  ? t("a;")
+  # stdout: NounE. a
+  ? t("{a;}")
+  # stdout: HideE. NounE. a
+  
+Multiple separators of all types are allowed.
+  ? t("a;;")
+  # stdout: NounE. a
+  ? t("a\n;")
+  # stdout: NounE. a
+  ? t("a;\n")
+  # stdout: NounE. a
+  ? t("a\n\n")
+  # stdout: NounE. a
+
+  ? t("{a;;}")
+  # stdout: HideE. NounE. a
+  ? t("{a\n;}")
+  # stdout: HideE. NounE. a
+  ? t("{a;\n}")
+  # stdout: HideE. NounE. a
+  ? t("{a\n\n}")
+  # stdout: HideE. NounE. a
+
+  ? t("{a\n\nb;;c;\n}")
+  # stdout: HideE. SeqE. []
+  #           NounE. a
+  #           NounE. b
+  #           NounE. c
+  ? t("a\n\nb;;c;\n")
+  # stdout: SeqE. []
+  #           NounE. a
+  #           NounE. b
+  #           NounE. c
+
 --- Acceptance of sequences everywhere they should be ---
 
 NOTE: these tests were produced by inspection of antlr/e.g. They are not complete.

@@ -271,10 +271,11 @@ getPocket![String key]:
 
 
 start:     br (topSeq)? ;
-//start:     (module (";"! | LINESEP!) | LINESEP!)* (topSeq)? ;
+//start:     (module seqSep | LINESEP!)* (topSeq)? ;
 //module: !;// placeholder for expressions that must be at the top of the file
 
-topSeq:     topExpr (((";"! | LINESEP!) (topExpr)?)+ {##=#([SeqExpr],##);}  )? ;
+topSeq:         topExpr ((seqSep)+ (topSeqMore {##=#([SeqExpr],##);})? )? ;
+topSeqMore:     topExpr ((seqSep)+ (topSeqMore)?)? ;
 
 topExpr:    eExpr | pragma ;
 
@@ -292,7 +293,10 @@ metaExpr:  "meta"^ "."! verb
 
 br:         (LINESEP!)* ;
 
-seq:        eExpr (((";"! | LINESEP!) (eExpr)?)+ {##=#([SeqExpr],##);}  )? ;
+seq:        eExpr ((seqSep)+ (seqMore {##=#([SeqExpr],##);})? )? ;
+seqMore:    eExpr ((seqSep)+ (seqMore)?)? ;
+
+seqSep:     (";"! | LINESEP!);
 
 eExpr:      assign | ejector ;
 
