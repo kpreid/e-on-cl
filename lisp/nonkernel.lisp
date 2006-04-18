@@ -24,6 +24,7 @@
     :|MapExpr|
     :|MessageDescExpr|
     :|MismatchExpr|
+    :|ModPowExpr|
     :|NKAssignExpr|
     :|NKObjectExpr|
     :|NullExpr|
@@ -607,6 +608,12 @@
                                      (|pattern| t |Pattern|))
                                     ()
   (mn '|CallExpr| (mn '|MatchBindExpr| |specimen| |pattern|) "not"))
+
+(defemacro |ModPowExpr| (|EExpr|) ((|base| t |EExpr|)
+                                   (|exponent| t |EExpr|)
+                                   (|modulus| t |EExpr|))
+                                  ()
+  (mn '|CallExpr| |base| "modPow" |exponent| |modulus|))
 
 (defemacro |NKAssignExpr| (|EExpr|) ((|place| t |EExpr|)
                                      (|value| t |EExpr|))

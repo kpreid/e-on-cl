@@ -119,6 +119,7 @@ tokens {
     SendExpr;
     CurryExpr;
     BinaryExpr;
+    ModPowExpr;
     AccumExpr;
     AccumPlaceholderExpr;
 
@@ -591,8 +592,11 @@ shift:          add (("<<"^ | ">>"^) {##.setType(BinaryExpr);} add)*   ;
 add:            mult (("+"^ | "-"^) {##.setType(BinaryExpr);} mult)*   ;
 
 // *, /, //, %, and %% are left associative
-mult:           pow (("*"^ | "/"^ | "//"^ | "%"^ | "%%"^) pow
-                    {##.setType(BinaryExpr);}   )* ;
+mult:           (prefix "**" prefix "%%") => 
+                prefix "**"! prefix "%%"^ pow {##.setType(ModPowExpr);}
+            |   pow ( ("*"^ | "/"^ | "//"^ | "%"^ | "%%"^) pow
+                      {##.setType(BinaryExpr);}                )*;
+                
 
 // ** is non-associative
 pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;

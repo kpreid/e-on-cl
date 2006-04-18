@@ -349,6 +349,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a !~ b")
   # value: e`(a =~ b).not()`
 
+'ModPowExpr'
+  ? t("a ** b %% c")
+  # value: e`a.modPow(b, c)`
+
 'NKAssignExpr'
 
   ? t("a := b")

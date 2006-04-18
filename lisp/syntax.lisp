@@ -839,6 +839,7 @@ XXX make precedence values available as constants"
           e.grammar::|MetaContextExpr|
           e.grammar::|MetaStateExpr|
           e.grammar::|MismatchExpr|
+          e.grammar::|ModPowExpr|
           e.grammar::|NKAssignExpr|
           e.grammar::|PropertyExpr|
           e.grammar::|PropertySlotExpr|
