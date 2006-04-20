@@ -67,6 +67,10 @@
                 (return-from strip-address (subseq string it))))
   (and (not final) string))
 
+(defun safe-privmsg (c d m)
+  (loop for line in (split-sequence:split-sequence #\Newline m) do
+    (privmsg c d line)))
+
 (defun msg-hook (message)
   (let ((destination (if (string-equal (first (arguments message)) *nickname*)
                          (source message)
@@ -75,18 +79,18 @@
     (if cmd
       (let ((source
               (handler-case
-                (e.syntax:e-source-to-tree cmd)
+                (e.syntax:parse-to-kernel cmd)
                 (error (condition)
                   (declare (ignore condition))
-                  (privmsg *connection* destination (format nil "syntax error"))
+                  (safe-privmsg *connection* destination (format nil "syntax error"))
                   (return-from msg-hook)))))
         (handler-case
           (multiple-value-bind (result new-scope)
               (elang:eval-e source *scope*)
-            (privmsg *connection* destination (format nil "# value: ~A" (elib:e-quote result)))
+            (safe-privmsg *connection* destination (format nil "# value: ~A" (elib:e-quote result)))
             (setf *scope* new-scope))
           (error (condition)
-            (privmsg *connection* destination (format nil "# ~A" (elib:e-quote condition))))))
+            (safe-privmsg *connection* destination (format nil "# ~A" (elib:e-quote condition))))))
     
     
       )))
