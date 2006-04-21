@@ -775,6 +775,47 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (seq (flatten :|optMethods|)
        (flatten :|matchers|)))
 
+;;; --- scope utilities ---
+
+(define-condition misleading-usage-error (error)
+  ;; XXX bad accessor names
+  ((node :type |ENode|
+         :initarg :node
+         :reader node)
+   (defining-property :type keyword
+                      :initarg :defining-property
+                      :reader defining-property)
+   (using-property :type keyword
+                   :initarg :using-property
+                   :reader using-property))
+  (:report (lambda (condition stream
+               &aux (node (node condition))
+                    (definer (defining-property condition))
+                    (user (using-property condition))
+                    (node-d (funcall (opt-node-property-getter node definer)))
+                    (node-u (funcall (opt-node-property-getter node user))))
+             (format stream "a ~A's ~A (~A) may not ~:[~;appear to ~]use ~
+                             definitions from its ~A (~A)"
+                            (observable-type-of node)
+                            user (e-quote node-u)
+                            (typep condition 'misleading-apparent-usage-error)
+                            definer (e-quote node-d)))))
+
+(define-condition misleading-actual-usage-error (misleading-usage-error) ())
+(define-condition misleading-apparent-usage-error (misleading-usage-error) ())
+
+(defun reject-usage-2 (node ejector actual definer user)
+  (let ((node-d (e-macroexpand-all (funcall (opt-node-property-getter node definer))))
+        (node-u (e-macroexpand-all (funcall (opt-node-property-getter node user)))))
+  (when (and node-d node-u (usesp node-d node-u))
+    (ejerror ejector (if actual
+                       'misleading-actual-usage-error
+                       'misleading-apparent-usage-error)
+                     :node node
+                     :defining-property definer
+                     :using-property user))))
+
+
 ;;; --- Kernel-E checking ---
 
 ;; utility, to be moved

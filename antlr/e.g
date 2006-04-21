@@ -312,11 +312,10 @@ ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
 
 forExpr:    "for"^ forPatt "in"! br assign body (catcher)?
                                                {##.setType(ForExpr);}  ;
-// the first pattern is actually the optional one. If it is missing, include an
-// Absent node for it.
-forPatt:        pattern br
-                ("=>"! pattern    {##=#([Assoc], ##);}
-                              |   {##=#([Assoc], [Absent], ##);})
+
+// XXX rewrite this so it produces the right tree without lookahead
+forPatt:        (pattern br "=>") => pattern br "=>"! pattern
+            |   {##=#([Absent], ##);} pattern
             ;
 
 accumExpr:      "accum"^ call accumulator pocket["accumulator"]!

@@ -174,13 +174,15 @@
     (mn '|LiteralExpr| value) 
     (mn '|NullExpr|)))
 
-(defmacro defemacro (node-class-name (&rest superclasses) (&rest properties) (&rest options) &body body
-    &aux (node (gensym "NODE")) (stop (gensym "STOP")))
+(defmacro defemacro (node-class-name (&rest superclasses) (&rest properties) (&rest options &key ((&whole node) (gensym "NODE")) &allow-other-keys) &body body
+    &aux (stop (gensym "STOP")))
   `(progn
      (e.elang::define-node-class ,node-class-name ,superclasses
        ,(loop for (name subnode type) in properties
               collect (list (intern (symbol-name name) :keyword) subnode type))
-       ,@options)
+       ,@(let ((options (copy-seq options)))
+           (remf options '&whole)
+           options))
      (defmethod e-macroexpand-1 ((,node ,node-class-name) ,stop)
        (declare (ignore ,stop))
        ;; XXX can this be simplified with node-visitor-arguments?
@@ -434,18 +436,20 @@
               ,result-noun))))
       (mn '|DefineExpr| kernel-pattern kernel-r-value kernel-ejector))))
 
-(defemacro |ForExpr| (|EExpr|) ((|assocPatterns| t (cons (eql assoc)
-                                                     (cons (or |Pattern| null)
-                                                       (cons |Pattern| null))))
+(defemacro |ForExpr| (|EExpr|) ((|optKeyPattern| t (or |Pattern| null))
+                                (|valuePattern| t |Pattern|)
                                 (|collection| t |EExpr|)
                                 (|body| t |EExpr|))
-                               ()
+                               (&whole node)
   (let ((valid-flag-var (gennoun "valid"))
         (key-var (gennoun "key"))
         (value-var (gennoun "value"))
         (pattern-escape-var (gennoun "skip"))
-        (key-pattern (or (second |assocPatterns|) (mn '|IgnorePattern|)))
-        (value-pattern (third |assocPatterns|)))
+        (key-pattern (or |optKeyPattern| (mn '|IgnorePattern|))))
+    (elang::reject-usage-2 node nil nil :|optKeyPattern| :|collection|)
+    (elang::reject-usage-2 node nil t   :|collection| :|optKeyPattern|)
+    (elang::reject-usage-2 node nil nil :|valuePattern| :|collection|)
+    (elang::reject-usage-2 node nil t   :|collection| :|valuePattern|)
     (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
       (mn '|SeqExpr|
         (mn '|DefineExpr| (mn '|VarPattern| valid-flag-var nil)
@@ -475,7 +479,7 @@
                           (mn '|SeqExpr|
                             (mn '|DefineExpr| key-pattern 
                                               key-var pattern-escape-var)
-                            (mn '|DefineExpr| value-pattern 
+                            (mn '|DefineExpr| |valuePattern| 
                                               value-var pattern-escape-var)
                             |body|)
                           nil nil)
@@ -489,8 +493,8 @@
       nil nil)))
 
 (defmethod expand-accum-body ((node |ForExpr|) accum-var)
-  (destructuring-bind (patterns collection body) (e.elang::node-visitor-arguments node)
-    (mn '|ForExpr| patterns collection (expand-accum-body body accum-var))))
+  (destructuring-bind (k v c body) (e.elang::node-visitor-arguments node)
+    (mn '|ForExpr| k v c (expand-accum-body body accum-var))))
 
 (defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |EExpr|)) ()
   (let* ((real-noun (e-macroexpand-all |noun|))
@@ -1039,6 +1043,7 @@
     ((|optParser| t (or null |EExpr|))
      (|parts| t (e-list (and |QuasiPart|))))
     (:rest-slot t)
+  ;; XXX todo: reject usage between (all $-holes) and (all @-holes)
   (let ((context-noun (gennoun "co"))
         (specimen-noun (gennoun "sp"))
         (ejector-noun (gennoun "ej")))

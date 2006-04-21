@@ -181,6 +181,26 @@ Parentheses disable modPow form
 #             NounE. b
 #             [] NounE. c
 
+--- ForExpr ---
+
+? t("for a => b in c { d }")
+# stdout: ForE.
+#           FinalP.
+#             NounE. a
+#             null
+#           FinalP.
+#             NounE. b
+#             null
+#           NounE. c
+#           NounE. d
+? t("for b in c { d }")
+# stdout: ForE.
+#           null
+#           FinalP.
+#             NounE. b
+#             null
+#           NounE. c
+#           NounE. d
 
 --- Miscellaneous ---
 

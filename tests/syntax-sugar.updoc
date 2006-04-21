@@ -260,6 +260,16 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            null
   #        }`
 
+  ? t("for a => b in a { c }")
+  # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`a`) may not appear to use definitions from its optKeyPattern (epatt`a`)>
+  ? t("for a => b in b { c }")
+  # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`b`) may not appear to use definitions from its valuePattern (epatt`b`)>
+  ? t("for a ? c => b in (def c := d) { e }")
+  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`a ? c`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  ? t("for a => b ? c in (def c := d) { e }")
+  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`b ? c`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  XXX prettier errors
+
   XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
   
 'ForwardExpr'
