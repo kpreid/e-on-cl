@@ -804,7 +804,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (define-condition misleading-actual-usage-error (misleading-usage-error) ())
 (define-condition misleading-apparent-usage-error (misleading-usage-error) ())
 
-(defun reject-usage-2 (node ejector actual definer user)
+(defun reject-definition-usage (node ejector actual definer user)
   (let ((node-d (e-macroexpand-all (funcall (opt-node-property-getter node definer))))
         (node-u (e-macroexpand-all (funcall (opt-node-property-getter node user)))))
   (when (and node-d node-u (usesp node-d node-u))
@@ -846,24 +846,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         (ejerror ejector "~S must have ~S of type ~S, but had ~S" 
                          node property ptype value)))))
 
-(defun %reject-usage (node ejector name-d node-d name-u node-u)
-  (when (and node-d node-u (usesp node-d node-u))
-    (ejerror ejector "kernel ~A may not use definitions ~
-                      from ~A (~A) in ~A (~A)"
-                     (observable-type-of node)
-                     name-d (e-quote node-d)
-                     name-u (e-quote node-u))))
-
 (defmacro define-kernel-e-check-method (node-class &body body)
   `(defmethod require-kernel-e-recursive progn ((node ,node-class) ejector)
      (macrolet ((check-property-types (&rest rules)
                   `(%check-property-types node ejector ',rules)))
-       (flet ((reject-usage (definer user)
-                (%reject-usage node ejector 
-                  (symbol-name definer)
-                  (funcall (opt-node-property-getter node definer))
-                  (symbol-name user)
-                  (funcall (opt-node-property-getter node user)))))
+       (flet ((this-reject-usage (actual definer user)
+                (reject-definition-usage node ejector actual definer user)))
          (declare (ignorable #'reject-usage))
          ,@body))))
 
@@ -921,10 +909,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 
 (define-kernel-e-check-method |DefineExpr|
-  (reject-usage :|pattern|        :|rValue|)
-  (reject-usage :|pattern|        :|optEjectorExpr|)
-  (reject-usage :|rValue|         :|pattern|)
-  (reject-usage :|optEjectorExpr| :|pattern|))
+  (this-reject-usage nil :|pattern|        :|rValue|)
+  (this-reject-usage nil :|pattern|        :|optEjectorExpr|)
+  (this-reject-usage t   :|rValue|         :|pattern|)
+  (this-reject-usage t   :|optEjectorExpr| :|pattern|))
 
 (define-kernel-e-type-constraints |AssignExpr|
   (:|noun| |NounExpr|))

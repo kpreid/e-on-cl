@@ -367,12 +367,17 @@
 
 ;; XXX for now, e.nonkernel.* packages are defined in nonkernel.lisp
 
+(cl:defpackage :e.elang.node-impl
+  (:use)
+  (:export
+    :reject-definition-usage
+    :define-node-class
+    :def-scope-rule))
+
 (cl:defpackage :e.elang
   (:nicknames :elang)
-  (:use :cl :e.util :elib :e.elang.vm-node)
+  (:use :cl :e.util :elib :e.elang.vm-node :e.elang.node-impl)
   (:export
-    :define-node-class
-  
     :eval-e
     :get-translation
     :require-kernel-e
@@ -381,10 +386,11 @@
     :e-macroexpand
     :e-macroexpand-all
     :kernelize
-    
+
     :+the-make-static-scope+
     
-    :node-elements ;; XXX shouldn't really be exported
+    :node-elements
+    :node-visitor-arguments
     :node-arity-error
     :opt-guard-expr-to-safe-opt-guard
     :pattern-opt-noun
@@ -392,6 +398,7 @@
     
     :slot-symbol-var-name ;; XXX stale
     ))
+
 
 (e.util:defglobals
   elang:+the-make-static-scope+)

@@ -62,8 +62,7 @@
     :|QuasiEscape|))
 
 (cl:defpackage :e.nonkernel.impl
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :e.nonkernel)
-  (:export :kernelize))
+  (:use :cl :e.util :e.elib :e.elang :e.elang.node-impl :e.elang.vm-node :e.nonkernel))
 
 (cl:in-package :e.nonkernel.impl)
 
@@ -73,8 +72,8 @@
   ((:|name| nil symbol)))
  
 ;; XXX make this less internal      
-(e.elang::def-scope-rule |TemporaryExpr|
-  (e.elang::! (e. e.elang:+the-make-static-scope+ |scopeRead| e.elang::node)))
+(def-scope-rule |TemporaryExpr|
+  (e.elang::! (e. +the-make-static-scope+ |scopeRead| e.elang::node)))
 
 
 (defun gennoun (label)
@@ -86,7 +85,7 @@
   (etypecase node
     (null nil)
     (vector (loop for sub across node append (find-names sub)))
-    (|NounExpr| (elang::node-elements node))
+    (|NounExpr| (node-elements node))
     (|ENode| 
       (loop for subnode-flag across (e. (get (class-name (class-of node)) 'static-maker) |getParameterSubnodeFlags|)
             for sub in (elang::node-visitor-arguments node)
@@ -177,7 +176,7 @@
 (defmacro defemacro (node-class-name (&rest superclasses) (&rest properties) (&rest options &key ((&whole node) (gensym "NODE")) &allow-other-keys) &body body
     &aux (stop (gensym "STOP")))
   `(progn
-     (e.elang::define-node-class ,node-class-name ,superclasses
+     (define-node-class ,node-class-name ,superclasses
        ,(loop for (name subnode type) in properties
               collect (list (intern (symbol-name name) :keyword) subnode type))
        ,@(let ((options (copy-seq options)))
@@ -190,7 +189,7 @@
                               (if (getf options :rest-slot)
                                 `(,@(butlast vars) &rest ,@(last vars))
                                 vars))
-                           (e.elang::node-elements ,node)
+                           (node-elements ,node)
          ,@body))))
 
 (defun noun-to-resolver-noun (noun)
@@ -215,7 +214,7 @@
 (define-node-class |AccumPlaceholderExpr| (|EExpr|) ())
 
 (defmethod expand-accum-body ((body |CallExpr|) accum-var)
-  (destructuring-bind (recipient verb args) (e.elang::node-visitor-arguments body)
+  (destructuring-bind (recipient verb args) (node-visitor-arguments body)
     (check-type (ref-shorten recipient) |AccumPlaceholderExpr|)
     ;; XXX this mess is evidence we need a handy make-node-according-to-"visitor"-arguments function (visitor arguments == maker arguments)
     (mn '|UpdateExpr| (apply #'mn '|CallExpr| accum-var verb (coerce args 'list)))))
@@ -254,7 +253,7 @@
       (coerce |rest| 'list))))
 
 (defmethod expand-accum-body ((body |BinaryExpr|) accum-var)
-  (destructuring-bind (op first rest) (e.elang::node-visitor-arguments body)
+  (destructuring-bind (op first rest) (node-visitor-arguments body)
     (check-type (ref-shorten first) |AccumPlaceholderExpr|)
     (mn '|UpdateExpr| (mn '|BinaryExpr| op accum-var rest))))
 
@@ -446,10 +445,11 @@
         (value-var (gennoun "value"))
         (pattern-escape-var (gennoun "skip"))
         (key-pattern (or |optKeyPattern| (mn '|IgnorePattern|))))
-    (elang::reject-usage-2 node nil nil :|optKeyPattern| :|collection|)
-    (elang::reject-usage-2 node nil t   :|collection| :|optKeyPattern|)
-    (elang::reject-usage-2 node nil nil :|valuePattern| :|collection|)
-    (elang::reject-usage-2 node nil t   :|collection| :|valuePattern|)
+    ;; XXX this shows there should be an ejector for expansion
+    (reject-definition-usage node nil nil :|optKeyPattern| :|collection|)
+    (reject-definition-usage node nil t   :|collection| :|optKeyPattern|)
+    (reject-definition-usage node nil nil :|valuePattern| :|collection|)
+    (reject-definition-usage node nil t   :|collection| :|valuePattern|)
     (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
       (mn '|SeqExpr|
         (mn '|DefineExpr| (mn '|VarPattern| valid-flag-var nil)
@@ -493,7 +493,7 @@
       nil nil)))
 
 (defmethod expand-accum-body ((node |ForExpr|) accum-var)
-  (destructuring-bind (k v c body) (e.elang::node-visitor-arguments node)
+  (destructuring-bind (k v c body) (node-visitor-arguments node)
     (mn '|ForExpr| k v c (expand-accum-body body accum-var))))
 
 (defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |EExpr|)) ()
@@ -524,7 +524,7 @@
   (mn '|IfExpr| |test| |then| (mn '|NullExpr|)))
 
 (defmethod expand-accum-body ((body |If1Expr|) accum-var)
-  (destructuring-bind (test then) (e.elang::node-visitor-arguments body)
+  (destructuring-bind (test then) (node-visitor-arguments body)
     (mn '|If1Expr| test (expand-accum-body then accum-var))))
 
 ;; using LiteralExpr for the name is a bit clunky but necessary: when it's a pattern the slot must be marked as a subnode. XXX come up with a better solution, and apply it to NKObjectExpr too
@@ -541,7 +541,7 @@
                (|LiteralExpr| (e. whatever |getValue|))
                (null "$_")
                (|Pattern|
-                 (let ((noun-string (e.elang::pattern-opt-noun whatever)))
+                 (let ((noun-string (pattern-opt-noun whatever)))
                          (if noun-string
                              ;; XXX remove the __T once we're out of the compatibility phase
                              (format nil "$~A__T" noun-string)
@@ -663,7 +663,7 @@
         |name| 
         (mn '|NKObjectExpr| 
           |docComment|
-          (let ((noun-string (e.elang::pattern-opt-noun |name|)))
+          (let ((noun-string (pattern-opt-noun |name|)))
             (if noun-string
               ;; XXX remove the __C once we're out of the compatibility phase
               (format nil "$~A__C" noun-string)
@@ -925,7 +925,7 @@
     nil nil))
 
 (defmethod expand-accum-body ((node |WhileExpr|) accum-var)
-  (destructuring-bind (test body) (e.elang::node-visitor-arguments node)
+  (destructuring-bind (test body) (node-visitor-arguments node)
     (mn '|WhileExpr| test (expand-accum-body body accum-var))))
     
 (defemacro |BindPattern| (|Pattern|) ((|noun| t |EExpr|)
@@ -944,7 +944,7 @@
           temp))
         (make-instance '|NounExpr| :elements '("true"))))))))
 
-(defmethod e.elang::pattern-opt-noun ((patt |BindPattern|))
+(defmethod pattern-opt-noun ((patt |BindPattern|))
   ;; XXX this is identical code to pattern-opt-noun of NounPattern
   (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
     (when (typep kernel-noun '|NounExpr|)
@@ -1097,7 +1097,7 @@
 (def-vtable |FunctionScript|
   (:|withFunctionDocumentation| (this doc)
     (mn '|EScript| 
-      (vector (apply #'mn '|ETo| doc "run" (e.elang::node-elements this)))
+      (vector (apply #'mn '|ETo| doc "run" (node-elements this)))
       #())))
 
 (defemacro |ETo| (|EMethodoid|) 

@@ -592,7 +592,7 @@ Trinary DefineExpr
   >     null,
   >     null), 
   >   null).eval(safeScope.with("y", "false").nestOuter())
-  # problem: kernel DefineExpr may not use definitions from optEjectorExpr (e`def y := true`) in pattern (epatt`x ? y`)
+  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`x ? y`) may not use definitions from its optEjectorExpr (e`def y := true`)>
 
 SlotExpr, SlotPattern, AssignExpr
 
