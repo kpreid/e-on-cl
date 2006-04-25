@@ -867,6 +867,9 @@ XXX make precedence values available as constants"
           e.grammar::|EMethod|
           e.grammar::|ETo|
           e.grammar::|EMatcher|
+          e.grammar::|FunctionObject|
+          e.grammar::|MethodObject|
+          e.grammar::|PlumbingObject|
           
           e.grammar::|QuasiLiteralExpr|
           e.grammar::|QuasiLiteralPattern|
@@ -975,7 +978,7 @@ XXX make precedence values available as constants"
           (apply #'make-from-tag text out-children))
 
         ;; -- doc-comment introduction --
-        ((e.grammar::|ThunkExpr|)
+        ((e.grammar::|ThunkExpr| e.grammar::|ObjectHeadExpr|)
           (apply #'make-from-tag (or enclosing-doc-comment "") out-children))
 
         ;; -- de-optioning --
@@ -1061,34 +1064,6 @@ XXX make precedence values available as constants"
                 (mn '|LiteralExpr| name)
                 name)
               rest)))
-
-        ;; -- object-expr stuff --
-        ((e.grammar::|ObjectExpr|)
-          (destructuring-bind (qualified-name (extends implements script)) out-children
-            (mn '|NKObjectExpr| (or enclosing-doc-comment "") qualified-name extends implements script)))
-        ((e.grammar::|MethodObject|)
-          (destructuring-bind (extends implements script) out-children
-            (list extends implements script)))
-        ((e.grammar::|FunctionObject|)
-          (destructuring-bind (parameters result-guard body is-easy-return) out-children
-            (list nil #() (mn '|FunctionScript| (coerce parameters 'vector) 
-                                                result-guard body
-                                                is-easy-return))))
-        ((e.grammar::|PlumbingObject|)
-          (destructuring-bind (implements matcher) out-children
-            (list nil implements (mn '|EScript| nil (vector matcher)))))
-        ((e.grammar::|EScript|)
-          (let ((todo out-children))
-            (let ((methods '())
-                  (matchers '()))
-              (loop while (typep (first todo) '(or |ETo| |EMethod|)) do
-                (push (pop todo) methods))
-              (loop while (typep (first todo) '|EMatcher|) do
-                (push (pop todo) matchers))
-              (when todo
-                (error "unexpected element type or misplaced method in EScript: ~S remaining (whole is ~S)" todo out-children))
-              (mn '|EScript| (coerce (nreverse methods) 'vector)
-                             (coerce (nreverse matchers) 'vector)))))
 
         ;; -- quasi stuff --
         ((e.grammar::|QUASIBODY|) 

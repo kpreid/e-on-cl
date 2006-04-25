@@ -84,7 +84,7 @@ tokens {
     MatchBindExpr;
     MismatchExpr;
     NounExpr;
-    ObjectExpr;
+    ObjectHeadExpr;
     InterfaceExpr;
     QuasiExpr;           // XXX unconfuse names: this is the `...` syntax, the following two are the holes-in-source-code syntax. same fix for *Pattern.
     QuasiLiteralExpr;
@@ -374,8 +374,8 @@ docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
 //<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
 // var x := ... should produce a DefrecExpr with a VarPattern
 // bind x := ... should produce a DefrecExpr with a BindPattern
-objectExpr:     "def"^ objName objectTail           {##.setType(ObjectExpr);}
-                | (binder | varNamer) objectTail    {##=#([ObjectExpr],##);}
+objectExpr:     "def"^ objName objectTail           {##.setType(ObjectHeadExpr);}
+                | (binder | varNamer) objectTail    {##=#([ObjectHeadExpr],##);}
             ;
 
 //so ObjectExpr(doc, fqn, auditors, script|method|matcher)
@@ -402,9 +402,9 @@ objectTail:     //(typeParams)?
                 //(":"! guard)?
             extender
             oImplements
-            script {##=#([MethodObject],##);}
+            scriptPair {##=#([MethodObject],##);}
         |   oImplements
-            (   script {##=#([MethodObject], #([Extends]), ##);}
+            (   scriptPair {##=#([MethodObject], #([Extends]), ##);}
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
@@ -438,11 +438,11 @@ typeParams:     "[" typePatternList br "]" ; // should have a br before the "]"
 
 typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
 
-//script:  "{"^ (method br)* (matcher br)* "}"!  {##.setType(List);} ;
-script:  "{"^ methods  "}"! {##.setType(EScript);} ;
+scriptPair:  "{"! methodList matcherList  "}"! ;
 
-methods: (methodPredict) => method br methods | (matcher br )* ;
-methodPredict: doco ("to"|"method"|"on") ;
+methodList:     ( (methodPredict) => method br )* {##=#([List], ##);} ;
+matcherList:    ( matcher br )* {##=#([List], ##);} ;
+methodPredict:  doco ("to"|"method"|"on") ;
 
 method:         doco ( "method"^ methodTail {##.setType(EMethod);}
                      | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;

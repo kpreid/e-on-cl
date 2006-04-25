@@ -97,12 +97,12 @@ XXX produce a nice error for this?
 # stdout: BinaryE.
 #           &
 #           NounE. a
-#           [] NKObjectE.
+#           [] ObjectHeadE.
 #             
 #             IgnoreP.
-#             null
-#             []
-#             EScript
+#             MethodObject
+#               null
+#               []
 #               []
 #               []
 
@@ -110,12 +110,12 @@ XXX produce a nice error for this?
 # stdout: BinaryE.
 #           &
 #           NounE. a
-#           [] NKObjectE.
+#           [] ObjectHeadE.
 #             b
 #             IgnoreP.
-#             null
-#             []
-#             EScript
+#             MethodObject
+#               null
+#               []
 #               []
 #               []
 

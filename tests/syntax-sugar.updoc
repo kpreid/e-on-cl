@@ -790,7 +790,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
     x ? tp("[] | a")
     x # syntax error: 
 
-'FunctionScript'
+'FunctionObject'
 
   ? t("/** a */ def b() :c { d }")
   # value: e`def b := def "$b__C" {
@@ -849,4 +849,4 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        }`
   
 XXX test temporary name rules
-XXX do node-based tests for FunctionScript, TailPattern, UpdateExpr since those aren't quite fully tested just from syntax '
+XXX do node-based tests for FunctionObject, TailPattern, UpdateExpr since those aren't quite fully tested just from syntax '

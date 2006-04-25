@@ -28,6 +28,7 @@
     :|NKAssignExpr|
     :|NKObjectExpr|
     :|NullExpr|
+    :|ObjectHeadExpr|
     :|ParamDescExpr|
     :|PrefixExpr|
     :|PropertyExpr|
@@ -50,7 +51,9 @@
     :|QuasiPattern|
     :|SamePattern|
     :|TailPattern|
-    :|FunctionScript|
+    :|FunctionObject|
+    :|MethodObject|
+    :|PlumbingObject|
     :|ETo|
     :|MapPatternAssoc|
     :|MapPatternImport|
@@ -154,14 +157,21 @@
   (error "shouldn't happen: string encountered in node macroexpansion: ~S" node))
 
 (defmethod e-macroexpand-all ((node |ENode|))
-  (let* ((node (e-macroexpand node))
-         (maker (get (class-name (class-of node)) 'elang::static-maker))
-         (new-node-args (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
-                         for sub in (elang::node-visitor-arguments node)
-                         collect (if (e-is-true subnode-flag)
-                                   (e-macroexpand-all sub)
-                                   sub))))
-    (e-call maker "run" `(nil ,@new-node-args nil))))
+  (let* ((node (e-macroexpand node)))
+    ;; XXX poor structure. should we have a separate "e-macroexpand-children"?
+    (if (not (typep node '|ENode|))
+      (e-macroexpand-all node)
+      (let* ((maker (get (class-name (class-of node)) 'elang::static-maker))
+             (new-node-args 
+              (progn 
+                (assert maker () "maker not found for ~S" node)
+                (loop 
+                  for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+                  for sub in (elang::node-visitor-arguments node)
+                  collect (if (e-is-true subnode-flag)
+                            (e-macroexpand-all sub)
+                            sub)))))
+        (e-call maker "run" `(nil ,@new-node-args nil))))))
 
 ;;; --- conveniences ---
 
@@ -690,15 +700,26 @@
                                                         "callWithPair"
                                                         (mn '|NounExpr| "super")
                                                         msg-noun))))))))
-        (let ((functionp (typep |script| '|FunctionScript|)))
-          ;; XXX devise a means for this which does not involve this type check
-          (if functionp
-            (mn '|ObjectExpr| "" (or |name| "_") |auditors| (e. |script| |withFunctionDocumentation| |docComment|))
-            ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
-            (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))))
+        ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
+        (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))
 
 (defemacro |NullExpr| (|EExpr|) () ()
   (mn '|NounExpr| "null"))
+
+(defemacro |ObjectHeadExpr| (|EExpr|) ((|docComment| nil string)
+                                       (|name| nil (or null |Pattern| string))
+                                       (|tail| t |ObjectTail|))
+                                      ()
+  ;; XXX possibly merge NKObjectExpr into this
+  (multiple-value-bind (doc tail)
+      (if (typep |tail| '|FunctionObject|)
+        (values "" (e. |tail| |withFunctionDocumentation| |docComment|))
+        (values |docComment| |tail|))
+    (destructuring-bind (parent auditors script) 
+        (coerce (e-macroexpand #| NOT -all |# tail) 'list)
+      (mn '|NKObjectExpr| doc |name| parent auditors script))))
+
+(define-node-class |ObjectTail| (|ENode|) ())
 
 (defemacro |ParamDescExpr| (|EExpr|)
     ((|name| nil string)
@@ -876,9 +897,9 @@
                                    (|isEasyReturn| nil e-boolean))
                                   ()
   (let ((resolution (gennoun "resolution")))
-    (mn '|NKObjectExpr|
-      "" |name| nil #()
-      (mn '|FunctionScript| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard|
+    (mn '|ObjectHeadExpr|
+      "" |name|
+      (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard|
         ;; XXX replace finally/catch handling with expansion to TryExpr, once that's nonkernel instead of syntax layer
         (labels ((do-finally (e)
                    (if |optFinally|
@@ -1083,22 +1104,37 @@
      (expand-map-pattern (nconc (coerce (e. |fixedPatt| |getPairs|) 'list)
                                 (list (mn '|MapPatternRest| |tailPatt|)))))))
 
-(defemacro |FunctionScript| (|EScriptoid|) 
+(defemacro |MethodObject| (|ObjectTail|) ((|parent| t (or null |EExpr|))
+                                          (|auditors| t (e-list |EExpr|))
+                                          (|methods| t (e-list |EMethodoid|))
+                                          (|matchers| t (e-list |EMatcher|)))
+                                         ()
+  (vector |parent| |auditors| (mn '|EScript| |methods| |matchers|)))
+
+(defemacro |FunctionObject| (|ObjectTail|) 
     ((|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
      (|body| t |EExpr|)
      (|isEasyReturn| nil e-boolean))
     ()
-  ;; XXX reduce duplication
-  (mn '|EScript| 
-    (vector (mn '|ETo| "" "run" |patterns| |optResultGuard| |body| |isEasyReturn|))
-    #()))
+  (mn '|MethodObject|
+      nil
+      #()
+      (vector (apply #'mn '|ETo| "" "run" (node-elements this)))
+      #()))
 
-(def-vtable |FunctionScript|
+(def-vtable |FunctionObject|
   (:|withFunctionDocumentation| (this doc)
-    (mn '|EScript| 
+    (mn '|MethodObject|
+      nil
+      #()
       (vector (apply #'mn '|ETo| doc "run" (node-elements this)))
       #())))
+
+(defemacro |PlumbingObject| (|ObjectTail|) ((|auditors| t (e-list |EExpr|))
+                                            (|matcher| t |EMatcher|))
+                                           ()
+  (vector nil |auditors| (mn '|EScript| nil (vector |matcher|))))
 
 (defemacro |ETo| (|EMethodoid|) 
     ((|docComment| nil string)
