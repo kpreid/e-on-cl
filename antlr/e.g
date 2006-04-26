@@ -408,7 +408,7 @@ objectTail:     //(typeParams)?
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
-        |   params resultGuard body getPocket["easy-return"]
+        |   params resultGuard fImplements body getPocket["easy-return"]
             {##=#([FunctionObject], ##);}
     ;
 
@@ -419,6 +419,12 @@ oExtends:    extender
 oImplements: "implements"^ br order (","! order)* {##.setType(Implements);}
              | {##=#([Implements],##);} ;
             // trailing comma would be ambiguous with HideExpr
+
+// this can be replaced with oImplements when function-implements becomes official
+fImplements:    "implements"^ br order (","! order)*
+                pocket["function-implements"] {##.setType(Implements);}
+             |  {##=#([Implements],##);} ;
+
 
 // used in interface expressions
 multiExtends: "extends"^ br order (","! order)* {##.setType(List);}

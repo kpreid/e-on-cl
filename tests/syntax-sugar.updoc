@@ -815,6 +815,24 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            }
   #        }`
 
+  ? t("pragma.enable(\"function-implements\"); /** a */ def b() :c implements d { e }")
+  # value: e`def b := def "$b__C" implements d {
+  #            
+  #            /** a */
+  #            method run() :c {
+  #                escape __return {
+  #                    e
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :d implements c { d }")
+  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`c`]) may not appear to use definitions from its patterns ([epatt`c`])>
+
+  ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :(def d := e) implements d { e }")
+  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`$<DefrecExpr d, e, null>$`)>
+  XXX prettier error
+
 'ETo'
 
   ? t("def a { to b() :c { d } }")

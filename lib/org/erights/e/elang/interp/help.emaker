@@ -3,37 +3,36 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+pragma.enable("function-implements")
 
 def makeUnQuote := <elib:oldeio.makeUnQuote>
 def makeTextWriter := <elib:oldeio.makeTextWriter>
 
 def mirandaMethods := null.__getAllegedType().getMessageTypes()
 
-def formatType implements DeepFrozen {
-  to run(type) :any {
-    def [tw, sb] := makeTextWriter.makeBufferingPair()
-    
-    # XXX produce nice explanations in the event the type misbehaves
-    # XXX should delegate this printing to ProtocolDesc, or some general 'E-syntax printer'
-    # XXX extends, implements
-    
-    # XXX use the routine for this in elang.lisp (we need to expose it)
-    if ((def s :String := type.getDocComment()) != "") {
-      tw.print("/** ", s, " */\n")
-    }
-    
-    tw.print("interface ")
-    tw.quote(type.getFQName() :String)
-    tw.print(" {")
-    def twBody := tw.indent()
-    for mverb ? !mirandaMethods.maps(mverb) \
-        => messageDesc in type.getMessageTypes() { # XXX MessageDesc guard 
-      twBody.lnPrint(messageDesc) # or guard here
-    }
-    tw.lnPrint("}")
-    
-    return makeUnQuote(sb.snapshot())
+def formatType(type) :any implements DeepFrozen {
+  def [tw, sb] := makeTextWriter.makeBufferingPair()
+  
+  # XXX produce nice explanations in the event the type misbehaves
+  # XXX should delegate this printing to ProtocolDesc, or some general 'E-syntax printer'
+  # XXX extends, implements
+  
+  # XXX use the routine for this in elang.lisp (we need to expose it)
+  if ((def s :String := type.getDocComment()) != "") {
+    tw.print("/** ", s, " */\n")
   }
+  
+  tw.print("interface ")
+  tw.quote(type.getFQName() :String)
+  tw.print(" {")
+  def twBody := tw.indent()
+  for mverb ? !mirandaMethods.maps(mverb) \
+      => messageDesc in type.getMessageTypes() { # XXX MessageDesc guard 
+    twBody.lnPrint(messageDesc) # or guard here
+  }
+  tw.lnPrint("}")
+  
+  return makeUnQuote(sb.snapshot())
 }
 
 def "$help" implements DeepFrozen {

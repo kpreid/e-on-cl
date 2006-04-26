@@ -7,6 +7,7 @@ pragma.enable("dot-props")
 pragma.enable("verb-curry")
 pragma.enable("accumulator")
 pragma.enable("trinary-define")
+pragma.enable("function-implements")
 
 def makeLALR1Parser := <import:org.cubik.cle.parser.makeLALR1Parser>
 def makeParseError := makeLALR1Parser::makeParseError
@@ -15,8 +16,8 @@ def EOF := makeLALR1Parser::EOF
 def mapStream := <import:org.cubik.cle.io.mapStream>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def mapV implements DeepFrozen {
-  to run(f, coll) { return accum [] for v in coll {_.with(f(v))}}}
+def mapV(f, coll) implements DeepFrozen \
+  { return accum [] for v in coll {_.with(f(v))}}
 
 def listAction implements DeepFrozen { to run(item, list) { return [item] + list }}
 
@@ -30,7 +31,7 @@ def ToProblem implements DeepFrozen {
   }
 }
 
-def lex implements DeepFrozen { to run(textIn) {
+def lex(textIn) implements DeepFrozen {
   # XXX get a better lexer library/pattern
   var text := textIn.read(EIO::ALL, EIO::ALL)
   #traceln(`text is ->$text<-, match ${text =~ rx`(?s)"(@mid.*)`} ->$mid<-`)
@@ -84,7 +85,7 @@ def lex implements DeepFrozen { to run(textIn) {
     }
   }
   return tokens.snapshot().asStream()
-}}
+}
 
 def metaparser := makeLALR1Parser(
   "grammar",

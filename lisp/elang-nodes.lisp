@@ -334,13 +334,23 @@
                                         (error "the ~S of a ~S must be a ~S (~A)" name (class-name (class-of node)) type condition-ref))))
     initargs))
 
+(defun to-scope (nodoid)
+  (typecase nodoid
+    (|ENode|
+     (e. nodoid |staticScope|))
+    ((and vector (not string))
+     (sum-default-node-scopes nodoid))))
+              
 (defun usesp (defining using)
-  "Return whether 'using' uses nouns defined by 'defining'."
-  (> (e. (e. (e. (e. defining |staticScope|) |outNames|)
-             |and|
-             (e. (e. using |staticScope|) |namesUsed|))
-         |size|)
-     0))
+  "Return whether 'using' uses nouns defined by 'defining'.
+List nodes will be assumed to be sequences."
+  (let ((defining (to-scope defining))
+        (using    (to-scope using)))
+    (> (e. (e. (e. defining |outNames|)
+               |and|
+               (e. using |namesUsed|))
+           |size|)
+       0)))
 
 (defmethod change-class ((node |ENode|) new-class &key &allow-other-keys)
   (declare (ignore new-class))
@@ -677,9 +687,16 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
           ,(transform scope-expr))))))
 
 (defun sum-node-scopes (nodes getter empty)
-  (reduce #'(lambda (a b) (e. a |add| b))
-          (map 'list getter nodes)
+  (reduce (lambda (a b) (e. a |add| b))
+          nodes
+          :key getter
           :initial-value empty))
+
+;; XXX lousy naming of this vs. the above
+(defun sum-default-node-scopes (nodes)
+  (sum-node-scopes nodes
+                   (lambda (a) (e. a |staticScope|))
+                   +empty-static-scope+))
 
 (def-scope-rule |AssignExpr|
   (seq (! (e. builder |scopeAssign| (:get :|noun|)))

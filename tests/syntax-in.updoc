@@ -127,6 +127,33 @@ XXX produce a nice error for this?
 #             
 #             NullE.
 
+--- Function expressions ---
+
+? t("def \"$a\"() :b {}")
+# stdout: ObjectHeadE.
+#           
+#           $a
+#           FunctionObject
+#             []
+#             NounE. b
+#             []
+#             NullE.
+#             false
+
+? t("def \"$a\"() :b implements c {}")
+# problem: (): The optional "function-implements" syntax is currently off.
+
+? t("pragma.enable(\"function-implements\"); def \"$a\"() :b implements c {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           $a
+#           FunctionObject
+#             []
+#             NounE. b
+#             [] NounE. c
+#             NullE.
+#             false
+
 --- modPow ---
 
 ? t("a ** b %% c")

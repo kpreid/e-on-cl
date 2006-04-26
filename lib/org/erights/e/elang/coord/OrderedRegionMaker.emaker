@@ -5,12 +5,14 @@
 #   DeepFrozen
 #   more helpful failure message
 
+pragma.enable("function-implements")
+
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 /**
  * A min where null represents positive infinity
  */
-def min implements DeepFrozen { to run(a, b) :any {
+def min(a, b) :any implements DeepFrozen {
     if (a == null) {
         b
     } else if (b == null) {
@@ -18,12 +20,12 @@ def min implements DeepFrozen { to run(a, b) :any {
     } else {
         a.min(b)
     }
-}}
+}
 
 /**
  * A max where null represents negative infinity
  */
-def max implements DeepFrozen { to run(a, b) :any {
+def max(a, b) :any implements DeepFrozen {
     if (a == null) {
         b
     } else if (b == null) {
@@ -31,18 +33,18 @@ def max implements DeepFrozen { to run(a, b) :any {
     } else {
         a.max(b)
     }
-}}
+}
 
 /**
  * A get that returns null if index is out of bounds
  */
-def get implements DeepFrozen { to run(list, index) :any {
+def get(list, index) :any implements DeepFrozen {
     if (index < 0 || index >= list.size()) {
         null
     } else {
         list[index]
     }
-}}
+}
 
 /**
  * Makes inequality-based regions for fully ordered positions like

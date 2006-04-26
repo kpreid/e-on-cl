@@ -4,18 +4,19 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("dot-props")
+pragma.enable("function-implements")
 
 def makeInStreamShell := <elib:eio.makeInStreamShell>
 def NOW := EIO::NOW
 def ELEMENTS := EIO::ELEMENTS
 
-def terminate implements DeepFrozen { to run(stream, terminator) {
+def terminate(stream, terminator) implements DeepFrozen {
   switch (Ref.optProblem(terminator)) {
     match p :notNull { stream.fail(p) }
     match ==null     { stream.close() }
     match _          { throw("reality failure") }
   }
-}}
+}
 
 def chunkedMapStream implements DeepFrozen {
   to run(outType :Guard, sourceStream, func, namer) :any {

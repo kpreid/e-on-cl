@@ -899,7 +899,7 @@
   (let ((resolution (gennoun "resolution")))
     (mn '|ObjectHeadExpr|
       "" |name|
-      (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard|
+      (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard| #()
         ;; XXX replace finally/catch handling with expansion to TryExpr, once that's nonkernel instead of syntax layer
         (labels ((do-finally (e)
                    (if |optFinally|
@@ -1114,22 +1114,34 @@
 (defemacro |FunctionObject| (|ObjectTail|) 
     ((|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
+     (|auditors| t (e-list |EExpr|))
      (|body| t |EExpr|)
      (|isEasyReturn| nil e-boolean))
-    ()
-  (mn '|MethodObject|
-      nil
-      #()
-      (vector (apply #'mn '|ETo| "" "run" (node-elements this)))
-      #()))
+    (&whole node)
+  (declare (ignore |patterns| |optResultGuard| |auditors| |body| |isEasyReturn|))
+  (expand-function-object node ""))
 
 (def-vtable |FunctionObject|
   (:|withFunctionDocumentation| (this doc)
-    (mn '|MethodObject|
-      nil
-      #()
-      (vector (apply #'mn '|ETo| doc "run" (node-elements this)))
-      #())))
+    (e-coercef doc '(or null string))
+    (expand-function-object this doc)))
+
+(defun expand-function-object (node doc)
+  (destructuring-bind
+      (|patterns| |optResultGuard| |auditors| |body| |isEasyReturn|)
+      (node-elements node)
+    (let ((kernel-patterns (e-macroexpand-all |patterns|))
+          (kernel-guard (e-macroexpand-all |optResultGuard|))
+          (kernel-auditors (e-macroexpand-all |auditors|)))
+      (reject-definition-usage node nil nil :|patterns| :|auditors|)
+      (reject-definition-usage node nil t   :|auditors| :|patterns|)
+      (reject-definition-usage node nil nil :|optResultGuard| :|auditors|)
+      (reject-definition-usage node nil t   :|auditors| :|optResultGuard|)
+      (mn '|MethodObject|
+        nil
+        kernel-auditors
+        (vector (mn '|ETo| doc "run" kernel-patterns kernel-guard |body| |isEasyReturn|))
+        #()))))
 
 (defemacro |PlumbingObject| (|ObjectTail|) ((|auditors| t (e-list |EExpr|))
                                             (|matcher| t |EMatcher|))

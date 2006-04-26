@@ -3,16 +3,16 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+pragma.enable("function-implements")
 
 def makeListShell := <import:org.erights.e.elib.tables.makeListShell>
 
 /** Check that start..!endd is a subrange of 0..!size. */
-def listRangeChecks implements DeepFrozen {
-  to run(start, endd, size, name) {
-    require(0 <= start,    thunk{`$name start < 0: $start`})
-    require(start <= endd, thunk{`$name range has negative length: $start..!$endd`})
-    require(endd <= size,  thunk{`$name bound > $size: $endd`})
-  }}
+def listRangeChecks(start, endd, size, name) implements DeepFrozen {
+  require(0 <= start,    thunk{`$name start < 0: $start`})
+  require(start <= endd, thunk{`$name range has negative length: $start..!$endd`})
+  require(endd <= size,  thunk{`$name bound > $size: $endd`})
+}
         
 def makeFlexListShell implements DeepFrozen {
   to run(self, impl, valueGuard) {

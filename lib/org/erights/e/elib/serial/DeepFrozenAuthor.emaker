@@ -4,6 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
+pragma.enable("function-implements")
 
 /** Non-coercing guard wrapper. */
 def Really {
@@ -161,21 +162,19 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
 
   
 
-  def requireAudit implements DeepFrozenStamp {
-    to run(objectExpr, witness, fail) :void {
-      for name => _ in objectExpr.staticScope().namesUsed() {
-        # # XXX figure out how to bootstrap so that the witness doesn't need a method so specific
-        # if (!witness.slotIsDeepFrozen(name)) {
-        #   throw("reference to non-DeepFrozen binding: " + E.toQuote(name))
-        # }
-        
-        def slot := witness.getSlot(name)
-        requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
-          out.quote(name)
-          out.print(" in the lexical scope of ")
-          out.print(objectExpr.getQualifiedName()) 
-        }})
-      }
+  def requireAudit(objectExpr, witness, fail) :void implements DeepFrozenStamp {
+    for name => _ in objectExpr.staticScope().namesUsed() {
+      # # XXX figure out how to bootstrap so that the witness doesn't need a method so specific
+      # if (!witness.slotIsDeepFrozen(name)) {
+      #   throw("reference to non-DeepFrozen binding: " + E.toQuote(name))
+      # }
+      
+      def slot := witness.getSlot(name)
+      requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
+        out.quote(name)
+        out.print(" in the lexical scope of ")
+        out.print(objectExpr.getQualifiedName()) 
+      }})
     }
   }
 
