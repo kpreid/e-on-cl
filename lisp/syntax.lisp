@@ -685,14 +685,19 @@ XXX make precedence values available as constants"
   (kernelize (apply #'e-source-to-tree source options)))
 
 (defun e-source-to-tree (source &key syntax-ejector pattern quasi-info)
-  (antlr-root 
-    #-e.syntax::local-parser
-      (query-or-die syntax-ejector "antlrParse" "unknown" source (as-e-boolean pattern) quasi-info)
-    #+e.syntax::local-parser
-      (handler-case
-        (antlr-parse "unknown" source pattern nil)
-        (error (c)
-          (eject-or-ethrow syntax-ejector c)))))
+  (let ((location
+          (let ((span (e. source |getOptSpan|)))
+            (if span
+              (e. span |getUri|)
+              "unknown"))))
+    (antlr-root 
+      #-e.syntax::local-parser
+        (query-or-die syntax-ejector "antlrParse" location source (as-e-boolean pattern) quasi-info)
+      #+e.syntax::local-parser
+        (handler-case
+          (antlr-parse location source pattern nil)
+          (error (c)
+            (eject-or-ethrow syntax-ejector c))))))
 
 (declaim (inline e-coercer))
 (defun e-coercer (type-or-guard)
