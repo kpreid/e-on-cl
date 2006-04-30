@@ -75,7 +75,7 @@
     (if cmd
       (let ((source
               (handler-case
-                (e.syntax:e-source-to-tree cmd)
+                (e.syntax:parse-to-kernel cmd)
                 (error (condition)
                   (declare (ignore condition))
                   (privmsg *connection* destination (format nil "syntax error"))
