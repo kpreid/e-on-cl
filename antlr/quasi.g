@@ -32,9 +32,9 @@ options {
 //QUASICLOSE: '`'  ('`' QUASIn {$setType(QUASIBODY);} | {selector.pop();})  ;
 
 QUASIBODY:      "${"            {$setType(DOLLARCURLY); selector.push("e");}
-            |   '$'! IDENT      {$setType(DOLLARHOLE);}
+            |   '$'! IDENT_S    {$setType(DOLLARHOLE);}
             |   "@{"            {$setType(ATCURLY); selector.push("e");}
-            |   '@'! IDENT      {$setType(ATHOLE);}
+            |   '@'! IDENT_S    {$setType(ATHOLE);}
             |   '$''$'! QUASIn
             |   "$\\"! ESC QUASIn
             |   '@''@'! QUASIn
@@ -51,9 +51,6 @@ protected
 QUASI1:         ~('`'|'$'|'@'|'\r'|'\n')
             |   EOL
             ;
-
-protected
-IDENT:      ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*  ;
 
 // escape sequence -- note that this is protected; it can only be called
 //   from another lexer rule -- it will not ever directly return a token to
@@ -79,6 +76,14 @@ ESC:    (!   'n'        {$setText("\n");}
     |! (' '|'\t'|'\f')* EOL
 ;
 
+// ----------------------------------------------------------------------------
+// common suffix with elex.g
+// XXX figure out if we can avoid this duplication
+
+// XXX need to extend this to cover Unicode
+protected
+IDENT_S:    ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
+
 protected
 ESC_UNICODE:    ('u')+! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT ;
 
@@ -103,7 +108,7 @@ ESC_OCTAL:  '0'..'3'
 protected
 HEX_DIGIT   :    ('0'..'9'|'A'..'F'|'a'..'f')  ;
 
+// XXX extend to Unicode's line/paragraph separators
 protected
 EOL:     (options {generateAmbigWarnings=false;} : "\r\n" | '\r'
                                                    | '\n' ) { newline(); } ;
-

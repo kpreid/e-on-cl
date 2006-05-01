@@ -274,37 +274,12 @@ ESC:   '\\'!
         )
 ;
 
-protected
-ESC_UNICODE:    ('u')+! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT ;
-
-protected
-ESC_OCTAL:  '0'..'3'
-                ( options { warnWhenFollowAmbig = false; }
-                :    '0'..'7'
-                    (
-                        options {
-                            warnWhenFollowAmbig = false;
-                        }
-                    :    '0'..'7'
-                    )?
-                )?
-            |   '4'..'7'
-                ( options { warnWhenFollowAmbig = false; }
-                :    '0'..'7'
-                )?
-            ;
-
-// hexadecimal digit
-protected
-HEX_DIGIT   :    ('0'..'9'|'A'..'F'|'a'..'f')  ;
 
 // an identifier.  Note that testLiterals is set to true!  This means
 // that after we match the rule, we look in the literals table to see
 // if it's a literal or really an identifer
-// XXX need to extend this to cover Unicode
 IDENT       options {testLiterals=true;}
-            :    ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*
-            ;
+            :   IDENT_S ;
 
 // the scheme component of a URI literal
 // NOTE: this should not be extended to Unicode; RFC 2396 lists this set specifically.
@@ -339,13 +314,44 @@ BR:      (   {_saveIndex=text.length();}:)
          ;
 
 protected
-EOL:     (options {generateAmbigWarnings=false;} : "\r\n" | '\r'
-                                                   | '\n' ) { newline(); } ;
-
-
-protected
 URI:            (  'a'..'z'|'A'..'Z'|'_'|'0'..'9'
                 |';'|'/'|'?'|':'|'@'|'&'|'='|'+'|'$'|','|'-'
                 |'.'|'!'|'~'|'*'|'\''|'('|')'|'%'|'\\'|'|'|'#'  )+
             ;
-/**/
+
+// ----------------------------------------------------------------------------
+// common suffix with elex.g
+// XXX figure out if we can avoid this duplication
+
+// XXX need to extend this to cover Unicode
+protected
+IDENT_S:    ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
+
+protected
+ESC_UNICODE:    ('u')+! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT ;
+
+protected
+ESC_OCTAL:  '0'..'3'
+                ( options { warnWhenFollowAmbig = false; }
+                :    '0'..'7'
+                    (
+                        options {
+                            warnWhenFollowAmbig = false;
+                        }
+                    :    '0'..'7'
+                    )?
+                )?
+            |   '4'..'7'
+                ( options { warnWhenFollowAmbig = false; }
+                :    '0'..'7'
+                )?
+            ;
+
+// hexadecimal digit
+protected
+HEX_DIGIT   :    ('0'..'9'|'A'..'F'|'a'..'f')  ;
+
+// XXX extend to Unicode's line/paragraph separators
+protected
+EOL:     (options {generateAmbigWarnings=false;} : "\r\n" | '\r'
+                                                   | '\n' ) { newline(); } ;
