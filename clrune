@@ -144,7 +144,7 @@ QUOTED_JHOME=`echo "$JHOME/" | perl -pe 's&(["\\\\])&\\$1&g'`
 # COMMON_INIT1/2 are separated since INIT2 needs to be read after INIT1 is evaluated, as the E.KNOT package will not exist until then.
 
 COMMON_INIT1='(progn
-  (setf *compile-print* t)
+  (setf *compile-print* nil)
   (when '"$LOADQUIET"'
     (setf *compile-verbose* nil)
     (setf *load-verbose* nil))
