@@ -8,8 +8,11 @@ options {
     importVocab=Common;
     testLiterals=false;    // don't automatically test for literals
     k=3;                   // four characters of lookahead
-    charVocabulary='\3'..'\377';
-    // unicode: charVocabulary='\u0003'..'\u7FFE';
+
+    // XXX where does \u0003 come from?
+    // XXX should allow Unicode U+10000..U+10FFFF, but can't express that in Java
+    charVocabulary='\u0003'..'\uFFFE';
+
     // without inlining some bitset tests, couldn't do unicode;
     // I need to make ANTLR generate smaller bitsets; see
     // bottom of JavaLexer.java

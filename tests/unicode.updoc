@@ -1,6 +1,25 @@
 # Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+E syntax
+
+  ? def pp := <import:org.cubik.cle.prim.parser>; null
+  ? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
+  ? def t(s) :any { return dumpENodes(pp.run(s), stdout) }; null
+
+  ? t("π")
+  # stdout: NounE. π
+
+  ? t("`π`")
+  # stdout: QuasiE.
+  #           null
+  #           [] QuasiText π
+
+  ? t("`$π`")
+  # stdout: QuasiE.
+  #           null
+  #           [] QuasiE.Hole NounE. π
+
 
 Sam Ruby's test string '
   ? def t := "Iñtërnâtiônàlizætiøn"
