@@ -141,6 +141,7 @@ tokens {
     URIGetter;
     URIExpr;
     ThunkExpr;
+    FunctionExpr;
     IndexExpr;
 
     // object parts
@@ -303,7 +304,7 @@ eExpr:      assign | ejector ;
 
 basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
             |   escapeExpr | whenExpr | metaExpr | accumExpr
-            |   docoDef ;
+            |   docoDef | fnExpr ;
 
 ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
             ("else"! (ifExpr | body ) {##.setType(IfExpr);}
@@ -349,6 +350,9 @@ whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
 escapeExpr:     "escape"^ pattern body (catcher)?   {##.setType(EscapeExpr);} ;
 
 thunkExpr:      "thunk"^ body    {##.setType(ThunkExpr);}  ;
+
+fnExpr:         "fn"^ patternsAsList body pocket["anon-lambda"]
+                    {##.setType(FunctionExpr);}  ;
 
 switchExpr:     "switch"^ parenExpr
                 "{"! (matcher br)* "}"!    {##.setType(SwitchExpr);}
@@ -459,6 +463,7 @@ optVerb:        verb | {##=#([FunctionVerb]);} ;
 matcher:        "match"^ pattern body  {##.setType(EMatcher);} ;
 
 params:         "("! patterns br ")"!  {##=#([List],##);} ;
+patternsAsList:   patterns {##=#([List],##);} ; // XXX can we avoid needing this as a separate rule?
 patterns:       (pattern (","! patterns)?)? ;
 
 optFinally:     "finally"! body

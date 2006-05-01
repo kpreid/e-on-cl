@@ -15,6 +15,7 @@
     :|ExitExpr|
     :|ForExpr|
     :|ForwardExpr|
+    :|FunctionExpr|
     :|FunCallExpr|
     :|FunSendExpr|
     :|GetExpr|
@@ -512,6 +513,16 @@
       (make-instance '|SeqExpr| :elements (list
         (mn '|PromiseVarExpr| real-noun resolver-noun)
         resolver-noun))))
+
+(defemacro |FunctionExpr| (|EExpr|) ((|patterns| t (e-list |Pattern|))
+                                  (|body| t |EExpr|))
+                                 ()
+  (mn '|ObjectExpr|
+      ""
+      "_"
+      #()
+      (mn '|EScript| (vector (mn '|EMethod| "" "run" |patterns| nil |body|)) 
+                             #())))
 
 (defemacro |FunCallExpr| (|EExpr|) ((|recipient| t |EExpr|) 
                                     (|args| t (e-list |EExpr|)))

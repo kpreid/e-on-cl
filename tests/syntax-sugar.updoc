@@ -283,6 +283,16 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`def [a__uriGetter, a__uriGetter__Resolver] := Ref.promise()
   #        a__uriGetter__Resolver`
 
+'FunctionExpr'
+
+  ? t("pragma.enable(\"anon-lambda\"); fn a { a }")
+  # value: e`def _ {
+  #            
+  #            method run(a) {
+  #                a
+  #            }
+  #        }`
+  
 'InterfaceExpr'
 
   ? t("interface a {}")

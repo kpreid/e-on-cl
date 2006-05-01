@@ -9,6 +9,42 @@ This file contains tests for the E parser's grammar; specifically excluding expa
 ? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
 ? def t(s) :any { return dumpENodes(pp.run(s), stdout) }; null
 
+--- Function syntax ---
+
+? t("pragma.enable(\"anon-lambda\"); fn { a }")
+# stdout: SeqE. [] FunctionE.
+#           []
+#           NounE. a
+
+? t("pragma.enable(\"anon-lambda\"); fn a { b }")
+# stdout: SeqE. [] FunctionE.
+#           [] FinalP.
+#             NounE. a
+#             null
+#           NounE. b
+
+? t("pragma.enable(\"anon-lambda\"); fn a, b { c }")
+# stdout: SeqE. [] FunctionE.
+#           []
+#             FinalP.
+#               NounE. a
+#               null
+#             FinalP.
+#               NounE. b
+#               null
+#           NounE. c
+
+? t("pragma.enable(\"anon-lambda\"); fn a, b, { c }")
+# stdout: SeqE. [] FunctionE.
+#           []
+#             FinalP.
+#               NounE. a
+#               null
+#             FinalP.
+#               NounE. b
+#               null
+#           NounE. c
+
 --- Sequence separators ---
 
 No SeqExprs around single terminated exprs
@@ -90,7 +126,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (unknown:1)@11: unexpected token: [":=",<156>,line=1,col=11]
+# problem: (unknown:1)@11: unexpected token: [":=",<158>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")

@@ -831,6 +831,7 @@ XXX make precedence values available as constants"
           e.grammar::|CurryExpr|
           e.grammar::|ForExpr|
           e.grammar::|ForwardExpr|
+          e.grammar::|FunctionExpr|
           e.grammar::|FunCallExpr|
           e.grammar::|FunSendExpr|
           e.grammar::|GetExpr|
