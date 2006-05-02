@@ -36,7 +36,8 @@ def makeStreamShell implements DeepFrozen {
       return terminator
     }
   
-    def streamShell { # implements Stream
+    # NOTE: can't use org.cubik.cle.root because we have no 'self' reference
+    def streamShell { # XXX implements Stream
       
       # XXX return interface's documentation
       

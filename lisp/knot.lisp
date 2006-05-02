@@ -93,60 +93,40 @@
 
 ; --- emaker loading ---
 
-(defvar *emaker-search-list*
-  (list (e.extern:pathname-to-file
-          (merge-pathnames
-            (make-pathname :directory '(:relative "lib"))
-            (asdf:component-pathname +the-asdf-system+))))
-  ; XXX we could test for this failure mode, or we could make some piece of the loader stack always cache filesystem state (i.e. source code or not-found) to ensure a consistent view.
-  "This variable is expected to be modified by startup code (such as via found-e-on-java-home), but should not be modified afterward to preserve the pseudo-deep-frozenness of <import>.")
+(defun system-file (offset)
+  (e.extern:pathname-to-file (merge-pathnames
+                               offset
+                               (asdf:component-pathname +the-asdf-system+))))
 
-(defvar *emaker-fasl-path*
-  (merge-pathnames
-    (make-pathname :directory '(:relative "compiled-lib"))
-    (asdf:component-pathname +the-asdf-system+)))
+(defglobal +builtin-emaker-loader-desc+ 
+  (list (system-file (make-pathname :directory '(:relative "lib"))) 
+        (system-file (make-pathname :directory '(:relative "compiled-lib")))))
+
+(defvar *emaker-search-list*
+  (list +builtin-emaker-loader-desc+)
+  "List of (list emaker-file-root opt-compiled-file-root). Changes will apply only to newly-created safe scopes.")
 
 (defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
   (setf *antlr-jar* (merge-pathnames #p"e.jar" dir-pathname))
   (setf *emaker-search-list* 
     (append *emaker-search-list*
-      (handler-case
-          (progn
-            (list (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) (merge-pathnames #p"e.jar" dir-pathname))))
-        (error (c)
-          (warn "Could not use e.jar because: ~A" c)
-          (list (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname))))))))
+      (list
+        (list
+          (handler-case
+              (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) 
+                       (merge-pathnames #p"e.jar" dir-pathname))
+            (error (c)
+              (warn "Could not use e.jar because: ~A" c)
+              (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname))))
+          (second +builtin-emaker-loader-desc+))))))
 
-(defun fqn-to-relative-pathname (fqn)
-  (let* ((pos (or (position #\. fqn :from-end t) -1))
-         (prefix-dirs (split-fqn-prefix (subseq fqn 0 (1+ pos)))))
-    (make-pathname :directory (cons :relative prefix-dirs)
-                   :name (subseq fqn (1+ pos))
-                   :type "emaker")))
+(defun fqn-to-slash-path (fqn typoid)
+  ;; XXX what to do with slashes in the input?
+  (concatenate 'string (substitute #\/ #\. fqn) "." typoid))
 
-(defun fqn-to-slash-path (fqn)
-  (concatenate 'string (substitute #\/ #\. fqn) ".emaker"))
-
-#+clisp
-(defun opt-compile-target (file fqn)
-  "CLISP has trouble with complex fasls - '*** - PRINT: not enough stack space for carrying out circularity analysis' - so we won't even try."
-  (declare (ignore file fqn))
-  nil)
-
-#-clisp
-(defun opt-compile-target (file fqn)
-  (declare (ignore file))
-  (let* ((emaker-path (merge-pathnames (fqn-to-relative-pathname fqn) *emaker-fasl-path*))
-         (fasl-path
-          (make-pathname
-            :type (concatenate 'string 
-                               "emaker-"
-                               (pathname-type (compile-file-pathname emaker-path)))
-            :defaults emaker-path)))
-    (let ((*standard-output* *trace-output*))
-      (ensure-directories-exist fasl-path :verbose t))
-    fasl-path))
+;; CLISP has trouble with complex fasls - '*** - PRINT: not enough stack space for carrying out circularity analysis' - so we won't try to compile. XXX better to handle compilation failure?
+(defconstant +compile-emakers+ #+clisp nil #-clisp t)
 
 (defun scope-for-fqn (scope fqn)
   (let* ((trace (make-tracer :label fqn))
@@ -158,12 +138,14 @@
     scope))
 
 ;;; XXX arrange to also fall back to eval-e if we fail to compile or to load
-(defun load-emaker-from-file (file fqn scope compile-target-fn)
+(defun load-emaker-from-file (file fqn scope opt-compiled-file)
   (let* ((fqn-prefix (concatenate 'string fqn "$"))
-         (compile-target (e-coerce (funcall compile-target-fn file fqn) '(or null pathname)))
+         (compile-target (when opt-compiled-file (e.extern::file-ref-pathname opt-compiled-file)))
          (scope (scope-for-fqn scope fqn)))
-    (if compile-target
+    (if (and +compile-emakers+ compile-target)
       (progn
+        (let ((*standard-output* *trace-output*))
+          (ensure-directories-exist compile-target :verbose t))
         (when (or (not (probe-file compile-target))
                   ;; XXX fix this interface and remove the respondsTo test
                   (and (e-is-true (e. file |__respondsTo| "_clFileWriteDate" 0))
@@ -180,45 +162,48 @@
       (elang:eval-e (e.syntax:parse-to-kernel (e. file |getTwine|))
                     scope))))
 
-(defun make-emaker-loader (search-list-slot scope-fn compile-target-fn
-    &aux (load-counts (make-hash-table :test #'equal)))
+(defglobal +emaker-fasl-type+ 
+  (concatenate 'string 
+    "emaker-"
+    (pathname-type (compile-file-pathname #p"foo.lisp" #|eww|#))))
+
+(defun make-emaker-loader (source-file-root opt-compiled-file-root scope-fn)
   (e-lambda "$emakerLoader" ()
     (:|fetch| (fqn absent-thunk)
-      (block fetch
-        (let* ((file
-                 (loop with subpath = (fqn-to-slash-path fqn)
-                       for root in (e. search-list-slot |getValue|)
-                       thereis (e. root |getOpt| subpath)
-                       finally 
-                         (return-from fetch (e. absent-thunk |run|)))))
-          (incf (gethash fqn load-counts 0))
-          (load-emaker-from-file file fqn (funcall scope-fn) compile-target-fn))))
-    (:|_getLoadCounts| () load-counts)))
+      (e-coercef fqn 'string)
+      (let* ((file (e. source-file-root |getOpt| (fqn-to-slash-path fqn "emaker"))))
+        (if file
+          (load-emaker-from-file file fqn 
+                                 (funcall scope-fn) 
+                                 (when opt-compiled-file-root
+                                   (e. opt-compiled-file-root |get|
+                                     (fqn-to-slash-path fqn +emaker-fasl-type+))))
+          (e. absent-thunk |run|))))))
 
-;; XXX threading: has state
-(defglobal +default-fresh-emaker-loader+ 
-  (make-emaker-loader (e. (place-slot *emaker-search-list*)
-                          |readOnly|)
-                      (lambda () (vat-safe-scope *vat*)) 
-                      #'opt-compile-target))
+(defun make-emaker-loader-from-desc (desc)
+  (destructuring-bind (emaker-root compiled-root) desc
+    (make-emaker-loader emaker-root compiled-root (lambda () (vat-safe-scope *vat*)))))
+
+;; XXX threading: review for state
+(defglobal +builtin-emaker-loader+
+  (make-emaker-loader-from-desc +builtin-emaker-loader-desc+))
 
 ;;; this is here because it's closely related to emaker loading
-(defglobal +resource-importer+ (e-lambda "org.cubik.cle.prim.resource__uriGetter"
-    (:stamped +deep-frozen-stamp+)
-  (:|get| (subpath)
-    ;; XXX there should be a getter-shell for this common method - is path-loader fit for that?
-    (e. +resource-importer+ |fetch| subpath
-      (e-lambda "$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote +resource-importer+) (e-quote subpath))))))
-  (:|fetch| (subpath absent-thunk)
-    (e-coercef subpath 'string)
-    (loop for root in *emaker-search-list*
-          for froot = (if (pathnamep root)
-                        (e.extern:pathname-to-file root)
-                        root)
-          for file = (e. froot |getOpt| subpath)
-          when file
-            return (e. file |readOnly|)
-          finally (return (e. absent-thunk |run|))))))
+(defun make-resource-loader (search-list) 
+  (e-lambda |resource__uriGetter|
+      (:stamped +deep-frozen-stamp+)
+    (:|get| (subpath)
+      ;; XXX there should be a getter-shell for this common method - is path-loader fit for that?
+      (e. |resource__uriGetter| |fetch| subpath
+        (e-lambda "$getFailureThunk" () (:|run| () 
+          (error "~A can't find ~A" (e-quote |resource__uriGetter|) (e-quote subpath))))))
+    (:|fetch| (subpath absent-thunk)
+      (e-coercef subpath 'string)
+      (loop for (root) in search-list
+            for file = (e. root |getOpt| subpath)
+            when file
+              return (e. file |readOnly|)
+            finally (return (e. absent-thunk |run|))))))
 
 
 
@@ -242,6 +227,7 @@
 
     (:|makeException|    +the-make-exception+)
     (:|StructureException| (make-instance 'cl-type-guard :type-specifier 'e-structure-exception))
+    (:|makeCoercionFailure| e.elib::+the-make-coercion-failure+)
   
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeVarSlot|      +the-make-var-slot+)
@@ -275,7 +261,7 @@
     (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
-      (e. (e. +default-fresh-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
+      (e. (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
           |run| 
           elib:+deep-frozen-stamp+))
     
@@ -310,15 +296,16 @@
                      "org.erights.e.elang.evm.")))
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
-      (:|fetch| (fqn absent-thunk
-          &aux (local-name (some (lambda (p) (without-prefix fqn p)) 
-                                 prefixes)))
-        (if local-name
-          (let* ((sym (find-symbol local-name :e.elang.vm-node)))
-            (or (and sym
-                     (get sym 'static-maker))
-                (e. absent-thunk |run|)))
-          (e. absent-thunk |run|)))
+      (:|fetch| (fqn absent-thunk)
+        (e-coercef fqn 'string)
+        (let ((local-name (some (lambda (p) (without-prefix fqn p)) 
+                                prefixes)))
+          (if local-name
+            (let* ((sym (find-symbol local-name :e.elang.vm-node)))
+              (or (and sym
+                       (get sym 'static-maker))
+                  (e. absent-thunk |run|)))
+            (e. absent-thunk |run|))))
       (:|optUnget| (specimen)
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
@@ -332,14 +319,15 @@
 ;; XXX support optUnget
 (defglobal +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
     (:stamped +deep-frozen-stamp+)
-  (:|fetch| (fqn absent-thunk
-      &aux (local-name (e.util:without-prefix fqn "org.erights.e.elang.evm.type.")))
-    (if local-name
-      (let* ((sym (find-symbol local-name :e.elang.vm-node)))
-        (if sym
-          (make-instance 'cl-type-guard :type-specifier sym)
-          (e. absent-thunk |run|)))
-      (e. absent-thunk |run|)))))
+  (:|fetch| (fqn absent-thunk)
+    (e-coercef fqn 'string)
+    (let ((local-name (without-prefix fqn "org.erights.e.elang.evm.type.")))
+      (if local-name
+        (let* ((sym (find-symbol local-name :e.elang.vm-node)))
+          (if sym
+            (make-instance 'cl-type-guard :type-specifier sym)
+            (e. absent-thunk |run|)))
+        (e. absent-thunk |run|))))))
 
 ; XXX move this utility function elsewhere
 ; XXX avoiding loading deep-frozen auditor because we need this during the construction of the path loader - so we reject some we could accept. the Right Solution is to add lazy auditing as MarkM suggested
@@ -467,7 +455,7 @@
 
 ; XXX simplify the amount of wrapping this requires / make those of these primitives which are safe (all of them?) importable
 (defglobal +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
-  (e. (e. +default-fresh-emaker-loader+ |fetch|
+  (e. (e. +builtin-emaker-loader+ |fetch|
         "org.erights.e.elib.ref.RefAuthor" 
         (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
       |run|
@@ -499,7 +487,12 @@
       +deep-frozen-stamp+))))
 
 (defun default-safe-scope-roots ()
-  (let* ((emaker-importer
+  (let* ((bare-emaker-loader
+           (e. +the-make-path-loader+ |run| "__importUncachedEmaker" 
+             (map 'vector 
+                  #'make-emaker-loader-from-desc
+                  *emaker-search-list*)))
+         (emaker-importer
            (let ((deep-frozen-cache (make-hash-table :test #'equal)))
              (e-lambda "org.cubik.cle.internal.emakerImporter"
                  (:stamped +deep-frozen-stamp+)
@@ -508,7 +501,7 @@
                  (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
                    (if cache-present
                      cache-value
-                     (let ((result (e. +default-fresh-emaker-loader+ |fetch| fqn absent-thunk)))
+                     (let ((result (e. bare-emaker-loader |fetch| fqn absent-thunk)))
                        (when (e-is-true (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |isDeepFrozen| result))
                          (setf (gethash fqn deep-frozen-cache) result))
                        result))))))))
@@ -652,7 +645,8 @@
           ("&__makeVerbFacet" ,(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
           
           ; --- XXX describe this category ---
-          ("resource__uriGetter" ,+resource-importer+)
+          ;; XXX remove this special and use a parameter instead
+          ("resource__uriGetter" ,(make-resource-loader *emaker-search-list*))
           
           ; --- user/REPL ---
           ("&help"              ,(lazy-import "org.erights.e.elang.interp.help")))))))
@@ -681,6 +675,7 @@
             ("file__uriGetter" ,(e.extern:make-file-getter '#()))
             ("gc"              ,e.extern:+gc+)
             ("makeWeakRef"     ,+the-make-weak-ref+)
+            ("unsafeNearSpawn"      ,e.extern:+spawn+)
             ("&stdin"     ,(make-lazy-apply-slot (lambda ()
                              (warn "making stdin")
                              (e. (e. (e-import "org.cubik.cle.charsets") |get| e.extern:+standard-external-format-common-name+) |decode| (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
@@ -706,6 +701,8 @@
              ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
             ("&getSocketLocalRef"
              ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-LOCAL-REF+" :e.sockets :e-on-cl.sockets)))))
+            ("&makePipe"        
+             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-MAKE-PIPE+" :e.sockets :e-on-cl.sockets)))))
             #||#)))))
 
 ;;; --- end ---

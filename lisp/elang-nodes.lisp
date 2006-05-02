@@ -34,7 +34,7 @@
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
           (e-util:mangle-verb "run" (+ 2 (length param-types))))
         (,span-sym ,@param-syms ,jlayout-sym)
-        (assert (null ,jlayout-sym))
+        (assert (null (ref-shorten ,jlayout-sym)))
         (e-coercef ,span-sym '(or null source-span))
         ,@(loop for param in param-syms
                 for type in param-types
@@ -835,19 +835,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 ;;; --- Kernel-E checking ---
 
-;; utility, to be moved
-(defun to-condition (defaulted-type datum &rest arguments)
-  "Implements CLHS 9.1.2.1."
-  (etypecase datum
-    (symbol
-      (apply #'make-condition datum arguments))
-    ((or string function)
-      (make-condition defaulted-type :format-control datum :format-arguments arguments))
-    (condition
-      datum)))
-(defun ejerror (ejector &rest args)
-  (eject-or-ethrow ejector (apply #'to-condition 'simple-error args)))
-
 (defun unmagical-typep (value type)
   "awful hack: E-LIST type can't work if expanded into a compiled file due to using (satisfies #:uninterned-symbol) so we ensure that TYPEP isn't optimized by indirecting through a redefinable function"
   (typep value type))
@@ -881,7 +868,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defun make-scope-checker (ejector) 
   (labels ((make (finals assigns)
              ;; XXX use hash tables?
-             (e-lambda |kernelScopeCheckerValue| ()
+             (e-lambda "$kernelScopeCheckerValue" ()
                (:|_getFinals| () finals)
                (:|_getAssigns| () assigns)
                (:|hide| () (make nil nil))

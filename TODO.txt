@@ -5,7 +5,6 @@ Major bugs:
   - The standard rune-in-E code doesn't work (at last try it runs the script then goes off into an infinite loop with something counting up)
   - if the mismatch printing in updoc fails, it won't be caught by the chainer, leaving us with Lost Signal
   - Auditors get more authority than they should: all the state of the audited object.
-  - Closing sockets is not supported at all.
   - mapStream.chunked doesn't check that the function returns the proper number of elements, and this is abused.
   - We need to take *default-pathname-defaults* off asdf:*central-registry*, so that E-on-CL images don't accidentally load code from the current directory; also think about what else in this vein might be needed.
 
@@ -14,6 +13,9 @@ Minor bugs:
   - clrune <relative-path-to-script> doesn't work because file__uriGetter doesn't accept relative paths. This is a design issue.
   - NaN/Infinity aren't sufficiently faked on lisps not exposing them.
   - for run-program, add interfaces to process-kill and process-close so that the io-handler-pound test doesn't leak fds
+  - Inconsistency between Scope and eval: 'def &x := __makeFinalSlot(...); x := ...' right now is caught statically as a single expression but not if &x goes through a Scope
+    - option #1: introduce synEnv
+    - option #2: remove static assignment-to-final catching
 
 Internal bugs:
 
@@ -37,8 +39,7 @@ Big features:
   - Pluribus
 
 Code cleanups not marked in the code:
-  - reorganize: rename elib.lisp once it's been pared down to just the external macros and stuff
-  - reorganize: rename tables2.lisp now that elib-tables.lisp is gone
+  - rename tables2.lisp now that elib-tables.lisp is gone
   - make sure we have vm.updoc tests for rebinding boundaries' presence and absence
 
 Optimizations:

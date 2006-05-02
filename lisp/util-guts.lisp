@@ -3,23 +3,31 @@
 
 (cl:in-package :e.util)
 
-(defun %define-if-available (packages symbols copier)
-  (dolist (nd symbols)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun %define-if-available-parse-mapping (nd)
     (let* ((name (if (listp nd)
                    (string (second nd))
                    (string nd)))
            (here-symbol (if (listp nd)
                           (first nd)
                           (intern name #.*package*))))
+      (values here-symbol name))))
+
+(defun %define-if-available (packages symbols copier)
+  (dolist (nd symbols)
+    (multiple-value-bind (here-symbol name) (%define-if-available-parse-mapping nd)
       (dolist (package (remove-if-not #'find-package packages))
         (multiple-value-bind (other-symbol found) (find-symbol name package)
           (when (eql found :external)
             (funcall copier here-symbol other-symbol)))))))
 
 (defmacro define-if-available (packages symbols &key (accessor 'fdefinition))
-  `(%define-if-available ',packages ',symbols 
-     (lambda (.out. .in.)
-       (setf (,accessor .out.) (,accessor .in.)))))
+  `(progn
+     ,(when (member accessor '(fdefinition symbol-function))
+        `(declaim (ftype function ,@(mapcar #'%define-if-available-parse-mapping symbols))))
+     (%define-if-available ',packages ',symbols 
+       (lambda (.out. .in.)
+         (setf (,accessor .out.) (,accessor .in.))))))
 
 (defun default-alias (alias original)
   (unless (fboundp alias)
@@ -79,7 +87,7 @@
    (excluded :initform '() :accessor exclusion-group-excluded)))
 
 (defclass exclusive-io-handler ()
-  ((group :initarg :group :accessor %eih-group)
+  ((group :initarg :group :reader %eih-group)
    (current-base :initform nil :accessor %eih-base)
    (installer :initarg :installer :accessor %eih-installer)))
 
@@ -104,30 +112,36 @@
   (let ((wrap-handler (make-instance 'exclusive-io-handler 
                         :group group)))
     (with-slots ((current-base-handler current-base)) wrap-handler
-      (labels ((install () 
-                 (setf current-base-handler
-                   (add-io-handler target 
-                     direction
-                     (lambda (target)
-                       (if (exclusion-group-active group)
-                         (progn
-                           (push #'install (exclusion-group-excluded group))
-                           (remove-io-handler (the (not null) current-base-handler))
-                           (setf current-base-handler nil))
-                         (with-io-handler-exclusion (group wrap-handler)
-                           (funcall function target))))))))
-        (setf (%eih-installer wrap-handler) #'install)
-        (install)
-        wrap-handler))))
+      (let (installer)
+        (labels ((install ()
+                   (if (null (%eih-installer wrap-handler))
+                     (warn "attempted to reinstall ~S for ~S ~S" wrap-handler target direction)
+                     (setf current-base-handler
+                       (add-io-handler target 
+                         direction
+                         (lambda (target)
+                           (if (exclusion-group-active group)
+                             (progn
+                               (push installer (exclusion-group-excluded group))
+                               (remove-io-handler (the (not null) current-base-handler))
+                               (setf current-base-handler nil))
+                             (with-io-handler-exclusion (group wrap-handler)
+                               (funcall function target)))))))))
+          (setf installer #'install)
+          (setf (%eih-installer wrap-handler) installer)
+          (install)
+          wrap-handler)))))
 
 (defun remove-exclusive-io-handler (handler)
   (let ((base-handler (slot-value handler 'current-base)))
     (when base-handler
       (e.util:remove-io-handler base-handler)))
   (setf (exclusion-group-excluded (%eih-group handler))
-        (delete
+        (remove
           (%eih-installer handler)
-          (exclusion-group-excluded (%eih-group handler)))))
+          (exclusion-group-excluded (%eih-group handler))))
+  (setf (%eih-installer handler) nil)
+  (values))
 
 ;;; --- pathname handling ---
 
@@ -249,6 +263,15 @@
       #+cmu  #'extensions:process-output
       #-(or sbcl ccl cmu)
         (error "Don't know where to find external-process-output-stream")
+      args))
+
+  (defun external-process-error-stream (&rest args)
+    (apply 
+      #+ccl  #'ccl:external-process-error-stream
+      #+sbcl #'sb-ext:process-error
+      #+cmu  #'extensions:process-error
+      #-(or sbcl ccl cmu)
+        (error "Don't know where to find external-process-error-stream")
       args)))
 
 (unless (fboundp 'run-program)

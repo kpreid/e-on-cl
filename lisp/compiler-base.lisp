@@ -535,7 +535,7 @@ XXX This is an excessively large authority and will probably be replaced."
            (self-fsym (make-symbol fqn))
            (inner-layout
              (make-instance 'object-scope-layout
-               :nouns (coerce (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|) 'list)
+               :nouns (map 'list #'ref-shorten (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|))
                :rest (make-instance 'prefix-scope-layout 
                        :fqn-prefix (concatenate 'string fqn "$")
                        :rest layout)))

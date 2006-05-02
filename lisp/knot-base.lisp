@@ -244,25 +244,20 @@
 
 ;; XXX once we have explicit Kernel-E verification, it should check for *internal* var/:= consistency, which this can't catch.
 
-(defun eject-error (ejector format-control &rest args)
-  ;; XXX move this elsewhere
-  (eject-or-ethrow ejector (make-condition 'simple-error 
-                             :format-control format-control
-                             :format-arguments args)))
-
 ;; XXX all scope stuff should probably be moved to a different package; its presence in e.knot is historical
 (defun require-node-fits-scope (node scope ejector)
   (let ((ss (e. node |staticScope|)))
     (e. (e. ss |namesUsed|) |iterate| (efun (k v)
+      (declare (ignore v))
       (unless (e-is-true (e. scope |maps| k))
         ;; XXX message to be revised
-        (eject-error ejector "undefined variable: ~A" k))))
+        (ejerror ejector "undefined variable: ~A" k))))
     (e. (e. ss |namesSet|) |iterate| (efun (k v)
       (declare (ignore v))
       ;; XXX isFinal is possibly too loose a check. review.
       (when (e-is-true (e. (e. scope |getSlot| k) |isFinal|))
         ;; XXX message to be revised
-        (eject-error ejector "~A is not an assignable variable" k))))))
+        (ejerror ejector "~A is not an assignable variable" k))))))
 
 ;;; --- structured classless exceptions ---
 
@@ -351,7 +346,7 @@
   (:|run| (problem)
     (error (e-problem-to-condition (e-coerce problem 'condition))))
   (:|eject| (opt-ejector problem)
-    (elib:eject-or-ethrow opt-ejector (e-problem-to-condition problem)))
+    (eject-or-ethrow opt-ejector (e-problem-to-condition problem)))
   (:|free| (problem)
     ; XXX there should be a function for this
     (error (if *compatible-catch-leakage*

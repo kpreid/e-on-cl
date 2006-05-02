@@ -10,6 +10,8 @@
   (when *parse-cache-name*
     (e.syntax:save-parse-cache-file *parse-cache-name*))
 
+  ;; XXX TODO: restore the load counting mechanism
+  #+(or)
   (maphash #'(lambda (fqn times)
              (when (> times 1)
                (warn "note: ~A loaded ~A times" fqn times)))
@@ -125,7 +127,6 @@
       If supported, it will be executable. Under CLISP, the first argument to
       the resulting executable must be \"--\" for correct argument processing.
       The sole argument is the name of the image file to create."
-  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
   (assert (= 1 (length args))) ;; will be options later, regarding how much to include
   (let ((image-file (native-pathname (first args)))
         (executable-p t)
@@ -133,42 +134,45 @@
     
     (save-flush)
     
-    #.(or
-        #+sbcl
-        (quote
-          (sb-ext:save-lisp-and-die
-            image-file
-            :executable executable-p
-            :toplevel #'%revive-start))
-        #+cmucl
-        (ext:save-lisp 
-          image-file 
-          :purify t
-          :init-function #'%revive-start
-          :load-init-file nil
-          :site-init nil
-          :batch-mode nil
-          :print-herald nil
-          :process-command-line nil
-          :executable executable-p)
-        #+openmcl
-        (quote
-          ;; reference: http://www.clozure.com/pipermail/openmcl-devel/2003-May/001062.html
-          (ccl:save-application
-            image-file
-            :toplevel-function #'%revive-start
-            :prepend-kernel executable-p))
-        #+clisp
-        (quote
-          (ext:saveinitmem
-            image-file
-            :quiet t
-            ; :norc t ; XXX is this appropriate?
-            :init-function #'%revive-start
-            :start-package (find-package :cl-user)
-            :keep-global-handlers nil ; XXX is this appropriate?
-            :executable executable-p))
-        '(error "Saving an executable/image is not supported for ~A." (lisp-implementation-type)))
+    #.(locally 
+        (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note)) 
+        (or
+          #+sbcl
+          (quote
+            (sb-ext:save-lisp-and-die
+              image-file
+              :executable executable-p
+              :toplevel #'%revive-start))
+          #+cmu
+          (quote
+            (ext:save-lisp 
+              image-file 
+              :purify t
+              :init-function #'%revive-start
+              :load-init-file nil
+              :site-init nil
+              :batch-mode nil
+              :print-herald nil
+              :process-command-line nil
+              :executable executable-p))
+          #+openmcl
+          (quote
+            ;; reference: http://www.clozure.com/pipermail/openmcl-devel/2003-May/001062.html
+            (ccl:save-application
+              image-file
+              :toplevel-function #'%revive-start
+              :prepend-kernel executable-p))
+          #+clisp
+          (quote
+            (ext:saveinitmem
+              image-file
+              :quiet t
+              ; :norc t ; XXX is this appropriate?
+              :init-function #'%revive-start
+              :start-package (find-package :cl-user)
+              :keep-global-handlers nil ; XXX is this appropriate?
+              :executable executable-p))
+          '(error "Saving an executable/image is not supported for ~A." (lisp-implementation-type))))
         
     ;; depending on the implementation (e.g. sbcl's save-lisp-and-die) we may
     ;; or may not reach here
@@ -237,7 +241,10 @@
       (("--boe" "--break-on-ejections")
         (setf *break-on-ejections* (read-from-string (pop args))))
       (("--resources" "-R")
-        (push (e.extern:pathname-to-file (merge-pathnames (native-pathname (pop args))))
+        ;; we'll eventually want a way to specify a different (or no) compiled file location
+        (push (make-list 2 :initial-element
+                (e.extern:pathname-to-file
+                  (merge-pathnames (native-pathname (pop args)))))
               e.knot:*emaker-search-list*))
       (otherwise
         (let ((tl (assoc (first args) *toplevels* :test #'equal)))

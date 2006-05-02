@@ -9,6 +9,21 @@ pragma.disable("explicit-result-guard")
 # Stamped DeepFrozen because this is a self-referential object (baseGuard#optUncall) and therefore has a promise to itself at audit time, and BaseGuard is (currently) depended on by the EventuallyDeepFrozen audit process.
 
 def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
+
+  def makeException := <import:org.cubik.cle.prim.makeException>
+  def ncfTypes := [meta.context().getFQNPrefix() + "NegatedCoercionFailure"]
+  def makeNegatedCoercionFailure(specimen, guard) {
+    return makeException(ncfTypes, [=> specimen, => guard],
+      def ncfPrinter implements DeepFrozen {
+        to run(tw :TextWriter, e ? (e._getProperties() =~ [=> specimen, => guard])) {  
+          tw.write("problem: ")
+          tw.quote(specimen)
+          tw.write(" must not be a ") # XXX aan
+          tw.quote(guard)
+        }
+      })
+  }
+
   def makeBaseGuard implements DeepFrozenStamp {
     to run(valueGuard) {
       def baseGuard implements SelflessStamp {
@@ -99,7 +114,7 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
               })
               
               # If we reach here, then the valueGuard did not fail, so we do.
-              throw.eject(optEjector, E.toQuote(specimen) + " must not be a " + E.toQuote(valueGuard)) # XXX aan
+              throw.eject(optEjector, makeNegatedCoercionFailure(specimen, valueGuard))
             }
           }
           

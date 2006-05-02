@@ -160,10 +160,12 @@
         (step nil)
         (step-scope nil)
         (backtrace nil)
-        (skipping nil))
+        (skipping nil)
+        (starting-time nil))
     
     (e-lambda |updocHandler| ()
       (:|begin| (nstep)
+        (setf nstep (ref-shorten nstep))
         (destructuring-bind (expr answers) nstep
           (declare (ignore answers))
           (setf step nstep)
@@ -186,7 +188,9 @@
                     (format t "~&? ~A~%" expr)
                     (princ "."))
                   node))
-              (force-output)))))
+              (progn
+                (force-output)
+                (setf starting-time (get-internal-run-time)))))))
       (:|takeStreams| ()
         (loop for stream in (list out err)
               for label in '("stdout" "stderr")
@@ -194,12 +198,17 @@
               unless (string= string "") 
                 do (e. |updocHandler| |answer| (list label string))))
       (:|answer| (answer)
-        (push answer new-answers)
+        (push (ref-shorten answer) new-answers)
         (when print-steps
           (print-answer answer)))
       (:|backtrace| (bt)
-        (setf backtrace bt))
+        (setf backtrace (ref-shorten bt)))
       (:|finish| ()
+        (when print-steps
+          (format t "~&step in ~Ss~%" 
+            (when starting-time
+              (float (/ (- (get-internal-run-time) starting-time)
+                        internal-time-units-per-second)))))
         (nreverse-here new-answers)
         (flet ((adjust-liveness (live)
                  "updates whether names set by this step are guessed to not
@@ -345,15 +354,16 @@
            )
       (e. scope-slot |setValue| scope)
       (format t "~&~A" (enough-namestring file))
-      (let ((starting-time (get-universal-time)))
+      (let ((starting-time (get-internal-run-time)))
         (chain #'result+
                (make-instance 'result)
                (lambda () script)
                (lambda () (funcall stepper (pop script)))
                (lambda (result) 
-                 (format t " ~A in ~As~%" 
+                 (format t " ~A in ~Gs~%" 
                          (result-step-count result)
-                         (- (get-universal-time) starting-time))))))))
+                         (/ (- (get-internal-run-time) starting-time)
+                            internal-time-units-per-second))))))))
 
 ; --- Profiling ---
 

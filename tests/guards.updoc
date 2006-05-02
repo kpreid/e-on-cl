@@ -6,6 +6,19 @@
   >   return accum [] for thing :Thing in things { _.with(thing) }
   > }
   # value: <testGuardMany>
+  
+  ? /** Verify that a guard does not print its specimen. */
+  > def testSpecimenNotPrinted(guard) :void {
+  >   escape printed {
+  >     escape fail {
+  >       guard.coerce(def notPrintSpecimen { to __printOn(_) :void { printed() }}, fail)
+  >       throw(`testSpecimenNotPrinted: $guard accepted`)
+  >     }
+  >   } catch _ {
+  >     throw(`testSpecimenNotPrinted: $guard printed`)
+  >   }
+  > }
+  # value: <testSpecimenNotPrinted>
 
 __makeGuard
 
@@ -112,6 +125,8 @@ nullOk base
   ? nullOk :DeepFrozen
   # value: nullOk
   
+  ? testSpecimenNotPrinted(nullOk)
+  
 nullOk parameterized
 
   ? nullOk[float64]
@@ -133,6 +148,8 @@ nullOk parameterized
 
   ? nullOk[float64] :DeepFrozen
   # value: nullOk[float64]
+
+  ? testSpecimenNotPrinted(nullOk[float64])
   
 boolean
 
@@ -153,6 +170,8 @@ boolean
   ? testGuardMany([Ref.promise()[0]], boolean)
   # value: []
 
+  ? testSpecimenNotPrinted(boolean)
+
 char
 
   ? char
@@ -161,6 +180,8 @@ char
   ? char + 3
   # value: (char + 3)
   
+  ? testSpecimenNotPrinted(char)
+
   XXX more tests
 
 int
@@ -179,6 +200,8 @@ int
   ? int.getTheTrivialValue()
   # value: 0
 
+  ? testSpecimenNotPrinted(int)
+
 float64
 
   ? float64
@@ -189,6 +212,8 @@ float64
   
   ? float64 + 3
   # value: (float64 + 3)
+
+  ? testSpecimenNotPrinted(float64)
 
   XXX more tests
 
@@ -202,6 +227,8 @@ String
   ? String[]
   # value: List[String]
   
+  ? testSpecimenNotPrinted(String)
+
   XXX more tests
 
 Guard
@@ -216,6 +243,8 @@ Twine
   ? Twine
   # value: Twine
   
+  ? testSpecimenNotPrinted(Twine)
+
   XXX more tests
 
 notNull
@@ -244,10 +273,12 @@ Tuple
   # problem: Need 1 element list: [1, 2]
 
   ? 44 :Tuple[any]
-  # problem: the int 44 doesn't coerce to a ConstList
+  # problem: the int 44 doesn't coerce to a List
 
   ? "44" :Tuple[any]
   # problem: Need 1 element list: "44"
+
+  ? testSpecimenNotPrinted(Tuple[any])
 
 __Portrayal
 
@@ -272,6 +303,9 @@ List
   
   ? "a" != ['a']
   # value: true
+  
+  ? testSpecimenNotPrinted(List)
+  ? testSpecimenNotPrinted(List[float64])
 
 Map
 
@@ -294,6 +328,9 @@ __MatchContext
 
   ? __MatchContext :DeepFrozen
   # value: <MatchContext>
+
+  ? testSpecimenNotPrinted(__MatchContext)
+  # problem: testSpecimenNotPrinted: <MatchContext> accepted
 
 ValueGuard
 
@@ -321,6 +358,8 @@ Union guards
   ? (float64 | char)[]
   # value: List[any[float64, char]]
 
+  ? testSpecimenNotPrinted(float64 | char)
+
 Intersection guards
 
   ? def Point := Tuple[any, any] & List[float64]
@@ -328,6 +367,8 @@ Intersection guards
 
   ? testGuardMany(["ab", [1, 2], [3.0, 4.0], 5, "six", [7.7, 8]], Point)
   # value: [[1.0, 2.0], [3.0, 4.0], [7.7, 8.0]]
+
+  ? testSpecimenNotPrinted(Point)
   
   test that intersection guard has Guard methods
   ? Point[]
@@ -339,6 +380,7 @@ Negated guards
   ? !int
   # value: !(int)
   
+  ? testSpecimenNotPrinted(!any)
 
 ButNot guards
 
@@ -346,6 +388,8 @@ ButNot guards
   ? List &! String
   # value: all[List, !(String)]
   
+  ? testSpecimenNotPrinted(List &! String)
+
 Xor guards
   
   XXX should we expect a specialized guard?

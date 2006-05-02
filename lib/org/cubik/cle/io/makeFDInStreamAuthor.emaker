@@ -7,7 +7,7 @@ pragma.enable("dot-props")
 pragma.enable("verb-curry")
 pragma.enable("accumulator")
 
-def makeInStreamShell := <elib:eio.makeInStreamShell>
+def makeBufferedInStreamShell := <import:org.cubik.cle.io.makeBufferedInStreamShell>
 
 def Range := EIO::Range
 def ALL := EIO::ALL
@@ -28,7 +28,7 @@ def makeFDInStreamAuthor {
       asdfOperate(load_op, intern("E-ON-CL.SOCKETS", "KEYWORD"))
     }
     def l__quasiParser {
-      to valueMaker(t) {
+      to valueMaker(t :String) {
         return def vm {
           to substitute(values) { return read(simple__quasiParser.valueMaker(t).substitute(values)) }
         } 
@@ -43,32 +43,26 @@ def makeFDInStreamAuthor {
       /** 'nameObj' is used for printing the stream. */
       to run(nameObj :any, fdRef, bufferLimit :(int >= 1)) {
 
-        def inBuffer := [].diverge(Element)
-
-        def inStream := makeInStreamShell(Element, def inBackend, def inImpl {
-          to __printOn(out :TextWriter) {
-            out.printSame(nameObj)
-          }
-          
-          to semiObtain(count :Range, proceed, report) {
-            def n := if (count == ALL) { inBuffer.size() } else { inBuffer.size().min(count) }
-            return if (proceed == EIO::ADVANCE) {
-              inBuffer.removeRun(0, n)
-            } else if (report == EIO::ELEMENTS) {
-              inBuffer.run(0, n)
-            }
-          }
-          
-          to terminate(t) { traceln(`XXX should be closing the fd $fdRef but that isn't implemented yet (makeFDInStreamAuthor)`) }
-          
-        })
-        
-        var eof := false
-        
         def inFDHandler
         def removeHandler() {
           fooRemoveReceiveHandler((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
         }
+        
+        def inStream := makeBufferedInStreamShell(Element, def inBackend, def inImpl {
+          to __printOn(out :TextWriter) {
+            out.printSame(nameObj)
+          }
+
+          # XXX todo: try a lazily-reading version - reads more only upon wants()
+          to taken(_) {}
+          
+          to terminate(t) { 
+            # XXX proper error handling?
+            removeHandler()
+            fdRef.shutdown(l`:input`, throw)
+          }
+          
+        })
         
         def vat := lisp["E.ELIB", "*VAT*"]::value
         
@@ -76,22 +70,20 @@ def makeFDInStreamAuthor {
           
           escape error {
             escape eofExit {
-              def elements := fdRef.read(bufferLimit - inBuffer.size(), error, eofExit)
-              #traceln(`$inStream: read $elements from fd $fdRef`)
-              inBuffer.append(elements)
+              def elements := fdRef.read(bufferLimit - inBackend.buffered(), error, eofExit)
+              #trace(`$inStream: read $elements from fd $fdRef`)
+              inBackend <- supply(elements)
             } catch _ {
-              traceln(`$inStream: eof`)
+              trace(`$inStream: eof from $fdRef`)
               removeHandler()
-              eof := true
+              inBackend <- close()
             }
           } catch p {
-            traceln(`$inStream: error $p`)
+            trace(`$inStream: error $p from $fdRef`)
             removeHandler()
+            # XXX this effectively discards any input that's been buffered
             inStream.fail(p)
           }
-          
-          inBackend.setAvailable(inBuffer.size())
-          
         })
         
         return inStream

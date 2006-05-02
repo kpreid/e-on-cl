@@ -60,6 +60,7 @@
                     (e. tw |print| problem)
                     (e. writer |write| ">"))
                   (:|problem| (tw fqn problem)
+                    (e-coercef fqn 'string)
                     (e. tw |print| "<***"
                                     (e.util:aan fqn)
                                     " threw "
@@ -70,6 +71,7 @@
                     (e-coercef text 'string)
                     (replace-newlines text line-separator (lambda (x) (e. writer |write| x))))
                   (:|indent| (indent-arg)
+                    (e-coercef indent-arg 'string)
                     (spawn is-quoting (concatenate 'string line-separator indent-arg)))
                   (:|asQuoting| ()
                     (spawn t line-separator))
@@ -243,6 +245,8 @@
     :autoflush autoflush
     :delegate (e-lambda "org.cubik.cle.internal.StreamTWDelegate" ()
       (:|write| (text)
+        (setf text (ref-shorten text))
+        (check-type text string)
         (princ text stream)
         nil)
       (:|flush| () 
@@ -284,14 +288,16 @@
       (vector (make-text-writer
                 :syntax (e. options |fetch| "syntax" (efun () +standard-syntax+))
                 :delegate (e-lambda "org.cubik.cle.internal.StringTWDelegate" ()
-                  (:|write| (piece
-                      &aux (old-size (length buffer))
+                  (:|write| (piece)
+                    (setf piece (ref-shorten piece))
+                    (check-type piece string)
+                    (let* ((old-size (length buffer))
                            (new-size (+ (length piece) old-size)))
-                    ; XXX code copied from FlexList#replace/5. Is this a sign?
-                    (when (< (array-dimension buffer 0) new-size)
-                      (adjust-array buffer (* new-size 2)))
-                    (setf (fill-pointer buffer) new-size)
-                    (replace buffer piece :start1 old-size))
+                      ; XXX code copied from FlexList#replace/5. Is this a sign?
+                      (when (< (array-dimension buffer 0) new-size)
+                        (adjust-array buffer (* new-size 2)))
+                      (setf (fill-pointer buffer) new-size)
+                      (replace buffer piece :start1 old-size)))
                   (:|flush| () nil)
                   (:|close| () nil)))
               (make-instance 'string-buffer :buffer buffer))))

@@ -18,51 +18,71 @@
       (eject-or-ethrow opt-ejector (make-e-type-error specimen +peer-ref-guard+))))))
 
 (defun make-socket-out-stream (our-socket impl-socket)
+  (make-fd-out-stream our-socket
+                      impl-socket ;; XXX is this correct for non-sbcl?
+                      (foo-sockopt-receive-buffer impl-socket)))
+
+(defun make-fd-out-stream (name fd-ref buffer-size)
   (with-result-promise (stream)
     (multiple-value-bind (backend backend-resolver) (make-promise)
       (let* ((buffer (make-array 
-                       (foo-sockopt-receive-buffer impl-socket) 
+                       buffer-size 
                        :element-type '(unsigned-byte 8)))
              ;; UNIX-WRITE doesn't like non-simple arrays
-             (end-of-buffer 0))
-        (flet ((wait-for-available ()
-                 (with-result-promise (handler)
-                   (vr-add-io-handler *vat* (%convert-handler-target impl-socket) :output (lambda (target)
-                     (declare (ignore target))
-                     (e. backend |setAvailable| (- (array-dimension buffer 0) end-of-buffer))
-                     (vr-remove-io-handler handler)
-                     (when (> end-of-buffer 0)
-                       (e. stream |flush|)))))
-                 (values)))
-          (let ((impl
-                 (e-lambda "$outImpl" ()
-                   (:|__printOn| (tw)
-                     (e-coercef tw +the-text-writer-guard+)
-                     (e. tw |print| our-socket))
-                   (:|write| (elements)
-                     (e-coercef elements 'vector)
-                     (let ((mark end-of-buffer))
-                       (assert (< (length elements) (- (array-dimension buffer 0) mark)))
-                       (incf end-of-buffer (length elements))
-                       (replace buffer elements :start1 mark)))
-                   (:|flush| ()
-                     (escape-bind (write-error-ej)
-                         (let ((n (foo-write impl-socket 
-                                             buffer 
-                                             write-error-ej 
-                                             :end end-of-buffer)))
+             (end-of-buffer 0)
+             (should-shutdown nil)
+             (is-waiting))
+        (labels ((wait-for-available ()
+                   (unless is-waiting
+                     (with-result-promise (handler)
+                       (setf is-waiting t)
+                       (vr-add-io-handler *vat* (%convert-handler-target fd-ref) :output (lambda (target)
+                         (declare (ignore target))
+                         (vr-remove-io-handler handler)
+                         (setf is-waiting nil)
+                         (e<- backend |setAvailable| (- (array-dimension buffer 0) end-of-buffer))
+                         (when should-shutdown
+                           ;; doing this at a time when we don't have a
+                           ;; handler installed
+                           ;; XXX this looks wrong - not giving the buffer a
+                           ;; chance to be emptied - but we haven't proven it
+                           ;; wrong yet
+                           (e. fd-ref |shutdown| :output nil))
+                         (when (> end-of-buffer 0)
+                           (flush))))))
+                   (values))
+                 (flush ()
+                   (escape-bind (write-error-ej)
+                         (let ((n (e. fd-ref |write|
+                                    buffer 
+                                    write-error-ej 
+                                    0 end-of-buffer)))
                            
                            (replace buffer buffer :start2 n)
                            (decf end-of-buffer n)
                            (wait-for-available))
                        (error)
-                         (e. e.knot:+trace+ |run| error)
-                         (e. stream |fail| error))
+                         #+(or) (e. e.knot:+trace+ |run| error)
+                         (unless (ref-is-resolved (e. stream |terminates|))
+                           (e. stream |fail| error)))))
+          (let ((impl
+                 (e-lambda "$outImpl" ()
+                   (:|__printOn| (tw)
+                     (e-coercef tw +the-text-writer-guard+)
+                     (e. tw |print| name))
+                   (:|write| (elements)
+                     (e-coercef elements 'vector)
+                     (let ((mark end-of-buffer))
+                       (assert (<= (length elements) (- (array-dimension buffer 0) mark)))
+                       (incf end-of-buffer (length elements))
+                       (replace buffer elements :start1 mark)))
+                   (:|flush| ()
+                     (flush)
                      nil)
                    (:|terminate| (terminator)
-                     ;; XXX to do this right we need shutdown(2)
-                     ;; for now we'll hope GC will clean up after us
-                     nil))))
+                     (declare (ignore terminator))
+                     (setf should-shutdown t)
+                     (flush)))))
             (wait-for-available)
             (e. (e-import "org.erights.e.elib.eio.makeOutStreamShell")
                 |run|
@@ -213,3 +233,43 @@
   (socket-address-ref-maker +local-ref-guard+ "local"))
 (defglobal +the-get-socket-peer-ref+ 
   (socket-address-ref-maker +peer-ref-guard+ "peer"))
+
+(defmacro with-ejection ((ejector) &body body &aux (condition (gensym)))
+  ;; XXX review for more general use of this macro
+  "Expose any CL:ERROR signaled in BODY via EJECTOR."
+  `(handler-case
+     (progn ,@body)
+     (error (,condition) (eject-or-ethrow ,ejector ,condition))))
+
+;; NOTE: used by e.extern:+spawn+
+(defun cl-to-eio-in-stream (stream name)
+  (fd-to-eio-in-stream (sb-sys:fd-stream-fd stream) name 4096 #| XXX arbitrary buffer size |#))
+
+;; NOTE: used by e.extern:+spawn+
+(defun cl-to-eio-out-stream (stream name)
+  (make-fd-out-stream name (make-fd-ref (sb-sys:fd-stream-fd stream)) 4096))
+
+(defun fd-to-eio-in-stream (fd name buffer)
+  (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
+          |run|
+          e.knot::+lisp+) 
+      |run| 
+      name
+      (make-fd-ref fd)
+      buffer))
+
+;; XXX this is not really about sockets
+(defglobal +the-make-pipe+ (e-lambda "$makePipe" ()
+  (:|run| (ejector)
+    #-sbcl (error "makePipe not yet implemented for ~A" (lisp-implementation-type))
+    (multiple-value-bind (read write)
+        (with-ejection (ejector) 
+          #+sbcl (sb-posix:pipe)
+          #-sbcl nil)
+      ;; XXX arrange for finalization of streams to close the fds
+      ;; XXX set nonblocking
+      (vector
+        (fd-to-eio-in-stream read (e-lambda "system pipe" ()) 4096)
+        (make-fd-out-stream (e-lambda "system pipe" ())
+                            (make-fd-ref write)
+                            4096))))))

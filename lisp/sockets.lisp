@@ -7,7 +7,6 @@
   #+openmcl (:import-from :openmcl-socket :socket-error)
   (:documentation "Taming the Lisp's socket interface, if it has one.")
   (:export
-    :foo-write
     :foo-connect-tcp
     :get-addr-info))
 
@@ -37,6 +36,8 @@
       (socket-error (condition)
         (eject-or-ethrow opt-ejector condition))))
   
+  (:|shutdown/2| 'foo-shutdown)
+  
   ; XXX implement vtable macros then write one for this get-and-setf template
   (:|getNonBlocking| (this) (as-e-boolean (non-blocking-mode this)))
   (:|setNonBlocking| (this new) (setf (non-blocking-mode this) (e-is-true new)))
@@ -46,6 +47,9 @@
   (:|getSockoptReceiveBuffer/0| 'sockopt-receive-buffer)
   (:|setSockoptReceiveBuffer| (this new) (setf (sockopt-receive-buffer this) new))
   
+  (:|write| (this vector error-ejector start end)
+    ;; XXX document
+    (e. (make-fd-ref (socket-file-descriptor this)) |write| vector error-ejector start end))
   (:|read| (this max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the socket, and return them as a ConstList."
     (e. (make-fd-ref (socket-file-descriptor this)) |read| max-octets error-ejector eof-ejector))
@@ -58,21 +62,6 @@
   (make-instance 'simple-error
     :format-control "error ~A (~A)"
     :format-arguments (list errno (sb-impl::strerror errno))))
-
-#+sbcl
-(defun foo-write (target vector error-ejector &key (start 0) (end (length vector)))
-  "half-baked function used from IPAuthor"
-  (setf target (ref-shorten target))
-  (e-coercef vector '(vector (unsigned-byte 8)))
-  (multiple-value-bind (n errno)
-      (sb-unix::unix-write (socket-file-descriptor target) vector start end)
-    (if (zerop errno)
-      n
-      (eject-or-ethrow error-ejector (errno-to-condition errno)))))
-
-#-(or sbcl)
-(defun foo-write (target vector error-ejector)
-  (error "foo-write not implemented"))
 
 #+sbcl
 (defun in-progress-socket-error-p (error)
@@ -169,6 +158,29 @@
   ;; XXX proper backlog value
   ;; XXX errors?
   (socket-listen socket (or opt-backlog 64)))
+
+#+sbcl
+(defun foo-accept (socket opt-ejector)
+  (handler-case
+      (socket-accept (socket-shorten socket))
+    (error (c) (eject-or-ethrow opt-ejector c))))
+
+#+sbcl
+(defun foo-shutdown (socket direction opt-ejector)
+  ;; XXX submit patch for sb-bsd-sockets
+  (handler-case
+      (if (= (sb-alien:alien-funcall
+               (sb-alien:extern-alien "shutdown" 
+                 (function sb-alien:int sb-alien:int sb-alien:int))
+               (socket-file-descriptor socket)
+               (ecase (ref-shorten direction)
+                 ;; XXX should sb-grovel for these
+                 (:input  0)
+                 (:output 1)
+                 (:io     2)))
+             -1)
+        (sb-bsd-sockets:socket-error "shutdown"))
+    (error (c) (eject-or-ethrow opt-ejector c))))
 
 ; --- ---
 
@@ -310,13 +322,46 @@
   (make-fd-ref (sb-sys:fd-stream-fd stream)))
   
 ; XXX this should not be in sockets but in something more general
-(defun make-fd-ref (fd)
-  (e-lambda "org.cubik.cle.io.FDRef" ()
-    (:|getFD| () fd)
+(defun make-fd-ref (opt-fd)
+  (e-lambda |FDRef| ()
+    (:|__printOn| (out)
+      (e-coercef out +the-text-writer-guard+)
+      (if opt-fd
+        (progn
+          (e. out |write| "<file descriptor ")
+          (e. out |print| opt-fd)
+          (e. out |write| ">"))
+        (e. out |write| "<closed file descriptor>")))
+  
+    (:|getFD| () (or opt-fd (error "this fd-ref has been closed.")))
+
+    (:|shutdown| (direction ejector)
+      ;; XXX embedding the assumption that this is a unidirectional, non-socket fd
+      (when opt-fd
+        (sb-posix:close opt-fd))
+      (setf fd nil)
+      (values))
+
+    #+sbcl
+    (:|write| (vector error-ejector start length)
+      (e-coercef vector 'vector)
+      (e-coercef start 'integer)
+      (e-coercef length '(or null integer))
+      (setf vector (coerce vector '(vector (unsigned-byte 8))))
+      (multiple-value-bind (n errno)
+          ;; This signal handling is unnecessary as of SBCL 0.9.11.27, which ignores SIGPIPE globally. XXX when 0.9.12 is released, remove this code
+          (let ((old (sb-sys:ignore-interrupt sb-unix:SIGPIPE)))
+            (unwind-protect
+              (sb-unix::unix-write (e. |FDRef| |getFD|) vector start (or length (length vector)))
+              (sb-sys:enable-interrupt sb-unix:SIGPIPE old)))
+        (if (zerop errno)
+          n
+          (eject-or-ethrow error-ejector (errno-to-condition errno)))))
 
     #+sbcl
     (:|read| (max-octets error-ejector eof-ejector)
-    "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
+      "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
+      (e-coercef max-octets '(integer 0))
       ; XXX be able to avoid allocating the buffer
       ; thanks to nyef on irc://irc.freenode.net/lisp for this code --
       ;   http://paste.lisp.org/display/7891
@@ -326,7 +371,7 @@
                                         :adjustable nil)))
         (multiple-value-bind (n-read errno)
             ; XXX SBCL internal package. Show me something more appropriate and I'll use it
-            (sb-unix:unix-read fd
+            (sb-unix:unix-read (e. |FDRef| |getFD|)
                                (sb-sys:vector-sap (sb-impl::%array-data-vector buf))
                                max-octets)
           (case n-read
@@ -336,9 +381,9 @@
                   buf)
                 (otherwise
                   ; XXX typed error with errno slot
-                  (eject-or-ethrow error-ejector (format nil "file descriptor read error: ~A (~A)" errno (sb-int:strerror errno))))))
+                  (ejerror error-ejector "file descriptor read error: ~A (~A)" errno (sb-int:strerror errno)))))
             ((0)
-              (eject-or-ethrow eof-ejector "socket EOF"))
+              (ejerror eof-ejector "socket EOF"))
             (otherwise
               (setf (fill-pointer buf) n-read)
               buf)))))))

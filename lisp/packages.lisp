@@ -42,6 +42,7 @@
     :run-program
     :external-process-input-stream
     :external-process-output-stream
+    :external-process-error-stream
     
     :mangle-verb
     :unmangle-verb
@@ -220,6 +221,7 @@
     :e-slot-value :place-slot
     :def-shorten-methods
     :escape-bind
+    :ejerror
     :with-vat :call-when-resolved :when-resolved
     :mapping-bind
     :e-import))
@@ -507,7 +509,8 @@
     :read-entire-file
     :+the-timer+
     :+rx-perl5-compiler+
-    :+rx-perl5-matcher+))
+    :+rx-perl5-matcher+
+    :+spawn+))
 
 (e.util:defglobals
   e.extern:+standard-external-format+

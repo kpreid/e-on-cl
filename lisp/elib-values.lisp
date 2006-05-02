@@ -702,6 +702,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Java-E compatibility; currently just returns self."
     this))
 
+; - type-error / CoercionFailure -
+
+(def-fqn type-error "org.cubik.cle.fail.coercionFailure")
+
 (def-vtable type-error
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -709,6 +713,17 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (print-object-with-type tw (type-error-datum this))
     (e. tw |write| " doesn't coerce to ")
     (e. tw |print| (e-util:aan (e-quote (type-specifier-to-guard (type-error-expected-type this)))))))
+
+(defglobal +the-make-coercion-failure+ (e-lambda "org.cubik.cle.fail.makeCoercionFailure"
+    (:stamped +deep-frozen-stamp+)
+  (:|asType| () (type-specifier-to-guard 'type-error))
+  (:|run| (specimen guard)
+    (make-condition
+      'type-error
+      :datum specimen
+      :expected-type (guard-to-type-specifier guard)))))
+
+; - -
 
 (def-vtable message-condition
   ; XXX should we really be doing this?

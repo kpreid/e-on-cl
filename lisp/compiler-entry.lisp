@@ -34,7 +34,7 @@
             and collect `(list ',(format nil "&~A" k) ,(binding-get-slot-code v)))))))
 
 (defun delta-extract-outer-scope (final-layout e-node initial-scope-form
-    &aux (rebound (e-coerce (e. (e. (e. e-node |staticScope|) |outNames|) |getKeys|) 'vector)))
+    &aux (rebound (map 'vector #'ref-shorten (e-coerce (e. (e. (e. e-node |staticScope|) |outNames|) |getKeys|) 'vector))))
   "Return a form which, when evaluated in the appropriate context for 'final-layout', returns the outer scope resulting from the evaluation of 'e-node', assuming that it has already been evaluated, and 'final-layout' is the resulting scope layout, and 'initial-scope' is the outer scope in which it was evaluated."
   `(e.
     ; XXX call something on the Scope maker, don't make one directly
@@ -56,6 +56,7 @@
       ; XXX decide what the official interface to getting slots from a Scope is
       (let (layout)
         (e. outer-scope |iterate| (efun (k v)
+          (setf k (ref-shorten k))
           (assert (char= #\& (char k 0)))
           (push (cons (subseq k 1) (binding-for-slot v)) layout)))
         (nreverse layout)))))
@@ -123,7 +124,7 @@
   (when opt-scope
     ;; XXX this is wrongish: we should execute the check *always*
     (e.knot:require-node-fits-scope expr opt-scope nil))
-  (let* ((all-nouns (coerce (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector) 'list))
+  (let* ((all-nouns (map 'list #'ref-shorten (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector)))
          (needed-nouns '())
          (needed-syms '())
          (initial-scope-var (gensym "INITIAL-SCOPE"))
