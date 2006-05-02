@@ -6,9 +6,6 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (use-package :e.nonkernel)) ;; XXX remove once nonkernel package is defined before syntax package
 
-'#.(when (member :abcl *features*) 
-    (pushnew 'e.syntax::local-parser *features*))
-
 ; --- ---
 
 (defun is-identifier (text)
@@ -528,10 +525,9 @@ XXX make precedence values available as constants"
                                           "e")))))
 
 #-e.syntax::local-parser
-(defvar *parse-cache-hash* (make-hash-table :test #'equal))
-
-#-e.syntax::local-parser
-(defvar *parser-process*)
+(progn
+  (defvar *parse-cache-hash* (make-generic-hashtable :test 'samep))
+  (defvar *parser-process*))
 
 #-e.syntax::local-parser
 (defun start-parser ()
@@ -659,7 +655,7 @@ XXX make precedence values available as constants"
     (setf args (mapcar #'convert args)))
   
   (let* ((key (list verb args)))
-    (multiple-value-bind (cached present-p) (gethash key *parse-cache-hash*)
+    (multiple-value-bind (cached present-p) (hashref key *parse-cache-hash*)
     (if present-p
       cached
       (e. e.knot:+sys-trace+ |doing|
@@ -668,7 +664,7 @@ XXX make precedence values available as constants"
                        args))
         (efun ()
           (let ((answer (call-to-java verb args)))
-            (setf (gethash key *parse-cache-hash*) answer)
+            (setf (hashref key *parse-cache-hash*) answer)
             answer)))))))
 
 #+(or)
@@ -1108,15 +1104,17 @@ XXX make precedence values available as constants"
           (with-standard-io-syntax
             (let ((*package* (find-package :e.elang.vm-node))) 
               (read stream)))
-        do (setf (gethash source *parse-cache-hash*) tree))
+        do (setf (hashref source *parse-cache-hash*) tree))
       (values))))
     
 (defun save-parse-cache (stream)
   (e. e.knot:+sys-trace+ |doing| 
     (format nil "Writing parse cache to ~A" (enough-namestring (pathname stream)))
     (efun ()
-      (let ((data (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
-                        collect (list source tree))))
+      (let ((data '()))
+        (map-generic-hash (lambda (source tree) 
+                            (push (list source tree) data))
+                          *parse-cache-hash*)
         (with-standard-io-syntax
           (let ((*package* (find-package :e.elang.vm-node)))
             (write data :stream stream))))

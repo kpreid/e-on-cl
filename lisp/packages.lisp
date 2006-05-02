@@ -411,8 +411,10 @@
 
 (cl:defpackage :e.elang.syntax
   (:nicknames :e.syntax)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node 
-        #+abcl :java)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node
+        #+abcl :java ; local parser (no cache)
+        #-abcl :net.hexapodia.hashtables ; for parse cache
+        )
   (:export
     +e-printer+
     
@@ -427,7 +429,10 @@
     
     :+prim-parser+
   ))
-  
+
+(when (member :abcl *features*)
+  (pushnew 'e.syntax::local-parser *features*))
+
 (e.util:defglobals
   e.elang.syntax:+prim-parser+
   e.elang.syntax:+e-printer+)
