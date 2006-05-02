@@ -265,6 +265,37 @@ Parentheses disable modPow form
 #           NounE. c
 #           NounE. d
 
+--- InterfaceExpr ---
+
+XXX more tests (this section was written to test guardless ParamDesc)
+
+? t("interface a { to b(c, d :e, _ :f, _) }")
+# stdout: InterfaceE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           null
+#           []
+#           []
+#           [] MessageDescE.
+#             
+#             b
+#             []
+#               ParamDescE.
+#                 c
+#                 null
+#               ParamDescE.
+#                 d
+#                 NounE. e
+#               ParamDescE.
+#                 null
+#                 NounE. f
+#               ParamDescE.
+#                 null
+#                 null
+#             null
+
 --- Miscellaneous ---
 
 ? t("a :b[c]")

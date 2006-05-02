@@ -345,6 +345,13 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            __makeProtocolDesc.makePair("", "a", __makeList.run(), __makeList.run(), __makeList.run())
   #        }).get(0)`
 
+  ? t("interface \"a\" { to b(c, d :e, _ :f, _) }")
+  # value: e`{
+  #            __makeProtocolDesc.run("", "a", __makeList.run(), __makeList.run(), __makeList.run({
+  #                __makeMessageDesc.run("", "b", __makeList.run(__makeParamDesc.run("c", null), __makeParamDesc.run("d", e), __makeParamDesc.run(null, f), __makeParamDesc.run(null, null)), null)
+  #            }))
+  #        }`
+
 'ListExpr'
 
   ? t("[]")

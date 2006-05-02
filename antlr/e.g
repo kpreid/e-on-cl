@@ -340,7 +340,7 @@ accumPlaceholder: "_" {##.setType(AccumPlaceholderExpr);} ;
 
 whenExpr:       "when"^ parenArgsList br "->"!  whenFn   {##.setType(WhenExpr);} ;
 
-whenFn:         objName params resultGuard body whenCatchers optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
+whenFn:         objName params optGuard body whenCatchers optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
 
 whenCatchers:   (catcher)+ {##=#([List],##);}
             |   pocket["easy-when"] {##=#([List],##);} ;
@@ -412,7 +412,7 @@ objectTail:     //(typeParams)?
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
-        |   params resultGuard fImplements body getPocket["easy-return"]
+        |   params optGuard fImplements body getPocket["easy-return"]
             {##=#([FunctionObject], ##);}
     ;
 
@@ -456,7 +456,7 @@ methodPredict:  doco ("to"|"method"|"on") ;
 
 method:         doco ( "method"^ methodTail {##.setType(EMethod);}
                      | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;
-methodTail:     optVerb params resultGuard body ;
+methodTail:     optVerb params optGuard body ;
 
 optVerb:        verb | {##=#([FunctionVerb]);} ;
 
@@ -471,7 +471,7 @@ optFinally:     "finally"! body
             ;
 
 // ("throws" guardList)? ;
-resultGuard:    ":"! guard | {##=#([Absent]);} ;
+optGuard:    ":"! guard | {##=#([Absent]);} ;
 
 guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
                                          // end with comma
@@ -502,12 +502,12 @@ iguards:        ("guards"! pattern)
 
 iscript:    "{"^ (imethod br)* "}"! {##.setType(List);} ;
 
-imethod:    doco ("to"^ | "method"^ | "on"^) optVerb mtypes resultGuard
+imethod:    doco ("to"^ | "method"^ | "on"^) optVerb mtypes optGuard
                  {##.setType(MessageDescExpr);}
             ;
 
-ptype:          justNoun (":"! guard)?    {##=#([ParamDescExpr],##);}
-            |   "_"      (":"! guard)?    {##=#([ParamDescExpr],##);}
+ptype:          (justNoun | "_" {##.setType(Absent);}) optGuard    
+                {##=#([ParamDescExpr],##);}
             ;
 typeList:   (ptype (","! typeList)?)? ;
 mtypes:     "("! typeList br ")"!   {##=#([List],##);} ;

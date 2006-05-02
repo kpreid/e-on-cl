@@ -733,12 +733,12 @@
 (define-node-class |ObjectTail| (|ENode|) ())
 
 (defemacro |ParamDescExpr| (|EExpr|)
-    ((|name| nil string)
-     (|optGuard| t |EExpr|))
+    ((|optName| nil (or null string))
+     (|optGuard| t (or null |EExpr|)))
     ()
   (mn '|CallExpr| (mn '|NounExpr| "__makeParamDesc")
                   "run"
-                  (mn '|LiteralExpr| |name|)
+                  (node-quote |optName|)
                   (or |optGuard| (mn '|NullExpr|))))
 
 (defemacro |PrefixExpr| (|EExpr|) ((|op| nil string)
