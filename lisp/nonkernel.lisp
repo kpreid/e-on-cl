@@ -226,7 +226,8 @@
 
 (defmethod expand-accum-body ((body |CallExpr|) accum-var)
   (destructuring-bind (recipient verb args) (node-visitor-arguments body)
-    (check-type (ref-shorten recipient) |AccumPlaceholderExpr|)
+    (setf recipient (ref-shorten recipient))
+    (check-type recipient |AccumPlaceholderExpr|)
     ;; XXX this mess is evidence we need a handy make-node-according-to-"visitor"-arguments function (visitor arguments == maker arguments)
     (mn '|UpdateExpr| (apply #'mn '|CallExpr| accum-var verb (coerce args 'list)))))
 
@@ -265,7 +266,8 @@
 
 (defmethod expand-accum-body ((body |BinaryExpr|) accum-var)
   (destructuring-bind (op first rest) (node-visitor-arguments body)
-    (check-type (ref-shorten first) |AccumPlaceholderExpr|)
+    (setf first (ref-shorten first))
+    (check-type first |AccumPlaceholderExpr|)
     (mn '|UpdateExpr| (mn '|BinaryExpr| op accum-var rest))))
 
 (defemacro |CoerceExpr| (|EExpr|) ((value t |EExpr|)

@@ -450,9 +450,10 @@ typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
 
 scriptPair:  "{"! methodList matcherList  "}"! ;
 
-methodList:     ( (methodPredict) => method br )* {##=#([List], ##);} ;
+methodList:     ( method br )* {##=#([List], ##);} ;
 matcherList:    ( matcher br )* {##=#([List], ##);} ;
-methodPredict:  doco ("to"|"method"|"on") ;
+
+// (not used) methodPredict:  doco ("to"|"method"|"on") ;
 
 method:         doco ( "method"^ methodTail {##.setType(EMethod);}
                      | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;

@@ -56,7 +56,8 @@
      (:file "compiler-seq"
             :depends-on ("compiler-base"))
      (:file "compiler-entry"
-            :depends-on ("compiler-base"))
+            :depends-on ("compiler-base" 
+                         "knot-base" #| for scopes |#))
      (:file "rune"
             :depends-on ("elib" "compiler-entry" "knot"))
      

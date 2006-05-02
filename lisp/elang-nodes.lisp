@@ -679,7 +679,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                (get-scope (node) (e. node |staticScope|)))
           (declare (ignorable (function :get) (function get-scope)))
           (let ((builder +the-make-static-scope+))
-          ,(transform scope-expr))))
+            (declare (ignorable builder))
+            ,(transform scope-expr))))
       (defmethod reduce-scopewise ((node ,specializer) builder)
         (flet ((:get (keyword) (funcall (opt-node-property-getter node keyword)))
                (get-scope (node) (reduce-scopewise node builder)))
@@ -856,7 +857,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                   `(%check-property-types node ejector ',rules)))
        (flet ((this-reject-usage (actual definer user)
                 (reject-definition-usage node ejector actual definer user)))
-         (declare (ignorable #'reject-usage))
+         (declare (ignorable #'this-reject-usage))
          ,@body))))
 
 (defun require-kernel-e (node ejector)
