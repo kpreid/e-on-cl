@@ -401,6 +401,11 @@ Plumbing
   ? __auditedBy(DeepFrozen, x)
   # value: false
   
+  Plumbing expressions can't have super '
+  ? def x extends y match msg {}
+  # problem: (unknown:1)@17: expecting "{", found 'match'
+  XXX will be 'syntax error', wording to change, gain file position info
+
 Alleged type
 
   ? /** object doc */
@@ -587,7 +592,7 @@ Trinary DefineExpr
   >     null,
   >     null), 
   >   null).eval(safeScope.with("y", "false").nestOuter())
-  # problem: kernel define expr may not use definitions from ejector expr (e`def y := true`) in pattern (epatt`x ? y`)
+  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`x ? y`) may not use definitions from its optEjectorExpr (e`def y := true`)>
 
 SlotExpr, SlotPattern, AssignExpr
 
@@ -836,7 +841,7 @@ Miscellaneous scoping
   ? { def x := 1; [{ def x := 2; x }, x] }
   # value: [2, 1]
   
-  ? { def x := 1; [def x := 2; x, x] }
+  ? { def x := 1; [( def x := 2; x ), x] }
   # problem: "x" already in scope
   
   ? { notOuterDefined + 1; def notOuterDefined := 2 }
@@ -852,10 +857,9 @@ Miscellaneous scoping
   ? {[outerDefined + 1, def outerDefined := 2]}
   # value: [45, 2]
   
-  XXX this is being rejected by the parser, but it really needs to be rejected at eval time as a constraint, so we should test it with explicit node construction (which usually goes in enode.updoc, but ???)
+  XXX this should be tested with explicit node construction
   ? { def x :x := 1 }
-  # problem: Failed: kernel definer cycle not allowed: x
-
+  # problem: kernel FinalPattern may not use its own noun (e`x`) in its guard (e`x`)
 
 XXX test perverse scoping cases:
   recursive defines pre-transform (raw-node-input case)

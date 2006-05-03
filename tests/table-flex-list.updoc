@@ -19,10 +19,10 @@
 ? [1, 2.0].diverge(float64)
 # value: [1.0, 2.0].diverge()
 
-? floatList == (floatList :<type:org.erights.e.elib.tables.FlexList>)
+? floatList == (floatList :(<type:org.erights.e.elib.tables.FlexList>))
 # value: true
 
-? floatList.snapshot() =~ x :<type:org.erights.e.elib.tables.FlexList>
+? floatList.snapshot() =~ x :(<type:org.erights.e.elib.tables.FlexList>)
 # value: false
 
 ? floatList[1] := 48

@@ -3,6 +3,7 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+pragma.enable("function-implements")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
@@ -15,7 +16,7 @@ def makeTermAuthor(SelflessStamp) {
     to audit(_, _) { return true }
   }
 
-  def printSeps implements DeepFrozen { to run(tw, args) {
+  def printSeps(tw, args) implements DeepFrozen {
     var sep := ""
     for arg in args { 
       tw.write(sep)
@@ -26,29 +27,29 @@ def makeTermAuthor(SelflessStamp) {
       }
       sep := ", "
     }
-  }}
+  }
   
   def magicPrintTable := [
-    makeAstroTag(null, ".bag.", nullOk) => def "$bagPrinter" implements DeepFrozen { to run(out, term) {
+    makeAstroTag(null, ".bag.", nullOk) => def "$bagPrinter"(out, term)  implements DeepFrozen {
       out.write("{")
       printSeps(out, term.getArgs())
       out.write("}")
-    }},
-    makeAstroTag(null, ".tuple.", nullOk) => def "$tuplePrinter" implements DeepFrozen { to run(out, term) {
+    },
+    makeAstroTag(null, ".tuple.", nullOk) => def "$tuplePrinter"(out, term)  implements DeepFrozen {
       out.write("[")
       printSeps(out, term.getArgs())
       out.write("]")
-    }},
-    makeAstroTag(null, ".attr.", nullOk) => def "$attrPrinter" implements DeepFrozen { to run(out, term) {
+    },
+    makeAstroTag(null, ".attr.", nullOk) => def "$attrPrinter"(out, term) implements DeepFrozen {
       def [attrBody] := term.getArgs() # XXX handle "wrong" number of args case
       out.print(attrBody.getTag().getTagName()) # XXX wrong: doesn't print data, for example
       out.write(": ")
       def [attrValue] := attrBody.getArgs()
       out.print(attrValue)
-    }},
+    },
   ]
 
-  def defaultTermPrint implements DeepFrozen { to run(tw, term) {
+  def defaultTermPrint(tw, term) implements DeepFrozen {
     def tag := term.getTag()
     def data := term.getData()
     def args := term.getArgs()
@@ -66,7 +67,7 @@ def makeTermAuthor(SelflessStamp) {
       printSeps(tw, args)
       tw.write(")")
     }
-  }}
+  }
   
   def makeTerm
   

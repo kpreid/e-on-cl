@@ -34,9 +34,10 @@
      (:file "extern"
             :depends-on ("elib" "sugar"))
      (:file "knot-base"
-            :depends-on ("elib" "sugar"))
+            :depends-on ("elib" "sugar"
+                         "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
      (:file "knot"
-            :depends-on ("knot-base" "extern"  
+            :depends-on ("knot-base" "extern" "elib-guts" "tables2"
                          "print" #| constructing global tracers |#))
      (:file "elang-nodes"
             :depends-on ("elib" 
@@ -44,8 +45,10 @@
                          "sugar" 
                          "elib-values"
                          "tables2"))
+     (:file "nonkernel"
+            :depends-on ("elang-nodes"))
      (:file "syntax"
-            :depends-on ("packages" "elang-nodes"))
+            :depends-on ("packages" "elang-nodes" "nonkernel"))
      (:file "compiler-base"
             :depends-on ("packages" 
                          "elang-nodes" 
@@ -53,9 +56,13 @@
      (:file "compiler-seq"
             :depends-on ("compiler-base"))
      (:file "compiler-entry"
-            :depends-on ("compiler-base"))
+            :depends-on ("compiler-base" 
+                         "knot-base" #| for scopes |#))
      (:file "rune"
-            :depends-on ("elib" "compiler-entry" "knot"))))))
+            :depends-on ("elib" "compiler-entry" "knot"))
+     
+     (:file "antlr-system"
+            :depends-on ("knot"))))))
 
 ;;; --- Auxiliary systems ---
 

@@ -174,7 +174,7 @@
                 backtrace nil)
           
           ;; must happen after vars are set, in case of syntax errors 
-          (let ((node (e.syntax:e-source-to-tree expr)))
+          (let ((node (e.syntax:parse-to-kernel expr)))
             (setf step-scope (e. node |staticScope|))
             (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
             #+#:debug (print (e. dead-names |getKeys|))
@@ -502,7 +502,7 @@
 (defun make-repl-handler ()
   (e-lambda "$replHandler" ()
     (:|begin| (step)
-      (e.syntax:e-source-to-tree step))
+      (e.syntax:parse-to-kernel step))
     (:|takeStreams| () nil)
     (:|answer/1| #'print-answer)
     (:|backtrace/1| (constantly nil))

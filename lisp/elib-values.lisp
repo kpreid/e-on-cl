@@ -176,14 +176,19 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; to have methods and a public maker eventually
 
+(defglobal +the-make-cons+ (e-lambda "$makeCons"
+    (:stamped +deep-frozen-stamp+)
+  (:|run/2| 'cons)))
+
 (def-vtable cons
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (e. e.syntax:+e-printer+ |printCons| tw this)))
-
-;(defmethod is-transparent-selfless (x cons)
-;  (declare (ignore x))
-;  t)
+    (e. e.syntax:+e-printer+ |printCons| tw this))
+  (:|__optUncall| (this)
+    (vector +the-make-cons+ "run" (vector (car this) (cdr this)))))
 
 ; --- Symbol ---
 

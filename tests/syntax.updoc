@@ -1,6 +1,8 @@
 # Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
+
 --- ePrinter ---
 
   ? def ePrinter := <import:org.erights.e.elang.syntax.ePrinter>
@@ -270,6 +272,15 @@ CdrPattern, ListPattern
   ? epatt`[car, cadr] + cddr`
   # value: epatt`[car, cadr] + cddr`
 
+Testing printing of nodes with no specific print code yet:
+
+  ? <import:org.cubik.cle.prim.parser>.run("{[a.run()]}")
+  # value: e`{
+  #            $<ListExpr [e`a.run()`]>$
+  #        }`
+  XXX these dollar signs are inappropriate
+  xxx this test will break as soon as ListExpr gets appropriate printing
+
 Precedence parenthesization tests
 
   ? e`((a) =~ b ? ((c) =~ d))`
@@ -340,13 +351,16 @@ Universal precedence-proper print-parenthesization tester:
   >     whole.welcome(ePrinter.makePrintENodeVisitor(tw))
   >     tw.close()
   >     escape fail {
-  >       def result := e__quasiParser.xTryParse(sb.snapshot(), fail)
+  >       def result := e__quasiParser.xTryParse(sb.snapshot(), fail).asKernelE()
   >       if (result != whole) {
-  >         # XXX should print kernel node structure instead of E-syntax
-  >         println(`difference: $whole ===> $result`)
+  >         println("difference: ")
+  >         dumpENodes(whole, stdout)
+  >         println("===>")
+  >         dumpENodes(result, stdout)
   >       }
   >     } catch p {
-  >       println(`parse error: $whole ===> ${sb.snapshot()} ($p)`)
+  >       println("parse error: ")
+  >       println(` ===> ${sb.snapshot()} ($p)`)
   >     }
   >   }
   > }
@@ -375,7 +389,30 @@ makeEParser
   # value: e`hi`
 
   ? escape fail { makeEParser.xTryParse("try", fail) } catch p { print(p) }
-  # stdout: syntax error: Unexpected EOF
+  # stdout: problem: (unknown:1)@4: expecting "{", found 'null'
+  XXX "found 'null'" is a bizarre error; fix
+
+Quasi-E-source issues
+
+  ? e`"$$@@"`.eval(safeScope)
+  # value: "$@"
+  
+  this syntax *could* be defined to mean something, but doesn't right now '
+  ? makeEParser.run("$a")
+  # problem: <TokenStreamException: A literal $ is not meaningful in E source.>
+  XXX wording to change
+  
+  ? makeEParser.run("${0}")
+  # problem: <TokenStreamException: A literal $ is not meaningful in E source.>
+
+  ? e__quasiParser.valueMaker("${0}")
+  # value: e`${0}`
+
+  ? e__quasiParser.valueMaker("${0}")
+  # value: e`${0}`
+
+  ? {def a := e`"a"`; e`$a + "$$b"`}.eval(safeScope)
+  # value: "a$b"
 
 XXX specific tests for e`` and epatt``
 XXX printing all nodes, parens, precedence

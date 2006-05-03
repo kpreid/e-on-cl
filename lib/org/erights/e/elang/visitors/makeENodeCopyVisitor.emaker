@@ -1,0 +1,51 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+pragma.enable("accumulator")
+
+def root := <import:org.cubik.cle.root>
+
+def makeENodeCopyVisitor implements DeepFrozen { # XXX write tests and documentation for this
+  to __printOn(out :TextWriter) {
+    out.print("<import:org.erights.e.elang.visitors.makeENodeCopyVisitor>")
+  }
+  
+  to run(self) {
+    def eNodeCopyVisitor extends root[self] {
+      to run(node) {
+        return switch (node) {
+          match list :List {
+            accum [] for x in list { _.with(self.run(x)) }
+          }
+          match ==null { null }
+          match _ {
+            node.welcome(self)
+          }
+        }
+      }
+    
+      match [`visit@_`, [optOriginal :notNull] + args] {
+        def maker := optOriginal.__optUncall()[0]
+        
+        def subnodeFlags := maker.getParameterSubnodeFlags()
+        
+        def left := [if (optOriginal != null) {optOriginal.getOptSpan()}]
+        # xxx preserve scope layout arg, if it ever becomes real
+        def right := [null]
+        
+        E.call(maker, "run",
+          accum left for i => arg in args { _.with(
+            if (subnodeFlags[i]) {
+              self.run(arg)
+            } else {
+              arg
+            }
+          )} + right
+        )
+      }
+    }
+    return eNodeCopyVisitor
+  }
+}

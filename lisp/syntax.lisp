@@ -3,10 +3,25 @@
 
 (in-package :e.elang.syntax)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (use-package :e.nonkernel)) ;; XXX remove once nonkernel package is defined before syntax package
+
 ; --- ---
 
 (defun is-identifier (text)
-  (query-to-java "isIdentifier" text))
+  #-e.syntax::local-parser
+  (query-to-java "isIdentifier" text)
+  #+e.syntax::local-parser
+  ;; XXX inadequate stub originally written to get the local-parser mode working
+  (or (string= text "")
+      (not (digit-char-p (aref text 0)))))
+
+(defun convention-uncapitalize (string)
+  (if (and (plusp (length string))
+           (string/= string (string-upcase string)))
+    (concatenate 'string (string (char-downcase (aref string 0))) 
+                         (subseq string 1))
+    string))
 
 ; --- Printing ---
 
@@ -219,6 +234,15 @@ XXX make precedence values available as constants"
                 (subprint-block (expr)
                   ; XXX call back to self once we have a self to preserve
                   (e. +e-printer+ |printExprBlock| tw expr))
+                (subprint-guard (expr &key (tw tw))
+                  "special rule for guard positions: NounExpr, GetExpr, or parenthesized"
+                  ;; XXX handle GetExpr (will be recursive)
+                  (if (typep (ref-shorten expr) '|NounExpr|)
+                    (subprint expr +precedence-atom+)
+                    (progn
+                      (e. tw |write| "(" #|)|#)
+                      (subprint expr +precedence-outer+)
+                      (e. tw |write| #|(|# ")"))))
                 (noun-pattern-printer (tag)
                   (lambda (opt-original noun-expr opt-guard-expr)
                     (declare (ignore opt-original))
@@ -226,7 +250,7 @@ XXX make precedence values available as constants"
                     (subprint noun-expr nil)
                     (when (ref-shorten opt-guard-expr)
                       (e. tw |print| " :")
-                      (subprint opt-guard-expr +precedence-in-guard+))))
+                      (subprint-guard opt-guard-expr))))
                 (quasi-printer (tag)
                   (lambda (opt-original index)
                     (declare (ignore opt-original))
@@ -419,7 +443,7 @@ XXX make precedence values available as constants"
               (when (ref-shorten opt-result-guard)
                 (e-lambda "syntax-printer" () (:|__printOn| (tw)
                   (e-coercef tw +the-text-writer-guard+)
-                  (subprint opt-result-guard +precedence-in-guard+ :tw tw)))))
+                  (subprint-guard opt-result-guard :tw tw)))))
             (e. tw |print| " ")
             (subprint-block body))
           
@@ -466,25 +490,57 @@ XXX make precedence values available as constants"
           (:|visitQuasiLiteralPatt/2| (quasi-printer "$"))
           (:|visitQuasiPatternPatt/2| (quasi-printer "@"))
           
-          ))))
+          (otherwise (mverb opt-original &rest args)
+            (check-type opt-original (not null))
+            (e. tw |write| "$<")
+            (e. tw |print| (subseq (unmangle-verb mverb) 5))
+            (loop with maker = (get (class-name (class-of opt-original)) 'static-maker)
+                  for subnode-flag across (e. maker |getParameterSubnodeFlags|)
+                  for sep = " " then ", "
+                  for sub in args
+                  do (e. tw |write| sep)
+                     (if (and (e-is-true subnode-flag) (typep sub '|ENode|))
+                       ;; XXX subprint doesn't handle nil/vector subnodes
+                       (subprint sub +precedence-atom+)
+                       (e. tw |quote| sub)))
+            (e. tw |write| ">$"))))))
   
   ))
 
 ; --- Parsing ---
 
-(defvar *parse-cache-hash* (make-hash-table :test #'equal))
+;; if we are using the local parser, this is unused because clrune has already
+;; set up the single Java process's classpath
+#-e.syntax::local-parser
+(defun compute-antlr-class-location ()
+  ;; xxx look into making this cleaner
+  (make-pathname
+    :name nil
+    :type nil
+    :version nil
+    :defaults (first (asdf:output-files (make-instance 'asdf:compile-op) 
+                                        (asdf:find-component
+                                          (asdf:find-system 
+                                              :e-on-cl.antlr-parser)
+                                          "e")))))
 
-(defvar *parser-process*)
+#-e.syntax::local-parser
+(progn
+  (defvar *parse-cache-hash* (make-generic-hashtable :test 'samep))
+  (defvar *parser-process*))
 
+#-e.syntax::local-parser
 (defun start-parser ()
   (assert (not (boundp '*parser-process*)))
   ; XXX pipe this through common tracing architecture
   (e. e.knot:+sys-trace+ |run| "starting Java-E parsing subprocess")
+  (asdf:operate 'asdf:compile-op :e-on-cl.antlr-parser)
   (setf *parser-process* (e.util:run-program
     "/usr/bin/env" ;; XXX platform assumption - we should have a way of telling our portable-run-program to "search" with unspecified means
     (list "rune"
           "-J-XX:ThreadStackSize=10240"
           "-cpa" (native-namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
+          "-cpa" (namestring (compute-antlr-class-location))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
           "-") 
@@ -493,23 +549,22 @@ XXX make precedence values available as constants"
     :error t
     :wait nil))
   (format (e.util:external-process-input-stream *parser-process*)
-        "def parseEToSExpression := <import:parseEToSExpression>~%")
+          "def parseEToSExpression := <import:parseEToSExpression>(<unsafe>)~%")
   (values))
 
-; disabling this for now because starting the parser at load time introduces dependencies (particularly, e.extern:+standard-external-format-common-name+ being defined first)
-; ; XXX stubbing out the parser for systems where we haven't made it work yet
-; #-(or abcl clisp) (start-parser)
-
+#-e.syntax::local-parser
 (defun kill-parser ()
   (when (boundp '*parser-process*)
     (close (e.util:external-process-input-stream *parser-process*))
     (close (e.util:external-process-output-stream *parser-process*))
     (makunbound '*parser-process*)))
 
+#-e.syntax::local-parser
 (defun ensure-parser ()
   (unless (boundp '*parser-process*)
     (start-parser)))
 
+#-e.syntax::local-parser
 (defun build-nodes (tree)
   (if (consp tree)
     (case (car tree)
@@ -549,10 +604,13 @@ XXX make precedence values available as constants"
       (t 
         (error "~A" s)))))
 
+#-e.syntax::local-parser
 (defvar *parse-counter* 0)
 
+#-e.syntax::local-parser
 (define-condition link-out-of-sync-error (error) ())
 
+#-e.syntax::local-parser
 (defun call-to-java (verb args &key trying-again)
   (ensure-parser)
 
@@ -580,20 +638,24 @@ XXX make precedence values available as constants"
         (progn
           (call-to-java verb args :trying-again t))))))
 
+#-e.syntax::local-parser
 (defun query-to-java (verb &rest args)
   "Memoized version of call-to-java"
   
-  ;; Ensure that the arguments are acceptable for passing, and printable under *print-readably* so they won't hose the parse cache.
-  ;; xxx discarding twine information: we can't pass it currently anyway, and we would need to store it in the parse cache
-  (setf args (mapcar (lambda (arg)
-                       (e-coercef arg '(or string e-boolean))
-                       (if (stringp arg)
-                         (coerce arg '(vector character))
-                         arg))
-                     args))
+  ;; This does two things:
+  ;; 1. Only objects which print parseably in E may pass this point, since the objects are passed by sending (e-print object) over a pipe.
+  ;; 2. Ensures that the arguments are printable under *print-readably*, and therefore won't hose the parse cache. In particular, strings must be general strings, not base-strings.
+  (labels ((convert (x) (e-coercef x '(or string e-boolean null vector integer float64))
+                        (typecase x
+                          (string
+                            (coerce x '(vector character)))
+                          (vector
+                            (map 'vector #'convert x))
+                          (t x))))
+    (setf args (mapcar #'convert args)))
   
   (let* ((key (list verb args)))
-    (multiple-value-bind (cached present-p) (gethash key *parse-cache-hash*)
+    (multiple-value-bind (cached present-p) (hashref key *parse-cache-hash*)
     (if present-p
       cached
       (e. e.knot:+sys-trace+ |doing|
@@ -602,46 +664,457 @@ XXX make precedence values available as constants"
                        args))
         (efun ()
           (let ((answer (call-to-java verb args)))
-            (setf (gethash key *parse-cache-hash*) answer)
+            (setf (hashref key *parse-cache-hash*) answer)
             answer)))))))
 
+#+(or)
 (defun parse-to-expr (source)
   (query-to-java "run" source))
 
-(defun e-source-to-tree (source &key syntax-ejector
-    &aux (tree-expr (parse-to-expr source)))
-  (if (eql (first tree-expr) 'error)
-    (error-from-e-error-string syntax-ejector (second tree-expr))
-    (build-nodes tree-expr)))
+#+(or)
+(defun e-source-to-tree (source &key syntax-ejector quasi-info)
+  (build-nodes (query-or-die syntax-ejector "run" source quasi-info)))
+
+#-e.syntax::local-parser
+(defun query-or-die (ejector &rest msg)
+  (let ((result (apply #'query-to-java msg)))
+    (if (eql (first result) 'error)
+      (error-from-e-error-string ejector (second result))
+      result)))
+
+(defun parse-to-kernel (source &rest options)
+  (kernelize (apply #'e-source-to-tree source options)))
+
+(defun e-source-to-tree (source &key syntax-ejector pattern quasi-info)
+  (let ((location
+          (let ((span (e. source |getOptSpan|)))
+            (if span
+              (e. span |getUri|)
+              "unknown"))))
+    (antlr-root 
+      #-e.syntax::local-parser
+        (query-or-die syntax-ejector "antlrParse" location source (as-e-boolean pattern) quasi-info)
+      #+e.syntax::local-parser
+        (handler-case
+          (antlr-parse location source pattern nil)
+          (error (c)
+            (eject-or-ethrow syntax-ejector c))))))
+
+(declaim (inline e-coercer))
+(defun e-coercer (type-or-guard)
+  (lambda (x) (e-coerce x type-or-guard)))
+
+(defun map-e-list (function list)
+  (map 'vector function (e-coerce list 'vector)))
+
+(defun mapper-e-list (function)
+  (lambda (x) (map-e-list function x)))
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
-  (:|run| (source syntax-ejector)
-    (e-source-to-tree source :syntax-ejector syntax-ejector))
+  (:|run| (source quasi-info syntax-ejector)
+    (e-coercef source 'twine)
+    (setf quasi-info (ref-shorten quasi-info))
+    (when quasi-info
+      ;; vector of vectors of integers ([valueHoles, patternHoles])
+      (setf quasi-info 
+        (map-e-list (mapper-e-list (e-coercer 'integer)) 
+                    quasi-info)))
+    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector))
   (:|run| (source)
-    (e-source-to-tree source))))
+    (e-coercef source 'twine)
+    (e-source-to-tree source))
+  (:|pattern| (source quasi-info syntax-ejector)
+    (e-coercef source 'twine)
+    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t))))
+
+;;; --- Antlr parser support ---
+
+#+e.syntax::local-parser
+(progn
+  (defun jvector (element-type &rest elements)
+    (jnew-array-from-array element-type (coerce elements 'vector)))
+  (declaim (ftype function antlr-parse))
+  (defglobal +ast-get-type+     (jmethod "antlr.collections.AST" "getType"))
+  (defglobal +ast-get-text+     (jmethod "antlr.collections.AST" "getText"))
+  (defglobal +ast-first-child+  (jmethod "antlr.collections.AST" "getFirstChild"))
+  (defglobal +ast-next-sibling+ (jmethod "antlr.collections.AST" "getNextSibling"))
+  (defglobal +token-names+ (jfield-raw #|jfield did an incomplete translation|# "EParser" "_tokenNames"))
+  (defun nodes-to-list (first-node)
+    (loop for c = first-node
+                then (jcall +ast-next-sibling+ c)
+          while c
+          collect c)))
+
+#+e.syntax::local-parser
+(let* ((c-ealexer (jconstructor "EALexer" "java.io.Reader"))
+       (c-quasi-lexer (jconstructor "QuasiLexer" "antlr.LexerSharedInputState"))
+       (c-string-reader (jconstructor "java.io.StringReader" "java.lang.String"))
+       (get-input-state (jmethod "antlr.CharScanner" "getInputState"))
+       (c-token-multi-buffer (jconstructor "antlr.TokenMultiBuffer" "[Ljava.lang.String;" #|]|# "[Lantlr.TokenStream;" #|]|#))
+       (set-selector (jmethod "antlr.SwitchingLexer" "setSelector" "antlr.TokenMultiBuffer"))
+       (set-filename (jmethod "antlr.CharScanner" "setFilename" "java.lang.String"))
+       (c-e-parser (jconstructor "EParser" "antlr.TokenBuffer"))
+       (parser-set-filename (jmethod "antlr.Parser" "setFilename" "java.lang.String"))
+       (e-parser-set-pocket (jmethod "EParser" "setPocket" "antlr.Token" "java.lang.String"))
+       (c-common-token (jconstructor "antlr.CommonToken" "int" "java.lang.String"))
+       (get-ast (jmethod "antlr.Parser" "getAST"))
+       (plumbing-token (jnew c-common-token -1 "plumbing"))
+       (pattern-parse-method (jmethod "EParser" "pattern"))
+       (expr-parse-method (jmethod "EParser" "start")))
+  (defun antlr-parse (fname text is-pattern is-quasi)
+    (let* ((elexer (jnew c-ealexer (jnew c-string-reader text)))
+           (qlexer (jnew c-quasi-lexer (jcall get-input-state elexer)))
+           (tb (jnew c-token-multi-buffer
+                     (jvector "java.lang.String" "e" "quasi")
+                     (jvector "antlr.TokenStream" elexer qlexer))))
+      (dolist (x (list elexer qlexer))
+        (jcall set-selector x tb)
+        (jcall set-filename x fname))
+      (let ((parser (jnew c-e-parser tb)))
+        (jcall parser-set-filename parser fname)
+        (jcall e-parser-set-pocket parser plumbing-token "enable")
+        (jcall (if is-pattern
+                 pattern-parse-method
+                 expr-parse-method)
+               parser)
+        (nodes-to-list (jcall get-ast parser))))))
+
+#-e.syntax::local-parser
+(defmacro ast-node-bind ((tag-var text-var children-var) node-var &body body)
+  `(destructuring-bind ((,tag-var ,text-var) &rest ,children-var) ,node-var
+     ,@body))
+
+#+e.syntax::local-parser
+(defmacro ast-node-bind ((tag-var text-var children-var) node-var &body body)
+  `(let* ((,tag-var  (intern (jarray-ref +token-names+
+                                         (jcall +ast-get-type+ ,node-var))
+                             :e.grammar))
+          (,text-var (jcall +ast-get-text+ ,node-var))
+          (,children-var (nodes-to-list (jcall +ast-first-child+ ,node-var))))
+     ,@body))
+
+(defun mn (name &rest elements)
+  (make-instance name :elements elements))
+
+(defun is-legitimate-toplevel-node (node)
+  (if (typep node '(or |EExpr| |Pattern|))
+    node
+    (error "Non-expression/pattern ~S leaked out of antlr builder" node)))
+
+(defun antlr-root (ast-nodes)
+  (let ((enodes (map 'list #'is-legitimate-toplevel-node (map 'vector #'build-antlr-nodes ast-nodes))))
+    (etypecase (length enodes)
+      ((integer 1 1)
+        (first enodes))
+      ((integer 2)  
+        (apply #'mn '|SeqExpr| enodes)))))
+
+(defun build-antlr-nodes (ast-node &key path enclosing-doc-comment)
+  (ast-node-bind (tag text in-children) ast-node
+    (let* ((next-path (cons ast-node path))
+           (out-children 
+             (unless (eql tag 'e.grammar::|DocComment|)
+               (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
+                       in-children))))
+     (labels ((make-from-tag (&rest elements)
+                (make-instance (or (find-symbol (symbol-name tag) :e.kernel)
+                                   (find-symbol (symbol-name tag) :e.nonkernel))
+                               :elements elements))
+              (pass () (apply #'make-from-tag out-children)))
+      (case tag
+        ;; -- no special treatment --
+        ((e.grammar::|AssignExpr|
+          e.grammar::|AccumExpr|
+          e.grammar::|AccumPlaceholderExpr|
+          e.grammar::|CallExpr|
+          e.grammar::|CoerceExpr|
+          e.grammar::|CurryExpr|
+          e.grammar::|ForExpr|
+          e.grammar::|ForwardExpr|
+          e.grammar::|FunctionExpr|
+          e.grammar::|FunCallExpr|
+          e.grammar::|FunSendExpr|
+          e.grammar::|GetExpr|
+          e.grammar::|HideExpr|
+          e.grammar::|IfExpr|
+          e.grammar::|If1Expr|
+          e.grammar::|ListExpr|
+          e.grammar::|LiteralExpr|
+          e.grammar::|MatchBindExpr|
+          e.grammar::|MessageDescExpr|
+          e.grammar::|MetaContextExpr|
+          e.grammar::|MetaStateExpr|
+          e.grammar::|MismatchExpr|
+          e.grammar::|ModPowExpr|
+          e.grammar::|NKAssignExpr|
+          e.grammar::|PropertyExpr|
+          e.grammar::|PropertySlotExpr|
+          e.grammar::|QuasiExpr|
+          e.grammar::|QuasiExprHole|
+          e.grammar::|QuasiParserExpr|
+          e.grammar::|QuasiPatternHole|
+          e.grammar::|SendExpr|
+          e.grammar::|SlotExpr|
+          e.grammar::|SwitchExpr|
+          e.grammar::|ParamDescExpr|
+          e.grammar::|URIExpr|
+          e.grammar::|WhenExpr|
+          e.grammar::|WhenFnExpr|
+          e.grammar::|WhileExpr|
+          e.grammar::|MapPattern|
+          e.grammar::|MapPatternAssoc|
+          e.grammar::|MapPatternImport|
+          e.grammar::|MapPatternOptional|
+          e.grammar::|MapPatternRequired|
+          e.grammar::|ListPattern|
+          e.grammar::|QuasiPattern|
+          e.grammar::|SuchThatPattern|
+          e.grammar::|TailPattern|
+          e.grammar::|EMethod|
+          e.grammar::|ETo|
+          e.grammar::|EMatcher|
+          e.grammar::|FunctionObject|
+          e.grammar::|MethodObject|
+          e.grammar::|PlumbingObject|
+          
+          e.grammar::|QuasiLiteralExpr|
+          e.grammar::|QuasiLiteralPattern|
+          e.grammar::|QuasiPatternExpr|
+          e.grammar::|QuasiPatternPattern|)
+          (pass))
+      
+        ;; -- misc. leaves and 'special' nodes --
+        ((e.grammar::|IDENT|) 
+          (assert (null out-children))
+          text)
+        ((e.grammar::|DOC_COMMENT|) 
+          (assert (null out-children))
+          ; XXX the lexer should do this stripping
+          (if (string= text "")
+            ""
+            (string-trim " 	
+" (subseq text 3 (- (length text) 2)))))
+        ((e.grammar::|DocComment|) 
+          (destructuring-bind (comment-node body) in-children
+            (build-antlr-nodes body 
+              :path next-path 
+              :enclosing-doc-comment (build-antlr-nodes comment-node
+                                       :path next-path))))
+        ((e.grammar::|INT|) 
+          (assert (null out-children))
+          (let ((*read-eval* nil))
+            (read-from-string text)))
+        ((e.grammar::|HEX|)
+          (assert (null out-children))
+          (let ((*read-eval* nil)
+                (*read-base* 16))
+            ;; XXX some input validation wouldn't hurt here
+            (read-from-string text)))
+        ((e.grammar::|FLOAT64|) 
+          (assert (null out-children))
+          (let ((*read-default-float-format* 'double-float)
+                (*read-eval* nil)) 
+            ;; this should be safe because the parser's already checked it for float syntax
+            ;; XXX implement actual E float syntax
+            (read-from-string text)))
+        ((e.grammar::|STRING|)
+          (assert (null out-children))
+          text)
+        ((e.grammar::|CHAR_LITERAL|) 
+          (assert (null out-children))
+          (destructuring-bind (character) (coerce text 'list)
+            character))
+        ((e.grammar::|URI|) 
+          (assert (null out-children))
+          text)
+        (e.grammar::|Absent|
+          (assert (null out-children))
+          nil)
+        (e.grammar::|True|
+          (assert (null out-children))
+          +e-true+)
+        (e.grammar::|False|
+          (assert (null out-children))
+          +e-false+)
+        (e.grammar::|FunctionVerb|
+          (assert (null out-children))
+          ;; XXX should be handled by the expansion layer instead
+          "run")
+        (e.grammar::|URIGetter| 
+          (assert (null out-children))
+          (cons tag text))
+
+        ;; -- special-purpose branches ---
+        ((e.grammar::|List| e.grammar::|Implements|)
+          (coerce out-children 'vector))
+        (e.grammar::|Extends|
+          (destructuring-bind (&optional extends) out-children
+            extends))
+        (e.grammar::|"catch"| 
+          (destructuring-bind (pattern body) out-children
+            (mn '|EMatcher| pattern body)))
+        (e.grammar::|Assoc|
+          (list* 'assoc out-children))
+        (e.grammar::|Export|
+          ;; XXX kpreid expects this to go away by handling MapExpr the same way as MapPattern
+          (list* 'export out-children))
+        
+        ;; -- node type de-confusion --  
+        (e.grammar::|UpdateExpr|
+          (mn '|UpdateExpr| 
+            (destructuring-bind (target verboid &rest args) out-children
+              (etypecase verboid
+                ((cons (eql update-op)) (mn '|BinaryExpr| (cdr verboid) target (coerce args 'vector)))
+                (string (apply #'mn '|CallExpr| target verboid args))))))
+        
+        ;; -- operator handling --        
+        (e.grammar::|PrefixExpr|
+          (destructuring-bind (op arg) out-children
+            (check-type op (cons (eql op) string))
+            (mn '|PrefixExpr| (cdr op) arg)))
+        ((e.grammar::|BinaryExpr|)
+          (destructuring-bind (left &rest rights) out-children
+            ;; GRUMBLE: either .., ..! should be marked as RangeExpr by the parser or CompareExpr should be another kind of BinaryExpr
+            (mn '|BinaryExpr| text left (coerce rights 'vector))))
+
+        ;; -- text introduction --
+        ((e.grammar::|CompareExpr| 
+          e.grammar::|ConditionalExpr| 
+          e.grammar::|ExitExpr|)
+          (apply #'make-from-tag text out-children))
+
+        ;; -- doc-comment introduction --
+        ((e.grammar::|ThunkExpr| e.grammar::|ObjectHeadExpr|)
+          (apply #'make-from-tag (or enclosing-doc-comment "") out-children))
+
+        ;; -- de-optioning --
+        ((e.grammar::|IgnorePattern|)
+          (destructuring-bind (&optional guard) out-children
+            (if guard
+              #+(or) (mn '|AcceptsPattern|)
+              (error "reserved syntax: anon guard") ;; XXX source position in error
+              (mn '|IgnorePattern|)))) 
+        (e.grammar::|DefrecExpr|
+          (destructuring-bind (l r &optional ejector) out-children
+            (mn '|DefrecExpr| l r ejector)))
+        (e.grammar::|EscapeExpr|
+          (destructuring-bind (patt body &optional catcher) out-children
+            (mn '|EscapeExpr| 
+              patt body 
+              (when catcher (e. catcher |getPattern|)) 
+              (when catcher (e. catcher |getBody|)))))
+        ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
+          (destructuring-bind (noun &optional guard) out-children
+            (make-from-tag noun guard)))
+
+        ;; -- negated-operator introduction --
+        ((e.grammar::|SameExpr|)
+          (destructuring-bind (left right) out-children
+            (mn '|SameExpr| left right (ecase (find-symbol text :keyword)
+                                         (:!= +e-true+)
+                                         (:== +e-false+)))))
+        ((e.grammar::|SamePattern|)
+          (destructuring-bind (value) out-children
+            (mn '|SamePattern| value (ecase (find-symbol text :keyword)
+                                       (:!= +e-true+)
+                                       (:== +e-false+)))))
+
+        ;; -- other --
+        (e.grammar::|SeqExpr|
+          ;; XXX this is more like an expansion issue
+          (if (null out-children)
+            (mn '|NullExpr|)
+            (apply #'mn '|SeqExpr| out-children)))
+        (e.grammar::|NounExpr|
+          (destructuring-bind (noun) out-children
+            (etypecase noun
+              (string (mn '|NounExpr| noun))
+              ((cons (eql e.grammar::|URIGetter|) t)
+                (mn '|URISchemeExpr| (cdr noun))))))
+        (e.grammar::|MapExpr|
+          ;; needs processing of its children
+          (apply #'make-from-tag
+            (loop for item in out-children collect
+                  ;; XXX the expander should be doing most of this instead
+                    (etypecase item
+                      ((cons (eql assoc) (cons t (cons t null)))
+                        (destructuring-bind (key value) (rest item)
+                          (mn '|ListExpr| key value)))
+                      ((cons (eql export) (cons t null))
+                        (destructuring-bind (key-value) (rest item)
+                          (mn '|ListExpr|
+                            (mn '|LiteralExpr|
+                              (etypecase key-value
+                                (|NounExpr| (e. key-value |getName|))
+                                (|SlotExpr| (format nil "&~A" (e. (e. key-value |getNoun|) |getName|)))))
+                            key-value)))
+                      (e.nonkernel.impl::|MapPatternPart|
+                        item)))))
+        (e.grammar::|TryExpr|
+          (destructuring-bind (expr &rest stuff) out-children
+            (loop for thing in stuff do
+              (cond 
+                ((typep thing '|EMatcher|)
+                  (setf expr (mn '|CatchExpr| expr (e. thing |getPattern|) (e. thing |getBody|))))
+                ((typep thing '|EExpr|)
+                  ;; GRUMBLE: this is a finally block, and it isn't marked
+                  (setf expr (mn '|FinallyExpr| expr thing)))
+                (t
+                  (error "unexpected TryExpr element: ~S" thing))))
+            expr))
+        ((e.grammar::|InterfaceExpr|)
+          (destructuring-bind (name &rest rest) out-children
+            (apply #'mn '|InterfaceExpr| 
+              (or enclosing-doc-comment "")
+              (if (typep name 'string)
+                (mn '|LiteralExpr| name)
+                name)
+              rest)))
+
+        ;; -- quasi stuff --
+        ((e.grammar::|QUASIBODY|) 
+          (assert (null out-children))
+          ;; XXX parser or this level needs to unescape quasi syntax escapes
+          (mn '|QuasiText| text))
+        ((e.grammar::|QuasiLiteralExpr|)
+          (apply #'mn '|QuasiExpr| out-children))
+        
+        (otherwise
+          (cond
+            ((and (string= (aref (symbol-name tag) 0) "\"") 
+                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 2)) "=")
+                  (null out-children))
+              (cons 'update-op (subseq text 0 (1- (length text)))))
+            ((and (string= (aref (symbol-name tag) 0) "\"") 
+                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 1)) "\"")
+                  (null out-children))
+              (cons 'op text))
+            (t (error "don't know what to do with ~S <- ~A" ast-node (write-to-string path :length 5))))))))))
 
 ; --- Parse cache files ---
  
 (defun load-parse-cache (stream)
+  ; XXX options to disable this output
   (e. e.knot:+sys-trace+ |doing| 
     (format nil "Loading parse cache from ~A" (enough-namestring (pathname stream)))
     (efun ()
       (loop
         for (source tree) in
           (with-standard-io-syntax
-            (let ((*package* (find-package :e.elang.vm-node))
-                  (*read-eval* nil)) 
+            (let ((*package* (find-package :e.elang.vm-node))) 
               (read stream)))
-        do (setf (gethash source *parse-cache-hash*) tree))
+        do (setf (hashref source *parse-cache-hash*) tree))
       (values))))
     
 (defun save-parse-cache (stream)
   (e. e.knot:+sys-trace+ |doing| 
     (format nil "Writing parse cache to ~A" (enough-namestring (pathname stream)))
     (efun ()
-      (let ((data (loop for source being each hash-key of *parse-cache-hash* using (hash-value tree)
-                        collect (list source tree))))
+      (let ((data '()))
+        (map-generic-hash (lambda (source tree) 
+                            (push (list source tree) data))
+                          *parse-cache-hash*)
         (with-standard-io-syntax
           (let ((*package* (find-package :e.elang.vm-node)))
             (write data :stream stream))))

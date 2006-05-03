@@ -558,6 +558,13 @@ If there is no current vat at initialization time, captures the current vat at t
 (defun top-loop ()
   (runner-loop *runner*))
 
+(defvar *exercise-reffiness* nil
+  "Set this true to test for code which is inappropriately sensitive to the presence of forwarding refs, by placing them around each argument to methods written in Lisp.")
+
+(defun reffify-args (args)
+  "See *EXERCISE-REFFINESS*."
+  (mapcar (lambda (x) (make-instance 'forwarding-ref :target x)) args))
+
 ; --- Type description objects ---
 
 ; These are defined early here so that the classes are available for use in the various __getAllegedType implementations, some of which construct the type description at macroexpansion time.
@@ -1042,13 +1049,6 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   (unless (gethash type *vtable-message-types-cache*)
     (setf (gethash type *vtable-message-types-cache*)
       (vtable-collect-message-types instance type))))
-
-(defvar *exercise-reffiness* nil
-  "Set this true to test for code which is inappropriately sensitive to the presence of forwarding refs, by placing them around each argument to methods written in Lisp.")
-
-(defun reffify-args (args)
-  "See *EXERCISE-REFFINESS*."
-  (mapcar (lambda (x) (make-instance 'forwarding-ref :target x)) args))
 
 (defmacro def-vtable (type-spec &body smethods
     &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))

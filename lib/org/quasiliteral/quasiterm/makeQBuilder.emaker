@@ -9,6 +9,7 @@ pragma.disable("explicit-result-guard")
 
 pragma.enable("accumulator")
 pragma.enable("trinary-define")
+pragma.enable("function-implements")
 
 #def &term__quasiParser0 := <elib:slot.makeLazySlot>(thunk {
 #  makeQBuilder(null)
@@ -37,28 +38,27 @@ def memoize := <import:org.cubik.cle.memoize>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 def root := <import:org.cubik.cle.root>
 
-def qtPrint implements DeepFrozen { to run(tw :TextWriter, what :QAstroArg) {
+def qtPrint(tw :TextWriter, what :QAstroArg) implements DeepFrozen {
   tw.write("qterm`")
   what.termPrint(tw)
   tw.write("`")
-}}
+}
 
 def EMPTY_INDEX := []
 
-def multiPut implements DeepFrozen {
- /**
-  * Given a multi-dimensional list and an index path, put newValue at that
-  * position in the list.
-  * <p/>
-  * For example, if 'bindings' is [['a','b'],['c','d','e']] diverge(),
-  * 'holeNum' is 1, 'index' is [2], and 'newValue' is 'x', then the 'e'
-  * should be replaced with 'x', since it's at list[1][2]. If any index
-  * step is out of bounds, the corresponding list is grown to include it
-  * (see {@link FlexList#ensureSize(int)} and null is returned.
-  * Alternatively, if an old value is being overwritten, then that old
-  * value is also returned.
-  */
- to run(bindings, holeNum :int, indexes :EList, newValue) {
+/**
+ * Given a multi-dimensional list and an index path, put newValue at that
+ * position in the list.
+ * <p/>
+ * For example, if 'bindings' is [['a','b'],['c','d','e']] diverge(),
+ * 'holeNum' is 1, 'index' is [2], and 'newValue' is 'x', then the 'e'
+ * should be replaced with 'x', since it's at list[1][2]. If any index
+ * step is out of bounds, the corresponding list is grown to include it
+ * (see {@link FlexList#ensureSize(int)} and null is returned.
+ * Alternatively, if an old value is being overwritten, then that old
+ * value is also returned.
+ */
+def multiPut(bindings, holeNum :int, indexes :EList, newValue) implements DeepFrozen {
   # XXX blindly copied
   var list := bindings
   var dest := holeNum
@@ -84,22 +84,21 @@ def multiPut implements DeepFrozen {
   list.ensureSize(dest + 1)
   list[dest] := newValue
   return result
-}}
+}
 
-def multiGet implements DeepFrozen {
- /**
-  * Given a multi-dimensional list and an index path, retrieve the
-  * corresponding element of the list.
-  * 
-  * For example, if 'args' is [['a','b'],['c','d','e']], 'holeNum' is 1,
-  * 'index' is [2,3], and 'repeat' is true, then the answer should be
-  * 'e', since it's at args[1][2], and the repeat flag allows us to ignore
-  * the 3 when we find that 'e' isn't a list. If 'repeat' had been false,
-  * the presence of an additional step on the index path would have caused
-  * an exception to be thrown. In either case, if an index step is out of
-  * bounds, an exception is thrown regardless of the value of 'repeat'.
-  */
- to run(args :List, holeNum :int, indexes :EList, repeat :boolean) {
+/**
+ * Given a multi-dimensional list and an index path, retrieve the
+ * corresponding element of the list.
+ * 
+ * For example, if 'args' is [['a','b'],['c','d','e']], 'holeNum' is 1,
+ * 'index' is [2,3], and 'repeat' is true, then the answer should be
+ * 'e', since it's at args[1][2], and the repeat flag allows us to ignore
+ * the 3 when we find that 'e' isn't a list. If 'repeat' had been false,
+ * the presence of an additional step on the index path would have caused
+ * an exception to be thrown. In either case, if an index step is out of
+ * bounds, an exception is thrown regardless of the value of 'repeat'.
+ */
+def multiGet(args :List, holeNum :int, indexes :EList, repeat :boolean) implements DeepFrozen {
     # XXX blindly copied
     var result := args[holeNum]
     for i => index in indexes {
@@ -114,10 +113,9 @@ def multiGet implements DeepFrozen {
       result := list[index]
     }
     return result
-}}
+}
 
-def inBounds implements DeepFrozen {
- to run(num :int, quant :char) :boolean {
+def inBounds(num :int, quant :char) :boolean implements DeepFrozen {
   return \
     switch (quant) {
       match =='?' { num == 0 || num == 1 }
@@ -125,10 +123,10 @@ def inBounds implements DeepFrozen {
       match =='*' { num >= 0 }
       match _ { throw("Must be '?', '+', or '*': " + quant) }
     }
-}}
+}
 
 
-def _make implements DeepFrozen { to run(astroBuilder) {
+def _make(astroBuilder) implements DeepFrozen {
 
   def qBuilder
 
@@ -142,8 +140,7 @@ def _make implements DeepFrozen { to run(astroBuilder) {
                                           ["BAstroArg" => QAstroArg,
                                            ])
   
-  def makeBaseQAstro implements DeepFrozen {
-   to run(self) {
+  def makeBaseQAstro(self) implements DeepFrozen {
     return def baseQAstro extends root[self] {
       # XXX blindly imitating EoJ. review after I understand this
       to matchBind(args :List, specimen, ejector) {
@@ -157,17 +154,15 @@ def _make implements DeepFrozen { to run(astroBuilder) {
         }
       }
     }
-  }}
+  }
 
-  def leafTag implements DeepFrozen {
-   to run(tagName :String, optSpan :nullOk[SourceSpan]) :Astro {
+  def leafTag(tagName :String, optSpan :nullOk[SourceSpan]) :Astro implements DeepFrozen {
     # XXX componentized tag names
     def tag :AstroTag := astroBuilder.getSchema().obtainTagForName(tagName)
     return astroBuilder.leafTag(tag, optSpan)
-  }}
+  }
 
-  def optCoerce implements DeepFrozen {
-   to run(termoid, isFunctorHole :boolean, optTag :nullOk[AstroTag]) {
+  def optCoerce(termoid, isFunctorHole :boolean, optTag :nullOk[AstroTag]) implements DeepFrozen {
     # XXX copied blindly, review. At the very least, it should be the astroBuilder's business how data types are coerced.
     var result :Astro := null
     switch (termoid) {
@@ -214,10 +209,9 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       return null
     }
     return result
-  }}
+  }
 
-  def makeLeafTagOrData implements DeepFrozen {
-    to run(optTag :nullOk[AstroTag], inputData, optSpan) {
+  def makeLeafTagOrData(optTag :nullOk[AstroTag], inputData, optSpan) implements DeepFrozen {
       def [tag, data] := 
         # ewwww
         if (optTag != null) { 
@@ -302,7 +296,7 @@ def _make implements DeepFrozen { to run(astroBuilder) {
       }
     }
     return quasiFunctor    
-  }}
+  }
 
   bind qBuilder := def "$qBuilder" extends baseBuilder implements EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
     method __optSealedDispatch(brand) :any {
@@ -673,15 +667,15 @@ def _make implements DeepFrozen { to run(astroBuilder) {
   
   
   return qBuilder
-}}
+}
 
 def makeQBuilder implements DeepFrozen {
   to getTerm__quasiParser() {
     def qBuilder := _make(<import:org.quasiliteral.term.makeTermBuilder>())
     def qparse := memoize({
-      def "$qparse" implements DeepFrozen { to run(template :String) {
+      def "$qparse"(template :String) implements DeepFrozen {
         return makeTermParser(qBuilder).parseText(template.asStream())
-      }}
+      }
     })
     
     return def "$term__quasiParser" implements DeepFrozen {

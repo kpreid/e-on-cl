@@ -111,7 +111,7 @@
       it is compiled into."
   (assert (= 1 (length args)))
   (establish-vat :label "rune --translate toplevel")
-  (print (e.elang:get-translation (e.syntax:e-source-to-tree (first args))))
+  (print (e.elang:get-translation (e.syntax:parse-to-kernel (first args))))
   (fresh-line)
   (force-output)
   (global-exit 0))

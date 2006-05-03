@@ -1,0 +1,887 @@
+# Copyright 2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+These are tests specifically of the text->Kernel-E stages, skipping evaluation and the intermediate unexpanded form; however, the intent is primarily to test expansion, not the parser.
+
+  ? def pp := <import:org.cubik.cle.prim.parser>; null
+  ? def t(s) :any { return pp.run(s).asKernelE() }; null
+  ? def tp(pat) :any { return pp.pattern(pat, null, null).asKernelE() }; null
+
+Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
+
+'AccumExpr'
+
+  ? t("pragma.enable(\"accumulator\"); accum a if (b) { _.c(d) }")
+  # value: e`def var accum__1 := a
+  #        if (b) {
+  #            accum__1 := accum__1.c(d)
+  #        } else {
+  #            null
+  #        }
+  #        accum__1`
+
+  ? t("pragma.enable(\"accumulator\"); accum a if (b) { _ + c }")
+  # value: e`def var accum__1 := a
+  #        if (b) {
+  #            accum__1 := accum__1.add(c)
+  #        } else {
+  #            null
+  #        }
+  #        accum__1`
+
+  ? t("pragma.enable(\"accumulator\"); accum a while (b) { _.c(d) }")
+  # value: e`def var accum__1 := a
+  #        escape __break {
+  #            __loop.run(def _ {
+  #                
+  #                method run() :boolean {
+  #                    if (b) {
+  #                        escape __continue {
+  #                            accum__1 := accum__1.c(d)
+  #                        }
+  #                        true
+  #                    } else {
+  #                        false
+  #                    }
+  #                }
+  #            })
+  #        }
+  #        accum__1`
+  
+  ? t("pragma.enable(\"accumulator\"); accum a for b => c in d { _.e(f) }")
+  # value: e`def var accum__1 := a
+  #        escape __break {
+  #            def var valid__2 := true
+  #            try {
+  #                d.iterate(def _ {
+  #                    
+  #                    method run(key__3, value__4) {
+  #                        require.run(valid__2, "For-loop body isn't valid after for-loop exits.")
+  #                        escape __continue {
+  #                            escape skip__5 {
+  #                                def b := (key__3, skip__5)
+  #                                def c := (value__4, skip__5)
+  #                                accum__1 := accum__1.e(f)
+  #                            }
+  #                            null
+  #                        }
+  #                    }
+  #                })
+  #            } finally {
+  #                valid__2 := false
+  #            }
+  #            null
+  #        }
+  #        accum__1`
+
+'BinaryExpr'
+
+  ? t("a + b")
+  # value: e`a.add(b)`
+
+  ? t("a - b")
+  # value: e`a.subtract(b)`
+
+  ? t("a * b")
+  # value: e`a.multiply(b)`
+
+  ? t("a / b")
+  # value: e`a.approxDivide(b)`
+
+  ? t("a // b")
+  # value: e`a.floorDivide(b)`
+
+  ? t("a % b")
+  # value: e`a.remainder(b)`
+
+  ? t("a %% b")
+  # value: e`a.mod(b)`
+
+  ? t("a ** b")
+  # value: e`a.pow(b)`
+  XXX test modPow behaviors
+
+  ? t("a & b")
+  # value: e`a.and(b)`
+
+  ? t("a | b")
+  # value: e`a.or(b)`
+  
+  ? t("a &! b")
+  # value: e`a.butNot(b)`
+
+  ? t("a ^ b")
+  # value: e`a.xor(b)`
+
+  ? t("a >> b")
+  # value: e`a.shiftRight(b)`
+  
+  ? t("a << b")
+  # value: e`a.shiftLeft(b)`
+
+
+  Disabled for now till the final fate of +(,) is decided
+  x ? t("a + (b, c)")
+  x # value: e`a.add(b, c)`
+  
+  ? t("a..b")
+  # value: e`__makeOrderedSpace.op__thru(a, b)`
+
+  ? t("a..!b")
+  # value: e`__makeOrderedSpace.op__till(a, b)`
+  
+  
+  XXX check that we've tested and implemented all non-simple binary verbs '
+
+
+'CoerceExpr'
+
+  ? t("a :b")
+  # value: e`ValueGuard.coerce(b, null).coerce(a, null)`
+
+  XXX order of evaluation reversal
+
+'CompareExpr'
+
+  ? t("a < b")
+  # value: e`__comparer.lessThan(a, b)`
+
+'ConditionalExpr'
+
+  ? t("(def a := b) || (def c := d)")
+  # value: e`if (def a := b) {
+  #            null =~ [&c]
+  #            __makeList.run(&c, &a)
+  #        } else {
+  #            if (def c := d) {
+  #                null =~ [&a]
+  #                __makeList.run(&c, &a)
+  #            } else {
+  #                null
+  #            }
+  #        } =~ [&c, &a]`
+  
+  ? t("(def a := b) && (def c := d)")
+  # value: e`if (def a := b) {
+  #            if (def c := d) {
+  #                __makeList.run(&c, &a)
+  #            } else {
+  #                null
+  #            }
+  #        } else {
+  #            null
+  #        } =~ [&c, &a]`
+  
+  XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
+
+  Bug test: temporary names inside a ConditionalExpr would fail
+  ? t("(def ==x := x) && true")
+  # value: e`if (def __1 ? __equalizer.sameEver(__1, x) := x) {
+  #            if (true) {
+  #                __makeList.run(&__1)
+  #            } else {
+  #                null
+  #            }
+  #        } else {
+  #            null
+  #        } =~ [&__1]`
+
+  Bug test: reusing names would cause them to be null =~ bound on both sides
+  ? t("1 =~ x || 2 =~ x")
+  # value: e`if (1 =~ x) {
+  #            null =~ []
+  #            __makeList.run(&x)
+  #        } else {
+  #            if (2 =~ x) {
+  #                null =~ []
+  #                __makeList.run(&x)
+  #            } else {
+  #                null
+  #            }
+  #        } =~ [&x]`
+
+
+'CurryExpr'
+
+  ? t("pragma.enable(\"verb-curry\"); a.b")
+  # value: e`__makeVerbFacet.curryCall(a, "b")`
+
+  ? t("pragma.enable(\"verb-curry\"); a <- b")
+  # value: e`__makeVerbFacet.currySend(a, "b")`
+
+'DefrecExpr'
+
+  ? t("def a := b")
+  # value: e`def a := b`
+
+  ? t("def [a, b] := [b, c]")
+  # value: e`def [b__1, bR__2] := Ref.promise()
+  #        def value__3 := def [a, b] := __makeList.run(b__1, c)
+  #        bR__2.resolve(b)
+  #        value__3`
+
+'ExitExpr'
+
+  ? t("return")
+  # value: e`__return.run()`
+
+  ? t("return a")
+  # value: e`__return.run(a)`
+
+  ? t("break a")
+  # value: e`__break.run(a)`
+
+  ? t("continue a")
+  # value: e`__continue.run(a)`
+
+'ForExpr'
+
+  ? t("for a => b in c { d }")
+  # value: e`escape __break {
+  #            def var valid__1 := true
+  #            try {
+  #                c.iterate(def _ {
+  #                    
+  #                    method run(key__2, value__3) {
+  #                        require.run(valid__1, "For-loop body isn't valid after for-loop exits.")
+  #                        escape __continue {
+  #                            escape skip__4 {
+  #                                def a := (key__2, skip__4)
+  #                                def b := (value__3, skip__4)
+  #                                d
+  #                            }
+  #                            null
+  #                        }
+  #                    }
+  #                })
+  #            } finally {
+  #                valid__1 := false
+  #            }
+  #            null
+  #        }`
+
+  ? t("for a => b in a { c }")
+  # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`a`) may not appear to use definitions from its optKeyPattern (epatt`a`)>
+  ? t("for a => b in b { c }")
+  # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`b`) may not appear to use definitions from its valuePattern (epatt`b`)>
+  ? t("for a ? c => b in (def c := d) { e }")
+  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`a ? c`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  ? t("for a => b ? c in (def c := d) { e }")
+  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`b ? c`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  XXX prettier errors
+
+  XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
+  
+'ForwardExpr'
+
+  ? t("def a")
+  # value: e`def [a, a__Resolver] := Ref.promise()
+  #        a__Resolver`
+  
+  Anything that expands to a noun is allowed.
+  ? t("def <a>")
+  # value: e`def [a__uriGetter, a__uriGetter__Resolver] := Ref.promise()
+  #        a__uriGetter__Resolver`
+
+'FunctionExpr'
+
+  ? t("pragma.enable(\"anon-lambda\"); fn a { a }")
+  # value: e`def _ {
+  #            
+  #            method run(a) {
+  #                a
+  #            }
+  #        }`
+  
+'InterfaceExpr'
+
+  ? t("interface a {}")
+  # value: e`def a := {
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+    
+  ? t("interface \"a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run("", "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+  
+  ? t("interface \"$a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a"), __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+    
+  ? t("/**hi*/ interface \"a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run("hi", "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+
+  ? t("/***/ interface \"a\" {}")
+  # value: e`{
+  #            __makeProtocolDesc.run("", "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }`
+    
+  ? t("interface a { to b(c :d) :e
+  >                  to f() }")
+  # value: e`def a := {
+  #            __makeProtocolDesc.run("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #                __makeMessageDesc.run("", "b", __makeList.run(__makeParamDesc.run("c", d)), e)
+  #            }, {
+  #                __makeMessageDesc.run("", "f", __makeList.run(), null)
+  #            }))
+  #        }`
+
+  ? t("interface a guards b { to c(d :e) :f 
+  >                           to g() }")
+  # value: e`(def [a, b] := {
+  #            __makeProtocolDesc.makePair("", meta.context().getFQNPrefix().add("a__T"), __makeList.run(), __makeList.run(), __makeList.run({
+  #                __makeMessageDesc.run("", "c", __makeList.run(__makeParamDesc.run("d", e)), f)
+  #            }, {
+  #                __makeMessageDesc.run("", "g", __makeList.run(), null)
+  #            }))
+  #        }).get(0)`
+
+  ? t("interface \"a\" guards b {}")
+  # value: e`(def [_, b] := {
+  #            __makeProtocolDesc.makePair("", "a", __makeList.run(), __makeList.run(), __makeList.run())
+  #        }).get(0)`
+
+  ? t("interface \"a\" { to b(c, d :e, _ :f, _) }")
+  # value: e`{
+  #            __makeProtocolDesc.run("", "a", __makeList.run(), __makeList.run(), __makeList.run({
+  #                __makeMessageDesc.run("", "b", __makeList.run(__makeParamDesc.run("c", null), __makeParamDesc.run("d", e), __makeParamDesc.run(null, f), __makeParamDesc.run(null, null)), null)
+  #            }))
+  #        }`
+
+'ListExpr'
+
+  ? t("[]")
+  # value: e`__makeList.run()`
+
+  ? t("[a, b]")
+  # value: e`__makeList.run(a, b)`
+
+'MapExpr'
+
+  ? t("[a => b]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run(a, b)))`
+
+  ? t("[=> a]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("a", a)))`
+
+  ? t("[=> &a]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("&a", &a)))`
+
+'MismatchExpr'
+
+  ? t("a !~ b")
+  # value: e`(a =~ b).not()`
+
+'ModPowExpr'
+  ? t("a ** b %% c")
+  # value: e`a.modPow(b, c)`
+
+'NKAssignExpr'
+
+  ? t("a := b")
+  # value: e`a := b`
+  
+  ? t("a(b, c) := d")
+  # value: e`a.setRun(b, c, def ares__1 := d)
+  #        ares__1`
+  
+  ? t("a[b, c] := d")
+  # value: e`a.put(b, c, def ares__1 := d)
+  #        ares__1`
+  
+  ? t("a.getFoo(b, c) := d")
+  # value: e`a.setFoo(b, c, def ares__1 := d)
+  #        ares__1`
+  
+  ? t("a.e(b, c) := d")
+  # problem: assignment can only be done to nouns and collection elements (not "e" call)
+  
+  ? t("<a:b> := c")
+  # value: e`a__uriGetter.put("b", def ares__1 := c)
+  #        ares__1`
+  
+  XXX unary-star assignments?
+
+'NKObjectExpr'
+
+  base case
+  ? t("def \"a\" {}")
+  # value: e`def "a" {
+  #        }`
+  
+  named
+  ? t("def a {}")
+  # value: e`def a := def "$a__C" {
+  #        }`
+  
+  named with recursion (implemented by DefrecExpr)
+  ? t("def a { method run() :any { a } }")
+  # value: e`def [a__1, aR__2] := Ref.promise()
+  #        def value__3 := def a := def "$a__C" {
+  #            
+  #            method run() :any {
+  #                a__1
+  #            }
+  #        }
+  #        aR__2.resolve(a)
+  #        value__3`
+  
+  parent
+  ? t("def \"a\" extends b {}")
+  # value: e`{
+  #            def super := b
+  #            def "a" {
+  #                match message__1 {
+  #                    E.callWithPair(super, message__1)
+  #                }
+  #            }
+  #        }`
+
+  parent with reference to name
+  ? t("def a extends b(a) {}")
+  # value: e`def [a__1, aR__2] := Ref.promise()
+  #        def value__3 := def a := {
+  #            def super := b.run(a__1)
+  #            def "$a__C" {
+  #                match message__4 {
+  #                    E.callWithPair(super, message__4)
+  #                }
+  #            }
+  #        }
+  #        aR__2.resolve(a)
+  #        value__3`
+  
+  named by bind-expr
+  ? t("bind a {}")
+  # value: e`def a__1 ? (a__Resolver.resolve(a__1)
+  #        true) := def "$a__C" {
+  #        }`
+
+'NullExpr'
+
+  ? t("{}")
+  # value: e`{
+  #            null
+  #        }`
+
+'PrefixExpr'
+
+  ? t("!a")
+  # value: e`a.not()`
+
+'PropertyExpr'
+
+  ? t("pragma.enable(\"dot-props\"); a::b")
+  # value: e`a.__getPropertySlot("b").getValue()`
+  
+  ? t("pragma.enable(\"dot-props\"); a::&b")
+  # value: e`a.__getPropertySlot("b")`
+  
+  ? t("pragma.enable(\"dot-props\"); a::\"b\"")
+  # value: e`a.__getPropertySlot("b").getValue()`
+  
+  ? t("pragma.enable(\"dot-props\"); a::&\"b\"")
+  # value: e`a.__getPropertySlot("b")`
+
+'QuasiExpr'
+
+  ? t("` a $b ${\"c\"} $\\n $$ `` @@ `")
+  # value: e`simple__quasiParser.valueMaker(" a ${0} ${1} 
+  #         $$ ` @@ ").substitute(__makeList.run(b, "c"))`
+
+  ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
+  # value: epatt`co__1 :__MatchContext ? (def [sp__2, ej__3] := co__1
+  #        simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
+  #         $$ ` @@ ").matchBind(__makeList.run(b, "c"), sp__2, ej__3) =~ [d, [e]])`
+
+  ? t("a`b`")
+  # value: e`a__quasiParser.valueMaker("b").substitute(__makeList.run())`
+
+'RangeExpr': see 'BinaryExpr' for now
+
+'SameExpr'
+  
+  ? t("a == b")
+  # value: e`__equalizer.sameEver(a, b)`
+  
+  ? t("a != b")
+  # value: e`__equalizer.sameEver(a, b).not()`
+
+'SendExpr'
+
+  ? t("a <- b(c)")
+  # value: e`E.send(a, "b", __makeList.run(c))`
+
+  ? t("a <- \"b\"(c)")
+  # value: e`E.send(a, "b", __makeList.run(c))`
+
+  ? t("a <- (b)")
+  # value: e`E.send(a, "run", __makeList.run(b))`
+
+'SwitchExpr'
+  
+  ? t("switch (x) { match [a] { b } match c { d } }")
+  # value: e`{
+  #            def specimen__1 := x
+  #            if (specimen__1 =~ [a]) {
+  #                b
+  #            } else {
+  #                if (specimen__1 =~ c) {
+  #                    d
+  #                } else {
+  #                    throw.run("no match: ".add(specimen__1))
+  #                }
+  #            }
+  #        }`
+  
+  XXX should be throw.run(__switchMatchError(...)) or similar, so that we're not stringifying the specimen '
+  
+'ThunkExpr'
+
+  ? t("thunk {}")
+  # value: e`def _ {
+  #            
+  #            method run() {
+  #                null
+  #            }
+  #        }`
+  
+  ? t("thunk { a }")
+  # value: e`def _ {
+  #            
+  #            method run() {
+  #                a
+  #            }
+  #        }`
+  
+  x ? t("thunk implements a { b }")
+  x # syntax error: 
+  
+  ? t("/** a */ thunk { b }")
+  # value: e`def _ {
+  #            
+  #            /** a */
+  #            method run() {
+  #                b
+  #            }
+  #        }`
+
+'UpdateExpr'
+
+  ? t("a += b")
+  # value: e`a := a.add(b)`
+  
+  See above about the related BinaryExpr
+  x ? t("a += (b, c)")
+  x # value: e`a := a.add(b, c)`
+  
+  ? t("a b= c")
+  # value: e`a := a.b(c)`
+  
+  ? t("a b= (c)")
+  # value: e`a := a.b(c)`
+  
+  ? t("a b= (c, d)")
+  # value: e`a := a.b(c, d)`
+  
+  ? t("a b= a")
+  # value: e`a := a.b(a)`
+  
+  ? t("a[b, c] += d")
+  # value: e`def recip__1 := a
+  #        def arg__2 := b
+  #        def arg__3 := c
+  #        recip__1.put(arg__2, arg__3, def ares__4 := recip__1.get(arg__2, arg__3).add(d))
+  #        ares__4`
+  
+  XXX these syntax-level tests don't test the result of arbitrary children to UpdateExpr '
+
+'URIExpr'
+
+  ? t("<a:b>")
+  # value: e`a__uriGetter.get("b")`
+  
+  ? t("<A:B>")
+  # value: e`a__uriGetter.get("B")`
+  
+  ? t("<ab:c>")
+  # value: e`ab__uriGetter.get("c")`
+
+  ? t("<ab:c:d>")
+  # value: e`ab__uriGetter.get("c:d")`
+
+'URISchemeExpr'
+
+  ? t("<a>")
+  # value: e`a__uriGetter`
+
+  ? t("<A>")
+  # value: e`a__uriGetter`
+
+  ? t("<svn+ssh>")
+  # value: e`::"svn+ssh__uriGetter"`
+
+  ? try { t("<0>") } catch _ {true}
+  # value: true
+  
+  ? t("<a+90-.>")
+  # value: e`::"a+90-.__uriGetter"`
+  
+  ? pp.pattern("<a>", null, null).getOptPrincipalNoun()
+  # value: "a__uriGetter"
+
+'WhenExpr'
+
+  ? t("when (a) -> b(c) :d { e }")
+  # problem: (): The optional "easy-when" syntax is currently off.
+  XXX message needs improvement
+  
+  ? t("when (a) -> b(c) :d { e } catch f { g }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        try {
+  #                            def c := Ref.fulfillment(resolution__1)
+  #                            e
+  #                        } catch f {
+  #                            g
+  #                        }
+  #                    }
+  #                }
+  #            })
+  #        }`
+  
+  ? t("when (a) -> b(c) :d { e } catch f { g } catch h { i } finally { j }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        try {
+  #                            try {
+  #                                try {
+  #                                    def c := Ref.fulfillment(resolution__1)
+  #                                    e
+  #                                } catch f {
+  #                                    g
+  #                                }
+  #                            } catch h {
+  #                                i
+  #                            }
+  #                        } finally {
+  #                            j
+  #                        }
+  #                    }
+  #                }
+  #            })
+  #        }`
+  
+  ? t("pragma.enable(\"easy-when\"); when (a) -> b(c) :d { e }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        def c := Ref.fulfillment(resolution__1)
+  #                        e
+  #                    }
+  #                }
+  #            })
+  #        }`
+
+  ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d) :e { f }")
+  # problem: must have same number of expressions and patterns
+  XXX should be syntax error
+  
+  ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d, e) :e { f }")
+  # value: e`{
+  #            Ref.whenResolved(promiseAllFulfilled.run(__makeList.run(a, b)), def c := def "$c__C" {
+  #                
+  #                method run(resolution__1) :e {
+  #                    escape __return {
+  #                        def [d, e] := Ref.fulfillment(resolution__1)
+  #                        f
+  #                    }
+  #                }
+  #            })
+  #        }`
+
+  ? t("pragma.enable(\"easy-return\"); when (a) -> b(c) :d { e } catch f { g }")
+  # value: e`{
+  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #                
+  #                method run(resolution__1) :d {
+  #                    escape __return {
+  #                        try {
+  #                            def c := Ref.fulfillment(resolution__1)
+  #                            e
+  #                        } catch f {
+  #                            g
+  #                        }
+  #                        null
+  #                    }
+  #                }
+  #            })
+  #        }`
+
+'WhileExpr'
+
+  ? t("while (a) { b }")
+  # value: e`escape __break {
+  #            __loop.run(def _ {
+  #                
+  #                method run() :boolean {
+  #                    if (a) {
+  #                        escape __continue {
+  #                            b
+  #                        }
+  #                        true
+  #                    } else {
+  #                        false
+  #                    }
+  #                }
+  #            })
+  #        }`
+
+'BindPattern'  
+
+  ? tp("bind a")
+  # value: epatt`a__1 ? (a__Resolver.resolve(a__1)
+  #        true)`
+
+  ? tp("bind a :b")
+  # value: epatt`a__1 :b ? (a__Resolver.resolve(a__1)
+  #        true)`
+
+  Anything that expands to a noun is allowed.
+  ? tp("bind <a> :b")
+  # value: epatt`a__uriGetter__1 :b ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
+  #        true)`
+
+  ? t("def bind <a> {}")
+  # value: e`def a__uriGetter__1 ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
+  #        true) := def "$a__uriGetter__C" {
+  #        }`
+
+'MapPattern'
+  
+  ? tp("[\"a\" => b]")
+  # value: epatt`map__1 ? (map__1.optExtract("a") =~ [b, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+  
+  ? tp("[(a) => b]")
+  # value: epatt`map__1 ? (map__1.optExtract(a) =~ [b, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+  
+  ? tp("[=> a]")
+  # value: epatt`map__1 ? (map__1.optExtract("a") =~ [a, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+
+  ? tp("[\"a\" => b := c]")
+  # value: epatt`map__1 ? (map__1.extract("a", c) =~ [b, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+
+  XXX expansion to be changed to not use such-that
+
+'SamePattern'
+
+  ? tp("==x")
+  # value: epatt`__1 ? __equalizer.sameEver(__1, x)`
+
+'TailPattern'
+
+  list-pattern variety
+    XXX this test is trivial as long as we're working at the E-syntax layer '
+    ? tp("[a] + b")
+    # value: epatt`[a] + b`
+    
+    ? tp("[] + a")
+    # value: epatt`[] + a`
+
+  map-pattern variety
+    ? tp("[\"a\" => b] | c")
+    # value: epatt`map__1 ? (map__1.optExtract("a") =~ [b, c])`
+    
+    x ? tp("[] | a")
+    x # syntax error: 
+
+'FunctionObject'
+
+  ? t("/** a */ def b() :c { d }")
+  # value: e`def b := def "$b__C" {
+  #            
+  #            /** a */
+  #            method run() :c {
+  #                escape __return {
+  #                    d
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"easy-return\"); /** a */ def b() :c { d }")
+  # value: e`def b := def "$b__C" {
+  #            
+  #            /** a */
+  #            method run() :c {
+  #                escape __return {
+  #                    d
+  #                    null
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"function-implements\"); /** a */ def b() :c implements d { e }")
+  # value: e`def b := def "$b__C" implements d {
+  #            
+  #            /** a */
+  #            method run() :c {
+  #                escape __return {
+  #                    e
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :d implements c { d }")
+  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`c`]) may not appear to use definitions from its patterns ([epatt`c`])>
+
+  ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :(def d := e) implements d { e }")
+  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`$<DefrecExpr d, e, null>$`)>
+  XXX prettier error
+
+'ETo'
+
+  ? t("def a { to b() :c { d } }")
+  # value: e`def a := def "$a__C" {
+  #            
+  #            method b() :c {
+  #                escape __return {
+  #                    d
+  #                }
+  #            }
+  #        }`
+  
+  ? t("pragma.disable(\"explicit-result-guard\"); def a { to b() { d } }")
+  # value: e`def a := def "$a__C" {
+  #            
+  #            method b() :void {
+  #                escape __return {
+  #                    d
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"easy-return\"); def a { to b() :c { d } }")
+  # value: e`def a := def "$a__C" {
+  #            
+  #            method b() :c {
+  #                escape __return {
+  #                    d
+  #                    null
+  #                }
+  #            }
+  #        }`
+  
+XXX test temporary name rules
+XXX do node-based tests for FunctionObject, TailPattern, UpdateExpr since those aren't quite fully tested just from syntax '

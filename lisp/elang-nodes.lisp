@@ -11,6 +11,8 @@
 (defgeneric opt-node-property-getter (node field-keyword))
 (defgeneric node-visitor-arguments (node))
 (defgeneric node-class-arity (node-class))
+(defgeneric node-class-element-types (node-class))
+(defgeneric node-class-element-names (node-class))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
 (defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
@@ -41,22 +43,45 @@
                            (when (typep (setf ,param (ref-shorten ,param)) '(and vector (not string)))
                              (setf ,param (map 'vector #'ref-shorten ,param)))
                            (e-coercef ,param ',type)))
-        (make-instance ',class-sym 
-          'source-span ,span-sym
+        (make-instance ',class-sym
+          :source-span ,span-sym
           :elements
           ,(if rest-p
             `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))
             `(list ,@param-syms)))))))
 
 (defun %setup-node-class (node-type rest-slot property-names dnm-types normal-prop-count)
-  (declare (ignore dnm-types property-names))
-  (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type))))
+  (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type)))
+        (element-types (make-element-attribute-list
+                          dnm-types rest-slot
+                          (lambda (last-type)
+                            (assert (typep last-type '(cons (eql e-list))))
+                            (second last-type))))
+        (element-names
+          (make-element-attribute-list
+            property-names rest-slot
+            (lambda (last-name)
+              `(member-of ,last-name)))))
     (defmethod elib:cl-type-fq-name ((type (eql node-type)))
       fqn)
-   
+    
     (defmethod node-class-arity ((node-class (eql (find-class node-type))))
       (values normal-prop-count
-              (if rest-slot nil normal-prop-count)))))
+              (if rest-slot nil normal-prop-count)))
+    (defmethod node-class-element-types ((node-class (eql (find-class node-type))))
+      "Returns the possibly-circular list of type specifiers for the type constraints of the elements of a node of this class."
+      element-types)
+    (defmethod node-class-element-names ((node-class (eql (find-class node-type))))
+      "Returns the possibly-circular list of names of the elements of a node of this class."
+      element-names)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-element-attribute-list (property-attribute-list rest-slot last-modifier)
+    (if rest-slot
+        (let ((rest-attrs (list (funcall last-modifier (first (last property-attribute-list))))))
+          (setf (rest rest-attrs) rest-attrs)
+          (nconc (butlast property-attribute-list) rest-attrs))
+        property-attribute-list)))
 
 (defmacro define-node-class (class-name (&rest superclasses) (&rest property-defs) &key rest-slot)
   (let ((normal-prop-count (- (length property-defs) (if rest-slot 1 0)))
@@ -105,7 +130,7 @@
              (append (subseq elements 0 ',normal-prop-count)
                      (list (coerce (subseq elements ',normal-prop-count) 'vector))))
           `(node-elements node)))
-            
+      
       (defmethod opt-node-property-getter 
           ((node ,class-name) 
            (field-keyword t))
@@ -125,7 +150,7 @@
                  :type (or null function))
    (source-span :initform nil
                 :type (or null source-span)
-                :initarg source-span)))
+                :initarg :source-span)))
 
 (define-node-class |EExpr|   (|ENode|)
   ())
@@ -133,7 +158,7 @@
   ())
 
 (define-node-class |AssignExpr|      (|EExpr|)
-  ((:|noun|   t (or |NounExpr| |QuasiExpr|))
+  ((:|noun|   t |EExpr|)
    (:|rValue| t |EExpr|)))
 (define-node-class |CallExpr|        (|EExpr|)
   ((:|recipient| t |EExpr|)
@@ -178,14 +203,15 @@
   ((:|docComment| nil string)
    (:|qualifiedName| nil string) 
    (:|auditorExprs| t (e-list |EExpr|)) 
-   (:|script| t |EScript|)))
+   (:|script| t |EScriptoid|)))
 (define-node-class |SeqExpr|         (|EExpr|)
   ((:|subs| t (e-list |EExpr|)))
   :rest-slot t)
 (define-node-class |SlotExpr|        (|EExpr|)
-  ((:|noun| t (or |NounExpr| |QuasiExpr|))))
+  ((:|noun| t |EExpr|)))
 
-(define-node-class |EMethod|         (|ENode|)
+(defclass |EMethodoid| (|ENode|) ()) ;; to support "to"
+(define-node-class |EMethod|         (|EMethodoid|)
   ((:|docComment| nil string)
    (:|verb| nil string)
    (:|patterns| t (e-list |Pattern|))
@@ -194,8 +220,10 @@
 (define-node-class |EMatcher|        (|ENode|)
   ((:|pattern| t |Pattern|) 
    (:|body| t |EExpr|)))
-(define-node-class |EScript|         (|ENode|)
-  ((:|optMethods| t (or null (e-list |EMethod|)))
+
+(defclass |EScriptoid| (|ENode|) ())
+(define-node-class |EScript|         (|EScriptoid|)
+  ((:|optMethods| t (or null (e-list |EMethodoid|)))
    (:|matchers| t (e-list |EMatcher|))))
                                
 (define-node-class |CdrPattern|      (|Pattern|)
@@ -214,13 +242,13 @@
   ())
 
 (define-node-class |FinalPattern|    (|NounPattern|)
-  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+  ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 (define-node-class |SlotPattern|     (|NounPattern|)
-  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+  ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 (define-node-class |VarPattern|      (|NounPattern|)
-  ((:|noun| t (or |QuasiExpr| |NounExpr|)) 
+  ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 
 (define-node-class |QuasiNode| (|ENode|)
@@ -254,12 +282,16 @@
   ;; imitating SBCL's hash-table printing
   (if (or (not *print-readably*) (not *read-eval*))
     (print-unreadable-object (node stream :type nil :identity nil)
-      (format stream "~A ~W" (type-of node) (node-elements node)))
+      (format stream "~A ~W" (type-of node) 
+                             (if (slot-boundp node 'elements)
+                               (node-elements node)
+                               '.undefined-elements.)))
     (with-standard-io-syntax
           (format stream
                   "#.~W"
                   `(make-instance ',(class-name (class-of node))
-                                  :elements ',(node-elements node))))))
+                                  ,(if (slot-boundp node 'elements)
+                                     `(:elements ',(node-elements node))))))))
 
 (defmethod make-load-form ((node |ENode|) &optional environment)
   (declare (ignore environment))
@@ -286,22 +318,39 @@
                (attempted-node-elements condition)
                (node-class-arity (attempted-node-class condition))))))
 
-(defmethod shared-initialize :after ((node |ENode|) slot-names &key &allow-other-keys)
-  (declare (ignore slot-names))
-  (let ((arity (length (node-elements node))))
+(defmethod shared-initialize ((node |ENode|) slot-names &rest initargs &key elements &allow-other-keys)
+  (let ((arity (length elements)))
     (multiple-value-bind (min max) (node-class-arity (class-of node))
       (unless (and (>= arity min)
                    (or (null max) (<= arity max)))
         (error 'node-arity-error :class (class-of node)
-                                 :elements (node-elements node))))))
+                                 :elements elements))))
+  (apply #'call-next-method node slot-names
+    :elements (loop for element in elements
+                    for name in (node-class-element-names (class-of node))
+                    for type in (node-class-element-types (class-of node))
+                    collect (e-coerce element type
+                                      (efun (condition-ref)
+                                        (error "the ~S of a ~S must be a ~S (~A)" name (class-name (class-of node)) type condition-ref))))
+    initargs))
 
+(defun to-scope (nodoid)
+  (typecase nodoid
+    (|ENode|
+     (e. nodoid |staticScope|))
+    ((and vector (not string))
+     (sum-default-node-scopes nodoid))))
+              
 (defun usesp (defining using)
-  "Return whether 'using' uses nouns defined by 'defining'."
-  (> (e. (e. (e. (e. defining |staticScope|) |outNames|)
-             |and|
-             (e. (e. using |staticScope|) |namesUsed|))
-         |size|)
-     0))
+  "Return whether 'using' uses nouns defined by 'defining'.
+List nodes will be assumed to be sequences."
+  (let ((defining (to-scope defining))
+        (using    (to-scope using)))
+    (> (e. (e. (e. defining |outNames|)
+               |and|
+               (e. using |namesUsed|))
+           |size|)
+       0)))
 
 (defmethod change-class ((node |ENode|) new-class &key &allow-other-keys)
   (declare (ignore new-class))
@@ -323,8 +372,6 @@
   (declare (ignore slot-names))
   (unless (or methods (> (length matchers) 0))
       (error "EScript must have methods or at least one matcher")))
-
-;; XXX reject NounPatterns that use their noun in the guard
 
 ; --- E-level methods ---
 
@@ -364,14 +411,17 @@
 
 NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced."
     (e-coercef args 'vector)
-    (if (zerop (length args))
-      this
-      (e. this |welcome|
-          (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
-              |run| args))))
+    (kernelize
+      (if (zerop (length args))
+        this
+        (e. this |welcome|
+            (e. (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
+                |run| args)))))
+  (:|asKernelE/0| 'kernelize)
   (:|welcome| (this visitor)
     (e-call
       visitor
+      ;; XXX need to decide on a policy about nonkernel nodes
       ; xxx should we use our alleged type method instead of observable-type-of?
       (concatenate 'string "visit" (symbol-name (observable-type-of this))) 
       (cons this (node-visitor-arguments this))))
@@ -432,11 +482,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   nil)
 
 (defmethod pattern-opt-noun ((patt |SuchThatPattern|))
-  (pattern-opt-noun (first (node-elements patt))))
+  (pattern-opt-noun (e. patt |getPattern|)))
 
 (defmethod pattern-opt-noun ((patt |NounPattern|))
-  ; XXX use method of noun expr once we have it
-  (first (node-elements (e. patt |getNoun|))))
+  (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
+    (when (typep kernel-noun '|NounExpr|)
+      (e. kernel-noun |getName|))))
 
 
 (defgeneric pattern-to-param-desc (pattern))
@@ -450,7 +501,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
 
 (defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
-  (pattern-to-param-desc (first (node-elements patt))))
+  (pattern-to-param-desc (e. patt |getPattern|)))
 
 ;; This is a class so that instances may be written to a compiled file.
 (defclass false-guard ()
@@ -546,13 +597,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (defglobal +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
     (:|run| (sn rn dn vn hms)
       "General StaticScope constructor. Currently provided only to make StaticScopes selfless."
-      (warn "using inefficient makeStaticScope#run")
-      (let ((map-guard (e-import "org.erights.e.elib.slot.Map"))
-            (string-guard (type-specifier-to-guard 'string)))
-        (e-coercef sn (e. map-guard |get| string-guard (type-specifier-to-guard '|NounExpr|)))
-        (e-coercef rn (e. map-guard |get| string-guard (type-specifier-to-guard '(or |NounExpr| |SlotExpr|))))
-        (e-coercef dn (e. map-guard |get| string-guard (type-specifier-to-guard '|FinalPattern|)))
-        (e-coercef vn (e. map-guard |get| string-guard (type-specifier-to-guard '(or |VarPattern| |SlotPattern|)))))
+      (let ((map-guard (e. (e-import "org.erights.e.elib.slot.Map")
+                           |get|
+                           (type-specifier-to-guard 'string)
+                           (type-specifier-to-guard '|ENode|))))
+        ;; XXX arrange to not be re-constructing the map guard on every
+        ;; invocation (cache per vat)
+        
+        ;; this is rather loose, but it shouldn't matter, as a StaticScope
+        ;; is only worth as much as what you got it from
+        (e-coercef sn map-guard)
+        (e-coercef rn map-guard)
+        (e-coercef dn map-guard)
+        (e-coercef vn map-guard))
       (e-coercef sn 'boolean)
       (make-static-scope :set-names sn
                          :read-names rn
@@ -560,19 +617,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                          :var-names vn
                          :has-meta-state-expr hms))
     (:|scopeAssign| (node)
-      (e-coercef node '|NounExpr|)
+      (e-coercef node '|ENode|)
       (make node :set-names (e. node |getName|)))
     (:|scopeDef| (node)
-      (e-coercef node '|FinalPattern|)
+      (e-coercef node '|ENode|)
       (make node :def-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeRead| (node)
-      (e-coercef node '(or |NounExpr| |SlotExpr|))
+      (e-coercef node '|ENode|)
       (make node :read-names (e. node |getName|)))
     (:|scopeVar| (node)
-      (e-coercef node '|VarPattern|)
+      (e-coercef node '|ENode|)
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeSlot| (node)
-      (e-coercef node '|SlotPattern|)
+      (e-coercef node '|ENode|)
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
     (:|getEmptyScope| () +empty-static-scope+))))
@@ -622,7 +679,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                (get-scope (node) (e. node |staticScope|)))
           (declare (ignorable (function :get) (function get-scope)))
           (let ((builder +the-make-static-scope+))
-          ,(transform scope-expr))))
+            (declare (ignorable builder))
+            ,(transform scope-expr))))
       (defmethod reduce-scopewise ((node ,specializer) builder)
         (flet ((:get (keyword) (funcall (opt-node-property-getter node keyword)))
                (get-scope (node) (reduce-scopewise node builder)))
@@ -630,9 +688,16 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
           ,(transform scope-expr))))))
 
 (defun sum-node-scopes (nodes getter empty)
-  (reduce #'(lambda (a b) (e. a |add| b))
-          (map 'list getter nodes)
+  (reduce (lambda (a b) (e. a |add| b))
+          nodes
+          :key getter
           :initial-value empty))
+
+;; XXX lousy naming of this vs. the above
+(defun sum-default-node-scopes (nodes)
+  (sum-node-scopes nodes
+                   (lambda (a) (e. a |staticScope|))
+                   +empty-static-scope+))
 
 (def-scope-rule |AssignExpr|
   (seq (! (e. builder |scopeAssign| (:get :|noun|)))
@@ -728,9 +793,72 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (seq (flatten :|optMethods|)
        (flatten :|matchers|)))
 
+;;; --- scope utilities ---
+
+(define-condition misleading-usage-error (error)
+  ;; XXX bad accessor names
+  ((node :type |ENode|
+         :initarg :node
+         :reader node)
+   (defining-property :type keyword
+                      :initarg :defining-property
+                      :reader defining-property)
+   (using-property :type keyword
+                   :initarg :using-property
+                   :reader using-property))
+  (:report (lambda (condition stream
+               &aux (node (node condition))
+                    (definer (defining-property condition))
+                    (user (using-property condition))
+                    (node-d (funcall (opt-node-property-getter node definer)))
+                    (node-u (funcall (opt-node-property-getter node user))))
+             (format stream "a ~A's ~A (~A) may not ~:[~;appear to ~]use ~
+                             definitions from its ~A (~A)"
+                            (observable-type-of node)
+                            user (e-quote node-u)
+                            (typep condition 'misleading-apparent-usage-error)
+                            definer (e-quote node-d)))))
+
+(define-condition misleading-actual-usage-error (misleading-usage-error) ())
+(define-condition misleading-apparent-usage-error (misleading-usage-error) ())
+
+(defun reject-definition-usage (node ejector actual definer user)
+  (let ((node-d (e-macroexpand-all (funcall (opt-node-property-getter node definer))))
+        (node-u (e-macroexpand-all (funcall (opt-node-property-getter node user)))))
+  (when (and node-d node-u (usesp node-d node-u))
+    (ejerror ejector (if actual
+                       'misleading-actual-usage-error
+                       'misleading-apparent-usage-error)
+                     :node node
+                     :defining-property definer
+                     :using-property user))))
+
+
 ;;; --- Kernel-E checking ---
 
-;; XXX the following is a stub of a more elaborate mechanism which will be introduced when the ANTLR parser is merged in, having nonkernel nodes. For now, it exists only for checking simple inter-node constraints.
+(defun unmagical-typep (value type)
+  "awful hack: E-LIST type can't work if expanded into a compiled file due to using (satisfies #:uninterned-symbol) so we ensure that TYPEP isn't optimized by indirecting through a redefinable function"
+  (typep value type))
+
+(defmacro define-kernel-e-type-constraints (node-class &rest rules)
+  `(define-kernel-e-check-method ,node-class
+     (check-property-types ,@rules)))
+
+(defun %check-property-types (node ejector rules)
+  (loop for (property ptype) in rules collect
+    (let ((value (funcall (opt-node-property-getter node property))))
+      (unless (unmagical-typep value ptype)
+        (ejerror ejector "~S must have ~S of type ~S, but had ~S" 
+                         node property ptype value)))))
+
+(defmacro define-kernel-e-check-method (node-class &body body)
+  `(defmethod require-kernel-e-recursive progn ((node ,node-class) ejector)
+     (macrolet ((check-property-types (&rest rules)
+                  `(%check-property-types node ejector ',rules)))
+       (flet ((this-reject-usage (actual definer user)
+                (reject-definition-usage node ejector actual definer user)))
+         (declare (ignorable #'this-reject-usage))
+         ,@body))))
 
 (defun require-kernel-e (node ejector)
   "Verify that the node is a valid Kernel-E tree."
@@ -784,18 +912,30 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         when (e-is-true subnode-flag)
           do (require-kernel-e-recursive maybe-subnode ejector)))
 
-(defmethod require-kernel-e-recursive progn ((node |DefineExpr|) ejector
-    &aux (pattern (e. node |getPattern|))
-         (r-value (e. node |getRValue|))
-         (opt-ejector-expr (e. node |getOptEjectorExpr|)))
-  (labels ((reject (name-d node-d name-u node-u)
-             (when (and node-d node-u (usesp node-d node-u))
-               (ejerror ejector "kernel define expr may not use definitions ~
-                                 from ~A (~A) in ~A (~A)" 
-                                 name-d (e-quote node-d) 
-                                 name-u (e-quote node-u)))))
-    (reject "pattern" pattern               "r-value expr" r-value)
-    (reject "pattern" pattern               "ejector expr" opt-ejector-expr)
-    (reject "r-value expr" r-value          "pattern" pattern)
-    (reject "ejector expr" opt-ejector-expr "pattern" pattern)))
 
+(define-kernel-e-check-method |DefineExpr|
+  (this-reject-usage nil :|pattern|        :|rValue|)
+  (this-reject-usage nil :|pattern|        :|optEjectorExpr|)
+  (this-reject-usage t   :|rValue|         :|pattern|)
+  (this-reject-usage t   :|optEjectorExpr| :|pattern|))
+
+(define-kernel-e-type-constraints |AssignExpr|
+  (:|noun| |NounExpr|))
+
+(define-kernel-e-check-method |NounPattern|
+  (check-property-types
+    (:|noun| |NounExpr|))
+  (let ((guard (e. node |getOptGuardExpr|)))
+    (when (and guard (usesp node guard))
+      (ejerror ejector "kernel ~A may not use its own noun (~A) in its guard (~A)"
+                       (observable-type-of node)
+                       (e-quote (e. node |getNoun|))
+                       (e-quote guard)))))
+
+(define-kernel-e-type-constraints |ObjectExpr|
+  (:|script| |EScript|))
+
+(define-kernel-e-type-constraints |EScript|
+  (:|optMethods| (or null (e-list |EMethod|)))
+  (:|matchers| (e-list |EMatcher|)))
+  

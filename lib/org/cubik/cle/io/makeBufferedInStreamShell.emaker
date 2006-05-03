@@ -33,7 +33,7 @@ def makeBufferedInStreamShell implements DeepFrozen {
         tw.printSame(impl)
       }
       
-      to semiObtain(count :EIO::Range, proceed, report) {
+      to semiObtain(count :(EIO::Range), proceed, report) {
         def n := if (count == ALL) { buffer.size() } else { buffer.size().min(count) }
         return if (proceed == EIO::ADVANCE) {
           try { # I want PROG1

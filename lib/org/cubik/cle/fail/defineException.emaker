@@ -3,6 +3,7 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+pragma.enable("function-implements")
 
 def makeException := <import:org.cubik.cle.prim.makeException>
 
@@ -10,10 +11,9 @@ def defineException implements DeepFrozen {
   to run(typeIDs :List[String],
          printer :DeepFrozen) {
 
-    def cprinter implements DeepFrozen { 
-      to run(tw :TextWriter, exception) {
+    def cprinter(tw :TextWriter, exception) implements DeepFrozen {
         printer(tw, exception._getProperties())
-    }}
+    }
 
     def exceptionDefinition implements DeepFrozen {
       to run(properties :Map[String, any]) {

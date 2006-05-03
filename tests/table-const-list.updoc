@@ -48,3 +48,4 @@ startOf/1-2
   ? [1, 1, 2, 1, 2].startOf([1, 2], 4)
   # value: -1
 
+XXX consider how to test all the same methods on Strings (or, for String-specific quirks, coercions, etc.)

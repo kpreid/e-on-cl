@@ -307,8 +307,13 @@
   
 (cl:defvar e.knot:*emaker-search-list*)
 
-(cl:defpackage :e.elang.vm-node 
-  (:nicknames)
+(cl:defpackage :e.grammar
+  (:documentation "Node types from the Antlr grammar.")
+  (:use))
+
+(cl:defpackage :e.kernel
+  ;; XXX plan-of-the-moment is to deprecate the names other than e.kernel
+  (:nicknames :e.node :e.elang.vm-node)
   (:documentation "All symbols in this package are the names of subclasses of ENode, eccept for null, error and .tuple..")
   ; XXX arrange so that null, error and .tuple. are not produced by parseEToSExpression?
   (:use)
@@ -329,8 +334,10 @@
     :|EExpr|
     :|EMatcher|
     :|EMethod|
+    :|EMethodoid|
     :|ENode|
     :|EScript|
+    :|EScriptoid|
     :|EscapeExpr|
     :|FinalPattern|
     :|FinallyExpr|
@@ -360,17 +367,32 @@
     :|VarPattern|)
   #+sbcl (:lock t))
 
+;; XXX for now, e.nonkernel.* packages are defined in nonkernel.lisp
+
+(cl:defpackage :e.elang.node-impl
+  (:use)
+  (:export
+    :reject-definition-usage
+    :define-node-class
+    :def-scope-rule))
+
 (cl:defpackage :e.elang
   (:nicknames :elang)
-  (:use :cl :e.util :elib :e.elang.vm-node)
+  (:use :cl :e.util :elib :e.elang.vm-node :e.elang.node-impl)
   (:export
     :eval-e
     :get-translation
     :require-kernel-e
     
+    :e-macroexpand-1
+    :e-macroexpand
+    :e-macroexpand-all
+    :kernelize
+
     :+the-make-static-scope+
     
-    :node-elements ;; XXX shouldn't really be exported
+    :node-elements
+    :node-visitor-arguments
     :node-arity-error
     :opt-guard-expr-to-safe-opt-guard
     :pattern-opt-noun
@@ -378,6 +400,7 @@
     
     :slot-symbol-var-name ;; XXX stale
     ))
+
 
 (e.util:defglobals
   elang:+the-make-static-scope+)
@@ -388,11 +411,15 @@
 
 (cl:defpackage :e.elang.syntax
   (:nicknames :e.syntax)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node
+        #+abcl :java ; local parser (no cache)
+        #-abcl :net.hexapodia.hashtables ; for parse cache
+        )
   (:export
     +e-printer+
     
     :e-source-to-tree
+    :parse-to-kernel
     
     :load-parse-cache
     :save-parse-cache
@@ -402,7 +429,10 @@
     
     :+prim-parser+
   ))
-  
+
+(when (member :abcl *features*)
+  (pushnew 'e.syntax::local-parser *features*))
+
 (e.util:defglobals
   e.elang.syntax:+prim-parser+
   e.elang.syntax:+e-printer+)

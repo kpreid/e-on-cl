@@ -1,0 +1,7 @@
+Parsing bugs:
+
+  Fails to parse:
+    N-ary infix operators and update forms ("a + (b, c)") -- deprecated? if so, should report a specific error
+
+  Bad parse trees:
+    "pragma.enable(\"dot-props\"); a <- ::b"

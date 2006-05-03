@@ -6,7 +6,7 @@
   >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
   > null
 
-  ? def [o, i] := EIO.pipe("bufferLimit" => 10, "synchronous" => true, "label" => "test")
+  ? def [o, i] := EIO.pipe(["bufferLimit" => 10, "synchronous" => true, "label" => "test"])
   # value: [->"test" pipe, <-"test" pipe]
 
   ? o.available()
@@ -34,7 +34,7 @@
   
 Asynchronous
   
-  ? def [o, i] := EIO.pipe("synchronous" => false, "label" => "async test")
+  ? def [o, i] := EIO.pipe(["synchronous" => false, "label" => "async test"])
   # value: [->"async test" pipe, <-"async test" pipe]
 
   ? def iap := i.whenAvailable(1, thunk { println(`${i.available()} available.`); "ia" })

@@ -1,0 +1,312 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+XXX todo: move everything else that should be here here
+
+This file contains tests for the E parser's grammar; specifically excluding expansion, parser protocol, etc. '
+
+? def pp := <import:org.cubik.cle.prim.parser>; null
+? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
+? def t(s) :any { return dumpENodes(pp.run(s), stdout) }; null
+
+--- Function syntax ---
+
+? t("pragma.enable(\"anon-lambda\"); fn { a }")
+# stdout: SeqE. [] FunctionE.
+#           []
+#           NounE. a
+
+? t("pragma.enable(\"anon-lambda\"); fn a { b }")
+# stdout: SeqE. [] FunctionE.
+#           [] FinalP.
+#             NounE. a
+#             null
+#           NounE. b
+
+? t("pragma.enable(\"anon-lambda\"); fn a, b { c }")
+# stdout: SeqE. [] FunctionE.
+#           []
+#             FinalP.
+#               NounE. a
+#               null
+#             FinalP.
+#               NounE. b
+#               null
+#           NounE. c
+
+? t("pragma.enable(\"anon-lambda\"); fn a, b, { c }")
+# stdout: SeqE. [] FunctionE.
+#           []
+#             FinalP.
+#               NounE. a
+#               null
+#             FinalP.
+#               NounE. b
+#               null
+#           NounE. c
+
+--- Sequence separators ---
+
+No SeqExprs around single terminated exprs
+  ? t("a;")
+  # stdout: NounE. a
+  ? t("{a;}")
+  # stdout: HideE. NounE. a
+  
+Multiple separators of all types are allowed.
+  ? t("a;;")
+  # stdout: NounE. a
+  ? t("a\n;")
+  # stdout: NounE. a
+  ? t("a;\n")
+  # stdout: NounE. a
+  ? t("a\n\n")
+  # stdout: NounE. a
+
+  ? t("{a;;}")
+  # stdout: HideE. NounE. a
+  ? t("{a\n;}")
+  # stdout: HideE. NounE. a
+  ? t("{a;\n}")
+  # stdout: HideE. NounE. a
+  ? t("{a\n\n}")
+  # stdout: HideE. NounE. a
+
+  ? t("{a\n\nb;;c;\n}")
+  # stdout: HideE. SeqE. []
+  #           NounE. a
+  #           NounE. b
+  #           NounE. c
+  ? t("a\n\nb;;c;\n")
+  # stdout: SeqE. []
+  #           NounE. a
+  #           NounE. b
+  #           NounE. c
+
+--- Acceptance of sequences everywhere they should be ---
+
+NOTE: these tests were produced by inspection of antlr/e.g. They are not complete.
+
+? t("__makeList(1;2)")
+# stdout: FunCallE.
+#           NounE. __makeList
+#           [] SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+
+xxx Should we change the grammar so that pragmas don't create SeqExprs? '
+? t("pragma.enable(\"trinary-define\"); def a := (1;2,3;4)")
+# stdout: SeqE. [] DefrecE.
+#           FinalP.
+#             NounE. a
+#             null
+#           SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+#           SeqE. []
+#             LiteralE. 3
+#             LiteralE. 4
+
+XXX ListExpr doesn't really belong here '
+? t("[1;2 => 3]")
+# stdout: MapE. [] ListE. []
+#           SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+#           LiteralE. 3
+
+? t("`${1;2}`")
+# stdout: QuasiE.
+#           null
+#           [] QuasiE.Hole SeqE. []
+#             LiteralE. 1
+#             LiteralE. 2
+
+--- Object expressions in high-precedence positions ---
+
+Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
+? t("1 + def a := 2")
+# problem: (unknown:1)@11: unexpected token: [":=",<158>,line=1,col=11]
+XXX produce a nice error for this?
+
+? t("a & def _ {}")
+# stdout: BinaryE.
+#           &
+#           NounE. a
+#           [] ObjectHeadE.
+#             
+#             IgnoreP.
+#             MethodObject
+#               null
+#               []
+#               []
+#               []
+
+? t("a & /**b*/def _ {}")
+# stdout: BinaryE.
+#           &
+#           NounE. a
+#           [] ObjectHeadE.
+#             b
+#             IgnoreP.
+#             MethodObject
+#               null
+#               []
+#               []
+#               []
+
+? t("a & thunk {}")
+# stdout: BinaryE.
+#           &
+#           NounE. a
+#           [] ThunkE.
+#             
+#             NullE.
+
+--- Function expressions ---
+
+? t("def \"$a\"() :b {}")
+# stdout: ObjectHeadE.
+#           
+#           $a
+#           FunctionObject
+#             []
+#             NounE. b
+#             []
+#             NullE.
+#             false
+
+? t("def \"$a\"() :b implements c {}")
+# problem: (): The optional "function-implements" syntax is currently off.
+
+? t("pragma.enable(\"function-implements\"); def \"$a\"() :b implements c {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           $a
+#           FunctionObject
+#             []
+#             NounE. b
+#             [] NounE. c
+#             NullE.
+#             false
+
+--- modPow ---
+
+? t("a ** b %% c")
+# stdout: ModPowE.
+#           NounE. a
+#           NounE. b
+#           NounE. c
+
+Parentheses disable modPow form
+? t("(a ** b) %% c")
+# stdout: BinaryE.
+#           %%
+#           BinaryE.
+#             **
+#             NounE. a
+#             [] NounE. b
+#           [] NounE. c
+
+? t("a %% b ** c")
+# stdout: BinaryE.
+#           %%
+#           NounE. a
+#           [] BinaryE.
+#             **
+#             NounE. b
+#             [] NounE. c
+
+? t("a ** b % c")
+# stdout: BinaryE.
+#           %
+#           BinaryE.
+#             **
+#             NounE. a
+#             [] NounE. b
+#           [] NounE. c
+
+? t("(a %% b) ** c")
+# stdout: BinaryE.
+#           **
+#           BinaryE.
+#             %%
+#             NounE. a
+#             [] NounE. b
+#           [] NounE. c
+
+? t("a %% (b ** c)")
+# stdout: BinaryE.
+#           %%
+#           NounE. a
+#           [] BinaryE.
+#             **
+#             NounE. b
+#             [] NounE. c
+
+--- ForExpr ---
+
+? t("for a => b in c { d }")
+# stdout: ForE.
+#           FinalP.
+#             NounE. a
+#             null
+#           FinalP.
+#             NounE. b
+#             null
+#           NounE. c
+#           NounE. d
+? t("for b in c { d }")
+# stdout: ForE.
+#           null
+#           FinalP.
+#             NounE. b
+#             null
+#           NounE. c
+#           NounE. d
+
+--- InterfaceExpr ---
+
+XXX more tests (this section was written to test guardless ParamDesc)
+
+? t("interface a { to b(c, d :e, _ :f, _) }")
+# stdout: InterfaceE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           null
+#           []
+#           []
+#           [] MessageDescE.
+#             
+#             b
+#             []
+#               ParamDescE.
+#                 c
+#                 null
+#               ParamDescE.
+#                 d
+#                 NounE. e
+#               ParamDescE.
+#                 null
+#                 NounE. f
+#               ParamDescE.
+#                 null
+#                 null
+#             null
+
+--- Miscellaneous ---
+
+? t("a :b[c]")
+# stdout: CoerceE.
+#           NounE. a
+#           GetE.
+#             NounE. b
+#             [] NounE. c
+
+XXX test acceptance of line breaks everywhere
+XXX general parser tests for everything
+
+x ? t("")
+x # stdout: 

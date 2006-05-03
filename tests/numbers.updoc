@@ -141,22 +141,22 @@ Number formatting
   ? 99.toString([].asMap())
   # value: "99"
   
-  ? 99.toString("base" => 2)
+  ? 99.toString(["base" => 2])
   # value: "1100011"
   
-  ? 99.toString("base" => 16)
+  ? 99.toString(["base" => 16])
   # value: "63"
   
-  ? 254.toString("base" => 16)
+  ? 254.toString(["base" => 16])
   # value: "fe"
   
-  ? 99.toString("base" => 37)
+  ? 99.toString(["base" => 37])
   # problem: base must be in 2..36, not 37
 
-  ? 99.toString("base" => 1)
+  ? 99.toString(["base" => 1])
   # problem: base must be in 2..36, not 1
   
-  ? 99.toString("base" => like(10))
+  ? 99.toString(["base" => like(10)])
   # value: "99"
 
 Integer coercion

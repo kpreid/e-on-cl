@@ -87,6 +87,10 @@
             (eject-or-ethrow opt-ejector
               (format nil "~A is not a ~S, even unsealed" (e-quote specimen) class-name)))))))))
 
+;;; --- miscellaneous ---
+
+(defvar *antlr-jar*)
+
 ; --- emaker loading ---
 
 (defun system-file (offset)
@@ -104,6 +108,7 @@
 
 (defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
+  (setf *antlr-jar* (merge-pathnames #p"e.jar" dir-pathname))
   (setf *emaker-search-list* 
     (append *emaker-search-list*
       (list
@@ -149,12 +154,12 @@
           ;; If we have a compile-target, then we have the authority
           ;; to write to it.
           (e.compiler:compile-e-to-file
-            (e.syntax:e-source-to-tree (e. file |getTwine|))
+            (e.syntax:parse-to-kernel (e. file |getTwine|))
             compile-target
             fqn-prefix
             scope))
         (e.compiler:load-compiled-e compile-target scope))
-      (elang:eval-e (e.syntax:e-source-to-tree (e. file |getTwine|))
+      (elang:eval-e (e.syntax:parse-to-kernel (e. file |getTwine|))
                     scope))))
 
 (defglobal +emaker-fasl-type+ 
@@ -394,7 +399,7 @@
                   source nil)
             (handler-case
               (progn
-                (setf value (elang:eval-e (e.syntax:e-source-to-tree source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|)))))
+                (setf value (elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|)))))
                 (e. resolver |resolve| value))
               (error (p)
                 (e. resolver |smash| p))))))

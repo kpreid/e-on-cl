@@ -1,0 +1,48 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def makeFirstCharSplitter := <import:org.quasiliteral.text.FirstCharSplitter>
+
+def quasiSpecialSplitter := makeFirstCharSplitter("$@")
+
+def convertQuasiInput implements DeepFrozen {
+  to inlineHoles_to_holeCharacterIndexes(quasi1Source :Twine) {
+    var outSource := ""
+    def outVH := [].diverge()
+    def outPH := [].diverge()
+    
+    var position := 0
+    while (quasiSpecialSplitter.findInFrom(quasi1Source, position) \
+             =~ markerIndex ? markerIndex >= 0) {
+      outSource += quasi1Source(position, markerIndex) # plain text
+      def marker := quasi1Source[markerIndex]
+      switch (quasi1Source[markerIndex + 1]) {
+        match =='{' { #}
+          def closeIndex ? markerIndex >= 0 := 
+            quasi1Source.startOf(#{
+                                 "}", markerIndex)
+          def holeIndex := __makeInt(quasi1Source.run(markerIndex + 2, closeIndex))
+          def holeOutPosition := outSource.size()
+          switch (marker) {
+            match =='$' { outVH[holeIndex] := holeOutPosition }
+            match =='@' { outPH[holeIndex] := holeOutPosition }
+          }
+          outSource += E.toString(marker)
+          position := closeIndex + 1
+        }
+        match ==marker {
+          outSource += E.toString(marker)
+          position := markerIndex + 2
+        }
+      }
+    }
+    outSource += quasi1Source.run(position)
+    return [outSource, outVH.snapshot(), outPH.snapshot()]
+  }
+}
+
+? convertQuasiInput.inlineHoles_to_holeCharacterIndexes("a${0}b@{0}c@@d$$e${1}f")
+# value: ["a$b@c@d$e$f", [1, 9], [3]]
