@@ -483,6 +483,13 @@ XXX make precedence values available as constants"
             (e. tw |print| " ? ")
             (subprint condition +precedence-in-suchthat+))
           
+          (:|visitViaPattern| (opt-original function subpatt)
+            (declare (ignore opt-original))
+            (e. tw |print| "via (")
+            (subprint function +precedence-outer+)
+            (e. tw |print| ") ")
+            (subprint subpatt nil))
+          
           (:|visitQuasiLiteralNode/2| (quasi-printer "$"))
           (:|visitQuasiPatternNode/2| (quasi-printer "@"))
           (:|visitQuasiLiteralExpr/2| (quasi-printer "$"))

@@ -364,7 +364,8 @@
     :|SlotExpr|
     :|SlotPattern|
     :|SuchThatPattern|
-    :|VarPattern|)
+    :|VarPattern|
+    :|ViaPattern|)
   #+sbcl (:lock t))
 
 ;; XXX for now, e.nonkernel.* packages are defined in nonkernel.lisp

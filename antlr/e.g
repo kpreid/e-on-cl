@@ -128,6 +128,7 @@ tokens {
     VarPattern;
     SlotPattern;
     ListPattern;
+    ViaPattern;
     TailPattern;
     IgnorePattern;
     SamePattern;
@@ -712,7 +713,8 @@ optCatchClause: "catch"! pattern body
 pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )?   ;
 
 listPatt:
-    eqPatt
+        eqPatt
+    |   "via"^ parenExpr listPatt {##.setType(ViaPattern);}
     |   "["^
         (   ((key br)? "=>") => mapPatts br "]"! {##.setType(MapPattern);}
             ("|"^ listPatt {##.setType(TailPattern);} )?

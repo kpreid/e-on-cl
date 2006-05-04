@@ -237,6 +237,9 @@
 (define-node-class |SuchThatPattern| (|Pattern|)
   ((:|pattern| t |Pattern|) 
    (:|test| t |EExpr|)))
+(define-node-class |ViaPattern| (|Pattern|)
+  ((:|function| t |EExpr|)
+   (:|pattern| t |Pattern|)))
 
 (define-node-class |NounPattern|     (|Pattern|)
   ())
@@ -484,6 +487,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defmethod pattern-opt-noun ((patt |SuchThatPattern|))
   (pattern-opt-noun (e. patt |getPattern|)))
 
+(defmethod pattern-opt-noun ((patt |ViaPattern|))
+  (pattern-opt-noun (e. patt |getPattern|)))
+
 (defmethod pattern-opt-noun ((patt |NounPattern|))
   (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
     (when (typep kernel-noun '|NounExpr|)
@@ -501,6 +507,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
 
 (defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
+  (pattern-to-param-desc (e. patt |getPattern|)))
+
+(defmethod pattern-to-param-desc ((patt |ViaPattern|))
   (pattern-to-param-desc (e. patt |getPattern|)))
 
 ;; This is a class so that instances may be written to a compiled file.
@@ -779,6 +788,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |VarPattern|
   (seq :|optGuardExpr|
        (! (e. builder |scopeVar| node))))
+
+(def-scope-rule |ViaPattern|
+  (seq :|function| :|pattern|))
 
 (def-scope-rule |EMatcher|
   (hide (seq :|pattern|

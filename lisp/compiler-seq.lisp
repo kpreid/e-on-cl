@@ -498,6 +498,17 @@
                  ,(eject-code ejector-spec `(%make-such-that-error ,specimen-var ',test))))))
     layout))
 
+(define-sequence-patt |ViaPattern| (layout specimen ejector-spec function pattern
+    &aux (function-var (gensym "VFN"))
+         (post-specimen-var (gensym "VSP")))
+  (values
+    (append (updating-sequence-expr function layout function-var)
+            `((,post-specimen-var 
+               (e. ,function-var |run| ,specimen
+                                       ,(opt-ejector-make-code ejector-spec))))
+            (updating-sequence-patt pattern layout post-specimen-var ejector-spec))
+    layout))
+
 ;;; --- Binding patterns ---
 
 (defun final-sequence-binding (noun layout specimen-var ejector-spec guard-var

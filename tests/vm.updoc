@@ -832,6 +832,33 @@ SuchThatPattern
   ? {[ def [stpv] ? (def stpev := stpv == 1) := [2], stpv, stpev ]}
   # problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>
 
+ViaPattern
+
+  success
+  ? pragma.enable("trinary-define")
+  > escape a { [def via (def _(b,_):any{return b+1}) c := (1, a), c] }
+  # value: [1, 2]
+
+  failure in via
+  ? pragma.enable("trinary-define")
+  > escape a { [def via (def _(_,b):any{throw.eject(b,"fail")}) c := (1, a), c] }
+  # value: problem: fail
+
+  failure in subpattern
+  ? pragma.enable("trinary-define")
+  > escape a { [def via (def _(b,_):any{return b+1}) c :char := (1, a), c] }
+  # value: problem: the int 2 doesn't coerce to a char
+  
+  pattern noun
+  ? pragma.enable("verb-curry")
+  > escape via (any.coerce) aa { print(aa) }
+  # stdout: <aa ejector>
+  XXX should have no name instead, since via may transform the specimen arbitrarily so the noun is unrelated?
+  
+  pattern param-desc
+  ? pragma.enable("verb-curry")
+  > def f(via (any.coerce) a) :any {}.__getAllegedType().getMessageTypes()["run/1"]
+  # value: to run(a) :any
 
 Miscellaneous scoping
 

@@ -8,6 +8,7 @@ This file contains tests for the E parser's grammar; specifically excluding expa
 ? def pp := <import:org.cubik.cle.prim.parser>; null
 ? def dumpENodes := <import:org.cubik.cle.dumpENodes>; null
 ? def t(s) :any { return dumpENodes(pp.run(s), stdout) }; null
+? def tp(s) :any { return dumpENodes(pp.pattern(s, null, null), stdout) }; null
 
 --- Function syntax ---
 
@@ -126,7 +127,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (unknown:1)@11: unexpected token: [":=",<155>,line=1,col=11]
+# problem: (unknown:1)@11: unexpected token: [":=",<156>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -294,6 +295,15 @@ XXX more tests (this section was written to test guardless ParamDesc)
 #               ParamDescE.
 #                 null
 #                 null
+#             null
+
+--- Via-pattern ---
+
+? tp("via (a) b")
+# stdout: ViaP.
+#           NounE. a
+#           FinalP.
+#             NounE. b
 #             null
 
 --- Miscellaneous ---
