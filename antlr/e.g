@@ -188,9 +188,6 @@ tokens {
     POSINT;
     FLOAT64;
     EXPONENT;
-
-    // workaround for ANTLR bug: a rule which matches nothing is rejected by the Java compiler: "exception antlr.RecognitionException is never thrown in body of corresponding try statement"
-    CANT_HAPPEN_TOKEN;
 }
 
 {
@@ -294,7 +291,7 @@ metaExpr:  "meta"^ "."! verb
             "("! ")"! ;
 
 br:         (LINESEP!)* ;
-filler:     CANT_HAPPEN_TOKEN | {##=#([Absent]);} ;
+filler:     {false}? | {##=#([Absent]);} ;
 
 
 seq:        eExpr ((seqSep)+ (seqMore {##=#([SeqExpr],##);})? )? ;
