@@ -823,67 +823,6 @@ XXX make precedence values available as constants"
                                :elements elements))
               (pass () (apply #'make-from-tag out-children)))
       (case tag
-        ;; -- no special treatment --
-        ((e.grammar::|AssignExpr|
-          e.grammar::|AccumExpr|
-          e.grammar::|AccumPlaceholderExpr|
-          e.grammar::|CallExpr|
-          e.grammar::|CoerceExpr|
-          e.grammar::|CurryExpr|
-          e.grammar::|ForExpr|
-          e.grammar::|ForwardExpr|
-          e.grammar::|FunctionExpr|
-          e.grammar::|FunCallExpr|
-          e.grammar::|FunSendExpr|
-          e.grammar::|GetExpr|
-          e.grammar::|HideExpr|
-          e.grammar::|IfExpr|
-          e.grammar::|If1Expr|
-          e.grammar::|ListExpr|
-          e.grammar::|LiteralExpr|
-          e.grammar::|MatchBindExpr|
-          e.grammar::|MessageDescExpr|
-          e.grammar::|MetaContextExpr|
-          e.grammar::|MetaStateExpr|
-          e.grammar::|MismatchExpr|
-          e.grammar::|ModPowExpr|
-          e.grammar::|NKAssignExpr|
-          e.grammar::|PropertyExpr|
-          e.grammar::|PropertySlotExpr|
-          e.grammar::|QuasiExpr|
-          e.grammar::|QuasiExprHole|
-          e.grammar::|QuasiParserExpr|
-          e.grammar::|QuasiPatternHole|
-          e.grammar::|SendExpr|
-          e.grammar::|SlotExpr|
-          e.grammar::|SwitchExpr|
-          e.grammar::|ParamDescExpr|
-          e.grammar::|URIExpr|
-          e.grammar::|WhenExpr|
-          e.grammar::|WhenFnExpr|
-          e.grammar::|WhileExpr|
-          e.grammar::|MapPattern|
-          e.grammar::|MapPatternAssoc|
-          e.grammar::|MapPatternImport|
-          e.grammar::|MapPatternOptional|
-          e.grammar::|MapPatternRequired|
-          e.grammar::|ListPattern|
-          e.grammar::|QuasiPattern|
-          e.grammar::|SuchThatPattern|
-          e.grammar::|TailPattern|
-          e.grammar::|EMethod|
-          e.grammar::|ETo|
-          e.grammar::|EMatcher|
-          e.grammar::|FunctionObject|
-          e.grammar::|MethodObject|
-          e.grammar::|PlumbingObject|
-          
-          e.grammar::|QuasiLiteralExpr|
-          e.grammar::|QuasiLiteralPattern|
-          e.grammar::|QuasiPatternExpr|
-          e.grammar::|QuasiPatternPattern|)
-          (pass))
-      
         ;; -- misc. leaves and 'special' nodes --
         ((e.grammar::|IDENT|) 
           (assert (null out-children))
@@ -1077,20 +1016,25 @@ XXX make precedence values available as constants"
           (assert (null out-children))
           ;; XXX parser or this level needs to unescape quasi syntax escapes
           (mn '|QuasiText| text))
-        ((e.grammar::|QuasiLiteralExpr|)
-          (apply #'mn '|QuasiExpr| out-children))
         
         (otherwise
-          (cond
-            ((and (string= (aref (symbol-name tag) 0) "\"") 
-                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 2)) "=")
-                  (null out-children))
-              (cons 'update-op (subseq text 0 (1- (length text)))))
-            ((and (string= (aref (symbol-name tag) 0) "\"") 
-                  (string= (aref (symbol-name tag) (- (length (symbol-name tag)) 1)) "\"")
-                  (null out-children))
-              (cons 'op text))
-            (t (error "don't know what to do with ~S <- ~A" ast-node (write-to-string path :length 5))))))))))
+          (let* ((tag-name (symbol-name tag))
+                 (length (length tag-name)))
+            (cond
+              ;; tokens like: "+="
+              ((and (string= (aref tag-name 0) "\"") 
+                    (string= (subseq tag-name (- length 2)) "=\"")
+                    (null out-children))
+                (cons 'update-op (subseq text 0 (1- (length text)))))
+              ;; tokens like: "+"
+              ((and (string= (aref tag-name 0) "\"") 
+                    (string= (aref tag-name (- length 1)) "\"")
+                    (null out-children))
+                (cons 'op text))
+              ;; tokens like: CallExpr
+              ((upper-case-p (aref tag-name 0))
+               (pass))
+              (t (error "don't know what to do with ~S <- ~A" ast-node (write-to-string path :length 5)))))))))))
 
 ; --- Parse cache files ---
  
