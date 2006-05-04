@@ -167,8 +167,6 @@ tokens {
     List;
     Assoc;
     Export;
-    Implements;
-    Extends;
     Absent;
     True;
     False;
@@ -191,6 +189,8 @@ tokens {
     FLOAT64;
     EXPONENT;
 
+    // workaround for ANTLR bug: a rule which matches nothing is rejected by the Java compiler: "exception antlr.RecognitionException is never thrown in body of corresponding try statement"
+    CANT_HAPPEN_TOKEN;
 }
 
 {
@@ -294,6 +294,8 @@ metaExpr:  "meta"^ "."! verb
             "("! ")"! ;
 
 br:         (LINESEP!)* ;
+filler:     CANT_HAPPEN_TOKEN | {##=#([Absent]);} ;
+
 
 seq:        eExpr ((seqSep)+ (seqMore {##=#([SeqExpr],##);})? )? ;
 seqMore:    eExpr ((seqSep)+ (seqMore)?)? ;
@@ -347,7 +349,7 @@ whenCatchers:   (catcher)+ {##=#([List],##);}
 
 whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
 
-escapeExpr:     "escape"^ pattern body (catcher)?   {##.setType(EscapeExpr);} ;
+escapeExpr:     "escape"^ pattern body optCatchClause {##.setType(EscapeExpr);} ;
 
 thunkExpr:      "thunk"^ body    {##.setType(ThunkExpr);}  ;
 
@@ -363,44 +365,37 @@ tryExpr:        "try"^ body
                 ("finally"! body)?                      {##.setType(TryExpr);}
             ;
 
-binder:         "bind"^ noun (":"! guard)?      {##.setType(BindPattern);}  ;
+bindPatt:       "bind"^ nounExpr optGuard {##.setType(BindPattern);} ;
+varPatt:        "var"^  nounExpr optGuard {##.setType(VarPattern);}  ;
+slotPatt:       "&"^    nounExpr optGuard {##.setType(SlotPattern);} ;
 
-varNamer:       "var"^ nounExpr (":"! guard)?   {##.setType(VarPattern);}  ;
-
-slotNamer:      "&"^ nounExpr (":"! guard )?    {##.setType(SlotPattern);} ;
+// those patterns which may replace a "def" keyword
+keywordPatt:    varPatt | bindPatt ;
 
 // should forward declaration allow types?
 //docoDef:    doco (defExpr | interfaceExpr | thunkExpr) ;
 docoDef:    (DOC_COMMENT {##=#([DocComment],##);})?
             (objectExpr | interfaceExpr | thunkExpr) ;
 
-//so ObjectExpr(doc, fqn, auditors, script|method|matcher)
-//<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
-// var x := ... should produce a DefrecExpr with a VarPattern
-// bind x := ... should produce a DefrecExpr with a BindPattern
 objectExpr:     "def"^ objName objectTail           {##.setType(ObjectHeadExpr);}
-                | (binder | varNamer) objectTail    {##=#([ObjectHeadExpr],##);}
+                | keywordPatt objectTail    {##=#([ObjectHeadExpr],##);}
             ;
 
-//so ObjectExpr(doc, fqn, auditors, script|method|matcher)
-//<kpreid> 'matcher' in the plumbing, def foo match ... {}, case
-// var x := ... should produce a DefrecExpr with a VarPattern
-// bind x := ... should produce a DefrecExpr with a BindPattern
 defExpr:    "def"^  ( (nounExpr ":=") => pattern ":="! defRightSide  {##.setType(DefrecExpr);}
                     | (nounExpr) => nounExpr {##.setType(ForwardExpr);}
                     | pattern ":="! defRightSide  {##.setType(DefrecExpr);}
                     )
-            | (binder | varNamer) ":="! defRightSide {##=#([DefrecExpr],##);}
+            | keywordPatt ":="! defRightSide {##=#([DefrecExpr],##);}
             ;
 
 // trinary-define support
 defRightSide:  ( "("! seq ","! ) =>
                  "("! seq ","! seq ")"! pocket["trinary-define"]!
-               | assign
+               | assign filler
                ;
 
 // minimize the look-ahead for objectTail
-objectPredict:    ("def" objName | varNamer | binder)
+objectPredict:    ("def" objName | keywordPatt)
                   ("extends" | "implements" | "match" | "{"| "(" ) ;
 objectTail:     //(typeParams)?
                 //(":"! guard)?
@@ -408,7 +403,7 @@ objectTail:     //(typeParams)?
             oImplements
             scriptPair {##=#([MethodObject],##);}
         |   oImplements
-            (   scriptPair {##=#([MethodObject], #([Extends]), ##);}
+            (   scriptPair {##=#([MethodObject], #([Absent]), ##);}
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
@@ -416,18 +411,18 @@ objectTail:     //(typeParams)?
             {##=#([FunctionObject], ##);}
     ;
 
-extender:    "extends"^ br order {##.setType(Extends);} ;
+extender:    "extends"! br order ;
 oExtends:    extender
-             |                   {##=#([Extends],##);}  ;
+             |                   {##=#([Absent],##);}  ;
 
-oImplements: "implements"^ br order (","! order)* {##.setType(Implements);}
-             | {##=#([Implements],##);} ;
+oImplements: "implements"^ br order (","! order)* {##.setType(List);}
+             | {##=#([List],##);} ;
             // trailing comma would be ambiguous with HideExpr
 
 // this can be replaced with oImplements when function-implements becomes official
 fImplements:    "implements"^ br order (","! order)*
-                pocket["function-implements"] {##.setType(Implements);}
-             |  {##=#([Implements],##);} ;
+                pocket["function-implements"] {##.setType(List);}
+             |  {##=#([List],##);} ;
 
 
 // used in interface expressions
@@ -435,11 +430,11 @@ multiExtends: "extends"^ br order (","! order)* {##.setType(List);}
              | {##=#([List],##);} ;
             // trailing comma would be ambiguous with HideExpr
 
-objName:        nounExpr         {##=#([FinalPattern],##);}
-            |   "_"^             {##.setType(IgnorePattern);}
-            |   "bind"^ noun     {##.setType(BindPattern);}
-            |   "var"^ nounExpr  {##.setType(VarPattern);}
-            |   "&"^ nounExpr    {##.setType(SlotPattern);}
+objName:        nounExpr        filler {##=#([FinalPattern],##);}
+            |   "_"^                   {##.setType(IgnorePattern);}
+            |   "bind"^ noun    filler {##.setType(BindPattern);}
+            |   "var"^ nounExpr filler {##.setType(VarPattern);}
+            |   "&"^ nounExpr   filler {##.setType(SlotPattern);}
             |   STRING
             ;
 
@@ -709,7 +704,12 @@ guard:
     (options{greedy=true;}: "["^ argList "]"! {##.setType(GetExpr);})*
     ;
 
+// XXX remove duplication of syntax
 catcher:        "catch"^ pattern body ;
+
+optCatchClause: "catch"! pattern body 
+            |            filler  filler
+            ;
 
 // Patterns
 pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )?   ;
@@ -727,27 +727,27 @@ listPatt:
 
 eqPatt:         (IDENT QUASIOPEN) =>
                 quasiParser quasiString {##=#([QuasiPattern],##);}
-            |   nounExpr (":"! guard)?  {##=#([FinalPattern],##);}
-            |   "_"^ (":"! guard)?      {##.setType(IgnorePattern);}
+            |   nounExpr optGuard       {##=#([FinalPattern],##);}
+            |   // "_"^ optGuard        {##.setType(IgnorePattern);} // not yet
+                "_"^                    {##.setType(IgnorePattern);}
             |   "=="^ prim              {##.setType(SamePattern);}
             |   "!="^ prim              {##.setType(SamePattern);}
             |   compareOp prim
             |   quasiString             {##=#([QuasiPattern,"simple"],
                                               [Absent],##);}
             |   parenExpr quasiString   {##=#([QuasiPattern],##);}
-            |   binder
-            |   varNamer
-            |   slotNamer
+            |   keywordPatt
+            |   slotPatt
             ;
 
 // namePatts are patterns that bind at most one name.
 // this is expanded inline into eqPatt, but used directly elsewhere
 // Note that this is not a simple subset of eqPatt.
-namePatt:       nounExpr (":"! guard)?    {##=#([FinalPattern],##);}
-            |   "_"^ (":"! guard)?        {##.setType(IgnorePattern);}
-            |   binder
-            |   varNamer
-            |   slotNamer
+namePatt:       nounExpr optGuard    {##=#([FinalPattern],##);}
+            |   // "_"^ optGuard     {##.setType(IgnorePattern);} // not yet
+                "_"^                 {##.setType(IgnorePattern);}
+            |   keywordPatt
+            |   slotPatt
             ;
 
 justNoun:       IDENT

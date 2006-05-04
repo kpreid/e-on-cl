@@ -885,11 +885,8 @@ XXX make precedence values available as constants"
           (cons tag text))
 
         ;; -- special-purpose branches ---
-        ((e.grammar::|List| e.grammar::|Implements|)
+        ((e.grammar::|List|)
           (coerce out-children 'vector))
-        (e.grammar::|Extends|
-          (destructuring-bind (&optional extends) out-children
-            extends))
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
             (mn '|EMatcher| pattern body)))
@@ -926,26 +923,6 @@ XXX make precedence values available as constants"
         ;; -- doc-comment introduction --
         ((e.grammar::|ThunkExpr| e.grammar::|ObjectHeadExpr|)
           (apply #'make-from-tag (or enclosing-doc-comment "") out-children))
-
-        ;; -- de-optioning --
-        ((e.grammar::|IgnorePattern|)
-          (destructuring-bind (&optional guard) out-children
-            (if guard
-              #+(or) (mn '|AcceptsPattern|)
-              (error "reserved syntax: anon guard") ;; XXX source position in error
-              (mn '|IgnorePattern|)))) 
-        (e.grammar::|DefrecExpr|
-          (destructuring-bind (l r &optional ejector) out-children
-            (mn '|DefrecExpr| l r ejector)))
-        (e.grammar::|EscapeExpr|
-          (destructuring-bind (patt body &optional catcher) out-children
-            (mn '|EscapeExpr| 
-              patt body 
-              (when catcher (e. catcher |getPattern|)) 
-              (when catcher (e. catcher |getBody|)))))
-        ((e.grammar::|FinalPattern| e.grammar::|SlotPattern| e.grammar::|VarPattern| e.grammar::|BindPattern|)
-          (destructuring-bind (noun &optional guard) out-children
-            (make-from-tag noun guard)))
 
         ;; -- negated-operator introduction --
         ((e.grammar::|SameExpr|)
