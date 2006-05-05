@@ -1,0 +1,11 @@
+pragma.enable("easy-return")
+
+pragma.enable("function-implements")
+
+{def __mapEmpty(specimen, optEjector) :void implements DeepFrozen { # implements ViaFunction
+  if (specimen.size().isZero()) {
+  } else {
+    # XXX avoid printing
+    throw.eject(optEjector, "unused elements in matched map: " + E.toQuote(specimen))
+  }
+}}

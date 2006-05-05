@@ -324,14 +324,6 @@ Map
  XXX conformTo for specimens
  XXX conformTo primitive guard
 
-__MatchContext
-
-  ? __MatchContext :DeepFrozen
-  # value: <MatchContext>
-
-  ? testSpecimenNotPrinted(__MatchContext)
-  # problem: testSpecimenNotPrinted: <MatchContext> accepted
-
 ValueGuard
 
   ? ValueGuard

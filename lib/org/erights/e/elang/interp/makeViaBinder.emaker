@@ -1,0 +1,16 @@
+pragma.enable("easy-return")
+
+pragma.enable("function-implements")
+
+{def __bind implements DeepFrozen {
+  to run(resolver) :any {
+    return def binder(specimen, _) :any { # implements ViaFunction
+      resolver.resolve(specimen)
+    }
+  }
+  to run(resolver, guard) :any {
+    return def guardedBinder(specimen, optEjector) :any { # implements ViaFunction
+      resolver.resolve(guard.coerce(specimen, optEjector))
+    }
+  }
+}}

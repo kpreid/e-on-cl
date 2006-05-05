@@ -5,6 +5,7 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 pragma.enable("function-implements")
+pragma.enable("anon-lambda")
 
 /** Non-coercing guard wrapper. */
 def Really {
@@ -30,9 +31,12 @@ def requireDF(condition, problemThunk) :void {
 
 def makeCallExpr := <import:org.erights.e.elang.evm.makeCallExpr>
 
-def [=> NounExpr, => EExpr, => ENode, => FinalPattern, => IfExpr, => SeqExpr] := \
-  {def nodeTypeMap { to size() { return 0 } 
-                     to optExtract(key) { return [<import>["org.erights.e.elang.evm.type." + key], nodeTypeMap] }}}
+def [NounExpr, EExpr, ENode, FinalPattern, IfExpr, SeqExpr] := \
+  { var types := []
+    ["NounExpr", "EExpr", "ENode", "FinalPattern", "IfExpr", "SeqExpr"] \
+      .iterate(fn _,name {types := types.with(<import>["org.erights.e.elang.evm.type." + name]); null})
+    types
+  }
 
 
 def primParser := <import:org.cubik.cle.prim.parser>
@@ -178,8 +182,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     }
   }
 
+  OptionallyDeepFrozen__Resolver.resolve(
   /** Acts as the DeepFrozen auditor, but will not throw if the object is not acceptable. */
-  bind OptionallyDeepFrozen implements DeepFrozenStamp {
+  def "%OptionallyDeepFrozen" implements DeepFrozenStamp {
     to audit(objectExpr, witness) {
       escape fail {
         requireAudit(objectExpr, witness, fail)
@@ -187,9 +192,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       }
       return false
     }
-  }
+  })
   
-  bind EventuallyDeepFrozen := 
+  EventuallyDeepFrozen__Resolver.resolve(
   /** Allows objects to be verified as DeepFrozen without requiring either transparency or that their components be settled at audit time, by having them implement a method to ...XXX finish writing this documentation */
   def "$EventuallyDeepFrozen" implements DeepFrozenStamp {
     to getPeekBrand() { return peekBrand }
@@ -255,7 +260,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       
       return true
     }
-  }
+  })
 
   # makeBaseGuard is itself DeepFrozen but does not have access to the DeepFrozenStamp; therefore we must allow it to get its stamp before invoking it to use as our own base.
   var optRealBase := null
@@ -267,7 +272,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     E.callWithPair(optRealBase, msg)
   }
 
-  bind DeepFrozen0 extends myBase implements DeepFrozenStamp {
+  DeepFrozen0__Resolver.resolve(def "$DeepFrozen" extends myBase implements DeepFrozenStamp {
     to __printOn(out :TextWriter) :void {
       out.print("DeepFrozen")
     }
@@ -300,7 +305,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     to "eventually"() {
       return EventuallyDeepFrozen
     }
-  }
+  })
   
   return DeepFrozen0
 }

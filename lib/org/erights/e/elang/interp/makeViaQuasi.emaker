@@ -1,0 +1,11 @@
+pragma.enable("easy-return")
+
+pragma.enable("function-implements")
+
+{def __quasiMatcher implements DeepFrozen {
+  to run(matchMaker, values) :any {
+    return def quasiMatcher(specimen, optEjector) :any implements DeepFrozen.optionally() {
+      return matchMaker.matchBind(values, specimen, optEjector)
+    }
+  }
+}}

@@ -1,0 +1,32 @@
+pragma.enable("easy-return")
+
+pragma.enable("function-implements")
+
+{def __matchSame implements DeepFrozen {
+  to run(expected) :any {
+    return def sameMatcher(specimen, optEjector) :any implements DeepFrozen.optionally() {
+      def comparison := __equalizer.optSame(specimen, expected)
+      # XXX avoid printing
+      if (comparison == null) {
+        throw.eject(optEjector, E.toQuote(specimen) + " is not yet " + E.toQuote(expected))
+      } else if (comparison) {
+        return expected
+      } else {
+        throw.eject(optEjector, E.toQuote(specimen) + " is not " + E.toQuote(expected))
+      }
+    }
+  }
+  to different(unexpected) :any {
+    return def differentMatcher(specimen, optEjector) :any implements DeepFrozen.optionally() {
+      def comparison := __equalizer.optSame(specimen, unexpected)
+      # XXX avoid printing
+      if (comparison == null) {
+        throw.eject(optEjector, E.toQuote(specimen) + " is not yet different from " + E.toQuote(unexpected))
+      } else if (comparison) {
+        throw.eject(optEjector, "must not be " + E.toQuote(unexpected))
+      } else {
+        return specimen
+      }
+    }
+  }
+}}

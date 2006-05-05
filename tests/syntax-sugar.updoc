@@ -3,9 +3,18 @@
 
 These are tests specifically of the text->Kernel-E stages, skipping evaluation and the intermediate unexpanded form; however, the intent is primarily to test expansion, not the parser.
 
-  ? def pp := <import:org.cubik.cle.prim.parser>; null
-  ? def t(s) :any { return pp.run(s).asKernelE() }; null
-  ? def tp(pat) :any { return pp.pattern(pat, null, null).asKernelE() }; null
+  ? def pp := <import:org.cubik.cle.prim.parser>
+  > def t(s) :any { return pp.run(s).asKernelE() }
+  > def tp(pat) :any { return pp.pattern(pat, null, null).asKernelE() }
+  > null
+  
+  ? def UnsealThrown := lisp.unsealingConditionGuard(lisp["CL", "T"].getValue())
+  > /**eval*/ 
+  > def te(s) :any { 
+  >   return [def n := pp.run(s).asKernelE()] + \
+  >     try { [true, n.eval(safeScope)] } catch p { [false, p :UnsealThrown] }
+  > }
+  > null
 
 Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
 
@@ -175,16 +184,17 @@ Where headings are in quotes, it indicates that the names are those I invented f
   XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
 
   Bug test: temporary names inside a ConditionalExpr would fail
-  ? t("(def ==x := x) && true")
-  # value: e`if (def __1 ? __equalizer.sameEver(__1, x) := x) {
+  ? t("(a[] := true) && true")
+  # value: e`if (a.put(def ares__1 := true)
+  #        ares__1) {
   #            if (true) {
-  #                __makeList.run(&__1)
+  #                __makeList.run(&ares__1)
   #            } else {
   #                null
   #            }
   #        } else {
   #            null
-  #        } =~ [&__1]`
+  #        } =~ [&ares__1]`
 
   Bug test: reusing names would cause them to be null =~ bound on both sides
   ? t("1 =~ x || 2 =~ x")
@@ -457,8 +467,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   
   named by bind-expr
   ? t("bind a {}")
-  # value: e`def a__1 ? (a__Resolver.resolve(a__1)
-  #        true) := def "$a__C" {
+  # value: e`def via (__bind.run(a__Resolver)) a__1 := def "$a__C" {
   #        }`
 
 'NullExpr'
@@ -492,11 +501,6 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("` a $b ${\"c\"} $\\n $$ `` @@ `")
   # value: e`simple__quasiParser.valueMaker(" a ${0} ${1} 
   #         $$ ` @@ ").substitute(__makeList.run(b, "c"))`
-
-  ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
-  # value: epatt`co__1 :__MatchContext ? (def [sp__2, ej__3] := co__1
-  #        simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
-  #         $$ ` @@ ").matchBind(__makeList.run(b, "c"), sp__2, ej__3) =~ [d, [e]])`
 
   ? t("a`b`")
   # value: e`a__quasiParser.valueMaker("b").substitute(__makeList.run())`
@@ -752,43 +756,115 @@ Where headings are in quotes, it indicates that the names are those I invented f
 'BindPattern'  
 
   ? tp("bind a")
-  # value: epatt`a__1 ? (a__Resolver.resolve(a__1)
-  #        true)`
+  # value: epatt`via (__bind.run(a__Resolver)) a__1`
 
   ? tp("bind a :b")
-  # value: epatt`a__1 :b ? (a__Resolver.resolve(a__1)
-  #        true)`
+  # value: epatt`via (__bind.run(a__Resolver, b)) a__1`
 
   Anything that expands to a noun is allowed.
   ? tp("bind <a> :b")
-  # value: epatt`a__uriGetter__1 :b ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
-  #        true)`
+  # value: epatt`via (__bind.run(a__uriGetter__Resolver, b)) a__uriGetter__1`
 
   ? t("def bind <a> {}")
-  # value: e`def a__uriGetter__1 ? (a__uriGetter__Resolver.resolve(a__uriGetter__1)
-  #        true) := def "$a__uriGetter__C" {
+  # value: e`def via (__bind.run(a__uriGetter__Resolver)) a__uriGetter__1 := def "$a__uriGetter__C" {
   #        }`
+  
+  
+  ? te("def [a, a__Resolver] := Ref.promise(); def bind a := 1; a")
+  # value: [e`def [a, a__Resolver] := Ref.promise()
+  #        def via (__bind.run(a__Resolver)) a__1 := 1
+  #        a`, true, 1]
+
+  ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); a__Resolver.resolve(0); [escape e { def bind a := (1, e) }, a]")
+  # value: [e`def [a, a__Resolver] := Ref.promise()
+  #        a__Resolver.resolve(0)
+  #        __makeList.run(escape e {
+  #            def via (__bind.run(a__Resolver)) a__1 := (1, e)
+  #        }, a)`, false, problem: this resolver's ref has already been resolved, therefore cannot be resolved to 1]
+  XXX should this eject instead?
+
+  ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); [escape e { def bind a :char := (1, e) }, a]")
+  # value: [e`def [a, a__Resolver] := Ref.promise()
+  #        __makeList.run(escape e {
+  #            def via (__bind.run(a__Resolver, char)) a__1 := (1, e)
+  #        }, a)`, true, [problem: the int 1 doesn't coerce to a char, <Promise>]]
 
 'MapPattern'
   
   ? tp("[\"a\" => b]")
-  # value: epatt`map__1 ? (map__1.optExtract("a") =~ [b, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+  # value: epatt`via (__mapExtract.run("a")) [b, via (__mapEmpty) _]`
   
   ? tp("[(a) => b]")
-  # value: epatt`map__1 ? (map__1.optExtract(a) =~ [b, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+  # value: epatt`via (__mapExtract.run(a)) [b, via (__mapEmpty) _]`
   
   ? tp("[=> a]")
-  # value: epatt`map__1 ? (map__1.optExtract("a") =~ [a, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+  # value: epatt`via (__mapExtract.run("a")) [a, via (__mapEmpty) _]`
 
   ? tp("[\"a\" => b := c]")
-  # value: epatt`map__1 ? (map__1.extract("a", c) =~ [b, map__2 ? __equalizer.sameEver(map__2.size(), 0)])`
+  # value: epatt`via (__mapExtract."default"("a", c)) [b, via (__mapEmpty) _]`
 
-  XXX expansion to be changed to not use such-that
+
+  ? te("def [\"a\" => b] := [\"a\" => 1]; b")
+  # value: [e`def via (__mapExtract.run("a")) [b, via (__mapEmpty) _] := __makeMap.fromPairs(__makeList.run(__makeList.run("a", 1)))
+  #        b`, true, 1]
+
+  ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] := ([].asMap(), e); b}")
+  # value: [e`escape e {
+  #            def via (__mapExtract.run("a")) [b, via (__mapEmpty) _] := (__makeList.run().asMap(), e)
+  #            b
+  #        }`, true, problem: "a" not in matched map: [].asMap()]
+
+  ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] := ([\"a\" => 1, \"b\" => 2], e); b}")
+  # value: [e`escape e {
+  #            def via (__mapExtract.run("a")) [b, via (__mapEmpty) _] := (__makeMap.fromPairs(__makeList.run(__makeList.run("a", 1), __makeList.run("b", 2))), e)
+  #            b
+  #        }`, true, problem: unused elements in matched map: ["b" => 2]]
 
 'SamePattern'
 
   ? tp("==x")
-  # value: epatt`__1 ? __equalizer.sameEver(__1, x)`
+  # value: epatt`via (__matchSame.run(x)) _`
+
+  ? tp("!=x")
+  # value: epatt`via (__matchSame.different(x)) _`
+
+
+  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (1, e) }")
+  # value: [e`escape e {
+  #            def via (__matchSame.run(1)) _ := (1, e)
+  #        }`, true, 1]
+  
+  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (2, e) }")
+  # value: [e`escape e {
+  #            def via (__matchSame.run(1)) _ := (2, e)
+  #        }`, true, problem: 2 is not 1]
+
+  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (Ref.promise()[0], e) }")
+  # value: [e`escape e {
+  #            def via (__matchSame.run(1)) _ := (Ref.promise().get(0), e)
+  #        }`, true, problem: <Promise> is not yet 1]
+
+  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (2, e) }")
+  # value: [e`escape e {
+  #            def via (__matchSame.different(1)) _ := (2, e)
+  #        }`, true, 2]
+  
+  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (1, e) }")
+  # value: [e`escape e {
+  #            def via (__matchSame.different(1)) _ := (1, e)
+  #        }`, true, problem: must not be 1]
+
+  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (Ref.promise()[0], e) }")
+  # value: [e`escape e {
+  #            def via (__matchSame.different(1)) _ := (Ref.promise().get(0), e)
+  #        }`, true, problem: <Promise> is not yet different from 1]
+
+'QuasiPattern'
+
+  ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
+  # value: epatt`via (__quasiMatcher.run(simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
+  #         $$ ` @@ "), __makeList.run(b, "c"))) [d, [e]]`
+  XXX test __quasiMatcher
 
 'TailPattern'
 
@@ -802,10 +878,16 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   map-pattern variety
     ? tp("[\"a\" => b] | c")
-    # value: epatt`map__1 ? (map__1.optExtract("a") =~ [b, c])`
+    # value: epatt`via (__mapExtract.run("a")) [b, c]`
     
     x ? tp("[] | a")
     x # syntax error: 
+
+    ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] | c := ([\"a\" => 1, \"b\" => 2], e); [b, c]}")
+    # value: [e`escape e {
+    #            def via (__mapExtract.run("a")) [b, c] := (__makeMap.fromPairs(__makeList.run(__makeList.run("a", 1), __makeList.run("b", 2))), e)
+    #            __makeList.run(b, c)
+    #        }`, true, [1, ["b" => 2]]]
 
 'FunctionObject'
 
@@ -882,6 +964,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #                }
   #            }
   #        }`
-  
+
+XXX add behavior tests for all expansions (right now they're only present for the new 'via' expansions) '
 XXX test temporary name rules
 XXX do node-based tests for FunctionObject, TailPattern, UpdateExpr since those aren't quite fully tested just from syntax '

@@ -1,0 +1,23 @@
+pragma.enable("easy-return")
+
+pragma.enable("function-implements")
+pragma.enable("trinary-define")
+
+{def __mapExtract implements DeepFrozen {
+  to run(key) :any {
+    return def extractor(specimen, optEjector) implements DeepFrozen.optionally() { # implements ViaFunction
+      return escape e {
+        def extraction :notNull := (specimen.optExtract(key), e)
+        extraction
+      } catch _ {
+        # XXX avoid printing
+        throw.eject(optEjector, E.toQuote(key) + " not in matched map: " + E.toQuote(specimen))
+      }
+    }
+  }
+  to "default"(key, defaultValue) :any {
+    return def defaultingExtractor(specimen, optEjector) implements DeepFrozen.optionally() { # implements ViaFunction
+      return specimen.extract(key, defaultValue)
+    }
+  }
+}}

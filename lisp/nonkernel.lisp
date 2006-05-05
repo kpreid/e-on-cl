@@ -965,18 +965,18 @@
 (defemacro |BindPattern| (|Pattern|) ((|noun| t |EExpr|)
                                       (|optGuard| t (or null |EExpr|)))
                                      ()
-  (let* ((real-noun (e-macroexpand-all |noun|))
-         (temp (gennoun (e. real-noun |getName|))))
-    (make-instance '|SuchThatPattern| :elements (list
-      (make-instance '|FinalPattern| :elements (list
-        temp
-        |optGuard|))
-      (make-instance '|SeqExpr| :elements (list
-        (make-instance '|CallExpr| :elements (list
-          (noun-to-resolver-noun real-noun)
-          "resolve"
-          temp))
-        (make-instance '|NounExpr| :elements '("true"))))))))
+  (let* ((real-noun (e-macroexpand-all |noun|)))
+    (check-type real-noun |NounExpr|)
+    (mn '|ViaPattern|
+      (apply #'mn '|FunCallExpr|
+        (mn '|NounExpr| "__bind")
+        (cons (noun-to-resolver-noun real-noun)
+              (if |optGuard|
+                (list |optGuard|)
+                '())))
+      ;; xxx This would be an IgnorePattern except that we want 'escape bind ej {}' to have a name for the ejector.
+      ;; This isn't a problem for objects because the naming of objects is nonkernel. Should we introduce a kernel-EscapeExpr with explicitly specified name?
+      (mn '|FinalPattern| (gennoun (e. real-noun |getName|)) nil))))
 
 (defmethod pattern-opt-noun ((patt |BindPattern|))
   ;; XXX this is identical code to pattern-opt-noun of NounPattern
@@ -1021,31 +1021,28 @@
   ((:|keyer| t |MapPatternKeyer|)))
    
 (defmethod build-incremental-map-pattern ((first |MapPatternRequired|) rest)
-  (let ((map-var (gennoun "map"))
-        (assoc (e. first |getKeyer|)))
-    (mn '|SuchThatPattern|
-      (mn '|FinalPattern| map-var nil)
-      (mn '|MatchBindExpr|
-        (mn '|CallExpr| map-var "optExtract" (map-pattern-key assoc))
-        (mn '|ListPattern|
-          (map-pattern-value assoc)
-          (build-incremental-map-pattern (first rest) (rest rest)))))))
+  (let ((assoc (e. first |getKeyer|)))
+    (mn '|ViaPattern|
+      (mn '|FunCallExpr| (mn '|NounExpr| "__mapExtract") 
+                         (map-pattern-key assoc))
+      (mn '|ListPattern|
+        (map-pattern-value assoc)
+        (build-incremental-map-pattern (first rest) (rest rest))))))
 
 (define-node-class |MapPatternOptional| (|MapPatternPart|)
   ((:|keyer| t |MapPatternKeyer|)
    (:|default| t |EExpr|)))
 
 (defmethod build-incremental-map-pattern ((first |MapPatternOptional|) rest)
-  (let ((map-var (gennoun "map"))
-        (assoc (e. first |getKeyer|)))
-    (mn '|SuchThatPattern|
-      (mn '|FinalPattern| map-var nil)
-      (mn '|MatchBindExpr|
-        (mn '|CallExpr| map-var "extract" (map-pattern-key assoc)
-                                          (e. first |getDefault|))
-        (mn '|ListPattern|
-          (map-pattern-value assoc)
-          (build-incremental-map-pattern (first rest) (rest rest)))))))
+  (let ((assoc (e. first |getKeyer|)))
+    (mn '|ViaPattern|
+      (mn '|CallExpr| (mn '|NounExpr| "__mapExtract") 
+                      "default"
+                      (map-pattern-key assoc)
+                      (e. first |getDefault|))
+      (mn '|ListPattern|
+        (map-pattern-value assoc)
+        (build-incremental-map-pattern (first rest) (rest rest))))))
 
 (define-node-class |MapPatternRest| (|MapPatternPart|)
   ((:|pattern| t |Pattern|)))
@@ -1056,13 +1053,9 @@
 
 (defmethod build-incremental-map-pattern ((first null) rest)
   (check-type rest null)
-  (let ((map-var (gennoun "map")))
-    (mn '|SuchThatPattern|
-      (mn '|FinalPattern| map-var nil)
-      ;; NOTE: I once had this using CompareExpr instead of SameExpr, which seems more sensible, but it turned out to be a cyclic dependency: __comparer uses DeepFrozen uses map-patterns uses __comparer.
-      (mn '|SameExpr| (mn '|CallExpr| map-var "size") 
-                      (mn '|LiteralExpr| 0)
-                      +e-false+))))
+  (mn '|ViaPattern|
+    (mn '|NounExpr| "__mapEmpty")
+    (mn '|IgnorePattern|)))
 
 (defun expand-map-pattern (pairs)
   (build-incremental-map-pattern (first pairs) (rest pairs)))
@@ -1078,33 +1071,22 @@
      (|parts| t (e-list (and |QuasiPart|))))
     (:rest-slot t)
   ;; XXX todo: reject usage between (all $-holes) and (all @-holes)
-  (let ((context-noun (gennoun "co"))
-        (specimen-noun (gennoun "sp"))
-        (ejector-noun (gennoun "ej")))
-    ;; NOTE: once we have the generalized guard change we can put the pair pattern directly in the SuchThatPattern
-    (mn '|SuchThatPattern|
-      (mn '|FinalPattern| context-noun (mn '|NounExpr| "__MatchContext"))
-      (mn '|SeqExpr|
-        (mn '|DefineExpr| (mn '|ListPattern| (mn '|FinalPattern| specimen-noun nil)
-                                             (mn '|FinalPattern| ejector-noun nil)) 
-                          context-noun nil)
-        (mn '|MatchBindExpr|
-          (mn '|CallExpr|
-            (mn '|CallExpr| (quasi-deopt-parser |optParser|)
-                            "matchMaker"
-                            (quasi-description |parts|))
-            "matchBind"
-            (quasi-value-list |parts|)
-            specimen-noun
-            ejector-noun)
-          (quasi-subpattern-list |parts|))))))
+  (mn '|ViaPattern|
+    (mn '|FunCallExpr| (mn '|NounExpr| "__quasiMatcher")
+                       (mn '|CallExpr| (quasi-deopt-parser |optParser|)
+                         "matchMaker"
+                         (quasi-description |parts|))
+                       (quasi-value-list |parts|))
+    (quasi-subpattern-list |parts|)))
 
 (defemacro |SamePattern| (|Pattern|) ((|value| t |EExpr|)
                                       (|invert| nil e-boolean))
                                      ()
-  (let ((temp (gennoun "")))
-    (mn '|SuchThatPattern| (mn '|FinalPattern| temp nil) 
-                           (mn '|SameExpr| temp |value| |invert|))))
+  (mn '|ViaPattern|
+    (mn '|CallExpr| (mn '|NounExpr| "__matchSame")
+                    (if (e-is-true |invert|) "different" "run")
+                    |value|)
+    (mn '|IgnorePattern|)))
 
 (defemacro |TailPattern| (|Pattern|) ((|fixedPatt| t |Pattern|)
                                       (|tailPatt| t |Pattern|))

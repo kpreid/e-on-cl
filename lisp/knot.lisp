@@ -634,15 +634,19 @@
           ; --- utility: EIO ---
           ("&EIO"               ,(lazy-import "org.erights.e.elib.eio.EIO"))
 
+          ; --- utility: used by expansions ---
+          ;; XXX these FQNs and scope nouns should be discussed
+          ("&__bind"         ,(lazy-import "org.erights.e.elang.interp.makeViaBinder"))
+          ("&__mapEmpty"     ,(lazy-import "org.erights.e.elang.interp.viaEmptyMap"))
+          ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.interp.makeViaExtractor"))
+          ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.interp.makeViaQuasi"))
+          ("&__matchSame"    ,(lazy-import "org.erights.e.elang.interp.makeViaSame"))
+          ("&__comparer"     ,(lazy-import "org.erights.e.elang.interp.comparer"))
+          ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
+
           ; --- utility: miscellaneous ---
-          ("&__comparer"        ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
-          ("__MatchContext"     ,(e-lambda "org.erights.e.elib.slot.MatchContext" 
-              (:stamped +deep-frozen-stamp+)
-            (:|coerce| (specimen opt-ejector)
-              (vector specimen opt-ejector))))
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
-          ("&__makeVerbFacet" ,(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
           
           ; --- XXX describe this category ---
           ;; XXX remove this special and use a parameter instead
