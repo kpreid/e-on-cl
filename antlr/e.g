@@ -306,12 +306,12 @@ basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
             |   escapeExpr | whenExpr | metaExpr | accumExpr
             |   docoDef | fnExpr ;
 
-ifExpr:     "if"^ parenExpr br body  // MARK should BR before block be allowed?
-            ("else"! (ifExpr | body ) {##.setType(IfExpr);}
+ifExpr:     "if"^ parenExpr br block  // MARK should BR before block be allowed?
+            ("else"! (ifExpr | block ) {##.setType(IfExpr);}
              |                        {##.setType(If1Expr);})
             ;
 
-forExpr:    "for"^ forPatt "in"! br assign body (catcher)?
+forExpr:    "for"^ forPatt "in"! br assign block (catcher)?
                                                {##.setType(ForExpr);}  ;
 
 // XXX rewrite this so it produces the right tree without lookahead
@@ -340,27 +340,28 @@ accumPlaceholder: "_" {##.setType(AccumPlaceholderExpr);} ;
 
 whenExpr:       "when"^ parenArgsList br "->"!  whenFn   {##.setType(WhenExpr);} ;
 
-whenFn:         objName params optGuard body whenCatchers optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
+whenFn:         objName parenParamList optGuard block whenCatcherList optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
 
-whenCatchers:   (catcher)+ {##=#([List],##);}
+whenCatcherList:   
+                (catcher)+ {##=#([List],##);}
             |   pocket["easy-when"] {##=#([List],##);} ;
 
-whileExpr:      "while"^ parenExpr body  {##.setType(WhileExpr);}  (catcher)? ;
+whileExpr:      "while"^ parenExpr block  {##.setType(WhileExpr);}  (catcher)? ;
 
-escapeExpr:     "escape"^ pattern body optCatchClause {##.setType(EscapeExpr);} ;
+escapeExpr:     "escape"^ pattern block optCatchClause {##.setType(EscapeExpr);} ;
 
-thunkExpr:      "thunk"^ body    {##.setType(ThunkExpr);}  ;
+thunkExpr:      "thunk"^ block    {##.setType(ThunkExpr);}  ;
 
-fnExpr:         "fn"^ patternsAsList body pocket["anon-lambda"]
+fnExpr:         "fn"^ patternList block pocket["anon-lambda"]
                     {##.setType(FunctionExpr);}  ;
 
 switchExpr:     "switch"^ parenExpr
                 "{"! (matcher br)* "}"!    {##.setType(SwitchExpr);}
             ;
 
-tryExpr:        "try"^ body
+tryExpr:        "try"^ block
                 (catcher)*
-                ("finally"! body)?                      {##.setType(TryExpr);}
+                ("finally"! block)?                      {##.setType(TryExpr);}
             ;
 
 bindPatt:       "bind"^ nounExpr optGuard {##.setType(BindPattern);} ;
@@ -395,8 +396,8 @@ defRightSide:  ( "("! seq ","! ) =>
 // minimize the look-ahead for objectTail
 objectPredict:    ("def" objName | keywordPatt)
                   ("extends" | "implements" | "match" | "{"| "(" ) ;
-objectTail:     //(typeParams)?
-                //(":"! guard)?
+objectTail:     //(typeParamList)?
+                //optGuard
             extender
             oImplements
             scriptPair {##=#([MethodObject],##);}
@@ -405,7 +406,7 @@ objectTail:     //(typeParams)?
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
-        |   params optGuard fImplements body getPocket["easy-return"]
+        |   parenParamList optGuard fImplements block getPocket["easy-return"]
             {##=#([FunctionObject], ##);}
     ;
 
@@ -436,10 +437,10 @@ objName:        nounExpr        filler {##=#([FinalPattern],##);}
             |   STRING
             ;
 
-//TODO MARK: what is typeParams for?  it appears to come right after "def name"
-typeParams:     "[" typePatternList br "]" ; // should have a br before the "]"
+//TODO MARK: what is typeParamList for?  it appears to come right after "def name"
+typeParamList:     "["^ typePatterns br "]" ; // should have a br before the "]"
 
-typePatternList:    (nounExpr (":"! guard)? ("," typePatternList)?)? ;
+typePatterns:    (nounExpr optGuard ("," typePatterns)?)? ;
 
 scriptPair:  "{"! methodList matcherList  "}"! ;
 
@@ -450,35 +451,31 @@ matcherList:    ( matcher br )* {##=#([List], ##);} ;
 
 method:         doco ( "method"^ methodTail {##.setType(EMethod);}
                      | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;
-methodTail:     optVerb params optGuard body ;
+methodTail:     optVerb parenParamList optGuard block ;
 
 optVerb:        verb | {##=#([FunctionVerb]);} ;
 
-matcher:        "match"^ pattern body  {##.setType(EMatcher);} ;
+matcher:        "match"^ pattern block  {##.setType(EMatcher);} ;
 
-params:         "("! patterns br ")"!  {##=#([List],##);} ;
-patternsAsList:   patterns {##=#([List],##);} ; // XXX can we avoid needing this as a separate rule?
 patterns:       (pattern (","! patterns)?)? ;
+patternList:    patterns {##=#([List],##);} ;
+parenParamList: "("! patternList br ")"! ;
 
-optFinally:     "finally"! body
+optFinally:     "finally"! block
             |   {##=#([Absent],##);}
             ;
 
-// ("throws" guardList)? ;
 optGuard:    ":"! guard | {##=#([Absent]);} ;
 
-guardList:      guard (","! guard)* ;    // requires at least one guard. cannot
-                                         // end with comma
-
 interfaceExpr:  "interface"! objName
-                //(":"! guard)?
+                //optGuard
                 (   iguards
                     multiExtends
                     oImplements
                     iscript
                 |   // NOTE this greedily consumes a following guard, thereby
                     // accepting things e.y cannot
-                    mtypes ((":") => ":"! guard | ) // function -- XXX wrong tree
+                    parenParamDescList ((":") => ":"! guard | ) // function -- XXX wrong tree
                 )
                 {##=#([InterfaceExpr],##);}
             ;
@@ -494,22 +491,23 @@ iguards:        ("guards"! pattern)
             |   ({##=#([Absent]);})
             ;
 
-iscript:    "{"^ (imethod br)* "}"! {##.setType(List);} ;
+iscript:    "{"^ (messageDesc br)* "}"! {##.setType(List);} ;
 
-imethod:    doco ("to"^ | "method"^ | "on"^) optVerb mtypes optGuard
+messageDesc:    doco ("to"^ | "method"^ | "on"^) optVerb parenParamDescList optGuard
                  {##.setType(MessageDescExpr);}
             ;
 
-ptype:          (justNoun | "_" {##.setType(Absent);}) optGuard    
+paramDesc:      (justNoun | "_" {##.setType(Absent);}) optGuard    
                 {##=#([ParamDescExpr],##);}
             ;
-typeList:   (ptype (","! typeList)?)? ;
-mtypes:     "("! typeList br ")"!   {##=#([List],##);} ;
+paramDescs:     (paramDesc (","! paramDescs)?)? ;
+parenParamDescList:     
+                "("! paramDescs br ")"!   {##=#([List],##);} ;
 
 // The current E grammar only let's you put these in a few places.
 doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;
 
-body:       "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
+block:          "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 
 // rules for expressions follow the pattern:
 //   thisLevelExpression :  nextHigherPrecedenceExpression
@@ -533,9 +531,9 @@ assign:     (("def"|"var"|"bind") => objectPredict|) => cond (  ":="^ assign  {#
             |   defExpr
             ;
 
-assignOp:       "//=" | "+=" | "-=" | "*=" | "/="
-            |   "%=" | "%%=" | "**=" | ">>=" | "<<=" | "&="
-            |   "^=" | "|="
+assignOp:       "//=" | "+="  | "-="  | "*="  | "/="
+            |   "%="  | "%%=" | "**=" | ">>=" | "<<="
+            |   "^="  | "|="  | "&="
             ;
 
 ejector:        (   "break"^
@@ -634,7 +632,7 @@ call:   prim
         |   "."^ verb  { ##.setType(CallExpr); }
                        (("(") => parenArgs
                        | pocket["verb-curry"]! { ##=#([CurryExpr], ##);})
-        |   "["^ argList "]"! {##.setType(GetExpr);}
+        |   "["^ args "]"! {##.setType(GetExpr);}
         |   "<-"^ { ##.setType(SendExpr); }
                   ( parenArgs { ##.setType(FunSendExpr); }
                   | verb (("(") => parenArgs // )
@@ -646,15 +644,15 @@ call:   prim
         )*
     ;
 
-parenArgs:      "("! argList ")"!  ;
-lambdaArgs:      "("! argList ")"! (sepword! body)?  ; //(body)? | body  ;
+parenArgs:      "("! args ")"!  ;
+lambdaArgs:      "("! args ")"! (sepword! block)?  ; //(block)? | block  ;
 
 parenArgsList:  parenArgs {##=#([List],##);} ;
 
 sepword:    IDENT | reserved | "else" | "catch" | "finally"
             |  "try" | "->" ;
 
-argList:        (seq (","! argList)?)? ;
+args:        (seq (","! args)?)? ;
 
 prim:           literal
             |   basic
@@ -667,19 +665,18 @@ prim:           literal
             |   URI                      {##=#([URIExpr],##);}
             |   URIStart add ">"!        {##=#([URIExpr],##);}
                                          warn["computed URIExpr is deprecated"]!
-            //|   "<"^ nounExpr (":"! add)? ">"! {##.setType(URIExpr);}
             |   "["^
-                (   (seq "=>" | "=>") => mapList
+                (   (seq "=>" | "=>") => assocs
                                                 {##.setType(MapExpr);}
-                |   argList                     {##.setType(ListExpr);}
+                |   args                        {##.setType(ListExpr);}
                 )  "]"!
-            |   body          {##=#([HideExpr],##);} warn["hide deprecated"]!
+            |   block          {##=#([HideExpr],##);}
             ;
 
-mapList:    (map (","! mapList)?)?   ;
+assocs:    (assoc (","! assocs)?)? ;
 
-map:            seq "=>"^ seq {##.setType(Assoc);}
-            |   "=>"^ (nounExpr
+assoc:          seq "=>"^ seq {##.setType(Assoc);}
+            |   "=>"^ ( nounExpr
                       | slotExpr
                       // | "def" nounExpr // XXX should be an explicit error; EoJ says: reserved: Forward exporter
                       ) {##.setType(Export);}
@@ -695,17 +692,17 @@ literal:    (STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL)
             {##=#([LiteralExpr],##);} ;
 
 
-// a valid guard is a nounExpr or parenExpr, optionally followed by [argList]*
+// a valid guard is a nounExpr or parenExpr, optionally followed by [args]*
 guard:
     (nounExpr | parenExpr)
     // NOTE the greedy consumption of getters.  This accepts more than e.y
-    (options{greedy=true;}: "["^ argList "]"! {##.setType(GetExpr);})*
+    (options{greedy=true;}: "["^ args "]"! {##.setType(GetExpr);})*
     ;
 
 // XXX remove duplication of syntax
-catcher:        "catch"^ pattern body ;
+catcher:        "catch"^ pattern block ;
 
-optCatchClause: "catch"! pattern body 
+optCatchClause: "catch"! pattern block 
             |            filler  filler
             ;
 
@@ -771,7 +768,6 @@ atHole:         SOURCE_PATTERN_HOLE {##.setType(INT);} ;
 key:            parenExpr | literal  ;
 
 parenExpr:      "("! seq ")"!  ;
-//args        :   "("! br seq ")"!  ;
 
 //mapPattList:    mapPatts {##=#([List],##);} ;
 mapPatts:       (mapPattern (","! mapPatts)?)? ;
