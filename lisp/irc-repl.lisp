@@ -69,7 +69,10 @@
 
 (defun safe-privmsg (c d m)
   (loop for line in (split-sequence:split-sequence #\Newline m) do
-    (privmsg c d line)))
+    (loop for (start end) = (list 0   (min 300 (length line)))
+                       then (list end (min (+ end 300) (length line)))
+          while (< start (length line))
+          do (privmsg c d (subseq line start end)))))
 
 (defun msg-hook (message)
   (let ((destination (if (string-equal (first (arguments message)) *nickname*)
