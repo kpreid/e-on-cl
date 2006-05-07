@@ -4,12 +4,19 @@
 # kpreid 2005-04-28: copied from Java E version
 #   TextWriter guard on __printOn for E-on-CL compatibilty
 #   removed unused 'sendSpreader'
+# 2006-05-07:
+#   made DeepFrozen
+#   removed unnecessary use of simple__quasiParser
 #
-# I would like to see these changes merged back to Java E.
+# I would like to see these changes merged back to E-on-Java.
 #
-# XXX possible further changes: 'fix' documentation markup; don't include not-relevant-to-client runtime documentation on facet; better print representation; remove inefficient `literalstring` matching
+# XXX possible further changes: 'fix' documentation markup; don't include not-relevant-to-client runtime documentation on facet; better print representation
 
-def makeVerbFacet(kind :String, recipient, verb, caller) :near {
+pragma.enable("function-implements")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def makeVerbFacet(kind :String, recipient, verb, caller) :near implements DeepFrozen {
 
     /**
      * A facet-function on some underlying object for sending only messages
@@ -18,7 +25,13 @@ def makeVerbFacet(kind :String, recipient, verb, caller) :near {
      * For example, '<tt>foo.bar</tt>' results in a function such that
      * '<tt>(foo.bar)(args...)</tt>' invokes '<tt>foo.bar(args...)</tt>'.
      */
-    def verbFacet {
+    def verbFacet implements EventuallyDeepFrozen {
+        method __optSealedDispatch(brand) :any {
+            if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+            }
+        }
+
         to __printOn(out :TextWriter) :void {
             out.print(`<$kind ${E.toQuote(verb)} facet>`)
         }
@@ -55,11 +68,11 @@ def makeVerbFacet(kind :String, recipient, verb, caller) :near {
     return verbFacet
 }
 
-def callCaller(recipient, verb, args) :any {
+def callCaller(recipient, verb, args) :any implements DeepFrozen {
     return E.call(recipient, verb, args)
 }
 
-def sendCaller(recipient, verb, args) :any {
+def sendCaller(recipient, verb, args) :any implements DeepFrozen {
     return E.send(recipient, verb, args)
 }
 
@@ -76,7 +89,7 @@ def sendCaller(recipient, verb, args) :any {
  * >web-calculus</a>, this is a cheap notation for forming a bar-only
  * unforseen-facet (a filtering forwarder, sort-of) on the "foo" object.
  */
-def __makeVerbFacet0 {
+def __makeVerbFacet0 implements DeepFrozen {
     to curryCall(recipient, verb :String) :near {
         return makeVerbFacet("calling",
                              recipient,

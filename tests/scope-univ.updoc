@@ -415,6 +415,12 @@ __makeVerbFacet
   
   ? rr(1, 2, 3)
   # problem: no such method: org.erights.e.elib.ref.RefAuthor$RefAuthor__C$Ref#isResolved/3
+  
+  ? rr :DeepFrozen
+  # value: <calling "isResolved" facet>
+  
+  ? pragma.enable("verb-curry"); {var x := 1; (&x).setValue} :DeepFrozen
+  # problem: <calling "setValue" facet> is not DeepFrozen because <calling "setValue" facet> contains references that are unsettled or not DeepFrozen
 
   ? pragma.enable("verb-curry"); var x := 1; def u := ((&x) <- setValue)
   # value: <sending "setValue" facet>
@@ -424,6 +430,13 @@ __makeVerbFacet
   
   ? x
   # value: 2
+  
+  ? u :DeepFrozen
+  # problem: <sending "setValue" facet> is not DeepFrozen because <sending "setValue" facet> contains references that are unsettled or not DeepFrozen
+  
+  ? pragma.enable("verb-curry"); (1 <- add) :DeepFrozen
+  # value: <sending "add" facet>
+  
 
 XXX test other scope objects
 
