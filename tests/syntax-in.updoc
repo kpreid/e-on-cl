@@ -245,6 +245,29 @@ Parentheses disable modPow form
 #             NounE. b
 #             [] NounE. c
 
+--- CoerceExpr ---
+
+? t("{a} :b")
+# stdout: CoerceE.
+#           HideE. NounE. a
+#           NounE. b
+
+? t("def _ {} :a")
+# stdout: CoerceE.
+#           ObjectHeadE.
+#             
+#             IgnoreP.
+#             MethodObject
+#               null
+#               []
+#               []
+#               []
+#           NounE. a
+
+? t("a :b :c")
+# problem: (unknown:1)@6: unexpected token: [":",<165>,line=1,col=6]
+XXX prettier error
+
 --- ForExpr ---
 
 ? t("for a => b in c { d }")
