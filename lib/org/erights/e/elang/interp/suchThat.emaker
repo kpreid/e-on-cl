@@ -1,0 +1,75 @@
+# Copyright 2005 Mark S. Miller under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.enable("trinary-define")
+pragma.enable("function-implements")
+
+# modified by kpreid:
+#   DeepFrozen
+#   specimen/expr
+#   exception type
+
+def defineException := <import:org.cubik.cle.fail.defineException>
+def defineExceptionGuard := <import:org.cubik.cle.fail.defineExceptionGuard>
+
+def makeSuchThatFailure := defineException(
+  [def failureFQN := meta.context().getFQNPrefix() + "SuchThatFailure"], 
+  def "$printer"(tw :TextWriter, [=> expr, => specimen]) implements DeepFrozen {  
+    tw.write("<such-that-error: ") # XXX what to do with this?
+    tw.print(expr)
+    tw.write(" was false for ")
+    tw.quote(specimen)
+    tw.write(">")
+  })
+# def SuchThatFailure := defineExceptionGuard([failureFQN])
+
+/**
+* Defines the builtin '__suchThat' via function and via function template.
+* <p>
+* __suchThat is provided to support the such-that pattern.
+* 'p ? e' expands to 'via (__suchThat) =~ [p, via (__suchThat(e)) =~ _]'
+*
+* @author Mark S. Miller
+*/
+def suchThat0 implements DeepFrozen {
+
+  # to getFailureGuard() :any { return SuchThatFailure }
+  
+  to run(specimen, optEjector) :any { return [specimen, specimen] }
+  
+  to handle(expr, flag :boolean) :any { # expr :any[ENode, String]
+    def suchThatFunc(specimen, optEjector) :void {
+      if (!flag) {
+        throw.eject(optEjector, makeSuchThatFailure([=> expr, => specimen]))
+      }
+      # doesn't need to return anything
+    }
+    return suchThatFunc
+  }
+}
+
+? interp.setExpand(true)
+
+? def foo(G1, G2, x :G1 ? (x =~ y :G2)) :any { return [x, y] }
+# expansion: def foo := def "__main$foo__C" {
+#
+# method run(G1,
+# G2,
+# via (__suchThat) =~
+# [x :G1,
+# via (__suchThat.run(x =~ y :G2)) =~ _]) :any {
+# escape __return {
+# __return.run(__makeList.run(x, y))
+# }
+# }
+# }
+
+# value: <foo>
+
+? interp.setExpand(false)
+
+? def Add1 { to coerce(specimen, _) :any { return specimen +1 }}
+
+? foo(float64, Add1, 3)
+# value: [3.0, 4.0]

@@ -283,8 +283,9 @@ Testing printing of nodes with no specific print code yet:
 
 Precedence parenthesization tests
 
-  ? e`((a) =~ b ? ((c) =~ d))`
-  # value: e`a =~ b ? (c =~ d)`
+  XXX this test is inapplicable until nonkernel printing is implemented
+  x ? e`((a) =~ b ? ((c) =~ d))`
+  x # value: e`a =~ b ? (c =~ d)`
 
   ? epatt`a :(b; c)` 
   # value: epatt`a :(b

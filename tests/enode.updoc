@@ -22,14 +22,14 @@
 ? def makeNounExpr := <import:org.erights.e.elang.evm.NounExpr>
 # value: <makeNounExpr>
 
+? def makeViaPattern := <import:org.erights.e.elang.evm.ViaPattern>
+# value: <makeViaPattern>
+
 ? def makeFinalPattern := <import:org.erights.e.elang.evm.FinalPattern>
 # value: <makeFinalPattern>
 
 ? def makeIgnorePattern := <import:org.erights.e.elang.evm.IgnorePattern>
 # value: <makeIgnorePattern>
-
-  ? def makeSuchThatPattern := <elang:evm.SuchThatPattern>
-  # value: <makeSuchThatPattern>
 
 ? <elang:visitors.KernelECopyVisitor>
 # value: <import:org.erights.e.elang.visitors.makeKernelECopyVisitor>
@@ -106,11 +106,11 @@ DefineExpr
   ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), makeNounExpr(null, "null", null), nounA, null)}.eval(safeScope)
   # problem: <misleading-apparent-usage-error: a DefineExpr's optEjectorExpr (e`a`) may not appear to use definitions from its pattern (epatt`a`)>
 
-  ? {makeDefineExpr(null, makeSuchThatPattern(null, makeIgnorePattern(null, null), nounA, null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null, null)}.eval(safeScope)
-  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`_ ? a`) may not use definitions from its rValue (e`def a := b`)>
+  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null, null)}.eval(safeScope)
+  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`via (a) _`) may not use definitions from its rValue (e`def a := b`)>
 
-  ? {makeDefineExpr(null, makeSuchThatPattern(null, makeIgnorePattern(null, null), nounA, null), nounB, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null)}.eval(safeScope)
-  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`_ ? a`) may not use definitions from its optEjectorExpr (e`def a := b`)>
+  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), nounB, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null)}.eval(safeScope)
+  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`via (a) _`) may not use definitions from its optEjectorExpr (e`def a := b`)>
 
   XXX more specifically test what part of the system does this check rather than just 'somewhere in the eval process'
 
@@ -432,14 +432,6 @@ SlotPattern
   ? makeSlotPattern(null, makeNounExpr(null, "state", null), makeNounExpr(null, "Lamport", null), null)
   # value: epatt`&state :Lamport`
 
-
-SuchThatPattern printing
-
-  ? makeSuchThatPattern(null, makeIgnorePattern(null, null), makeNounExpr(null, "false", null), null)
-  # value: epatt`_ ? false`
-
-  XXX move to syntax.updoc
-
 --- SourceSpans ---
 
   ? def makeSourceSpan := <elib:base.makeSourceSpan>
@@ -588,7 +580,7 @@ SuchThatPattern printing
   # value: <[] := ["d", "c", "a"] =~ ["cc"] + var []>
 
   catch
-  ? e`try { def aa := a } catch b ? c { def dd := d }`.staticScope()
+  ? e`try { def aa := a } catch via (c) b { def dd := d }`.staticScope()
   # value: <[] := ["d", "c", "a"] =~ [] + var []>
 
   define
@@ -596,7 +588,7 @@ SuchThatPattern printing
   # value: <[] := ["b"] =~ ["bb", "a"] + var []>
 
   escape
-  ? e`escape a ? b { def cc := c }`.staticScope()
+  ? e`escape via (b) a { def cc := c }`.staticScope()
   # value: <[] := ["c", "b"] =~ [] + var []>
 
   XXX escape with catch
@@ -673,9 +665,11 @@ SuchThatPattern printing
   ? epatt`&a :b`.staticScope()
   # value: <[] := ["b"] =~ [] + var ["a"]>
   
-  such-that
-  ? epatt`a ? (def bb := b)`.staticScope()
-  # value: <[] := ["b"] =~ ["bb", "a"] + var []>
+  via
+  ? epatt`via (def aa := a) b`.staticScope()
+  # value: <[] := ["a"] =~ ["b", "aa"] + var []>
+  ? epatt`via (def aa := a) via (aa) b`.staticScope()
+  # value: <[] := ["a"] =~ ["b", "aa"] + var []>
 
   var
   ? epatt`var a`.staticScope()
@@ -927,16 +921,6 @@ evalToPair
   #               null
   #         
   
-  ? epatt`patt ? cond`.welcome(makeVisitor(0))
-  # stdout: SuchThatPattern epatt`patt ? cond`...
-  #           FinalPattern epatt`patt`...
-  #             NounExpr e`patt`...
-  #               patt
-  #             null
-  #           NounExpr e`cond`...
-  #             cond
-  #         
-  
   ? epatt`finalNoun :guard`.welcome(makeVisitor(0))
   # stdout: FinalPattern epatt`finalNoun :guard`...
   #           NounExpr e`finalNoun`...
@@ -996,9 +980,6 @@ evalToPair
   # value: "foo"
   XXX should be &foo?
   
-  ? <vm:SuchThatPattern>(null, simplest, <vm:NounExpr>(null, "bar", null), null).getOptPrincipalNoun()
-  # value: "foo"
-
   ? (def listPatt := <vm:ListPattern>(null, [simplest], null)).getOptPrincipalNoun()
 
   ? <vm:CdrPattern>(null, listPatt, listPatt, null).getOptPrincipalNoun()

@@ -3,9 +3,11 @@
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
+
 pragma.enable("accumulator")
 pragma.enable("function-implements")
 pragma.enable("anon-lambda")
+pragma.enable("trinary-define")
 
 /** Non-coercing guard wrapper. */
 def Really {
@@ -56,11 +58,11 @@ def eDF__quasiParser {
 
 def exprShorten(expr) {
   return \
-    switch (expr) {
-      match s :Really[SeqExpr] ? (s.getSubs() =~ [single]) {
-        single
-      }
-      match _ { expr }
+    escape mismatch {
+      def s :Really[SeqExpr] := (expr, mismatch)
+      def [single] := (s.getSubs(), mismatch)
+    } catch _ {
+      expr
     }
 }
 
@@ -109,7 +111,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         def optUncall := specimen.__optUncall()
         
         # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
-        if (optUncall =~ uncall ? (uncall != null)) {
+        if (optUncall =~ uncall && uncall != null) {
           def sub(_, component) {
             requireDeepFrozen(component, sofarther, optEjector, root)
           }
@@ -224,14 +226,16 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         # both 'method' and 'methods' are E keywords
 
         requireDF(
-          for methd ? (methd.getVerb() == "__optSealedDispatch" \
-                        && methd.getPatterns().size() == 1) in methds {
+          for via (fn m,e{(m.getVerb() == "__optSealedDispatch" \
+                           && m.getPatterns().size() == 1
+                          ).pick(fn{m},e)()}) \
+              methd in methds {
             
             def optResultGuard := methd.getOptResultGuard()
             requireDF((optResultGuard == null \
                      || expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs())), 
               thunk{label + ": __optSealedDispatch result guard is not any"})
-            requireDF(methd.getPatterns() =~ [brandPattern :Really[FinalPattern] ? (brandPattern.getOptGuardExpr() == null)], 
+            requireDF(methd.getPatterns() =~ [brandPattern :Really[FinalPattern]] && brandPattern.getOptGuardExpr() == null, 
               thunk{label + ": __optSealedDispatch argument pattern is not simple"})
             # XXX We haven't implemented node pattern matching yet. Once EventuallyDeepFrozen is working, test and implement pattern matching and reenable this.
             # requireDF(methd.getBody() =~ \

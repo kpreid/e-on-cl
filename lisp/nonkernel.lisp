@@ -51,6 +51,7 @@
     :|QuasiParserExpr|
     :|QuasiPattern|
     :|SamePattern|
+    :|SuchThatPattern|
     :|TailPattern|
     :|FunctionObject|
     :|MethodObject|
@@ -1087,6 +1088,20 @@
                     (if (e-is-true |invert|) "different" "run")
                     |value|)
     (mn '|IgnorePattern|)))
+
+(defemacro |SuchThatPattern| (|Pattern|) ((|pattern| t |Pattern|) 
+                                          (|test| t |EExpr|))
+                                         ()
+  (mn '|ViaPattern|
+    (mn '|NounExpr| "__suchThat")
+    (mn '|ListPattern|
+      |pattern|
+      (mn '|ViaPattern|
+        (mn '|CallExpr| (mn '|NounExpr| "__suchThat")
+                        "handle"
+                        (node-quote (e-print |test|)) ; XXX officially should be actual nodes, not their print
+                        |test|)
+        (mn '|IgnorePattern|)))))
 
 (defemacro |TailPattern| (|Pattern|) ((|fixedPatt| t |Pattern|)
                                       (|tailPatt| t |Pattern|))

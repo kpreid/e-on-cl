@@ -363,7 +363,6 @@
     :|SeqExpr|
     :|SlotExpr|
     :|SlotPattern|
-    :|SuchThatPattern|
     :|VarPattern|
     :|ViaPattern|)
   #+sbcl (:lock t))
@@ -484,8 +483,6 @@
     :updating-fully-qualify-name
     
     :%catch-expr-resignal
-    :such-that-error
-    :%make-such-that-error
     
     :delta-extract-outer-scope
     :outer-scope-to-layout

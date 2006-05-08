@@ -380,7 +380,7 @@ __getAllegedType, E object
 
   ? def m := t.getMessageTypes()["foo/3"]
   # value: /** This is the sole method. */
-  #        to foo(bar :int, baz, qux) :float64
+  #        to foo(bar :int, _, qux) :float64
     
   ? m.getVerb()
   # value: "foo"
@@ -389,7 +389,7 @@ __getAllegedType, E object
   # value: "This is the sole method."
   
   ? m.getParams()
-  # value: [bar :int, baz, qux]
+  # value: [bar :int, _, qux]
   
   ? [m.getOptResultGuard()]
   # value: [float64]

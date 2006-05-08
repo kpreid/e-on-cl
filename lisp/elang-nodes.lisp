@@ -234,9 +234,6 @@
 (define-node-class |ListPattern|     (|Pattern|)
   ((:|subs| t (e-list |Pattern|)))
   :rest-slot t)
-(define-node-class |SuchThatPattern| (|Pattern|)
-  ((:|pattern| t |Pattern|) 
-   (:|test| t |EExpr|)))
 (define-node-class |ViaPattern| (|Pattern|)
   ((:|function| t |EExpr|)
    (:|pattern| t |Pattern|)))
@@ -484,9 +481,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defmethod pattern-opt-noun ((patt |Pattern|))
   nil)
 
-(defmethod pattern-opt-noun ((patt |SuchThatPattern|))
-  (pattern-opt-noun (e. patt |getPattern|)))
-
 (defmethod pattern-opt-noun ((patt |ViaPattern|))
   (pattern-opt-noun (e. patt |getPattern|)))
 
@@ -505,9 +499,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (make-instance 'param-desc
     :opt-name (e. (e. pattern |getNoun|) |getName|)
     :opt-guard (opt-guard-expr-to-safe-opt-guard (e. pattern |getOptGuardExpr|))))
-
-(defmethod pattern-to-param-desc ((patt |SuchThatPattern|))
-  (pattern-to-param-desc (e. patt |getPattern|)))
 
 (defmethod pattern-to-param-desc ((patt |ViaPattern|))
   (pattern-to-param-desc (e. patt |getPattern|)))
@@ -781,9 +772,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |SlotPattern|
   (seq :|optGuardExpr|
        (! (e. builder |scopeSlot| node))))
-
-(def-scope-rule |SuchThatPattern|
-  (seq :|pattern| :|test|))
 
 (def-scope-rule |VarPattern|
   (seq :|optGuardExpr|

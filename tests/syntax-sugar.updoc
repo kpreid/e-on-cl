@@ -274,10 +274,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`a`) may not appear to use definitions from its optKeyPattern (epatt`a`)>
   ? t("for a => b in b { c }")
   # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`b`) may not appear to use definitions from its valuePattern (epatt`b`)>
-  ? t("for a ? c => b in (def c := d) { e }")
-  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`a ? c`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
-  ? t("for a => b ? c in (def c := d) { e }")
-  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`b ? c`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  ? t("for via (c) a => b in (def c := d) { e }")
+  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`via (c) a`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  ? t("for a => via (c) b in (def c := d) { e }")
+  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`via (c) b`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
   XXX prettier errors
 
   XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
@@ -820,6 +820,13 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            b
   #        }`, true, problem: unused elements in matched map: ["b" => 2]]
 
+'QuasiPattern'
+
+  ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
+  # value: epatt`via (__quasiMatcher.run(simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
+  #         $$ ` @@ "), __makeList.run(b, "c"))) [d, [e]]`
+  XXX test __quasiMatcher
+
 'SamePattern'
 
   ? tp("==x")
@@ -859,12 +866,16 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            def via (__matchSame.different(1)) _ := (Ref.promise().get(0), e)
   #        }`, true, problem: <Promise> is not yet different from 1]
 
-'QuasiPattern'
+'SuchThatPattern'
 
-  ? tp("` a $b ${\"c\"} @d @{[e]} $\\n $$ `` @@ `")
-  # value: epatt`via (__quasiMatcher.run(simple__quasiParser.matchMaker(" a ${0} ${1} @{0} @{1} 
-  #         $$ ` @@ "), __makeList.run(b, "c"))) [d, [e]]`
-  XXX test __quasiMatcher
+  ? t("def x ? true := 1")
+  # value: e`def via (__suchThat) [x, via (__suchThat.handle("true", true)) _] := 1`
+  
+  ? te("def x ? true := 1")
+  # value: [e`def via (__suchThat) [x, via (__suchThat.handle("true", true)) _] := 1`, true, 1]
+  
+  ? te("def x ? false := 1")
+  # value: [e`def via (__suchThat) [x, via (__suchThat.handle("false", false)) _] := 1`, false, problem: <such-that-error: false was false for 1>]
 
 'TailPattern'
 

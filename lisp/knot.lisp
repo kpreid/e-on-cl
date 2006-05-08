@@ -641,6 +641,7 @@
           ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.interp.makeViaExtractor"))
           ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.interp.makeViaQuasi"))
           ("&__matchSame"    ,(lazy-import "org.erights.e.elang.interp.makeViaSame"))
+          ("&__suchThat"    ,(lazy-import "org.erights.e.elang.interp.suchThat"))
           ("&__comparer"     ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
 

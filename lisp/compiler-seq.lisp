@@ -486,18 +486,6 @@
                                                  ejector-spec)))
     layout))
 
-(define-sequence-patt |SuchThatPattern| (layout specimen ejector-spec pattern test
-    &aux (test-result (gensym "TEST"))
-         (specimen-var (gensym "STSP")))
-  (values
-    (append `((,specimen-var ,specimen))
-            (updating-sequence-patt pattern layout specimen-var ejector-spec)
-            (updating-sequence-expr test layout test-result :may-inline t)
-            `((,(gensym "JUNK")
-               (unless (e-is-true ,test-result)
-                 ,(eject-code ejector-spec `(%make-such-that-error ,specimen-var ',test))))))
-    layout))
-
 (define-sequence-patt |ViaPattern| (layout specimen ejector-spec function pattern
     &aux (function-var (gensym "VFN"))
          (post-specimen-var (gensym "VSP")))

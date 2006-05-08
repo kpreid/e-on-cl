@@ -164,8 +164,8 @@ EscapeExpr
   ? { def ej; escape bind ej {}; ej("oops"); print("end") }
   # problem: ejector "ej__1" no longer in scope
   
-  ? escape _ ? false { print("failing ejector pattern test") }
-  # problem: <such-that-error: false was false for <null ejector>>
+  ? escape via(def _(_,e):any{throw.eject(e,"biff")}) _ { print("failing ejector pattern test") }
+  # problem: biff
   
  ejector printing
   ? { def ej; escape bind ej {}; ej }
@@ -179,7 +179,7 @@ EscapeExpr
   # value: 1
   
  catch pattern executes after unwinding
-  ? escape x { try { x(1) } finally { print("bye!") } } catch y ? (print("hi!"); true) { [y] }
+  ? escape x { try { x(1) } finally { print("bye!") } } catch via (def _(s,_) :any {print("hi!"); return s}) y { [y] }
   # stdout: bye!hi!
   
   # value: [1]
@@ -197,10 +197,12 @@ EscapeExpr with catch
 
 EscapeExpr bug: ejector should be valid in the pattern
 
-  ? escape ej ? ej("ok") { ej("oops") }
+  ? pragma.enable("anon-lambda")
+  > escape via (fn ej,_ {ej("ok");ej}) ej { ej("oops") }
   # value: "ok"
 
-  ? escape ej ? ej("ok") { ej("oops") } catch v { v + "." }
+  ? pragma.enable("anon-lambda")
+  > escape via (fn ej,_ {ej("ok");ej}) ej { ej("oops") } catch v { v + "." }
   # value: "ok."
 
 List expressions for further testing
@@ -316,7 +318,7 @@ Matcher
   # value: ["hi", ["there"]]
 
   ? def nonmatches {
-  >   match _ ? false { "oops" }
+  >   match ==null { "oops" }
   > }
   # value: <nonmatches>
 
@@ -328,7 +330,7 @@ Matcher
 
   ? def maybes {
   >   to regular() :any { return "yep" }
-  >   match [x ? (x == "yes"), args] { args[1] }
+  >   match [=="yes", args] { args[1] }
   > }
   # value: <maybes>
   
@@ -519,7 +521,7 @@ CatchExpr
   # stdout: body finally catch 
   
   non-catching
-  ? try { throw("hi") } catch _ ? false { "oops" }
+  ? try { throw("hi") } catch =="irrelevant" { "oops" }
   # problem: hi
 
 Trinary DefineExpr
@@ -550,14 +552,16 @@ Trinary DefineExpr
  Evaluation order
  
   ? pragma.enable("trinary-define")
-  > def x ? (println("patt"); false) := ((println("specimen"); 8), (println("ejector"); null))
+  > pragma.enable("anon-lambda")
+  > def via(fn s,_ {println("patt");throw("exit")}) x := \
+  >   ((println("specimen"); 8),
+  >    (println("ejector"); null))
   # stdout: specimen
   #         ejector
   #         patt
   #         
   
-  # problem: <such-that-error: println.run("patt")
-  #          false was false for 8>
+  # problem: exit
   
  Returning "ejector"
   XXX in Java-E this creates a note in the trace that the ejector returned and proceeds as if the ejector was null
@@ -567,32 +571,8 @@ Trinary DefineExpr
   
  Scoping
   ? pragma.enable("trinary-define")
-  > {def y := "NOT-AN-EJECTOR"; {def x ? false := (def y := null, y)}}
-  # problem: <such-that-error: false was false for null>
-
-  Java-E would reject parsing and expanding the following code, so we have to test it by constructing nodes. (Note that this test does not yet care whether the failure is at node construction time or eval time.)
-
-  {def y := false; def x ? y := (9, def y := true)}
-  ? def <evm> := <elang:evm.*>
-  > <evm:DefineExpr>(null, 
-  >   <evm:SuchThatPattern>(null, 
-  >     <evm:FinalPattern>(null, 
-  >       <evm:NounExpr>(null, "x", null),
-  >       null,
-  >       null), 
-  >     <evm:NounExpr>(null, "y", null),
-  >     null),
-  >   <evm:LiteralExpr>(null, 9, null), 
-  >   <evm:DefineExpr>(null, 
-  >     <evm:FinalPattern>(null, 
-  >       <evm:NounExpr>(null, "y", null), 
-  >       null,
-  >       null), 
-  >     <evm:NounExpr>(null, "true", null), 
-  >     null,
-  >     null), 
-  >   null).eval(safeScope.with("y", "false").nestOuter())
-  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`x ? y`) may not use definitions from its optEjectorExpr (e`def y := true`)>
+  > {def y := "NOT-AN-EJECTOR"; {def ==0 := (def y := null, y)}}
+  # problem: null is not 0
 
 SlotExpr, SlotPattern, AssignExpr
 
@@ -817,20 +797,6 @@ IgnorePattern
   check for non-evaluation
   ? var x := 0; def _ := (x += 1); x
   # value: 1
-
-SuchThatPattern
-
-  ? {[ [1] =~ [stpv] ? (def stpev := stpv == 1), stpv, stpev ]}
-  # value: [true, 1, true]
-
-  ? {[ [2] =~ [stpv] ? (def stpev := stpv == 1), stpv, stpev ]}
-  # value: [false, <ref broken by problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>>, <ref broken by problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>>]
-
-  ? {[ def [stpv] ? (def stpev := stpv == 1) := [1], stpv, stpev ]}
-  # value: [[1], 1, true]
-
-  ? {[ def [stpv] ? (def stpev := stpv == 1) := [2], stpv, stpev ]}
-  # problem: <such-that-error: def stpev := __equalizer.sameEver(stpv, 1) was false for [2]>
 
 ViaPattern
 

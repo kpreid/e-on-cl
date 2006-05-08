@@ -477,11 +477,12 @@ XXX make precedence values available as constants"
                      (subprint patt nil))
             (e. tw |print| #|[|# "]"))
           
-          (:|visitSuchThatPattern| (opt-original subpatt condition)
-            (declare (ignore opt-original))
-            (subprint subpatt nil)
-            (e. tw |print| " ? ")
-            (subprint condition +precedence-in-suchthat+))
+          ; once we have general nonkernel printing and an answer regarding visitors, this should be reenabled
+          ;(:|visitSuchThatPattern| (opt-original subpatt condition)
+          ;  (declare (ignore opt-original))
+          ;  (subprint subpatt nil)
+          ;  (e. tw |print| " ? ")
+          ;  (subprint condition +precedence-in-suchthat+))
           
           (:|visitViaPattern| (opt-original function subpatt)
             (declare (ignore opt-original))
