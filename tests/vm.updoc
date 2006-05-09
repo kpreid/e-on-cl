@@ -83,6 +83,14 @@ var slot with guard
   ? def var failing_guarded_var :tfloat64 := "five"
   # problem: the String "five" doesn't coerce to a float64
   
+  Bug: assignment to a var was using coerce/1 instead of coerce/2
+  ? { def var x :(def guard { to coerce(sp,ej) :any {return sp} 
+  >                           to coerce(_) {throw("oops")} }) \
+  >       := 1
+  >   x := 2
+  >   x }
+  # value: 2
+  
 Non-contagion:
 
   ? def y := x

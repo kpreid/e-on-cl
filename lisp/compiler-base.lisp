@@ -253,7 +253,7 @@
   `(if ,(%var-binding-broken-flag binding)
      (error (ref-opt-problem ,(%var-binding-broken-flag binding)))
      ,(if (%binding-guard-code binding)
-        `(setf ,(%var-binding-symbol binding) (e. ,(%binding-guard-code binding) |coerce| ,value-form))
+        `(setf ,(%var-binding-symbol binding) (e. ,(%binding-guard-code binding) |coerce| ,value-form nil))
         `(setf ,(%var-binding-symbol binding) ,value-form))))
 
 (defmethod binding-exit-info ((binding direct-var-binding) broken-ref-form)
