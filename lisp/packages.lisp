@@ -344,6 +344,7 @@
     :|HideExpr|
     :|IfExpr|
     :|IgnorePattern|
+    :|IntoExpr|
     :|ListPattern|
     :|LiteralExpr|
     :|MatchBindExpr|

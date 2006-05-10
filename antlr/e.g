@@ -73,6 +73,7 @@ tokens {
     HideExpr;
     IfExpr;
     If1Expr;
+    IntoExpr;
     ForExpr;
     WhenExpr;
     CoerceExpr;
@@ -300,7 +301,11 @@ seqMore:    eExpr ((seqSep)+ (seqMore)?)? ;
 
 seqSep:     (";"! | LINESEP!);
 
-eExpr:      assign | ejector ;
+eExpr:      withinInto
+            ("into"^ {##.setType(IntoExpr);} intoOptEjector pattern)* ;
+
+intoOptEjector: "!"! parenExpr | filler ;
+withinInto:     assign | ejector ;
 
 basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
             |   escapeExpr | whenExpr | metaExpr | accumExpr

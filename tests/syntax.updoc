@@ -247,6 +247,14 @@ If
   #            c
   #        }`
 
+Into
+
+  ? e`a into b`
+  # value: e`a into b`
+
+  ? e`a  into  !  ( b )  c`
+  # value: e`a into !(b) c`
+
 MetaContext
 
   ? e`meta.context()`
@@ -321,7 +329,10 @@ Universal precedence-proper print-parenthesization tester:
   >   e`escape a {b}`,
   >   e`try {a} finally {b}`,
   >   e`{a}`,
+  >   e`if (a) {b}`,
   >   e`if (a) {b} else {c}`,
+  >   e`a into b`,
+  >   e`a into !(b) c`,
   >   e`1`,
   >   e`meta.context()`,
   >   e`meta.getState()`,
@@ -338,6 +349,9 @@ Universal precedence-proper print-parenthesization tester:
   >     e`aa($inner)`,
   >     e`$inner(aa)`,
   >     e`def aa := $inner`,
+  >     e`$inner into aa`,
+  >     e`$inner into !(aa) bb`,
+  >     e`aa into !($inner) bb`,
   >     e`$inner =~ aa`,
   >     e`$inner; aa`,
   >     e`aa; $inner`,

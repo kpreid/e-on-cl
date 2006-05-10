@@ -187,6 +187,10 @@
   ((:|test| t |EExpr|) 
    (:|then| t |EExpr|) 
    (:|else| t |EExpr|)))
+(define-node-class |IntoExpr|        (|EExpr|)
+  ((:|rValue| t |EExpr|)
+   (:|optEjectorExpr| t (or null |EExpr|))
+   (:|pattern| t |Pattern|)))
 (define-node-class |LiteralExpr|     (|EExpr|)
   ;; XXX loosen restriction to DeepPassByCopy? different set of literals? include other CL float types?
   ((:|value| nil (or string character rational float64))))
@@ -730,6 +734,11 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |IfExpr|
   (seq (hide (seq :|test| :|then|)) (hide :|else|)))
+
+(def-scope-rule |IntoExpr|
+  (seq :|rValue| 
+       :|optEjectorExpr|
+       :|pattern|))
 
 (def-scope-rule |LiteralExpr|
   nil)

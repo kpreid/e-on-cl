@@ -127,7 +127,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (unknown:1)@11: unexpected token: [":=",<156>,line=1,col=11]
+# problem: (unknown:1)@11: unexpected token: [":=",<159>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -265,7 +265,7 @@ Parentheses disable modPow form
 #           NounE. a
 
 ? t("a :b :c")
-# problem: (unknown:1)@6: unexpected token: [":",<165>,line=1,col=6]
+# problem: (unknown:1)@6: unexpected token: [":",<168>,line=1,col=6]
 XXX prettier error
 
 --- ForExpr ---
@@ -318,6 +318,58 @@ XXX more tests (this section was written to test guardless ParamDesc)
 #               ParamDescE.
 #                 null
 #                 null
+#             null
+
+--- IntoExpr ---
+
+? t("a into b")
+# stdout: IntoE.
+#           NounE. a
+#           null
+#           FinalP.
+#             NounE. b
+#             null
+
+? t("a into ! (b) c")
+# stdout: IntoE.
+#           NounE. a
+#           NounE. b
+#           FinalP.
+#             NounE. c
+#             null
+
+? t("a into ! b c")
+# problem: (unknown:1)@10: expecting "(", found 'b'
+
+IntoExpr has precedence immediately above sequences.
+
+? t("a; def b := c into d; e")
+# stdout: SeqE. []
+#           NounE. a
+#           IntoE.
+#             DefrecE.
+#               FinalP.
+#                 NounE. b
+#                 null
+#               NounE. c
+#               null
+#             null
+#             FinalP.
+#               NounE. d
+#               null
+#           NounE. e
+
+? t("a into b into c")
+# stdout: IntoE.
+#           IntoE.
+#             NounE. a
+#             null
+#             FinalP.
+#               NounE. b
+#               null
+#           null
+#           FinalP.
+#             NounE. c
 #             null
 
 --- Via-pattern ---

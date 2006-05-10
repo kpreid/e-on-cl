@@ -485,6 +485,30 @@ IfExpr
   ? if (def conformist { to __conformTo(_) :any {return conformist} }) {"y"} else {"n"}
   # problem: the "__main$conformist__C" <conformist> doesn't coerce to a boolean
 
+IntoExpr
+
+  success
+  ? { (1 into ia); ia }
+  # value: 1
+
+  ? escape e { (1 into !(e) ia); ia }
+  # value: 1
+
+  failure
+  ? { (1 into ia :char); ia }
+  # problem: the int 1 doesn't coerce to a char
+
+  ? { (1 into !(null) ia :char); ia }
+  # problem: the int 1 doesn't coerce to a char
+
+  ? escape e { (1 into !(e) ia :char); ia }
+  # value: problem: the int 1 doesn't coerce to a char
+
+  non-recursion
+  ? { 1 into ia; { ia + 1 into ia; ia } }
+  # value: 2
+
+
 FinallyExpr
 
   ? [try {} finally {}]

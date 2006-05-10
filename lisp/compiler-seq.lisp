@@ -266,6 +266,19 @@
          ,(hide-sequence else layout))))
     layout))
 
+(define-sequence-expr |IntoExpr| (layout result value opt-ejector pattern
+    &aux (ej (gensym "INEJ")) (value-var result))
+  (values
+    (append ;; if there is an ejector, inlining 
+            (updating-sequence-expr value layout value-var :may-inline (not opt-ejector))
+            (if opt-ejector
+              (updating-sequence-expr opt-ejector layout ej :may-inline nil)
+              '())
+            (unless (eql value-var result)
+              `((,result ,value-var)))
+            (updating-sequence-patt pattern layout result (when opt-ejector `(ejector ,ej))))
+    layout))
+
 (define-inline-expr |LiteralExpr| (layout value)
   (declare (ignore layout))
   `(quote ,value))

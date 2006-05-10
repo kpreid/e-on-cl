@@ -68,6 +68,9 @@
 (defconstant +precedence-define-right+ 60)
 (defconstant +precedence-define+ 60)
 
+(defconstant +precedence-into-left+ 70)
+(defconstant +precedence-into+ 70)
+
 (defconstant +precedence-in-seq+ 80)
 (defconstant +precedence-seq+ 80)
 
@@ -339,6 +342,17 @@ XXX make precedence values available as constants"
             (when (ref-shorten false-block)
               (e. tw |print| " else ")
               (subprint-block false-block)))
+          
+          (:|visitIntoExpr| (opt-original specimen opt-ejector pattern)
+            (declare (ignore opt-original))
+            (precedential (+precedence-into+)
+              (subprint specimen +precedence-into-left+)
+              (e. tw |print| " into ")
+              (when (ref-shorten opt-ejector)
+                (e. tw |write| "!(")
+                (subprint opt-ejector +precedence-outer+)
+                (e. tw |write| ") "))
+              (subprint pattern nil)))
           
           (:|visitLiteralExpr| (opt-original value)
             (declare (ignore opt-original))
