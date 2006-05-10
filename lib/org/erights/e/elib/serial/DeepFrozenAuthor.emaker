@@ -266,17 +266,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     }
   })
 
-  # makeBaseGuard is itself DeepFrozen but does not have access to the DeepFrozenStamp; therefore we must allow it to get its stamp before invoking it to use as our own base.
-  var optRealBase := null
-
-  def myBase match msg {
-    if (optRealBase == null) {
-      optRealBase := __makeGuard(DeepFrozen0)
-    }
-    E.callWithPair(optRealBase, msg)
-  }
-
-  DeepFrozen0__Resolver.resolve(def "$DeepFrozen" extends myBase implements DeepFrozenStamp {
+  DeepFrozen0__Resolver.resolve(def "$DeepFrozen" implements DeepFrozenStamp {
     to __printOn(out :TextWriter) :void {
       out.print("DeepFrozen")
     }

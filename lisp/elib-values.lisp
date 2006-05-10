@@ -680,6 +680,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (make-instance 'cl-type-guard :type-specifier ts)))
 
 (defun make-e-type-error (specimen guard)
+  ;; XXX this is duplicated with +the-make-coercion-failure+
   (make-instance 'type-error
     :datum specimen
     :expected-type (guard-to-type-specifier guard)))

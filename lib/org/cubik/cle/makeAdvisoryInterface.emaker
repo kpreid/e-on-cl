@@ -10,7 +10,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def makeAdvisoryInterface implements DeepFrozen {
   to run(typeDesc) { # XXX typeDesc :DeepPassByCopy
-    def advisoryInterface extends __makeGuard(advisoryInterface) implements EventuallyDeepFrozen { # XXX implements DeepPassByCopy
+    def advisoryInterface implements EventuallyDeepFrozen { # XXX implements DeepPassByCopy
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -30,7 +30,7 @@ def makeAdvisoryInterface implements DeepFrozen {
         out.print(simplifyFQName(typeDesc.getFQName()))
       }
       
-      # XXX should delegate TypeDesc query methods
+      # XXX should extend the TypeDesc
     }
     return advisoryInterface
   }

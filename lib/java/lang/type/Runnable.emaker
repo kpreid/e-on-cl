@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def Runnable extends __makeGuard(Runnable) {
+def Runnable {
   to coerce(specimen, optEjector) {
     if (!specimen.__respondsTo("run", 0)) {
       traceln("java.lang.Runnable guard could reject " + E.toQuote(specimen))

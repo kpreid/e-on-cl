@@ -581,6 +581,8 @@
           ("TextWriter" ,elib:+the-text-writer-guard+)
           
           ; --- data guards: nonatomic, nonprimitive ---
+          ("&all"         ,(lazy-import "org.erights.e.elib.slot.makeIntersectionGuard"))
+          ("&Not"         ,(lazy-import "org.erights.e.elib.slot.makeNegatedGuard"))
           ("&List"        ,(lazy-import "org.erights.e.elib.slot.List"))
           ("&Map"         ,(lazy-import "org.erights.e.elib.slot.Map"))
           ("&Set"         ,(typical-lazy "<import:org.erights.e.elib.tables.ConstSet>.asType()"))
@@ -593,7 +595,7 @@
           ("&__makeParamDesc"    ,(lazy-import "org.erights.e.elib.base.makeParamDesc"))
           
           ; --- utility: guard meta ---
-          ("&__makeGuard" ,(lazy-import "org.erights.e.elib.slot.makeBaseGuard"))
+          ("&__makeGuard" ,(typical-lazy "def stubMakeGuard(_) :any { return def stubBaseGuard {} }"))
           ; The ValueGuard and Guard guards do not currently reject anything, but this may change (e.g. DeepFrozen)
           ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
           ("&Guard"       ,(lazy-import "org.erights.e.elib.slot.type.Guard"))

@@ -5,7 +5,7 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 /** Java-E compatibility */
-def makeThrowable extends __makeGuard(makeThrowable) {
+def makeThrowable {
   to asType() { return <type:java.lang.Throwable> }
 
   # XXX methods

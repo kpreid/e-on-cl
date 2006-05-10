@@ -4,29 +4,34 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def makeIntersectionGuard implements DeepFrozen {
-  to run(subGuards) {
-    def intersectionGuard extends __makeGuard(intersectionGuard) {
-      to __printOn(out :TextWriter) {
-        out.print("all")
-        out.quote(subGuards) # pun
-      }
-      
-      # XXX should/will the super documentation be inherited?
-      to and(other) {
-        return <elib:slot.makeIntersectionGuard>(subGuards.with(other))
-      }
-      
-      to coerce(var specimen, optEjector) {
-        for guard in subGuards {
-          specimen := guard.coerce(specimen, optEjector)
-        }
-        return specimen
-      }
+pragma.enable("function-implements")
+
+def _make(subGuards) implements DeepFrozen {
+  def intersectionGuard {
+    to __printOn(out :TextWriter) {
+      out.print("all")
+      out.quote(subGuards) # pun
     }
     
-    return intersectionGuard
+    # xxx this flattening can no longer be done trivially
+    # to and(other) {
+    #   return <elib:slot.makeIntersectionGuard>(subGuards.with(other))
+    # }
+    
+    to coerce(var specimen, optEjector) {
+      for guard in subGuards {
+        specimen := guard.coerce(specimen, optEjector)
+      }
+      return specimen
+    }
   }
+  
+  return intersectionGuard
+}
+
+def makeIntersectionGuard implements DeepFrozen {
+  to run(subGuards) { return _make(subGuards) }
+  match [=="get", subGuards] { _make(subGuards) }
 }
 
 # XXX unneeded check

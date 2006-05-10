@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def StringBuffer extends __makeGuard(StringBuffer) {
+def StringBuffer {
   to coerce(specimen, optEjector) {
     throw.eject(optEjector, "StringBuffer not yet available")
   }

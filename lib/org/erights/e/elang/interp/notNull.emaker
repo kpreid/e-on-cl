@@ -1,0 +1,32 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# modified by kpreid to be DeepFrozen and not use __makeGuard
+
+/**
+ * Defines the builtin 'notNull' guard.
+ *
+ * @author Mark Miller
+ */
+def notNull0 implements DeepFrozen {
+    /**
+     * 'notNull' is a non-transforming guard -- when it succeeds, the result
+     * is the same as the specimen.
+     * <p>
+     * notNull succeeds when the specimen is either not settled or not null.
+     * This means it will succeed for a promise that hasn't yet resolved to
+     * null, even if it will be resolved to null.
+     */
+    to coerce(specimen, optEjector) :any {
+        if (Ref.isSettled(specimen) && null == specimen) {
+            throw.eject(optEjector, "Must not be null")
+        } else {
+            specimen
+        }
+    }
+
+    /**
+     * Prints "notNull"
+     */
+    to __printOn(out :TextWriter) :void { out.print("notNull") }
+}

@@ -20,46 +20,6 @@
   > }
   # value: <testSpecimenNotPrinted>
 
-__makeGuard
-
-  ? __makeGuard
-  # value: <makeBaseGuard>
-  
-  ? def testGuard extends __makeGuard(testGuard) {
-  >   to coerce(specimen, optEjector) :any {
-  >     return switch (specimen) {
-  >       match ==1 { return specimen }
-  >       match x ? x >= 2 { return 2 }
-  >       match _ { throw.eject(optEjector, "nope") }
-  >     }
-  >   }
-  > }
-  # value: <testGuard>
-
-  ? testGuard[]
-  # value: List[<testGuard>]
-
-  ? testGuardMany(-1..3, testGuard)
-  # value: [1, 2, 2]
-
-  ? testGuardMany(-1..3, !testGuard)
-  # value: [-1, 0]
-
-  ? testGuard.accepts(0)
-  # value: false
-
-  ? testGuard.accepts(1)
-  # value: true
-
-  ? testGuard.accepts(2)
-  # value: true
-
-  ? testGuard.coerce(1)
-  # value: 1
-  
-  ? testGuard.coerce(0)
-  # problem: nope
-
 any
 
   ? any
@@ -68,9 +28,6 @@ any
   ? any[int, float64] :DeepFrozen
   # value: any[int, float64]
   
-  ? any[]
-  # value: List[any]
-
 void
 
   ? void
@@ -80,7 +37,6 @@ void
   # value: void
   
   XXX void-coerces-anything property
-  XXX void has BaseGuard methods
 
 near
 XXX test with far refs (eventual resolved)
@@ -221,12 +177,7 @@ String
 
   ? String
   # value: String
-  
- check that builtinType[] works. 
- 
-  ? String[]
-  # value: List[String]
-  
+    
   ? testSpecimenNotPrinted(String)
 
   XXX more tests
@@ -326,35 +277,25 @@ Map
 
 ValueGuard
 
-  ? ValueGuard
-  # value: ValueGuard
-  
-  ? any :ValueGuard
-  # value: any
+  ? [ValueGuard, ValueGuard == Guard]
+  # value: [Guard, true]
 
 Union guards
 
-  ? int | float64
+  ? any[int, float64]
   # value: any[int, float64]
   
-  ? int | float64 | char
-  # value: any[int, float64, char]
-  
-  ? testGuardMany(["a", 'b', 3, 4.0], float64 | char)
+  ? testGuardMany(["a", 'b', 3, 4.0], any[float64, char])
   # value: ['b', 3.0, 4.0]
   
   ? any[float64, char] :DeepFrozen
   # value: any[float64, char]
   
-  test that union guard has BaseGuard methods
-  ? (float64 | char)[]
-  # value: List[any[float64, char]]
-
-  ? testSpecimenNotPrinted(float64 | char)
+  ? testSpecimenNotPrinted(any[float64, char])
 
 Intersection guards
 
-  ? def Point := Tuple[any, any] & List[float64]
+  ? def Point := all[Tuple[any, any], List[float64]]
   # value: all[Tuple[any, any], List[float64]]
 
   ? testGuardMany(["ab", [1, 2], [3.0, 4.0], 5, "six", [7.7, 8]], Point)
@@ -362,34 +303,11 @@ Intersection guards
 
   ? testSpecimenNotPrinted(Point)
   
-  test that intersection guard has Guard methods
-  ? Point[]
-  # value: List[all[Tuple[any, any], List[float64]]]
-
 Negated guards
 
-  Assuming everything uses __makeGuard, testGuard above has tested the actual functionality of baseGuard#not (this file needs a better organization) and this is for print checking
-  ? !int
-  # value: !(int)
+  ? Not[int]
+  # value: Not[int]
   
-  ? testSpecimenNotPrinted(!any)
-
-ButNot guards
-
-  NOTE: this test depends on the questionable behavior of the ListGuard passing strings without coercing them to list-of-char.
-  ? List &! String
-  # value: all[List, !(String)]
-  
-  ? testSpecimenNotPrinted(List &! String)
-
-Xor guards
-  
-  XXX should we expect a specialized guard?
-  XXX N-ary xor?
-  ? testGuard ^ (int < 2)
-  # value: any[all[<testGuard>, (int >= 2)], all[!(<testGuard>), (int < 2)]]
-  
-  ? testGuardMany(-1..3, testGuard ^ (int < 2))
-  # value: [-1, 0, 2, 2]
+  ? testSpecimenNotPrinted(Not[any])
 
 XXX trivial values for all Java unboxable types

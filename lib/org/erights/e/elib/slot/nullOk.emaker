@@ -6,12 +6,7 @@ pragma.disable("explicit-result-guard")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def nullOk0 extends __makeGuard(nullOk0) implements EventuallyDeepFrozen {
-  method __optSealedDispatch(brand) :any {
-    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
-      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
-    }
-  }
+def nullOk0 implements DeepFrozen {
 
   to __printOn(out :TextWriter) :void {
     out.print("nullOk")
@@ -25,8 +20,8 @@ def nullOk0 extends __makeGuard(nullOk0) implements EventuallyDeepFrozen {
   
   to getTheTrivialValue() { return null }
   
-  to get(subGuard) :Guard {
-    def nullOk1 extends __makeGuard(nullOk1) implements EventuallyDeepFrozen {
+  to get(subGuard) {
+    def nullOk1 implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -35,7 +30,8 @@ def nullOk0 extends __makeGuard(nullOk0) implements EventuallyDeepFrozen {
     
       to __printOn(out :TextWriter) :void {
         # XXX print this explicitly as E-syntax sugared "get" call
-        out.quote(nullOk0, [subGuard])
+        out.print("nullOk")
+        out.quote([subGuard])
       }
     
       to coerce(specimen, optEjector) {

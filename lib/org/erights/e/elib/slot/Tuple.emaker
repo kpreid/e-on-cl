@@ -19,7 +19,7 @@ def Tuple0 implements EventuallyDeepFrozen {
   }
 
   match [=="get", elementGuards] {
-    def Tuple1 extends __makeGuard(Tuple1) implements EventuallyDeepFrozen {
+    def Tuple1 implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

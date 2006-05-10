@@ -346,7 +346,8 @@ Universal precedence-proper print-parenthesization tester:
   >     e`bb =~ aa :$inner`,
   >   ] {
   >     # Special case: SeqExpr may merge harmlessly with nested SeqExprs
-  >     if (List[SeqExpr].accepts([whole, inner])) { continue }
+  >     # XXX make this test more precise
+  >     if ([whole, inner] =~ x :List[SeqExpr]) { continue }
   >
   >     def [tw, sb] := <elib:oldeio.TextWriter>.makeBufferingPair()
   >     whole.welcome(ePrinter.makePrintENodeVisitor(tw))

@@ -1239,7 +1239,6 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 (defclass cl-type-guard () 
   ((ts :initarg :type-specifier
        :reader cl-type-specifier)
-   (super :initform nil)
    (trivial-box :initform nil)))
 
 (declaim (inline standard-coerce))

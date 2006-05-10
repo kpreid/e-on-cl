@@ -610,7 +610,7 @@ SlotExpr, SlotPattern, AssignExpr
   ? &any
   # value: <& any>
   
-  ? (&any) :(DeepFrozen & PassByCopy)
+  ? (&any) :all[DeepFrozen, PassByCopy]
   # value: <& any>
   
   ? (&any).getValue()

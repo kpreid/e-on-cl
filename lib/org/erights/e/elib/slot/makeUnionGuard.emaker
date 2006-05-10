@@ -8,7 +8,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def makeUnionGuard implements DeepFrozen {
   to run(subGuards) {
-    def unionGuard extends __makeGuard(unionGuard) implements EventuallyDeepFrozen {
+    def unionGuard implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -20,9 +20,10 @@ def makeUnionGuard implements DeepFrozen {
         out.quote(subGuards)
       }
       
-      to or(other) {
-        return <elib:slot.makeUnionGuard>(subGuards.with(other))
-      }
+      # xxx this flattening can no longer be done trivially
+      # to or(other) {
+      #   return <elib:slot.makeUnionGuard>(subGuards.with(other))
+      # }
       
       to coerce(specimen, optEjector) {
         for guard in subGuards {

@@ -440,4 +440,4 @@ __makeVerbFacet
 
 XXX test other scope objects
 
-see guards.updoc for testing of __makeGuard and standard guards
+see guards.updoc for testing of standard guards

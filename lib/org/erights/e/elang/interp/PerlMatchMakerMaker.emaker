@@ -128,7 +128,7 @@ def PerlMatchMakerMaker {
             /**
              * matches a compiled pattern against a specimen
              */
-            def matchBind(pattern, specimen, optEjector) :any[] {
+            def matchBind(pattern, specimen, optEjector) :List {
                 def makeInput(specimen) :any {
                     E.call(PatternMatcherInputMaker, "run(String)", [specimen])
                 }
@@ -161,7 +161,7 @@ def PerlMatchMakerMaker {
                 # pattern.
                 def pattern := makePattern([])
                 result := def matchMaker1 {
-                    to matchBind([], specimen, optEjector) :any[] {
+                    to matchBind([], specimen, optEjector) :List {
                         return matchBind(pattern, specimen, optEjector)
                     }
                     to __printOn(out :TextWriter) :void {
@@ -175,7 +175,7 @@ def PerlMatchMakerMaker {
                 # pattern. Caching only saves us from perlifying
                 # redundantly.
                 result := def matchMaker2 {
-                    to matchBind(args, specimen, optEjector) :any[] {
+                    to matchBind(args, specimen, optEjector) :List {
                         def pattern := makePattern(args)
                         return matchBind(pattern, specimen, optEjector)
                     }

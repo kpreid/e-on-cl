@@ -113,7 +113,7 @@ def OrderedRegionMaker implements EventuallyDeepFrozen {
          * <p>
          * As guards, regions only accept positions in the region.
          */
-        def self extends __makeGuard(self) implements EventuallyDeepFrozen {
+        def self implements EventuallyDeepFrozen {
             method __optSealedDispatch(brand) :any {
               if (brand == EventuallyDeepFrozen.getPeekBrand()) {
                 EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

@@ -9,8 +9,8 @@ def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def List0 extends __makeGuard(List0) implements EventuallyDeepFrozen {
-  
+def List0 implements EventuallyDeepFrozen {
+
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -30,7 +30,7 @@ def List0 extends __makeGuard(List0) implements EventuallyDeepFrozen {
   }
 
   to get(elementGuard) {
-    def List1 extends __makeGuard(List1) implements EventuallyDeepFrozen {
+    def List1 implements EventuallyDeepFrozen {
 
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {

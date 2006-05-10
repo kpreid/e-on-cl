@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def DataOutput extends __makeGuard(DataOutput) {
+def DataOutput {
   to coerce(specimen, optEjector) {
     throw.eject(optEjector, "no DataOutput yet")
   }

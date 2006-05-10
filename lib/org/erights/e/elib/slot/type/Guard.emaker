@@ -1,20 +1,41 @@
-# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-# XXX make this a TypeDesc or similar
-def Guard0 extends __makeGuard(Guard0) {
-  to audit(objectExpr, witness) :any {
-    return true
-  }
-  
-  to coerce(specimen, _) {
-    return specimen
-  }
+<import:org.cubik.cle.makeAdvisoryInterface>(
+# XXX what is a ValueGuardTemplate?
+/**
+ * A Guard will either coerce an input to a value that matches some
+ * condition, or it will fail.
+ * <p/>
+ * A Guard is used in the E language to guard the return value of a
+ * method. It is also used both in E and ELib as an argument to a
+ * ValueGuardTemplate.
+ * <p/>
+ * XXX Guard will also require DeepFrozen
+ *
+ * @author Mark S. Miller
+ */
+interface "org.erights.e.elib.slot.Guard" {
 
-  to __printOn(out :TextWriter) :void {
-    out.print("Guard")
-  }
-}
+    /**
+     * If specimen coerces to a value that matches the condition represented
+     * by this guard, return that value; other fail (according to optEjector)
+     * with a problem explaining why not.
+     * <p/>
+     * If optEjector is null, then throw the problem.
+     * Otherwise, call optEjector with the problem.  optEjector should
+     * perform a non-local exit, and so should not return.
+     * If optEjector returns anyway, then throw the problem after all.
+     * <p/>
+     * A note to Java implementors of this method: You almost certainly want
+     * to start your method with
+     * <pre>    specimen = Ref.resultion(specimen);</pre>
+     */
+    to coerce(specimen :any, optEjector :any) :any # XXX OneArgFunc
+    
+    /** XXX document this */
+    to getTheTrivialValue() :any
+})

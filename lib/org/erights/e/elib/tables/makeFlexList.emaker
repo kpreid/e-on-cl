@@ -34,7 +34,7 @@ def makeFlexList implements EventuallyDeepFrozen {
       method put(i, new :valueGuard) :void {
         def size := array.getFillPointer()
         if (i < size) {
-          array.setElt(i, valueGuard.coerce(new))
+          array.setElt(i, new)
         } else if (i == size) {
           array.vectorPushExtend(new)
         } else {

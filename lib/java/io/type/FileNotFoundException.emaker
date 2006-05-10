@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def FileNotFoundException extends __makeGuard(FileNotFoundException) {
+def FileNotFoundException {
   to coerce(specimen, optEjector) {
     throw.eject(optEjector, "XXX FileNotFoundException not distinguished")
   }

@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def IOException extends __makeGuard(IOException) {
+def IOException {
   to coerce(specimen, optEjector) {
     throw.eject(optEjector, "IOException not yet available")
   }

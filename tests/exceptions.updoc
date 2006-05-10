@@ -136,7 +136,7 @@ http://www.eros-os.org/pipermail/e-lang/2005-January/010416.html
   >        }
   >      }
   > 
-  >      def guard extends __makeGuard(guard) {
+  >      def guard {
   >        to coerce(specimen, optEjector) :any {
   >          return Throwable.coerce(unsealer.unseal(specimen, optEjector),
   >                                  optEjector)

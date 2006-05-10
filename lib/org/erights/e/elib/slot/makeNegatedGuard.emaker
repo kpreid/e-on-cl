@@ -1,0 +1,55 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+pragma.enable("function-implements")
+
+def makeException := <import:org.cubik.cle.prim.makeException>
+def ncfTypes := [meta.context().getFQNPrefix() + "NegatedCoercionFailure"]
+def makeNegatedCoercionFailure(specimen, guard) implements DeepFrozen {
+  return makeException(ncfTypes, [=> specimen, => guard],
+    def ncfPrinter implements DeepFrozen {
+      to run(tw :TextWriter, e ? (e._getProperties() =~ [=> specimen, => guard])) {  
+        tw.write("problem: ")
+        tw.quote(specimen)
+        tw.write(" must not be a ") # XXX aan
+        tw.quote(guard)
+      }
+    })
+}
+
+def _make(subGuard) implements DeepFrozen {
+  def negatedGuard {
+    to __printOn(out :TextWriter) {
+      out.write("Not[")
+      out.quote(subGuard)
+      out.write("]")
+    }
+    
+    to coerce(specimen, optEjector) {
+      def coerceReturn := __return
+    
+      subGuard.coerce(specimen, def negatedGuardSuccess(_) {
+        coerceReturn(specimen)
+      })
+      
+      # If we reach here, then the subGuard did not fail, so we do.
+      # XXX reveals the subGuard to the ejector: is this OK? subguards *often* reveal themselves (__conformTo(guard)), to their specimens, but not always.
+      throw.eject(optEjector, makeNegatedCoercionFailure(specimen, subGuard))
+    }
+  }
+  
+  return negatedGuard
+}
+
+def makeNegatedGuard implements DeepFrozen {
+  # maker usage
+  to run(subGuard) { return _make(subGuard) }
+  # parameterized-guard usage
+  to get(subGuard) { return _make(subGuard) }
+}
+
+# XXX unneeded check
+# XXX flatten check

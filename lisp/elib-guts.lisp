@@ -19,7 +19,6 @@
 (def-vtable cl-type-guard
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    ;; assuming that super behaves DeepFrozen
     (eql auditor +deep-frozen-stamp+))
 
   (:|coerce| (guard specimen opt-ejector)
@@ -27,6 +26,7 @@
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (cl-type-simple-expr (cl-type-specifier this))))
+  
   (:|getFQName| (this)
     (cl-type-fq-name (cl-type-specifier this)))
   (:|getTheTrivialValue| (this)
@@ -64,22 +64,17 @@
   (lambda (a)   (sxhash (cl-type-specifier a))))
 
 (defmethod e-call-match ((rec cl-type-guard) mverb &rest args)
-  (with-slots (ts super) rec
-    ; XXX we could make super initialized more lazily
-    ; XXX super needs to be per-thread
-    (unless super
-      (setf super (e. (e. (vat-safe-scope *vat*) |get| "__makeGuard") |run| rec)))
+  (with-slots (ts) rec
     (if (eql ts 't) ; XXX bad OO
       (cond
         ((and (not (eql mverb :|get/0|))
               (eql mverb (e-util:mangle-verb "get" (length args))))
-          (e. (e. super |_getMakeUnionGuard|) |run| (coerce args 'vector)))
+          (e. (e-import "org.erights.e.elib.slot.makeUnionGuard") |run| (coerce args 'vector)))
         ((and (eql mverb :|__respondsTo/2|) 
               (string= (aref args 0) "get"))
           +e-true+)
-        (t
-          (apply #'e-call-dispatch super mverb args)))
-      (apply #'e-call-dispatch super mverb args))))
+        (t (no-such-method rec mverb args)))
+      (no-such-method rec mverb args))))
 
 (defmethod make-load-form ((object cl-type-guard) &optional environment)
   (declare (ignore environment))

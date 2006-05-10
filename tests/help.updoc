@@ -190,10 +190,10 @@ __getAllegedType details, def-vtable-based
   ? def t := 43.__getAllegedType()
   # value: int
 
-  ? t.coerce(2389523789523745902364890237489)
+  ? t.coerce(2389523789523745902364890237489, null)
   # value: 2389523789523745902364890237489
   
-  ? t.coerce(true)
+  ? t.coerce(true, null)
   # problem: the boolean true doesn't coerce to an int
   
   ? t.getFQName()

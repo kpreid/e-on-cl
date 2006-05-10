@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def BufferedReader extends __makeGuard(BufferedReader) {
+def BufferedReader {
   to coerce(specimen, optEjector) {
     throw.eject(optEjector, "no BufferedReaders yet")
   }

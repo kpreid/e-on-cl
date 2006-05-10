@@ -35,9 +35,10 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
         # The method documentation here is copied from the Guard interface in Java-E, even though BaseGuard there doesn't have it. This way, interactive use of guards has documentation.
       
         to __printOn(out :TextWriter) {
-          out.print("__makeGuard(")
+          out.quote(makeBaseGuard)
+          out.write("(")
           out.quote(valueGuard)
-          out.print(")")
+          out.write(")")
         }
         
         to coerce(specimen, optEjector) {
@@ -99,7 +100,7 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
           */
         to not() { # XXX memoize
           # XXX this perhaps should be a separate emaker, but we don't need it yet.
-          def negatedGuard extends __makeGuard(negatedGuard) {
+          def negatedGuard extends makeBaseGuard(negatedGuard) {
             to __printOn(out :TextWriter) {
               out.print("!(")
               out.quote(valueGuard)

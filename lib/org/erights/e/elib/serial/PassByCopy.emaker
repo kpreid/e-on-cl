@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def PassByCopy0 extends __makeGuard(PassByCopy0) {
+def PassByCopy0 {
   to __printOn(out :TextWriter) :void {
     out.print("PassByCopy")
   }
