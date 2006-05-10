@@ -312,7 +312,7 @@
              (multiple-value-call 
                #'format 
                stream 
-               "~@<Attempted to create a ~S with ~S children, ~:_~S, ~:_instead of ~S-~S.~:> ~:_~@<This probably means you are using an incompatible version of E-on-Java, or haven't fixed the bug described at: ~:_<http://www.eros-os.org/pipermail/e-lang/2006-January/011049.html>~:>" 
+               "Attempted to create a ~S with ~S children, ~:_~S, ~:_instead of ~S-~S." 
                (class-name (attempted-node-class condition))
                (length (attempted-node-elements condition))
                (attempted-node-elements condition)
