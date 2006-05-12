@@ -505,6 +505,21 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a`b`")
   # value: e`a__quasiParser.valueMaker("b").substitute(__makeList.run())`
 
+  ? t("a`@b`")
+  # problem: the (E.ELANG::MEMBER-OF :|parts|) of a E.NONKERNEL:|QuasiExpr| must be a (AND
+  #                                                                                    E.NONKERNEL.IMPL::|QuasiPart|
+  #                                                                                    (NOT
+  #                                                                                     E.NONKERNEL:|QuasiPatternHole|)) (The value
+  #                                                                                                                         #<QuasiPatternHole (#<FinalPattern (#<NounExpr ("b")>
+  #                                                                                                                                                             NIL)>)>
+  #                                                                                                                       is not of type
+  #                                                                                                                         (AND
+  #                                                                                                                          E.NONKERNEL.IMPL::|QuasiPart|
+  #                                                                                                                          (NOT
+  #                                                                                                                           E.NONKERNEL:|QuasiPatternHole|)).)
+  XXX prettier error
+  xxx preserve enough source location info to point to the origin of the problem
+
 'RangeExpr': see 'BinaryExpr' for now
 
 'SameExpr'
