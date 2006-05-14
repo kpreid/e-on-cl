@@ -77,6 +77,15 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   >     }
   >   }
   > }
+  # problem: EventuallyDeepFrozen: $lazyFailer5__C: __optSealedDispatch argument pattern must not have a guard
+
+  ? def lazyFailer5 implements EventuallyDeepFrozen {
+  >   method __optSealedDispatch(var brand) :any {
+  >     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+  >       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  >     }
+  >   }
+  > }
   # problem: EventuallyDeepFrozen: $lazyFailer5__C: __optSealedDispatch argument pattern is not simple
   
   ? def lazyFailer6 implements EventuallyDeepFrozen {

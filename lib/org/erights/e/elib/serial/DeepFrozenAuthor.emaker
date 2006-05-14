@@ -108,10 +108,8 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       } else if (Ref.isPassByCopy(specimen)) {
         # transparent
         
-        def optUncall := specimen.__optUncall()
-        
         # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
-        if (optUncall =~ uncall && uncall != null) {
+        if ((def uncall := specimen.__optUncall()) != null) {
           def sub(_, component) {
             requireDeepFrozen(component, sofarther, optEjector, root)
           }
@@ -212,8 +210,8 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                                   slot :any,
                                   precedingNodes # :Really[List[ENode]]
                                  ) :boolean {
-        return expr =~ nounExpr :NounExpr \
-               && witness.getSlot(def noun := nounExpr.getName()) == slot \
+        def nounExpr :NounExpr := (expr, fn _{return false})
+        return witness.getSlot(def noun := nounExpr.getName()) == slot \
                && accum true for p in precedingNodes {
                     _ & !(p.staticScope().outNames().maps(noun)) }
       }
@@ -222,7 +220,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       def auditorExprs := objectExpr.getAuditorExprs()
       
       # The matcher is irrelevant provided that our method exists
-      if (script.getOptMethods() =~ methds :Really[ConstList]) {
+      if ((def methds := script.getOptMethods()) != null) {
         # both 'method' and 'methods' are E keywords
 
         requireDF(
@@ -235,14 +233,20 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
             requireDF((optResultGuard == null \
                      || expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs())), 
               thunk{label + ": __optSealedDispatch result guard is not any"})
-            requireDF(methd.getPatterns() =~ [brandPattern :Really[FinalPattern]] && brandPattern.getOptGuardExpr() == null, 
-              thunk{label + ": __optSealedDispatch argument pattern is not simple"})
+            
+            def [brandPattern :Really[FinalPattern]] := \
+              (methd.getPatterns(),
+               fn _{throw(label + ": __optSealedDispatch argument pattern is not simple")})
+            requireDF(brandPattern.getOptGuardExpr() == null, 
+              thunk{label + ": __optSealedDispatch argument pattern must not have a guard"})
             # XXX We haven't implemented node pattern matching yet. Once EventuallyDeepFrozen is working, test and implement pattern matching and reenable this.
             # requireDF(methd.getBody() =~ \
             #     eDF`if ($brandPattern == @{auditorExpr ? expressionWillHaveValue(auditorExpr, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard) {[optResultGuard]} else {[]})}.getPeekBrand()) { meta.getState() }`, 
             #   thunk{`$label: __optSealedDispatch body is not suitably formed`})
             def methodBody := exprShorten(methd.getBody())
-            requireDF(methodBody =~ ifExpr :Really[IfExpr], thunk{label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody)})
+            def ifExpr :Really[IfExpr] := \
+              (methodBody,
+               fn _{throw(label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody))})
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
             requireDF(exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null) \
