@@ -16,17 +16,19 @@
   
   ? def genericBuilder { 
   >   to doesQuasis() :any { true }
-  >   match [v, a] { [v] + a } }; null
+  >   match [v, a] { [v] + a } }
+  > def gbParser := makeTermParser(genericBuilder)
+  # value: <termParser>
 
-  ? makeTermParser(genericBuilder).parse(makeLexStream())
+  ? gbParser.parse(makeLexStream())
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
 
-  ? makeTermParser(genericBuilder).parseText("foo".asStream())
+  ? gbParser.parseText("foo".asStream())
   # value: ["start", ["term", ["tag", [["Ident", "foo"]]]]]
 
 --- Grammar
 
-  ? def p(tokens) :any { makeTermParser(genericBuilder).parse(tokens.asStream()) }; null
+  ? def p(tokens) :any { gbParser.parse(tokens.asStream()) }; null
 
 foo()
 
@@ -114,11 +116,14 @@ Holes
 
   ? def qBuilder := makeQBuilder(termBuilder)
   # value: <qBuilder>
+  
+  ? def qbParser := makeTermParser(qBuilder)
+  # value: <termParser>
  
-  ? makeTermParser(qBuilder).parse(makeLexStream())
+  ? qbParser.parse(makeLexStream())
   # value: qterm`foo`
 
-  ? makeTermParser(qBuilder).parseText("foo".asStream())
+  ? qbParser.parseText("foo".asStream())
   # value: qterm`foo`
 
 XXX all term-language grammar
