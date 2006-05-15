@@ -6,14 +6,7 @@ These are tests specifically of the text->Kernel-E stages, skipping evaluation a
   ? def pp := <import:org.cubik.cle.prim.parser>
   > def t(s) :any { return pp.run(s).asKernelE() }
   > def tp(pat) :any { return pp.pattern(pat, null, null).asKernelE() }
-  > null
-  
-  ? def UnsealThrown := lisp.unsealingConditionGuard(lisp["CL", "T"].getValue())
-  > /**eval*/ 
-  > def te(s) :any { 
-  >   return [def n := pp.run(s).asKernelE()] + \
-  >     try { [true, n.eval(safeScope)] } catch p { [false, p :UnsealThrown] }
-  > }
+  > def te(s) :any { return t(s).eval(safeScope) }
   > null
 
 Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
@@ -788,23 +781,14 @@ Where headings are in quotes, it indicates that the names are those I invented f
   
   
   ? te("def [a, a__Resolver] := Ref.promise(); def bind a := 1; a")
-  # value: [e`def [a, a__Resolver] := Ref.promise()
-  #        def via (__bind.run(a__Resolver)) a__1 := 1
-  #        a`, true, 1]
+  # value: 1
 
   ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); a__Resolver.resolve(0); [escape e { def bind a := (1, e) }, a]")
-  # value: [e`def [a, a__Resolver] := Ref.promise()
-  #        a__Resolver.resolve(0)
-  #        __makeList.run(escape e {
-  #            def via (__bind.run(a__Resolver)) a__1 := (1, e)
-  #        }, a)`, false, problem: this resolver's ref has already been resolved, therefore cannot be resolved to 1]
+  # problem: this resolver's ref has already been resolved, therefore cannot be resolved to 1
   XXX should this eject instead?
 
   ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); [escape e { def bind a :char := (1, e) }, a]")
-  # value: [e`def [a, a__Resolver] := Ref.promise()
-  #        __makeList.run(escape e {
-  #            def via (__bind.run(a__Resolver, char)) a__1 := (1, e)
-  #        }, a)`, true, [problem: the int 1 doesn't coerce to a char, <Promise>]]
+  # value: [problem: the int 1 doesn't coerce to a char, <Promise>]
 
 'MapPattern'
   
@@ -822,20 +806,13 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
 
   ? te("def [\"a\" => b] := [\"a\" => 1]; b")
-  # value: [e`def via (__mapExtract.run("a")) [b, via (__mapEmpty) _] := __makeMap.fromPairs(__makeList.run(__makeList.run("a", 1)))
-  #        b`, true, 1]
+  # value: 1
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] := ([].asMap(), e); b}")
-  # value: [e`escape e {
-  #            def via (__mapExtract.run("a")) [b, via (__mapEmpty) _] := (__makeList.run().asMap(), e)
-  #            b
-  #        }`, true, problem: "a" not in matched map: [].asMap()]
+  # value: problem: "a" not in matched map: [].asMap()
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] := ([\"a\" => 1, \"b\" => 2], e); b}")
-  # value: [e`escape e {
-  #            def via (__mapExtract.run("a")) [b, via (__mapEmpty) _] := (__makeMap.fromPairs(__makeList.run(__makeList.run("a", 1), __makeList.run("b", 2))), e)
-  #            b
-  #        }`, true, problem: unused elements in matched map: ["b" => 2]]
+  # value: problem: unused elements in matched map: ["b" => 2]
 
 'QuasiPattern'
 
@@ -854,34 +831,22 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (1, e) }")
-  # value: [e`escape e {
-  #            def via (__matchSame.run(1)) _ := (1, e)
-  #        }`, true, 1]
+  # value: 1
   
   ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (2, e) }")
-  # value: [e`escape e {
-  #            def via (__matchSame.run(1)) _ := (2, e)
-  #        }`, true, problem: 2 is not 1]
+  # value: problem: 2 is not 1
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (Ref.promise()[0], e) }")
-  # value: [e`escape e {
-  #            def via (__matchSame.run(1)) _ := (Ref.promise().get(0), e)
-  #        }`, true, problem: <Promise> is not yet 1]
+  # value: problem: <Promise> is not yet 1
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (2, e) }")
-  # value: [e`escape e {
-  #            def via (__matchSame.different(1)) _ := (2, e)
-  #        }`, true, 2]
+  # value: 2
   
   ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (1, e) }")
-  # value: [e`escape e {
-  #            def via (__matchSame.different(1)) _ := (1, e)
-  #        }`, true, problem: must not be 1]
+  # value: problem: must not be 1
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (Ref.promise()[0], e) }")
-  # value: [e`escape e {
-  #            def via (__matchSame.different(1)) _ := (Ref.promise().get(0), e)
-  #        }`, true, problem: <Promise> is not yet different from 1]
+  # value: problem: <Promise> is not yet different from 1
 
 'SuchThatPattern'
 
@@ -889,10 +854,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`def via (__suchThat) [x, via (__suchThat.handle("true", true)) _] := 1`
   
   ? te("def x ? true := 1")
-  # value: [e`def via (__suchThat) [x, via (__suchThat.handle("true", true)) _] := 1`, true, 1]
+  # value: 1
   
   ? te("def x ? false := 1")
-  # value: [e`def via (__suchThat) [x, via (__suchThat.handle("false", false)) _] := 1`, false, problem: <such-that-error: false was false for 1>]
+  # problem: <such-that-error: false was false for 1>
 
 'TailPattern'
 
@@ -912,10 +877,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
     x # syntax error: 
 
     ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] | c := ([\"a\" => 1, \"b\" => 2], e); [b, c]}")
-    # value: [e`escape e {
-    #            def via (__mapExtract.run("a")) [b, c] := (__makeMap.fromPairs(__makeList.run(__makeList.run("a", 1), __makeList.run("b", 2))), e)
-    #            __makeList.run(b, c)
-    #        }`, true, [1, ["b" => 2]]]
+    # value: [1, ["b" => 2]]
 
 'FunctionObject'
 
