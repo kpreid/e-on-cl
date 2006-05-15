@@ -9,21 +9,28 @@ def Throwable := <import:org.cubik.cle.prim.Throwable>
 def RefAuthor {
   # XXX map args?
   # Stamped rather than audited deep-frozen since DeepFrozen is nonprimitive and uses Ref itself in the course of auditing. XXX have DeepFrozenAuthor use primitives?
-  to run(makePromise, refState, refIsResolved, eeqIsSettled, makeUnconnectedRef, refIsPassByCopy, refOptProblem, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
+  to run(makePromise, refState, refIsResolved, makeUnconnectedRef, refOptProblem, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
     def Ref0 := def "$Ref" implements DeepFrozenStamp {
       to promise() :any { makePromise() }
-      to isBroken(r) :any { refState(r) == sElibBroken }
-      to isNear(r) :any { refState(r) == sElibNear }
+      
+      to isBroken(r)   :any { refState(r) == sElibBroken }
+      to isNear(r)     :any { refState(r) == sElibNear }
       to isEventual(r) :any { refState(r) == sElibEventual }
       to isFar(r) :any { refState(r) == sElibEventual && refIsResolved(r) }
-      to isSettled(r) :any { eeqIsSettled(r) }
+      
+      to isSettled(r)  :any { __equalizer.isSettled(r) }
+      to isResolved(r) :any { refIsResolved(r) }
       
       to broken(p) :any { 
         # The new exception-sealing system means that broken references must be able to hold arbitrary values. However, current E programs (and our test suite) expect Ref.broken("foo") to make an exception object. Thus this guard.
         makeUnconnectedRef(p :Throwable)
       }
+      to optProblem(r) :any { refOptProblem(r) }
       
-      to isPassByCopy(r) :any { refIsPassByCopy(r) }
+      to isPassByCopy(r) :any { 
+        # xxx eventually, this will need to reflect the difference between PassByCopy and Selfless.
+        __equalizer.isSelfless(r)
+      }
       to whenResolved(ref, reactor) :any {
         # XXX does this match the semantics of the standard E whenResolved?
         #traceln(`entering whenResolved`)
@@ -48,9 +55,10 @@ def RefAuthor {
         safeWhenResolvedReactor(null)
         resultPromise
       }
-      to isResolved(r) :any { refIsResolved(r) }
-      to fulfillment(r) :any { 
-        if (refOptProblem(r) =~ p ? (p != null)) {
+      
+      to fulfillment(r) :any {
+        def p := refOptProblem(r)
+        if (p != null) {
           throw(p)
         } else if (refIsResolved(r)) {
           r
@@ -58,7 +66,6 @@ def RefAuthor {
           throw("not resolved (Ref#fulfillment)")
         }
       }
-      to optProblem(r) :any { refOptProblem(r) }
     }
   }
 }

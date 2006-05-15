@@ -233,6 +233,22 @@
           (:|optSame| (left right)
             (opt-same left right '(() . ())))
           
+          (:|isSettled| (ref)
+            (as-e-boolean (settledp ref)))
+          
+          (:|isSelfless| (ref)
+            "Returns whether the reference is selfless; that is, whether it can be acquired by construction as well as by passing. Such references may or may not also be transparent."
+            (as-e-boolean (typep ref
+              '(or (satisfies transparent-selfless-p)
+                   ;; XXX derive this list from the def-atomic-sameness
+                   ;; definitions instead of hardcoding
+                   null
+                   string
+                   character
+                   integer
+                   float64
+                   elib:e-boolean))))
+          
           (:|makeTraversalKey/1| 'make-traversal-key))))))
 
 ;;; --- TraversalKey ---

@@ -465,19 +465,7 @@
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function (f+ #'as-e-boolean #'ref-is-resolved)
                      :stamps (list +deep-frozen-stamp+))
-      (wrap-function (f+ #'as-e-boolean #'settledp)
-                     :stamps (list +deep-frozen-stamp+))
       (wrap-function #'make-unconnected-ref
-                     :stamps (list +deep-frozen-stamp+))
-      (wrap-function (lambda (ref)
-        (as-e-boolean (typep ref 
-          '(or (satisfies transparent-selfless-p)
-               null
-               string
-               character
-               integer
-               float64
-               elib:e-boolean))))
                      :stamps (list +deep-frozen-stamp+))
       (wrap-function #'ref-opt-problem
                      :stamps (list +deep-frozen-stamp+))
