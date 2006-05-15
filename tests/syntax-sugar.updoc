@@ -546,12 +546,14 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("switch (x) { match [a] { b } match c { d } }")
   # value: e`{
   #            def specimen__1 := x
-  #            if (specimen__1 =~ [a]) {
+  #            escape next__2 {
+  #                def [a] := (specimen__1, next__2)
   #                b
-  #            } else {
-  #                if (specimen__1 =~ c) {
+  #            } catch _ {
+  #                escape next__2 {
+  #                    def c := (specimen__1, next__2)
   #                    d
-  #                } else {
+  #                } catch _ {
   #                    throw.run("no match: ".add(specimen__1))
   #                }
   #            }

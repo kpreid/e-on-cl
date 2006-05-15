@@ -818,7 +818,8 @@
 (defemacro |SwitchExpr| (|EExpr|) ((|specimen| t |EExpr|)
                                    (|matchers| nil (e-list |EMatcher|)))
                                   (:rest-slot t)
-  (let ((specimen-var (gennoun "specimen")))
+  (let ((specimen-var (gennoun "specimen"))
+        (next-ej (gennoun "next")))
     ;; NOTE: I briefly got confused. Even if |specimen| turns out to be a
     ;; NounExpr, we can't skip employing a temporary var, because the noun
     ;; might be for a special slot.
@@ -828,10 +829,14 @@
         (labels ((match-chain (list) 
                   (if list
                     (let ((matcher (first list)))
-                      (mn '|IfExpr|
-                        (mn '|MatchBindExpr| specimen-var
-                                             (e. matcher |getPattern|))
-                        (e. matcher |getBody|)
+                      (mn '|EscapeExpr|
+                        (mn '|FinalPattern| next-ej nil)
+                        (mn '|SeqExpr|
+                          (mn '|DefineExpr| (e. matcher |getPattern|)
+                                            specimen-var
+                                            next-ej)
+                          (e. matcher |getBody|))
+                        (mn '|IgnorePattern|)
                         (match-chain (rest list))))
                     (mn '|CallExpr| (mn '|NounExpr| "throw") "run"
                       (mn '|CallExpr| (mn '|LiteralExpr| "no match: ") "add"
