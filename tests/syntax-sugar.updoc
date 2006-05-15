@@ -6,7 +6,7 @@ These are tests specifically of the text->Kernel-E stages, skipping evaluation a
   ? def pp := <import:org.cubik.cle.prim.parser>
   > def t(s) :any { return pp.run(s).asKernelE() }
   > def tp(pat) :any { return pp.pattern(pat, null, null).asKernelE() }
-  > def te(s) :any { return t(s).eval(safeScope) }
+  > def te(s) :any { return t(s).eval(safeScope.with("println", println)) } # XXX should be interp.getTopScope()
   > null
 
 Where headings are in quotes, it indicates that the names are those I invented for the nodes representing the unexpanded syntax, which are not reified in E-on-Java and have no names.
@@ -203,6 +203,41 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            }
   #        } =~ [&x]`
 
+  ? te("[false && false, true && false, false && true, true && true]")
+  # value: [false, false, false, true]
+  ? te("[false || false, true || false, false || true, true || true]")
+  # value: [false, true, true, true]
+
+  ? def testConditionalResult := te("def testConditionalResult(a, b) :any {
+  >   {println([(def r := def ra := a) && \
+  >             (def rba := ra
+  >              def r := def rb := b), 
+  >             &r, &ra, &rb, &rba])}
+  >   {println([(def r := def ra := a) || \
+  >             (def r := def rb := b),
+  >             &r, &ra, &rb])}
+  > }")
+  # value: <testConditionalResult>
+  
+  ? testConditionalResult(false, false)
+  # stdout: [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         
+
+  ? testConditionalResult(false, true)
+  # stdout: [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         [true, <& true>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <& true>]
+  #         
+
+  ? testConditionalResult(true, false)
+  # stdout: [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         [true, <& true>, <& true>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         
+
+  ? testConditionalResult(true, true)
+  # stdout: [true, <& true>, <& true>, <& true>, <& true>]
+  #         [true, <& true>, <& true>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         
 
 'CurryExpr'
 
