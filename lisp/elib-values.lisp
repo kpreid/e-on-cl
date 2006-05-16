@@ -4,6 +4,9 @@
 
 (in-package :elib)
 
+(defun format-control-quote (string)
+  (cl-ppcre:regex-replace-all "~" string "~~"))
+
 ; --- Nil ---
 
 (def-vtable null
@@ -69,8 +72,8 @@
       ((and (typep guard 'cl-type-guard)
             (subtypep 'simple-error (cl-type-specifier guard)))
         (make-condition 'simple-error
-          :format-control "~A" 
-          :format-arguments (list this)))
+          :format-control (format-control-quote this) 
+          :format-arguments '()))
       (t this)))
   (:|op__cmp| (this other)
     ; XXX is this also available for EList, and if so can we move it there with no loss of efficiency?
@@ -691,7 +694,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; XXX the <typename: desc> is inherited from Java-E: consider whether it's the Right Thing
 (def-vtable condition
   (:|__printOn| (this tw
-      &aux (interesting-type (not (eql (observable-type-of this) 'simple-error))))
+      &aux (interesting-type (not (member (observable-type-of this) '(or simple-error string-error)))))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "problem: ")
     (when interesting-type
@@ -708,17 +711,62 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Java-E compatibility; currently just returns self."
     this))
 
+; - simple-error -
+
+(defglobal +the-make-string-error+ (e-lambda "org.cubik.cle.fail.makeStringException"
+    (:stamped +deep-frozen-stamp+)
+  (:|asType| () (type-specifier-to-guard 'string-error))
+  (:|run| (string)
+    (make-condition 'simple-error
+      :format-control (format-control-quote string)
+      :format-arguments '()))))
+
+(defun simple-condition-string-only-p (condition)
+  (let ((fc (simple-condition-format-control condition)))
+    (and (stringp fc)
+         (cl-ppcre:scan (load-time-value 
+                          (cl-ppcre:create-scanner
+                            "^(?:[^~]|~~)*$"))
+                        fc)
+         (null (simple-condition-format-arguments condition)))))
+
+(deftype string-error ()
+  '(and simple-error (satisfies simple-condition-string-only-p)))
+(def-fqn string-error "org.cubik.cle.fail.StringException")
+
+(defmethod observable-type-of ((this simple-error))
+  (if (typep this 'string-error)
+    'string-error
+    'simple-error))
+
+(def-vtable simple-error
+  (audited-by-magic-verb (this auditor)
+    (and (typep this 'string-error)
+         (eql auditor +selfless-stamp+)))
+  (:|__optUncall| (this)
+    (when (typep this 'string-error)
+      `#(,+the-make-string-error+ "run" #(,(format nil (simple-condition-format-control this)))))))
+
 ; - type-error / CoercionFailure -
 
-(def-fqn type-error "org.cubik.cle.fail.coercionFailure")
+(def-fqn type-error "org.cubik.cle.fail.CoercionFailure")
 
 (def-vtable type-error
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| "problem: ")
     (print-object-with-type tw (type-error-datum this))
     (e. tw |write| " doesn't coerce to ")
-    (e. tw |print| (e-util:aan (e-quote (type-specifier-to-guard (type-error-expected-type this)))))))
+    (e. tw |print| (e-util:aan (e-quote (type-specifier-to-guard (type-error-expected-type this))))))
+  (:|__optUncall| (this)
+    `#(,+the-make-coercion-failure+ "run" #(,(e. this |getSpecimen|)
+                                            ,(e. this |getGuard|))))
+  (:|getSpecimen/0| 'type-error-datum)
+  (:|getGuard| (this)
+    (type-specifier-to-guard (type-error-expected-type this))))
 
 (defglobal +the-make-coercion-failure+ (e-lambda "org.cubik.cle.fail.makeCoercionFailure"
     (:stamped +deep-frozen-stamp+)

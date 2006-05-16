@@ -39,23 +39,3 @@
 
   ? defineException([], def _(_,_):void{})([].asMap()) :ParseError
   # problem: <_> is not DeepFrozen
-
-
-
-
-
-  x ? def CoercionFailure := <import:org.cubik.cle.prim.CoercionFailure>
-  x # value: CoercionFailure
-  x 
-  x ? CoercionFailure.accepts(Ref.optProblem(Ref.broken("X")))
-  x # value: false
-  x 
-  x ? def typeError :CoercionFailure := escape ex { String.coerce(0, ex) }
-  x # value: problem: the int 0 doesn't coerce to a String
-  x 
-  x ? typeError.getSpecimen()
-  x # value: 0
-  x 
-  x ? typeError.getGuard()
-  x # value: String
-  x 

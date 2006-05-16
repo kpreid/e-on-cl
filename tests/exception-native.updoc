@@ -1,0 +1,59 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  XXX invent non-Java FQNs  
+  ? def Exception := <type:java.lang.Exception>
+  # value: Throwable
+  ? def Throwable := <type:java.lang.Throwable>
+  # value: Throwable
+  
+  ? Exception == Throwable
+  # value: true
+
+--- Simple string exception ---
+
+  ? def stringEx := "a" :Throwable
+  # value: problem: a
+  
+  ? stringEx :Throwable
+  # value: problem: a
+  
+  ? Ref.isPassByCopy(stringEx)
+  # value: true
+  ? stringEx.__optUncall()
+  # value: [<makeStringException>, "run", ["a"]]
+
+
+  format-string-proofing tests
+  ? [def formatTest := "~%" :Throwable, formatTest.__optUncall()]
+  # value: [problem: ~%, [<makeStringException>, "run", ["~%"]]]
+  ? "~~" :Throwable
+  # value: problem: ~~
+  ? "~a~" :Throwable
+  # value: problem: ~a~
+
+--- CoercionFailure ---
+
+  ? def CoercionFailure := <type:org.cubik.cle.prim.CoercionFailure>
+  # value: CoercionFailure
+  
+  ? Ref.optProblem(Ref.broken("X")) :CoercionFailure
+  # problem: the StringException problem: X doesn't coerce to a CoercionFailure
+  
+  ? def typeError :CoercionFailure := escape ex { String.coerce(0, ex) }
+  # value: problem: the int 0 doesn't coerce to a String
+  
+  ? typeError.getSpecimen()
+  # value: 0
+  
+  ? typeError.getGuard()
+  # value: String
+  
+  ? Ref.isPassByCopy(typeError)
+  # value: true
+  ? typeError.__optUncall()
+  # value: [<makeCoercionFailure>, "run", [0, String]]
+
+  XXX correct?
+  
+XXX test 
