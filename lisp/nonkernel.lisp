@@ -314,42 +314,52 @@
                                         (|left| t |EExpr|)
                                         (|right| t |EExpr|))
                                        ()
-  (let* ((kernel-left  (e-macroexpand-all |left|))
+  (let* ((broken (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow") "broken"))
+         (kernel-left  (e-macroexpand-all |left|))
          (kernel-right (e-macroexpand-all |right|))
          (left-map  (e. (e. kernel-left |staticScope|) |outNames|))
          (right-map (e. (e. kernel-right |staticScope|) |outNames|))
          (both-nouns (keys-to-nouns (e. left-map |or| right-map)))
-         (slot-list (apply #'mn '|ListExpr| 
-                      (map 'list (lambda (noun) (mn '|SlotExpr| noun))
-                                 both-nouns))))
-    (labels ((slot-patterns (nouns)
-               (apply #'mn '|ListPattern|
+         (result-var (gennoun "ok"))
+         (success-list (apply #'mn '|ListExpr| 
+                         (mn '|NounExpr| "true")
+                         (map 'list (lambda (noun) (mn '|SlotExpr| noun))
+                                 both-nouns)))
+         (failure-list (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow")
+                                       "failureList"
+                                       (node-quote (length both-nouns)))))
+    (labels ((partial-failure (failed-nouns) 
+               (apply #'mn '|SeqExpr| 
+                 (nconc
+                   (map 'list (lambda (noun) 
+                                (mn '|DefineExpr| (mn '|SlotPattern| noun nil)
+                                                  broken
+                                                  nil))
+                              failed-nouns)
+                   (list success-list)))))
+      (mn '|SeqExpr|
+        (mn '|DefineExpr|
+          (apply #'mn '|ListPattern|
+                 (mn '|FinalPattern| result-var nil)
                  (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
-                            nouns)))
-             (bind-failure (nouns) 
-               (mn '|MatchBindExpr| (mn '|NullExpr|)
-                                    (slot-patterns nouns))))
-      (mn '|MatchBindExpr|
-        (ecase (find-symbol |op| :keyword)
-          (:\|\|
-           (let* ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
-                  (right-only (keys-to-nouns (e. right-map |butNot| left-map))))
-             (mn '|IfExpr| kernel-left 
-                           (mn '|SeqExpr|
-                             (bind-failure right-only)
-                             slot-list)
+                            both-nouns))
+          (ecase (find-symbol |op| :keyword)
+            (:\|\|
+             (let* ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
+                    (right-only (keys-to-nouns (e. right-map |butNot| left-map))))
+               (mn '|IfExpr| kernel-left 
+                             (partial-failure right-only)
+                             (mn '|IfExpr| kernel-right
+                               (partial-failure left-only)
+                               failure-list))))
+            (:&&   
+             (mn '|IfExpr| kernel-left
                            (mn '|IfExpr| kernel-right
-                             (mn '|SeqExpr|
-                               (bind-failure left-only)
-                               slot-list)
-                             (mn '|NullExpr|)))))
-          (:&&   
-           (mn '|IfExpr| kernel-left
-                         (mn '|IfExpr| kernel-right
-                                       slot-list
-                                       (mn '|NullExpr|))
-                         (mn '|NullExpr|))))
-        (slot-patterns both-nouns)))))
+                                         success-list
+                                         failure-list)
+                           failure-list)))
+          nil)
+        result-var))))
 
 (defemacro |CurryExpr| (|EExpr|) ((|expr| t (or |CallExpr| |SendExpr|)))
                                  ()

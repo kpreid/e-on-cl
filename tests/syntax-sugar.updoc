@@ -141,7 +141,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a :b")
   # value: e`ValueGuard.coerce(b, null).coerce(a, null)`
 
-  XXX order of evaluation reversal
+  XXX order of evaluation reversal means we need usage rejection
 
 'CompareExpr'
 
@@ -151,57 +151,60 @@ Where headings are in quotes, it indicates that the names are those I invented f
 'ConditionalExpr'
 
   ? t("(def a := b) || (def c := d)")
-  # value: e`if (def a := b) {
-  #            null =~ [&c]
-  #            __makeList.run(&c, &a)
+  # value: e`def [ok__1, &c, &a] := if (def a := b) {
+  #            def &c := __booleanFlow.broken()
+  #            __makeList.run(true, &c, &a)
   #        } else {
   #            if (def c := d) {
-  #                null =~ [&a]
-  #                __makeList.run(&c, &a)
+  #                def &a := __booleanFlow.broken()
+  #                __makeList.run(true, &c, &a)
   #            } else {
-  #                null
+  #                __booleanFlow.failureList(2)
   #            }
-  #        } =~ [&c, &a]`
+  #        }
+  #        ok__1`
   
   ? t("(def a := b) && (def c := d)")
-  # value: e`if (def a := b) {
+  # value: e`def [ok__1, &c, &a] := if (def a := b) {
   #            if (def c := d) {
-  #                __makeList.run(&c, &a)
+  #                __makeList.run(true, &c, &a)
   #            } else {
-  #                null
+  #                __booleanFlow.failureList(2)
   #            }
   #        } else {
-  #            null
-  #        } =~ [&c, &a]`
+  #            __booleanFlow.failureList(2)
+  #        }
+  #        ok__1`
   
-  XXX 'null =~' for failure leads to cryptic failures (inherited from EoJ)
-
   Bug test: temporary names inside a ConditionalExpr would fail
+  NOTE: the exporting of ares__2 here is useless; however, our current expansion system doesn't attempt to determine that. '
   ? t("(a[] := true) && true")
-  # value: e`if (a.put(def ares__1 := true)
-  #        ares__1) {
+  # value: e`def [ok__1, &ares__2] := if (a.put(def ares__2 := true)
+  #        ares__2) {
   #            if (true) {
-  #                __makeList.run(&ares__1)
+  #                __makeList.run(true, &ares__2)
   #            } else {
-  #                null
+  #                __booleanFlow.failureList(1)
   #            }
   #        } else {
-  #            null
-  #        } =~ [&ares__1]`
+  #            __booleanFlow.failureList(1)
+  #        }
+  #        ok__1`
 
-  Bug test: reusing names would cause them to be null =~ bound on both sides
-  ? t("1 =~ x || 2 =~ x")
-  # value: e`if (1 =~ x) {
-  #            null =~ []
-  #            __makeList.run(&x)
+  Bug test: reusing names would cause them to be failure-bound on both sides
+  ? t("(def x := 1; true) || (def x := 2; true)")
+  # value: e`def [ok__1, &x] := if (def x := 1
+  #        true) {
+  #            __makeList.run(true, &x)
   #        } else {
-  #            if (2 =~ x) {
-  #                null =~ []
-  #                __makeList.run(&x)
+  #            if (def x := 2
+  #            true) {
+  #                __makeList.run(true, &x)
   #            } else {
-  #                null
+  #                __booleanFlow.failureList(1)
   #            }
-  #        } =~ [&x]`
+  #        }
+  #        ok__1`
 
   ? te("[false && false, true && false, false && true, true && true]")
   # value: [false, false, false, true]
@@ -220,23 +223,23 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: <testConditionalResult>
   
   ? testConditionalResult(false, false)
-  # stdout: [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
-  #         [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  # stdout: [false, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>]
+  #         [false, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>]
   #         
 
   ? testConditionalResult(false, true)
-  # stdout: [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
-  #         [true, <& true>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <& true>]
+  # stdout: [false, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>]
+  #         [true, <& true>, <ref broken by problem: boolean flow expression failed>, <& true>]
   #         
 
   ? testConditionalResult(true, false)
-  # stdout: [false, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
-  #         [true, <& true>, <& true>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  # stdout: [false, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>, <ref broken by problem: boolean flow expression failed>]
+  #         [true, <& true>, <& true>, <ref broken by problem: boolean flow expression failed>]
   #         
 
   ? testConditionalResult(true, true)
   # stdout: [true, <& true>, <& true>, <& true>, <& true>]
-  #         [true, <& true>, <& true>, <ref broken by problem: the Null null doesn't coerce to a ConstList>]
+  #         [true, <& true>, <& true>, <ref broken by problem: boolean flow expression failed>]
   #         
 
 'CurryExpr'
