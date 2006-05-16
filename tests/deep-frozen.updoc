@@ -46,6 +46,16 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   ? f22 :DeepFrozen
   # problem: <f22> is not DeepFrozen
 
+Broken references are DeepFrozen if the exception is
+
+  ? Ref.broken("a") :DeepFrozen
+  # value: <ref broken by problem: a>
+  
+  ? Ref.broken(<import:org.cubik.cle.fail.makeCoercionFailure>(def x {}, int)) :DeepFrozen
+  # problem: <ref broken by problem: the "__main$x__C" <x> doesn't coerce to an int> is not DeepFrozen because <x> is not
+  
+  XXX test with a disconnected ref (ex-Far ref)
+
 --- 'Lazy' checking
 
   ? def EventuallyDeepFrozen := DeepFrozen."eventually"()

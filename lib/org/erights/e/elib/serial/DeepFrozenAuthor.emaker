@@ -149,6 +149,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         }
         rtrace("--rDF amplified")
         return
+
+      } else if (Ref.isBroken(specimen)) {
+        rtrace("--rDF broken")
+        requireDeepFrozen(Ref.optProblem(specimen), sofarther, optEjector, root)
+        return
       
       } else {
         rtrace("--rDF opaque")
