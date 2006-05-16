@@ -45,7 +45,7 @@ def primParser := <import:org.cubik.cle.prim.parser>
 /** Version of e__quasiParser that doesn't do proper substitution, so has fewer dependencies. */
 def eDF__quasiParser {
   to valueMaker(text) {
-    requireDF(text.indexOf1('$') == -1 && text.indexOf1('@') == -1, thunk{"eDF`` doesn't support holes or escapes"})
+    requireDF((text.indexOf1('$') == -1) & (text.indexOf1('@') == -1), thunk{"eDF`` doesn't support holes or escapes"})
     def parsed := primParser(text)
     def substituter {
       to substitute(_) {
@@ -98,8 +98,8 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     } else {
       def sofarther := sofar.with(specimenKey, null)
       
-      if (__auditedBy(DeepFrozen0, specimen) || 
-          __auditedBy(OptionallyDeepFrozen, specimen) || 
+      if (__auditedBy(DeepFrozen0, specimen) |
+          __auditedBy(OptionallyDeepFrozen, specimen) |
           __auditedBy(DeepFrozenStamp, specimen)) {
         # atomic DeepFrozenness
         rtrace("--rDF atomic")
@@ -216,9 +216,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                                   precedingNodes # :Really[List[ENode]]
                                  ) :boolean {
         def nounExpr :NounExpr := (expr, fn _{return false})
-        return witness.getSlot(def noun := nounExpr.getName()) == slot \
-               && accum true for p in precedingNodes {
-                    _ & !(p.staticScope().outNames().maps(noun)) }
+        return (witness.getSlot(def noun := nounExpr.getName()) == slot) \
+               & accum true for p in precedingNodes {
+                   _ & !(p.staticScope().outNames().maps(noun)) }
       }
 
       def script := objectExpr.getScript()
@@ -229,15 +229,16 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         # both 'method' and 'methods' are E keywords
 
         requireDF(
-          for via (fn m,e{(m.getVerb() == "__optSealedDispatch" \
-                           && m.getPatterns().size() == 1
+          for via (fn m,e{((m.getVerb() == "__optSealedDispatch") \
+                           & (m.getPatterns().size() == 1)
                           ).pick(fn{m},e)()}) \
               methd in methds {
             
             def optResultGuard := methd.getOptResultGuard()
-            requireDF((optResultGuard == null \
-                     || expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs())), 
-              thunk{label + ": __optSealedDispatch result guard is not any"})
+            if (optResultGuard != null) {
+              requireDF(expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs()), 
+                thunk{label + ": __optSealedDispatch result guard is not any"})
+            }
             
             def [brandPattern :Really[FinalPattern]] := \
               (methd.getPatterns(),
@@ -254,14 +255,14 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                fn _{throw(label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody))})
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
-            requireDF(exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null) \
-                      && expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
-                      && expressionWillHaveValue(eDF`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
+            requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null)) \
+                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
+                      & expressionWillHaveValue(eDF`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
               thunk{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
               
             # overly restrictive in the same way as the previous
-            requireDF(exprShorten(ifExpr.getThen()) == eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())` \
-                    && expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
+            requireDF((exprShorten(ifExpr.getThen()) == eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`) \
+                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
               thunk{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
             
             break true
