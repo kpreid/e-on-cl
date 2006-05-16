@@ -283,62 +283,6 @@
   (declare (ignore layout))
   `(quote ,value))
 
-;; Um--I blame the ugliness of the implementation on the ugliness of
-;; the definition.
-;; XXX it would be better to use multiple values instead of an explicit
-;; list - we can do this if we change the sequence format to allow
-;; multiple-value binding
-(define-sequence-expr |MatchBindExpr| (layout result specimen pattern
-    &aux (list-block (gensym "MB-PATTERN-LIST"))
-         (exit-block (gensym "MB-PATTERN-EXIT"))
-         (specimen-var (gensym "SPECIMEN"))
-         (values-var (gensym "MB-VALUES"))
-         (problem-var (gensym "MB-PROBLEM")))
-  (values
-    (let* ((specimen-seq (updating-sequence-expr specimen layout specimen-var))
-           (layout-before-pattern layout)
-           (pattern-seq (updating-sequence-patt 
-                          pattern layout specimen-var 
-                          `(eject-function 
-                             "match-bind" 
-                             (lambda (v) 
-                               (return-from ,exit-block v)))))
-           (pattern-info
-             (loop for (noun . binding) in 
-                     (scope-layout-bindings-before
-                       layout
-                       layout-before-pattern)
-                   for ei = (binding-exit-info binding problem-var)
-                   do (when (some (complement #'first) ei)
-                        (error "Malformed exit info (NIL as variable) ~
-                                from ~S => ~S: ~S" 
-                               noun binding ei))
-                   append ei)))
-      (append specimen-seq
-              ;; squeeze all the vars from the pattern into a list
-              `((,values-var
-                 (block ,list-block 
-                   ;; constructing the *failure* value - will never
-                   ;; reach here on success
-                   (cons +e-false+ 
-                         (let ((,problem-var
-                             (make-unconnected-ref 
-                               (block ,exit-block
-                                 ;; this is the normal case - on success,
-                                 ;; the return-from jumps out of the
-                                 ;; failure list construction
-                                 ,(sequence-to-form pattern-seq
-                                    `(return-from ,list-block
-                                       (list +e-true+ 
-                                             ,@(mapcar #'first pattern-info))))))))
-                           (declare (ignorable ,problem-var))
-                           (list ,@(mapcar #'second pattern-info)))))))
-              ;; destructure the list back to the expected vars
-              (loop for (var) in (cons (list result) pattern-info)
-                    append `((,var (first ,values-var))
-                             (,values-var (rest ,values-var))))))
-    layout))
-
 (define-sequence-expr |MetaContextExpr| (layout result)
   (values
     `((,result ',(make-instance 'static-context

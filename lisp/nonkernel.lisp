@@ -23,6 +23,7 @@
     :|InterfaceExpr|
     :|ListExpr|
     :|MapExpr|
+    :|MatchBindExpr|
     :|MessageDescExpr|
     :|MismatchExpr|
     :|ModPowExpr|
@@ -177,13 +178,16 @@
 
 ;;; --- conveniences ---
 
+;; XXX look into load-time-value-izing constant mn calls automatically
 (defun mn (name &rest elements)
   (make-instance name :elements elements))
 
 (defun node-quote (value)
-  (if value
-    (mn '|LiteralExpr| value) 
-    (mn '|NullExpr|)))
+  (etypecase value
+    ((or string number character) (mn '|LiteralExpr| value))
+    ((eql #.+e-true+) (mn '|NounExpr| "true"))
+    ((eql #.+e-false+) (mn '|NounExpr| "false"))
+    (null (mn '|NullExpr|))))
 
 (defmacro defemacro (node-class-name (&rest superclasses) (&rest properties) (&rest options &key ((&whole node) (gensym "NODE")) &allow-other-keys) &body body
     &aux (stop (gensym "STOP")))
@@ -490,10 +494,7 @@
                                    (mn '|FinalPattern| value-var nil)) 
                   nil
                   (mn '|SeqExpr|
-                    (mn '|CallExpr| (mn '|NounExpr| "require") 
-                                    "run"
-                                    valid-flag-var
-                                    (mn '|LiteralExpr| "For-loop body isn't valid after for-loop exits."))
+                    (mn '|FunCallExpr| (mn '|NounExpr| "__validateFor") valid-flag-var)
                     (mn '|EscapeExpr| (mn '|FinalPattern|
                                         (mn '|NounExpr| "__continue") nil) 
                                           
@@ -620,6 +621,44 @@
       (mn '|NounExpr| "__makeList")
       "run"
       (coerce |subs| 'list)))
+
+(defun kdef (specimen ej pattern)
+  (mn '|IntoExpr| specimen ej pattern))
+
+(defemacro |MatchBindExpr| (|EExpr|) ((|specimen| t |EExpr|)
+                                      (|pattern| t |Pattern|))
+                                     ()
+  (let* ((specimen (gennoun "sp"))
+         (ejector (gennoun "fail"))
+         (result (gennoun "ok"))
+         (problem (gennoun "problem"))
+         (broken (gennoun "b"))
+         (kernel-pattern (e-macroexpand-all |pattern|))
+         (pattern-nouns (keys-to-nouns (e. (e. kernel-pattern |staticScope|) |outNames|))))
+    (mn '|SeqExpr|
+      (kdef |specimen| nil (mn '|FinalPattern| specimen nil))
+      (kdef (mn '|EscapeExpr|
+              (mn '|FinalPattern| ejector nil)
+              (mn '|SeqExpr|
+                (kdef specimen ejector kernel-pattern)
+                (apply #'mn '|ListExpr|
+                  (node-quote +e-true+)
+                  (map 'list (lambda (noun) (mn '|SlotExpr| noun))
+                             pattern-nouns)))
+              (mn '|FinalPattern| problem nil)
+              (mn '|SeqExpr|
+                (kdef (mn '|CallExpr| (mn '|NounExpr| "Ref") "broken" problem) 
+                      nil 
+                      (mn '|FinalPattern| broken nil))
+                (apply #'mn '|ListExpr|
+                  (node-quote +e-false+)
+                  (make-list (length pattern-nouns) :initial-element broken))))
+            nil
+            (apply #'mn '|ListPattern|
+              (mn '|FinalPattern| result nil)
+              (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
+                         pattern-nouns)))
+      result)))
 
 (defemacro |MapExpr| (|EExpr|) ((|pairs| t (e-list |EExpr|)))
                                (:rest-slot t)

@@ -267,8 +267,9 @@ MetaState
 
 MatchBInd
 
-  ? e`a =~ b`
-  # value: e`a =~ b`
+  x ? e`a =~ b`
+  x # value: e`a =~ b`
+  XXX once we have nonkernel node printing, reenable this
 
 SlotExpr
 
@@ -303,17 +304,18 @@ Precedence parenthesization tests
   # value: e`a := (b
   #        c)`
   
-  ? e`(a := b) =~ c`
-  # value: e`(a := b) =~ c`
+  XXX nonkernel quasiquote/printing
+  x ? e`(a := b) =~ c`
+  x # value: e`(a := b) =~ c`
   
-  ? e`a := (b =~ c)`
-  # value: e`a := b =~ c`
+  x ? e`a := (b =~ c)`
+  x # value: e`a := b =~ c`
 
   ? e`a := (b := c)`
   # value: e`a := b := c`
 
-  ? e`(a =~ b) =~ c`
-  # value: e`(a =~ b) =~ c`
+  x ? e`(a =~ b) =~ c`
+  x # value: e`(a =~ b) =~ c`
 
 Universal precedence-proper print-parenthesization tester:
 
@@ -336,7 +338,7 @@ Universal precedence-proper print-parenthesization tester:
   >   e`1`,
   >   e`meta.context()`,
   >   e`meta.getState()`,
-  >   e`a =~ b`,
+  >   # e`a =~ b`,
   >   e`a`,
   >   e`def "o" {}`,
   >   e`a; b`,
@@ -352,12 +354,11 @@ Universal precedence-proper print-parenthesization tester:
   >     e`$inner into aa`,
   >     e`$inner into !(aa) bb`,
   >     e`aa into !($inner) bb`,
-  >     e`$inner =~ aa`,
+  >     # e`$inner =~ aa`,
   >     e`$inner; aa`,
   >     e`aa; $inner`,
   >     e`def aa { method bb() :$inner {} }`,
-  >     e`bb =~ aa ? $inner`,
-  >     e`bb =~ aa :$inner`,
+  >     e`def aa :$inner := bb`,
   >   ] {
   >     # Special case: SeqExpr may merge harmlessly with nested SeqExprs
   >     # XXX make this test more precise

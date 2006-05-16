@@ -635,6 +635,11 @@
           ("&__comparer"     ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
           ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.interp.booleanFlow"))
+          ("__validateFor"      ,(e-lambda "$__validateFor"
+              (:stamped +deep-frozen-stamp+)
+            (:|run| (flag)
+              (unless (e-is-true flag)
+                (error "For-loop body isn't valid after for-loop exits.")))))
 
           ; --- utility: miscellaneous ---
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))

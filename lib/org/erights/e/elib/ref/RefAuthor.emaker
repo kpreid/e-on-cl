@@ -23,7 +23,7 @@ def RefAuthor {
       
       to broken(p) :any { 
         # The new exception-sealing system means that broken references must be able to hold arbitrary values. However, current E programs (and our test suite) expect Ref.broken("foo") to make an exception object. Thus this guard.
-        makeUnconnectedRef(p :Throwable)
+        makeUnconnectedRef(Throwable.coerce(p, null))
       }
       to optProblem(r) :any { refOptProblem(r) }
       

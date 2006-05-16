@@ -58,7 +58,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #                d.iterate(def _ {
   #                    
   #                    method run(key__3, value__4) {
-  #                        require.run(valid__2, "For-loop body isn't valid after for-loop exits.")
+  #                        __validateFor.run(valid__2)
   #                        escape __continue {
   #                            escape skip__5 {
   #                                def b := (key__3, skip__5)
@@ -284,7 +284,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #                c.iterate(def _ {
   #                    
   #                    method run(key__2, value__3) {
-  #                        require.run(valid__1, "For-loop body isn't valid after for-loop exits.")
+  #                        __validateFor.run(valid__1)
   #                        escape __continue {
   #                            escape skip__4 {
   #                                def a := (key__2, skip__4)
@@ -311,7 +311,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`via (c) b`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
   XXX prettier errors
 
-  XXX look into extracting part of the for-loop expansion into a function - the revocation logic at least
+  XXX look into extracting more of the for-loop expansion into a function
   
 'ForwardExpr'
 
@@ -412,10 +412,78 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("[=> &a]")
   # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("&a", &a)))`
 
+MatchBindExpr
+  
+  ? t("left =~ [rA, &rB, [rC]]")
+  # value: e`left into sp__1
+  #        escape fail__2 {
+  #            sp__1 into !(fail__2) [rA, &rB, [rC]]
+  #            __makeList.run(true, &rB, &rC, &rA)
+  #        } catch problem__3 {
+  #            Ref.broken(problem__3) into b__4
+  #            __makeList.run(false, b__4, b__4, b__4)
+  #        } into [ok__5, &rB, &rC, &rA]
+  #        ok__5`
+
+  XXX rewrite the following to use <te>; they were just copied in from vm.updoc from when MatchBindExpr was kernel
+
+  ? def tfloat64 := <import:org.cubik.cle.prim.float64>; null
+  ? def tint := <import:org.cubik.cle.prim.int>; null
+
+  ? {[92 =~ x, x]}
+  # value: [true, 92]
+  
+  ? {[93 =~ x :tint, x]}
+  # value: [true, 93]
+  
+  ? {[94 =~ x :tfloat64, x]}
+  # value: [true, 94.0]
+  
+  ? {[95.0 =~ x :tint, &x]}
+  # value: [false, <ref broken by problem: the float64 95.0 doesn't coerce to an int>]
+  
+ Form of smashed remnants from binding patterns
+ 
+  ? def q := def "shortProblemGuard" { to coerce(_, e) :void { throw.eject(e, "Q") } }
+  # value: <shortProblemGuard>
+ 
+  ? [1 =~ matchBindNoun :q, &matchBindNoun]
+  # value: [false, <ref broken by problem: Q>]
+  
+  Given a SlotPattern, we don't know what behavior might be expected of the slot, so the slot itself is broken. '
+  ? [&any =~ &matchBindNoun :q, &matchBindNoun]
+  # value: [false, <ref broken by problem: Q>]
+  ? matchBindNoun := "hi"
+  # problem: Q
+  ? matchBindNoun
+  # problem: Q
+  
+  VarPattern slots act like SlotPattern slots. XXX is this most correct?
+  ? [1 =~ var matchBindNoun :q, &matchBindNoun]
+  # value: [false, <ref broken by problem: Q>]
+  ? matchBindNoun := "hi"
+  # problem: Q
+  ? matchBindNoun
+  # problem: Q
+
+ MatchBindExpr containing guardless VarPattern (bug test: wouldn't compile because the nonexistent guard variable (nil) was being passed through the match-bind boundary ')
+
+  ? {[null =~ var x, x, x := 1, x]}
+  # value: [true, null, 1, 1]
+
+
 'MismatchExpr'
 
   ? t("a !~ b")
-  # value: e`(a =~ b).not()`
+  # value: e`(a into sp__1
+  #        escape fail__2 {
+  #            sp__1 into !(fail__2) b
+  #            __makeList.run(true, &b)
+  #        } catch problem__3 {
+  #            Ref.broken(problem__3) into b__4
+  #            __makeList.run(false, b__4)
+  #        } into [ok__5, &b]
+  #        ok__5).not()`
 
 'ModPowExpr'
   ? t("a ** b %% c")
@@ -589,7 +657,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #                }
   #            }
   #        }`
-  
+   
   XXX should be throw.run(__switchMatchError(...)) or similar, so that we're not stringifying the specimen '
   
 'ThunkExpr'

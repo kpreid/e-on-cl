@@ -91,23 +91,6 @@
                    (|LiteralExpr| "b")))
   "ab")
 
-(deftest eval.match-bind.ok
-  (ev '(|SeqExpr| 
-         (|MatchBindExpr| (|LiteralExpr| 0) 
-                          (|FinalPattern| (|NounExpr| "x") nil))
-         (|NounExpr| "x")))
-  0)
-  
-(deftest eval.match-bind.nok
-  (e-quote
-    (ev `(|SeqExpr| 
-           (|MatchBindExpr| (|LiteralExpr| 0) 
-                            (|FinalPattern| 
-                              (|NounExpr| "x") 
-                              (|NounExpr| "nullOk")))
-           (|NounExpr| "x"))))
-  "<ref broken by problem: the int 0 doesn't coerce to a Null>")
-  
 (deftest eval.catch.ok
   (ev `(|CatchExpr| (|LiteralExpr| 0)
                     (|FinalPattern| (|NounExpr| "p") nil)

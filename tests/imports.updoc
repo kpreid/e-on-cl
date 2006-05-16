@@ -34,7 +34,7 @@ Throwable
   ? p :Throwable
   # value: problem: foo
   
-  ? {[null =~ nullT :Throwable, nullT]}
+  ? {[null =~ nullT :Throwable, &nullT]}
   # value: [false, <ref broken by problem: the Null null doesn't coerce to a Throwable>]
 
 Runnable

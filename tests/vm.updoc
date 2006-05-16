@@ -230,49 +230,20 @@ List expressions for further testing
   ? [tlist[2]]
   # value: [null]
 
-MatchBindExpr, FinalPattern guards
+FinalPattern guards
   
-  ? {[92 =~ x, x]}
-  # value: [true, 92]
+  ? escape e {[92 into !(e) x, x]}
+  # value: [92, 92]
   
-  ? {[93 =~ x :tint, x]}
-  # value: [true, 93]
+  ? escape e {[93 into !(e) x :tint, x]}
+  # value: [93, 93]
   
-  ? {[94 =~ x :tfloat64, x]}
-  # value: [true, 94.0]
+  ? escape e {[94 into !(e) x :tfloat64, x]}
+  # value: [94, 94.0]
   
-  ? {[95.0 =~ x :tint, x]}
-  # value: [false, <ref broken by problem: the float64 95.0 doesn't coerce to an int>]
-
-Testing form of smashed remnants from binding patterns
- 
-  ? def q := def "shortProblemGuard" { to coerce(_, e) :void { throw.eject(e, "Q") } }
-  # value: <shortProblemGuard>
- 
-  ? [1 =~ matchBindNoun :q, &matchBindNoun, matchBindNoun]
-  # value: [false, <& <ref broken by problem: Q>>, <ref broken by problem: Q>]
+  ? escape e {[95.0 into !(e) x :tint, x]}
+  # value: problem: the float64 95.0 doesn't coerce to an int
   
-  Given a SlotPattern, we don't know what behavior might be expected of the slot, so the slot itself is broken. '
-  ? [&any =~ &matchBindNoun :q, &matchBindNoun]
-  # value: [false, <ref broken by problem: Q>]
-  ? matchBindNoun := "hi"
-  # problem: Q
-  ? matchBindNoun
-  # problem: Q
-  
-  VarPattern slots act like SlotPattern slots. XXX is this most correct?
-  ? [1 =~ var matchBindNoun :q, &matchBindNoun]
-  # value: [false, <ref broken by problem: Q>]
-  ? matchBindNoun := "hi"
-  # problem: Q
-  ? matchBindNoun
-  # problem: Q
-
-MatchBindExpr containing guardless VarPattern (bug test: wouldn't compile because the nonexistent guard variable (nil) was being passed through the match-bind boundary ')
-
-  ? {[null =~ var x, x, x := 1, x]}
-  # value: [true, null, 1, 1]
-
 MetaContextExpr
 
   ? meta.context() :DeepFrozen
@@ -765,7 +736,7 @@ ListPattern
   ? ["a", "b"] =~ [lp_a]
   # value: false
   
-  ? lp_a
+  ? &lp_a
   # value: <ref broken by problem: a 2 size list doesn't match a 1 size list pattern>
   
   ? def [_, _] := ["a"]

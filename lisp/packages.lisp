@@ -347,7 +347,6 @@
     :|IntoExpr|
     :|ListPattern|
     :|LiteralExpr|
-    :|MatchBindExpr|
     :|MetaContextExpr|
     :|MetaStateExpr|
     :|NounExpr|
@@ -463,7 +462,6 @@
     :binding-get-code
     :binding-get-slot-code
     :binding-set-code
-    :binding-exit-info
     
     :direct-def-binding
     :direct-var-binding

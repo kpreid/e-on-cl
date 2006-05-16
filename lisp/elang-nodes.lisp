@@ -198,9 +198,6 @@
   ())
 (define-node-class |MetaStateExpr|   (|EExpr|)
   ())
-(define-node-class |MatchBindExpr|   (|EExpr|)
-  ((:|specimen| t |EExpr|) 
-   (:|pattern| t |Pattern|)))
 (define-node-class |NounExpr|        (|EExpr|)
   ((:|name| nil string)))
 (define-node-class |ObjectExpr|      (|EExpr|)
@@ -742,9 +739,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |LiteralExpr|
   nil)
-
-(def-scope-rule |MatchBindExpr|
-  (seq :|specimen| :|pattern|))
 
 (def-scope-rule |MetaContextExpr|
   nil)

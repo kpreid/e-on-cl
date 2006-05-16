@@ -28,6 +28,7 @@
 (defgeneric scope-layout-meta-state-bindings (scope-layout)
   (:documentation "Returns a list of '(vector # #) forms suitable for constructing the return value of MetaStateExpr."))
 
+;; XXX this is no longer used since MatchBindExpr became nonkernel. delete?
 (defgeneric scope-layout-bindings-before (inner-layout outer-layout)
   (:documentation "Returns a list of (noun . binding) from INNER-LAYOUT until reaching OUTER-LAYOUT. For example, if A and B consist entirely of conses, (scope-layout-bindings-before a b) is similar to (ldiff a b)."))
 
@@ -173,11 +174,6 @@
 (defgeneric binding-set-code      (binding value-form)
   (:documentation "Return a form which will set the value of the binding to the result of evaluating value-form."))
 
-(defgeneric binding-exit-info     (binding broken-ref-form)
-  ;; NOTE: this was written for the sequence compiler, but it *might*
-  ;; be generic enough for future work, so I'm leaving it here.
-  (:documentation "Returns a list of, for each Lisp variable used by the binding's code, the variable and the form to which it should be bound if an enclosing MatchBindExpr fails, which may evaluate broken-ref-form at most once."))
-
 
 ; slot bindings - represented as symbols for historical reasons - xxx change that?
 
@@ -189,9 +185,6 @@
 
 (defmethod binding-set-code ((binding symbol) value-form)
   `(e. ,binding |setValue| ,value-form))
-
-(defmethod binding-exit-info ((binding symbol) broken-ref-form)
-  `((,binding ,broken-ref-form)))
 
 
 
@@ -212,9 +205,6 @@
   ;; xxx eventually this should be able to point at the source position of the assignment
   (declare (ignore value-form))
   (error "shouldn't happen: unassignable binding in compiler: ~A" (binding-get-source-noun binding)))
-
-(defmethod binding-exit-info ((binding direct-def-binding) broken-ref-form)
-  `((,(binding-get-code binding) ,broken-ref-form)))
 
 
 (defclass direct-var-binding ()
@@ -256,12 +246,6 @@
         `(setf ,(%var-binding-symbol binding) (e. ,(%binding-guard-code binding) |coerce| ,value-form nil))
         `(setf ,(%var-binding-symbol binding) ,value-form))))
 
-(defmethod binding-exit-info ((binding direct-var-binding) broken-ref-form)
-  `((,(%var-binding-symbol binding) ,broken-ref-form)
-    (,(%var-binding-broken-flag binding) ,broken-ref-form)
-    ,@(when (%binding-guard-code binding)
-      `((,(%binding-guard-code binding) ,broken-ref-form)))))
-
 
 (defclass value-binding ()
   ((value :initarg :value)))
@@ -279,10 +263,6 @@
   (declare (ignore value-form))
   (error "not an assignable slot: <& ~A>" (e-quote (slot-value binding 'value))))
 
-(defmethod binding-exit-info ((binding value-binding) broken-ref-form)
-  (declare (ignore broken-ref-form))
-  (error "binding-exit-info on a value-binding shouldn't happen"))
-
 
 (defclass slot-binding ()
   ((slot :initarg :slot)))
@@ -295,10 +275,6 @@
 
 (defmethod binding-set-code ((binding slot-binding) value-form)
   `(e. ,(slot-value binding 'slot) |setValue| ,value-form))
-
-(defmethod binding-exit-info ((binding slot-binding) broken-ref-form)
-  (declare (ignore broken-ref-form))
-  (error "binding-exit-info on a slot-binding shouldn't happen"))
 
 
 (defgeneric binding-for-slot (slot))

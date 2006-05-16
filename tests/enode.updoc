@@ -614,10 +614,6 @@ SlotPattern
   ? e`meta.context()`.staticScope()
   # value: <[] := [] =~ [] + var []>
   
-  match-bind
-  ? e`(def bb := b) =~ a`.staticScope()
-  # value: <[] := ["b"] =~ ["a", "bb"] + var []>
-
   noun
   ? e`boolean`.staticScope()
   # value: <[] := ["boolean"] =~ [] + var []>
@@ -811,16 +807,6 @@ evalToPair
   
   ? e`meta.getState()`.welcome(makeVisitor(0))
   # stdout: MetaStateExpr e`meta.getState()`...
-  #         
-  
-  ? e`specimen =~ pattern`.welcome(makeVisitor(0))
-  # stdout: MatchBindExpr e`specimen =~ pattern`...
-  #           NounExpr e`specimen`...
-  #             specimen
-  #           FinalPattern epatt`pattern`...
-  #             NounExpr e`pattern`...
-  #               pattern
-  #             null
   #         
   
   ? e`noun`.welcome(makeVisitor(0))
