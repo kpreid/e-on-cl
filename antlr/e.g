@@ -411,7 +411,7 @@ objectTail:     //(typeParamList)?
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
-        |   parenParamList optGuard fImplements block getPocket["easy-return"]
+        |   parenParamList optResultGuard fImplements block getPocket["easy-return"]
             {##=#([FunctionObject], ##);}
     ;
 
@@ -456,7 +456,7 @@ matcherList:    ( matcher br )* {##=#([List], ##);} ;
 
 method:         doco ( "method"^ methodTail {##.setType(EMethod);}
                      | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;
-methodTail:     optVerb parenParamList optGuard block ;
+methodTail:     optVerb parenParamList optResultGuard block ;
 
 optVerb:        verb | {##=#([FunctionVerb]);} ;
 
@@ -470,7 +470,18 @@ optFinally:     "finally"! block
             |   {##=#([Absent],##);}
             ;
 
-optGuard:    ":"! guard | {##=#([Absent]);} ;
+optGuard:       ":"! guard | {##=#([Absent]);} ;
+optResultGuard: ":"! guard 
+            |   {   String v = myPocket.getProperty("explicit-result-guard", "disable");
+                    if ("warn".equals(v)) {
+                        reportWarning("No explicit result guard.");
+                    } else if (v.equals("enable")) {
+                        // XXX refactor
+                        Token pos = LT(0);
+                        throw new SemanticException("You must specify a result guard or disable \"explicit-result-guard\".", getFilename(), pos.getLine(), pos.getColumn());
+                    }
+                }
+                {##=#([Absent]);} ;
 
 interfaceExpr:  "interface"! objName
                 //optGuard

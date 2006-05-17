@@ -164,6 +164,82 @@ XXX produce a nice error for this?
 #             
 #             NullE.
 
+--- Result guards / easy-return ---
+
+? t("pragma.disable(\"easy-return\")
+>    pragma.enable(\"explicit-result-guard\")
+>    def \"$a\"() {}")
+# problem: (unknown:3)@13: You must specify a result guard or disable "explicit-result-guard".
+XXX source position
+
+? t("pragma.disable(\"easy-return\")
+>    pragma.enable(\"explicit-result-guard\")
+>    def \"$a\"{ to b() {} }")
+# problem: (unknown:3)@19: You must specify a result guard or disable "explicit-result-guard".
+XXX source position
+
+? t("pragma.disable(\"easy-return\")
+>    pragma.disable(\"explicit-result-guard\")
+>    def \"$a\"() {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           $a
+#           FunctionObject
+#             []
+#             null
+#             []
+#             NullE.
+#             false
+
+? t("pragma.disable(\"easy-return\")
+>    pragma.disable(\"explicit-result-guard\")
+>    def \"$a\"{ to b() {} }")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           $a
+#           MethodObject
+#             null
+#             []
+#             [] ETo
+#               
+#               b
+#               []
+#               null
+#               NullE.
+#               false
+#             []
+
+? t("pragma.enable(\"easy-return\")
+>    pragma.disable(\"explicit-result-guard\")
+>    def \"$a\"() {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           $a
+#           FunctionObject
+#             []
+#             null
+#             []
+#             NullE.
+#             true
+
+? t("pragma.enable(\"easy-return\")
+>    pragma.disable(\"explicit-result-guard\")
+>    def \"$a\"{ to b() {} }")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           $a
+#           MethodObject
+#             null
+#             []
+#             [] ETo
+#               
+#               b
+#               []
+#               null
+#               NullE.
+#               true
+#             []
+
 --- Function expressions ---
 
 ? t("def \"$a\"() :b {}")
