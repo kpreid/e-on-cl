@@ -254,7 +254,7 @@ XXX source position
 #             false
 
 ? t("def \"$a\"() :b implements c {}")
-# problem: (): The optional "function-implements" syntax is currently off.
+# problem: (unknown:1)@26: The optional "function-implements" syntax is currently off.
 
 ? t("pragma.enable(\"function-implements\"); def \"$a\"() :b implements c {}")
 # stdout: SeqE. [] ObjectHeadE.

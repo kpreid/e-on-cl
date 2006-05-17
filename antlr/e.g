@@ -213,6 +213,13 @@ public void reportError(RecognitionException ex) {
     throw new RuntimeException(ex);
 }
 
+
+private void throwSemanticHere(String text) throws RecognitionException, TokenStreamException {
+    Token pos = LT(0);
+    throw new SemanticException(text, getFilename(), pos.getLine(), pos.getColumn());
+}
+
+
 // pocket mechanisms: add a boolean, and test in the grammar with {foo}?
 private java.util.Properties myPocket = new java.util.Properties();
 
@@ -224,7 +231,7 @@ protected boolean is(String v) {
     return returnAST.getText().equals(v);
 }
 
-protected boolean isPocket(String key) {
+protected boolean isPocket(String key) throws RecognitionException, TokenStreamException {
     // XXX clean this up
     String v = myPocket.getProperty(key, "disable");
     if ("disable".equals(v)) {
@@ -232,7 +239,8 @@ protected boolean isPocket(String key) {
     } else if ("enable".equals(v)) {
         return true;
     } else {
-        throw new RuntimeException("can't convert " + v + " to boolean for: " + key);
+        throwSemanticHere("" + key + " must be \"enable\" or \"disable\" here, not: " + key);
+        throw new RuntimeException("can't happen");
     }
 }
 
@@ -253,9 +261,16 @@ pocket![String key]: {
     if ("warn".equals(v)) {
         reportWarning(key + " in pocket");
     } else if (!v.equals("enable")) {
-        String error = "The optional \"" + key + "\" syntax is currently off.";
-        reportError(error);
-        throw new RecognitionException(error);
+        throwSemanticHere("The optional \"" + key + "\" syntax is currently off.");
+    }
+} ;
+
+reversePocket![String key, String warnmsg, String errmsg]: {
+    String v = myPocket.getProperty(key, "disable");
+    if ("warn".equals(v)) {
+        reportWarning(warnmsg);
+    } else if (v.equals("enable")) {
+        throwSemanticHere(errmsg);
     }
 } ;
 
@@ -472,15 +487,9 @@ optFinally:     "finally"! block
 
 optGuard:       ":"! guard | {##=#([Absent]);} ;
 optResultGuard: ":"! guard 
-            |   {   String v = myPocket.getProperty("explicit-result-guard", "disable");
-                    if ("warn".equals(v)) {
-                        reportWarning("No explicit result guard.");
-                    } else if (v.equals("enable")) {
-                        // XXX refactor
-                        Token pos = LT(0);
-                        throw new SemanticException("You must specify a result guard or disable \"explicit-result-guard\".", getFilename(), pos.getLine(), pos.getColumn());
-                    }
-                }
+            |   reversePocket["explicit-result-guard",
+                              "Missing result guard.",
+                              "You must specify a result guard or disable \"explicit-result-guard\"."]
                 {##=#([Absent]);} ;
 
 interfaceExpr:  "interface"! objName
