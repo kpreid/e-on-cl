@@ -5,11 +5,11 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
 def enums {
-  to size() { return 0 }
-  to optExtract(key) { return [key, enums] }
+  to fetch(key, _) { return key }
+  to without(key) { return enums }
 }
 
-def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] := enums
+def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := enums
 
 def EIO0 := def "org.erights.e.elib.eio.EIO" implements DeepFrozen {
   to getRange() { return nullOk[int >= 0] }

@@ -487,21 +487,6 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           +e-true+))
       map))
 
-  (:|optExtract| (this key)
-    (block nil
-      (vector
-        (e. this |fetch| key
-          (efun () (return nil)))
-        (e. this |without| key))))
-
-  (:|extract| (this key default)
-    (block nil
-      (vector
-        (e. this |fetch| key
-          (efun ()
-            (return (vector default this))))
-        (e. this |without| key))))
-  
   (:|and| (map mask)
     (e-coercef mask +the-any-map-guard+)
     (e. +the-make-const-map+ |fromIteratable|

@@ -7,8 +7,7 @@ pragma.enable("trinary-define")
   to run(key) :any {
     return def extractor(specimen, optEjector) implements DeepFrozen.optionally() { # implements ViaFunction
       return escape e {
-        def extraction :notNull := (specimen.optExtract(key), e)
-        extraction
+        [specimen.fetch(key, e), specimen.without(key)]
       } catch _ {
         # XXX avoid printing
         throw.eject(optEjector, E.toQuote(key) + " not in matched map: " + E.toQuote(specimen))
@@ -17,7 +16,7 @@ pragma.enable("trinary-define")
   }
   to "default"(key, defaultValue) :any {
     return def defaultingExtractor(specimen, optEjector) implements DeepFrozen.optionally() { # implements ViaFunction
-      return specimen.extract(key, defaultValue)
+      return [specimen.fetch(key, thunk { return [defaultValue, specimen] }), specimen.without(key)]
     }
   }
 }}

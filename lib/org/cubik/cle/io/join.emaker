@@ -4,7 +4,7 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] := def eiop { to size() { return 0 } to optExtract(key) { return [E.call(EIO, "get" + key, []), eiop] } }
+def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := def eiop { to fetch(key, _) { return E.call(EIO, "get" + key, []) } to without(key) { return eiop } }
 
 def join implements DeepFrozen {
   /** Transfers the elements of an InStream to an OutStream. Acts immediately if possible; for non-immediate effects, use join <- (...). The return value will be resolved, to the terminator of the input stream, as soon as no more elements will be delivered to the OutStream; at this time, the output stream will also be terminated. */
