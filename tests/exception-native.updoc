@@ -22,6 +22,10 @@
   # value: true
   ? stringEx.__optUncall()
   # value: [<makeStringException>, "run", ["a"]]
+  ? stringEx.__optUncall()[0] == <import:org.cubik.cle.fail.makeStringException>
+  # value: true
+  ? stringEx == E.call(E, "call", stringEx.__optUncall())
+  # value: true
 
 
   format-string-proofing tests
@@ -53,6 +57,10 @@
   # value: true
   ? typeError.__optUncall()
   # value: [<makeCoercionFailure>, "run", [0, String]]
+  ? typeError.__optUncall()[0] == <import:org.cubik.cle.fail.makeCoercionFailure>
+  # value: true
+  ? typeError == E.call(E, "call", typeError.__optUncall())
+  # value: true
 
   XXX correct?
   
