@@ -458,6 +458,7 @@
     :scope-layout-bindings-before
     :scope-layout-bind
     :scope-layout-nest
+    :scope-layout-static-context
     
     :binding-get-code
     :binding-get-slot-code

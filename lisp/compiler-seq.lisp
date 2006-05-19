@@ -285,8 +285,7 @@
 
 (define-sequence-expr |MetaContextExpr| (layout result)
   (values
-    `((,result ',(make-instance 'static-context
-                   :fqn-prefix (scope-layout-fqn-prefix layout))))
+    `((,result ',(scope-layout-static-context layout)))
     layout))
 
 (define-sequence-expr |MetaStateExpr| (layout result)

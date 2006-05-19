@@ -32,11 +32,13 @@
 (defgeneric scope-layout-bindings-before (inner-layout outer-layout)
   (:documentation "Returns a list of (noun . binding) from INNER-LAYOUT until reaching OUTER-LAYOUT. For example, if A and B consist entirely of conses, (scope-layout-bindings-before a b) is similar to (ldiff a b)."))
 
-
 (defmethod scope-layout-bindings-before :around (inner outer)
   (if (eql inner outer)
     nil
     (call-next-method)))
+
+(defgeneric scope-layout-opt-object-expr (scope-layout)
+  (:documentation "Currently internal. Returns the innermost inclosing ObjectExpr if possible, as for meta.context()."))
 
 
 (defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
@@ -57,6 +59,9 @@
 (defmethod scope-layout-meta-state-bindings ((scope-layout (eql '*)))
   nil)
 
+(defmethod scope-layout-opt-object-expr ((scope-layout (eql '*)))
+  nil)
+
 
 (defmethod scope-layout-noun-binding ((scope-layout null) noun-string)
   (error 'unbound-noun :noun noun-string))
@@ -74,8 +79,10 @@
   
 (defmethod scope-layout-meta-state-bindings ((scope-layout null))
   nil)
-  
-  
+
+(defmethod scope-layout-opt-object-expr ((scope-layout null))
+  nil)
+
 (defmethod scope-layout-noun-binding ((scope-layout cons) noun-string
     &aux (entry (first scope-layout)))
   (if (string= (car entry) noun-string)
@@ -102,6 +109,9 @@
 (defmethod scope-layout-bindings-before ((inner cons) outer)
   (cons (first inner)
         (scope-layout-bindings-before (rest inner) outer)))
+
+(defmethod scope-layout-opt-object-expr ((scope-layout cons))
+  nil)
 
 
 (defclass scope-layout () 
@@ -130,6 +140,10 @@
 (defmethod scope-layout-bindings-before ((inner scope-layout) outer)
   (scope-layout-bindings-before (slot-value inner 'rest) outer))
 
+(defmethod scope-layout-opt-object-expr ((scope-layout scope-layout))
+  (scope-layout-opt-object-expr (slot-value scope-layout 'rest)))
+
+
 (defclass prefix-scope-layout (scope-layout)
   ((fqn-prefix :initarg :fqn-prefix :reader scope-layout-fqn-prefix))
   (:documentation "Establishes a new FQN prefix."))
@@ -145,7 +159,10 @@
 
 (defclass object-scope-layout (scope-layout)
   ((nouns :initarg :nouns
-          :type list))
+          :type list)
+  (object-expr :initarg :object-expr
+               :type e.kernel:|ObjectExpr|
+               :reader scope-layout-opt-object-expr))
   (:documentation "Marks the boundary of an object definition, the scope which meta.getState() (implemented via scope-layout-meta-state-bindings) operates on."))
 
 (defmethod scope-layout-meta-state-bindings ((scope-layout object-scope-layout))
@@ -328,7 +345,10 @@
 
 ;; This is a class so that instances may be written to a compiled file.
 (defclass static-context ()
-  ((fqn-prefix :initarg :fqn-prefix :initform (error "fqn-prefix not supplied")))
+  ((fqn-prefix :initarg :fqn-prefix
+               :initform (error "fqn-prefix not supplied"))
+   (opt-object-source :initarg :opt-object-source
+                      :initform (error "object-source not supplied")))
   #| (:documentation XXX) |#)
 
 (defmethod make-load-form ((a static-context) &optional environment)
@@ -342,10 +362,18 @@
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<static context>"))
+  (:|getOptSource| (this)
+    (slot-value this 'opt-object-source))
+  (:|getSource| (this)
+    (or (ref-shorten (e. this |getOptSource|))
+        (error "There is no enclosing object expression at ~A" (e. this |getFQNPrefix|))))
   (:|getFQNPrefix| (this)
     (slot-value this 'fqn-prefix)))
 
-
+(defun scope-layout-static-context (layout)
+  (make-instance 'static-context
+    :fqn-prefix (scope-layout-fqn-prefix layout)
+    :opt-object-source (scope-layout-opt-object-expr layout)))
 
 ;;; --- ObjectExpr code generation ---
 
@@ -498,6 +526,7 @@ XXX This is an excessively large authority and will probably be replaced."
              (scope-layout-nest
                (make-instance 'object-scope-layout
                  :nouns (map 'list #'ref-shorten (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|))
+                 :object-expr this-expr
                  :rest (make-instance 'prefix-scope-layout 
                          :fqn-prefix (concatenate 'string fqn "$")
                          :rest layout))))

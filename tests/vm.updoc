@@ -251,6 +251,28 @@ MetaContextExpr
   
   ? meta.context().getFQNPrefix()
   # value: "__main$"
+  
+  ? meta.context().getSource()
+  # problem: There is no enclosing object expression at __main$
+
+  ? [meta.context().getOptSource()]
+  # value: [null]
+
+  ? thunk { meta.context().getSource() } ()
+  # value: e`def _ {
+  #            
+  #            method run() {
+  #                meta.context().getSource()
+  #            }
+  #        }`
+  
+  ? thunk { meta.context().getOptSource() } ()
+  # value: e`def _ {
+  #            
+  #            method run() {
+  #                meta.context().getOptSource()
+  #            }
+  #        }`
 
 MetaStateExpr
 
