@@ -42,15 +42,25 @@ def makeIOScope implements DeepFrozen {
   
     # XXX throw out defaultInterp once all uses of IOScopes supply their own
     if (!(ioAdd.maps("interp") || ioAdd.maps("&interp"))) {
-      def gc := exits.fetch("gc", thunk{thunk{}})
+      def gc := <import:org.cubik.cle.prim.gc>
+    
       ioAdd with= ("interp", def defaultInterp {
-        /** not yet implemented */
-        to waitAtTop(ref :any) :void {}
+        to waitAtTop(_) :void {
+          throw("waitAtTop not defined in this context")
+        }
+        to exitAtTop(_) :void {
+          throw("exitAtTop not defined in this context")
+        }
+        to blockAtTop() :void {
+          throw("blockAtTop not defined in this context")
+        }
+        to continueAtTop() :void {
+          throw("continueAtTop not defined in this context")
+        }
         
         # we don't have getResult yet, but don't forget to clear its list then
         to gc() :void { gc() }
     
-        /** Stub originally written to support Java-E's elang.interp.rune. Always returns an empty ConstMap. This will change eventually. */      
         to getProps() :any {
           # XXX this has no tests
           return props

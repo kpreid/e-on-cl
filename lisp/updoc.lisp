@@ -250,7 +250,7 @@
                                          (has-problem expected-answers))))
                   (make-instance 'result :failures 1 :steps 1))))))))))
 
-(defun make-stepper (&key gc props handler)
+(defun make-stepper (&key props handler)
   (let* ((scope-slot (make-instance 'elib:e-var-slot :value nil))
          (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain")))
     (symbol-macrolet ((scope (e-slot-value scope-slot))
@@ -281,8 +281,7 @@
             result-promise))
         scope-slot
         (e-lambda "org.cubik.cle.updocInterp" ()
-          ; XXX this is a hodgepodge of issues we don't care about, just existing because we need to define waitAtTop.
-          (:|gc| () (e. gc |run|) nil)
+          (:|gc| () (e. e.extern:+gc+ |run|) nil)
           (:|getProps| () props)
           (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
             (e. wait-hook-slot |setValue|
@@ -307,7 +306,6 @@
            (eval-err-stream (make-string-output-stream))
            (stepper scope-slot interp 
              (make-stepper :props e.knot::+eprops+ ;; XXX internal
-                           :gc e.extern:+gc+ 
                            :handler (make-updoc-handler :out eval-out-stream 
                                                         :err eval-err-stream
                                                         :print-steps print-steps
@@ -511,7 +509,7 @@
 
 (defun repl-start ()
   (multiple-value-let* 
-      ((stepper scope-slot interp (make-stepper :gc e.extern:+gc+ :handler (make-repl-handler)))
+      ((stepper scope-slot interp (make-stepper :handler (make-repl-handler)))
        (scope (e. (make-io-scope :stdout *standard-output*
                                  :stderr *error-output*
                                  :interp interp) 

@@ -260,6 +260,7 @@
     (:|equalizer|        (make-equalizer))
     (:|E|                elib:+the-e+)
     (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
+    (:|gc|               e.extern:+gc+)
     
     (:|DeepFrozen|
       (e. (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
@@ -675,7 +676,6 @@
         (make-scope "__ioPowers$"
           `(("timer"           ,e.extern:+the-timer+)
             ("file__uriGetter" ,(e.extern:make-file-getter '#()))
-            ("gc"              ,e.extern:+gc+)
             ("makeWeakRef"     ,+the-make-weak-ref+)
             ("unsafeNearSpawn"      ,e.extern:+spawn+)
             ("&stdin"     ,(make-lazy-apply-slot (lambda ()
