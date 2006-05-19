@@ -35,7 +35,7 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   # value: 0
   
   ? def f2 implements DeepFrozen { to run() :void { f2x += 1 } }
-  # problem: "f2x" in the lexical scope of $f2__C is not DeepFrozen because <var 0> is not
+  # problem: "f2x" in the lexical scope of __main$f2__C is not DeepFrozen because <var 0> is not
   
   ? DeepFrozen :DeepFrozen
   # value: DeepFrozen
@@ -65,20 +65,20 @@ Broken references are DeepFrozen if the exception is
   # value: <Resolver>
   
   ? def lazyFailer1 implements EventuallyDeepFrozen {}
-  # problem: EventuallyDeepFrozen: $lazyFailer1__C: no __optSealedDispatch/1 method found
+  # problem: EventuallyDeepFrozen: __main$lazyFailer1__C: no __optSealedDispatch/1 method found
   
   ? def lazyFailer2 implements EventuallyDeepFrozen match msg {}
-  # problem: EventuallyDeepFrozen: $lazyFailer2__C: auditing plumbing not yet supported
+  # problem: EventuallyDeepFrozen: __main$lazyFailer2__C: auditing plumbing not yet supported
   
   ? def lazyFailer3 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch() :void {}
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer3__C: no __optSealedDispatch/1 method found
+  # problem: EventuallyDeepFrozen: __main$lazyFailer3__C: no __optSealedDispatch/1 method found
   
   ? def lazyFailer4 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch(brand) :void {}
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer4__C: __optSealedDispatch result guard is not any
+  # problem: EventuallyDeepFrozen: __main$lazyFailer4__C: __optSealedDispatch result guard is not any
   
   ? def lazyFailer5 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand :void) :any {
@@ -87,7 +87,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer5__C: __optSealedDispatch argument pattern must not have a guard
+  # problem: EventuallyDeepFrozen: __main$lazyFailer5__C: __optSealedDispatch argument pattern must not have a guard
 
   ? def lazyFailer5 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(var brand) :any {
@@ -96,7 +96,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer5__C: __optSealedDispatch argument pattern is not simple
+  # problem: EventuallyDeepFrozen: __main$lazyFailer5__C: __optSealedDispatch argument pattern is not simple
   
   ? def lazyFailer6 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :void {
@@ -105,7 +105,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer6__C: __optSealedDispatch result guard is not any
+  # problem: EventuallyDeepFrozen: __main$lazyFailer6__C: __optSealedDispatch result guard is not any
   
   XXX can't do this test because Java-E rejects redefining "any" - see if we can replace the node builder or some such to fix this - if not, build an expression using ENode constructors and eval that '
   x ? def lazyFailer7 implements (def any := int; EventuallyDeepFrozen) {
@@ -115,7 +115,7 @@ Broken references are DeepFrozen if the exception is
   x >     }
   x >   }
   x > }
-  x # problem: EventuallyDeepFrozen: $lazyFailer7__C: __optSealedDispatch/1 does not have appropriate structure
+  x # problem: EventuallyDeepFrozen: __main$lazyFailer7__C: __optSealedDispatch/1 does not have appropriate structure
   
   ? def lazyFailer8 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch(brand) :any {
@@ -124,7 +124,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer8__C: __optSealedDispatch body is not an if, but the EscapeExpr e`escape __return {
+  # problem: EventuallyDeepFrozen: __main$lazyFailer8__C: __optSealedDispatch body is not an if, but the EscapeExpr e`escape __return {
   #              if (__equalizer.sameEver(brand, EventuallyDeepFrozen.getPeekBrand())) {
   #                  EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
   #              } else {
@@ -139,7 +139,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer9__C: __optSealedDispatch argument pattern is not simple
+  # problem: EventuallyDeepFrozen: __main$lazyFailer9__C: __optSealedDispatch argument pattern is not simple
   
   ? def lazyFailer10 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :any {
@@ -148,7 +148,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer10__C: __optSealedDispatch if test does not compare the given brand to the peek brand
+  # problem: EventuallyDeepFrozen: __main$lazyFailer10__C: __optSealedDispatch if test does not compare the given brand to the peek brand
   
   ? def lazyFailer11 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :any {
@@ -157,7 +157,7 @@ Broken references are DeepFrozen if the exception is
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: $lazyFailer11__C: __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  # problem: EventuallyDeepFrozen: __main$lazyFailer11__C: __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
   
   ? def opaqueButDeepFrozen implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :any {
