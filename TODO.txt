@@ -16,6 +16,7 @@ Minor bugs:
   - Inconsistency between Scope and eval: 'def &x := __makeFinalSlot(...); x := ...' right now is caught statically as a single expression but not if &x goes through a Scope
     - option #1: introduce synEnv
     - option #2: remove static assignment-to-final catching
+  - The Updoc parser is sloppy and in need of tests.
 
 Internal bugs:
 
@@ -30,8 +31,7 @@ Big features:
   - Parse E code without requiring E-on-Java.
   - more complete socket IO
   - more complete file IO
-  - Character stream encoding/decoding.
-  - term trees
+  - finish term-tree system (matching, etc.)
   - true vats
   - boot-comm system
   - threaded vats
@@ -44,6 +44,7 @@ Code cleanups not marked in the code:
 
 Optimizations:
   - Perhaps instead of EscapeExpr, MatchBind, etc, immediately reifying ejectors, they could make ejector bindings whose get-code creates the ejector. The straightforward places to take advantage of this would be in trinary-define and CallExpr where the receiver is an ejector binding's value.
+  - Constant folding for calls when the receiver and args are DeepFrozen and known to terminate.
 
 ---
 
