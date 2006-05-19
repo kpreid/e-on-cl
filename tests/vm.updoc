@@ -259,7 +259,7 @@ MetaContextExpr
   # value: [null]
 
   ? thunk { meta.context().getSource() } ()
-  # value: e`def _ {
+  # value: e`def "__main$_" {
   #            
   #            method run() {
   #                meta.context().getSource()
@@ -267,7 +267,7 @@ MetaContextExpr
   #        }`
   
   ? thunk { meta.context().getOptSource() } ()
-  # value: e`def _ {
+  # value: e`def "__main$_" {
   #            
   #            method run() {
   #                meta.context().getOptSource()

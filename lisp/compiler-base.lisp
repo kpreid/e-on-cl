@@ -395,23 +395,10 @@
                  remaining-code)))
       (m-b-list (coerce matchers 'list)))))
 
-(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym doc-comment
+(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym object-expr
     &aux (simple-name (simplify-fq-name qualified-name))
          (type-desc
-           (e. +the-make-type-desc+ |run|
-             doc-comment
-             qualified-name
-             #()
-             #()
-             (or-miranda-message-descs
-               (loop for method across methods
-                 for (doc-comment verb patterns opt-result-guard nil) = (node-elements method)
-                 collect
-                   (make-instance 'message-desc
-                     :verb verb
-                     :doc-comment doc-comment
-                     :params (map 'vector #'pattern-to-param-desc patterns)
-                     :opt-result-guard (opt-guard-expr-to-safe-opt-guard opt-result-guard))))))
+           (e. object-expr |asTypeDesc|))
          (method-body (getf generators :method-body)))
   `(case mverb
     ,@(loop for method across methods
@@ -448,8 +435,8 @@
       (or (member (e-util:mangle-verb verb arity) mangled-verbs)
           (e-is-true (elib:miranda self :|__respondsTo/2| args nil))))))
 
-(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym doc-comment)
-  (declare (ignore self-fsym methods doc-comment))
+(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym object-expr)
+  (declare (ignore self-fsym methods object-expr))
   `(case mverb
     ((elib:audited-by-magic-verb) 
       ,(if checker-sym
@@ -517,10 +504,12 @@ XXX This is an excessively large authority and will probably be replaced."
     `((string= slot-name ,name) ,(binding-get-slot-code binding)))
   (t (error "no such slot: ~A" slot-name))) |#
 
-(defun object-form (generators layout this-expr doc-comment auditor-forms script fqn)
+(defun object-form (generators layout this-expr auditor-forms
+    &aux (script (e. this-expr |getScript|)))
   (destructuring-bind (opt-methods matchers) (node-elements script)
     (let* ((has-auditors (> (length auditor-forms) 0))
            (checker-sym (when has-auditors (make-symbol "APPROVEDP")))
+           (fqn (e. this-expr |getQualifiedName|))
            (self-fsym (make-symbol fqn))
            (inner-layout
              (scope-layout-nest
@@ -543,7 +532,7 @@ XXX This is an excessively large authority and will probably be replaced."
                  ,(funcall (if opt-methods
                              #'methodical-object-body
                              #'plumbing-object-body)
-                  generators self-fsym inner-layout opt-methods matchers fqn checker-sym doc-comment)))))
+                  generators self-fsym inner-layout opt-methods matchers fqn checker-sym this-expr)))))
       (flet ((build-labels (post-forms)
                `(let ((.identity-token. (cons nil nil)))
                   (labels ,labels-fns ,@post-forms #',self-fsym))))

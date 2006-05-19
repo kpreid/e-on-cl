@@ -471,6 +471,30 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "epatt"))
+
+(def-vtable |ObjectExpr|
+  (:|withQualifiedName| (this new)
+    ;; XXX write generalized withFoo for all nodes?
+    (make-instance '|ObjectExpr| :elements
+      (let ((e (copy-list (node-elements this))))
+        (setf (second e) new)
+        e)))
+  (:|asTypeDesc| (object-expr)
+    (e. +the-make-type-desc+ |run|
+      (e. object-expr |getDocComment|)
+      (e. object-expr |getQualifiedName|)
+      #()
+      #()
+      (or-miranda-message-descs
+        ;; XXX will die if a plumbing expression
+        (loop for method across (ref-shorten (e. (e. object-expr |getScript|) |getOptMethods|))
+          for (doc-comment verb patterns opt-result-guard nil) = (node-elements method)
+          collect
+            (make-instance 'message-desc
+              :verb verb
+              :doc-comment doc-comment
+              :params (map 'vector #'pattern-to-param-desc patterns)
+              :opt-result-guard (opt-guard-expr-to-safe-opt-guard opt-result-guard)))))))
      
 ; --- analysis ---
 

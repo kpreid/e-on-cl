@@ -289,12 +289,26 @@ ObjectExpr, EScript
   ? emptyObject.getQualifiedName()
   # value: "bar"
   
+  ? emptyObject.withQualifiedName("baz.bar")
+  # value: e`/** foo */
+  #        def "baz.bar" {
+  #        }`
+
+  ? emptyObject.withQualifiedName(1)
+  # problem: the :|qualifiedName| of a E.KERNEL:|ObjectExpr| must be a STRING (The value 1
+  #                                                                            is not of type
+  #                                                                              STRING.)
+  XXX E-style error for this
+  
   ? emptyObject.getAuditorExprs()
   # value: []
   
   ? emptyObject.getScript()
   # value: e??` {
   #        }`
+  
+  ? emptyObject.asTypeDesc() == emptyObject.eval(safeScope).__getAllegedType()
+  # value: true
   
   ? emptyObject.staticScope()
   # value: <[] := [] =~ [] + var []>
@@ -327,6 +341,9 @@ ObjectExpr, EScript
   # value: <[] := ["foo"] =~ [] + var []>
 
   ? fooThunk.getScript() == thunkScript
+  # value: true
+
+  ? fooThunk.asTypeDesc() == fooThunk.eval(safeScope.with("foo", 1)).__getAllegedType()
   # value: true
 
   printing implements

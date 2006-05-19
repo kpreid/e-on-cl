@@ -369,11 +369,8 @@
           append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
     (object-form +seq-object-generators+
                  layout 
-                 (make-instance '|ObjectExpr| :elements (list doc-comment qualified-name auditor-exprs script))
-                 doc-comment
-                 auditor-vars
-                 script
-                 fqn)))
+                 (make-instance '|ObjectExpr| :elements (list doc-comment fqn auditor-exprs script))
+                 auditor-vars)))
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values
