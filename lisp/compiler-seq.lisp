@@ -346,7 +346,6 @@
 (defun seq-matcher-body (layout matcher mverb-var args-var remaining-code)
   (check-type matcher |EMatcher|)
   (destructuring-bind (pattern body) (node-elements matcher)
-    (setf layout (scope-layout-nest layout))
     (let* ((pattern-eject-block (gensym "MATCHER-SKIP"))
            (matcher-block (gensym "MATCHERS"))
            (result-var (gensym "RESULT"))

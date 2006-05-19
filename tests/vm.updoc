@@ -856,6 +856,13 @@ Miscellaneous scoping
   XXX this should be tested with explicit node construction
   ? { def x :x := 1 }
   # problem: kernel FinalPattern may not use its own noun (e`x`) in its guard (e`x`)
+  
+  Bug: rebinding boundary was not being established by pure object expressions
+  ? { def a := 1; def f { method run(a) :any { a } }; f(2) }
+  # value: 2
+  ? { def a := 1; def f match a { a }; f(2) }
+  # value: ["run", [2]]
+
 
 XXX test perverse scoping cases:
   recursive defines pre-transform (raw-node-input case)
