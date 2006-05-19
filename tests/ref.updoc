@@ -165,7 +165,7 @@ Ref
   ? Ref.fulfillment(Ref.promise()[0])
   # problem: not resolved (Ref#fulfillment)
 
- optProblem
+ optProblem and matching
 
   ? [Ref.optProblem('r')]
   # value: [null]
@@ -175,6 +175,18 @@ Ref
 
   ? [Ref.optProblem(Ref.promise()[0])]
   # value: [null]
+  
+  ? pragma.enable("trinary-define"); pragma.enable("call-pattern")
+  > escape e { def Ref.broken(p) := ('r', e); p }
+  # value: problem: 'r' is not broken
+  
+  ? pragma.enable("trinary-define"); pragma.enable("call-pattern")
+  > escape e { def Ref.broken(p) := (Ref.broken("expected"), e); [p] }
+  # value: [problem: expected]
+  
+  ? pragma.enable("trinary-define"); pragma.enable("call-pattern")
+  > escape e { def Ref.broken(p) := (Ref.promise()[0], e); p }
+  # value: problem: <Promise> is not broken
   
  isEventual
 

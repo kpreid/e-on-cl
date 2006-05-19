@@ -131,6 +131,8 @@ tokens {
     ListPattern;
     ViaPattern;
     TailPattern;
+    FunCallPattern;
+    CallPattern;
     IgnorePattern;
     SamePattern;
     SuchThatPattern;
@@ -415,7 +417,7 @@ defRightSide:  ( "("! seq ","! ) =>
 
 // minimize the look-ahead for objectTail
 objectPredict:    ("def" objName | keywordPatt)
-                  ("extends" | "implements" | "match" | "{"| "(" ) ;
+                  ("extends" | "match" | (parenParams optGuard)? ("{" | "implements") ) ;
 objectTail:     //(typeParamList)?
                 //optGuard
             extender
@@ -478,8 +480,9 @@ optVerb:        verb | {##=#([FunctionVerb]);} ;
 matcher:        "match"^ pattern block  {##.setType(EMatcher);} ;
 
 patterns:       (pattern (","! patterns)?)? ;
+parenParams:  "("! patterns br ")"! ;
 patternList:    patterns {##=#([List],##);} ;
-parenParamList: "("! patternList br ")"! ;
+parenParamList: parenParams {##=#([List],##);} ;
 
 optFinally:     "finally"! block
             |   {##=#([Absent],##);}
@@ -747,8 +750,13 @@ listPatt:
     ;
 
 eqPatt:         (IDENT QUASIOPEN) =>
-                quasiParser quasiString {##=#([QuasiPattern],##);}
-            |   nounExpr optGuard       {##=#([FinalPattern],##);}
+                quasiParser quasiString          {##=#([QuasiPattern],##);}
+            |   nounExpr ( parenParams           pocket["call-pattern"]
+                                                 {##=#([FunCallPattern],##);}
+                         | "."! verb parenParams pocket["call-pattern"]
+                                                 {##=#([CallPattern],##);}
+                         |   optGuard            {##=#([FinalPattern],##);}
+                         )
             |   // "_"^ optGuard        {##.setType(IgnorePattern);} // not yet
                 "_"^                    {##.setType(IgnorePattern);}
             |   "=="^ prim              {##.setType(SamePattern);}
@@ -756,7 +764,12 @@ eqPatt:         (IDENT QUASIOPEN) =>
             |   compareOp prim
             |   quasiString             {##=#([QuasiPattern,"simple"],
                                               [Absent],##);}
-            |   parenExpr quasiString   {##=#([QuasiPattern],##);}
+            |   parenExpr ( quasiString           {##=#([QuasiPattern],##);}
+                          | parenParams           pocket["call-pattern"]
+                                                  {##=#([FunCallPattern],##);}
+                          | "."! verb parenParams pocket["call-pattern"]
+                                                  {##=#([CallPattern],##);} 
+                          )
             |   keywordPatt
             |   slotPatt
             ;

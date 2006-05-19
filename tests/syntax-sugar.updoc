@@ -895,6 +895,22 @@ MatchBindExpr
   ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); [escape e { def bind a :char := (1, e) }, a]")
   # value: [problem: the int 1 doesn't coerce to a char, <Promise>]
 
+'CallPattern' and 'FunCallPattern'
+
+Call patterns are a form of extensible pattern which is more suitable than quasi-patterns for objects which do not naturally have a (semi-)textual syntax.
+
+...
+
+  ? t("pragma.enable(\"call-pattern\"); def a.b(c) := d")
+  # value: e`def via (__makeVerbFacet.curryCall(a, "match__b/1")) [c] := d`
+
+  ? t("pragma.enable(\"call-pattern\"); def a(b) := c")
+  # value: e`def via (__makeVerbFacet.curryCall(a, "match__run/1")) [b] := c`
+  
+  XXX the use of expr rather than pattern parsing here is a workaround because pragmas can't be specified in patterns. '
+  
+The generated verb includes the arity since there are always exactly two arguments (the specimen and ejector), the arity being otherwise explicit only in the list pattern, which is too late for the matcher to see it.
+
 'MapPattern'
   
   ? tp("[\"a\" => b]")

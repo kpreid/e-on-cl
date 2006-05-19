@@ -48,6 +48,8 @@
     :|WhenFnExpr|
     :|WhileExpr|
     :|BindPattern|
+    :|CallPattern|
+    :|FunCallPattern|
     :|MapPattern|
     :|QuasiParserExpr|
     :|QuasiPattern|
@@ -1038,6 +1040,22 @@
   (let ((kernel-noun (e-macroexpand-all (e. patt |getNoun|))))
     (when (typep kernel-noun '|NounExpr|)
       (e. kernel-noun |getName|))))
+
+(defemacro |CallPattern| (|Pattern|) ((|recipient| t |EExpr|)
+                                      (|verb| nil string) 
+                                      (|args| t (e-list |Pattern|)))
+                                     (:rest-slot t)
+  (mn '|ViaPattern|
+    (mn '|CurryExpr|
+      (mn '|CallExpr|
+        |recipient|
+        (format nil "match__~A/~A" |verb| (length |args|))))
+    (apply #'mn '|ListPattern| |args|)))
+
+(defemacro |FunCallPattern| (|Pattern|) ((|recipient| t |EExpr|)
+                                         (|args| t (e-list |Pattern|)))
+                                        (:rest-slot t)
+  (apply #'mn '|CallPattern| |recipient| "run" |args|))
 
 ;; XXX lousy name
 (define-node-class |MapPatternKeyer| (|ENode|) ())

@@ -4,12 +4,21 @@
 pragma.disable("easy-return")
 pragma.disable("explicit-result-guard")
 
+pragma.enable("function-implements")
+
 def Throwable := <import:org.cubik.cle.prim.Throwable>
+def makeException := <import:org.cubik.cle.prim.makeException>
 
 def RefAuthor {
   # XXX map args?
   # Stamped rather than audited deep-frozen since DeepFrozen is nonprimitive and uses Ref itself in the course of auditing. XXX have DeepFrozenAuthor use primitives?
   to run(makePromise, refState, refIsResolved, makeUnconnectedRef, refOptProblem, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
+
+    def nbmPrinter(out :TextWriter, ex) implements DeepFrozenStamp {
+      out.quote(ex.getSpecimen())
+      out.write(" is not broken")
+    }
+
     def Ref0 := def "$Ref" implements DeepFrozenStamp {
       to promise() :any { makePromise() }
       
@@ -26,6 +35,13 @@ def RefAuthor {
         makeUnconnectedRef(Throwable.coerce(p, null))
       }
       to optProblem(r) :any { refOptProblem(r) }
+      to "match__broken/1"(r, ej) :any {
+        if (refState(r) == sElibBroken) {
+          [refOptProblem(r)]
+        } else {
+          throw.eject(ej, makeException([meta.context().getFQNPrefix() + "NotBrokenMismatch"], ["specimen" => r], nbmPrinter))
+        }
+      }
       
       to isPassByCopy(r) :any { 
         # xxx eventually, this will need to reflect the difference between PassByCopy and Selfless.

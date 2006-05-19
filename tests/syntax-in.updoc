@@ -127,7 +127,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (unknown:1)@11: unexpected token: [":=",<159>,line=1,col=11]
+# problem: (unknown:1)@11: unexpected token: [":=",<161>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -267,6 +267,47 @@ XXX source position
 #             NullE.
 #             false
 
+Testing discrimination between functions and call patterns:
+
+? t("def a() {}")
+# stdout: ObjectHeadE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           FunctionObject
+#             []
+#             null
+#             []
+#             NullE.
+#             false
+
+? t("pragma.enable(\"function-implements\"); def a() implements b {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           FunctionObject
+#             []
+#             null
+#             [] NounE. b
+#             NullE.
+#             false
+
+? t("def a() :b {}")
+# stdout: ObjectHeadE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           FunctionObject
+#             []
+#             NounE. b
+#             []
+#             NullE.
+#             false
+
 --- modPow ---
 
 ? t("a ** b %% c")
@@ -341,7 +382,7 @@ Parentheses disable modPow form
 #           NounE. a
 
 ? t("a :b :c")
-# problem: (unknown:1)@6: unexpected token: [":",<168>,line=1,col=6]
+# problem: (unknown:1)@6: unexpected token: [":",<170>,line=1,col=6]
 XXX prettier error
 
 --- ForExpr ---
@@ -448,6 +489,32 @@ IntoExpr has precedence immediately above sequences.
 #             NounE. c
 #             null
 
+--- CallPattern, FunCallPattern ---
+
+? tp("a.b(c)")
+# problem: (unknown:1)@6: The optional "call-pattern" syntax is currently off.
+? tp("a(b)")
+# problem: (unknown:1)@4: The optional "call-pattern" syntax is currently off.
+
+? t("pragma.enable(\"call-pattern\"); 0 =~ a.b(c)")
+# stdout: SeqE. [] MatchBindE.
+#           LiteralE. 0
+#           CallP.
+#             NounE. a
+#             b
+#             [] FinalP.
+#               NounE. c
+#               null
+
+? t("pragma.enable(\"call-pattern\"); 0 =~ a(b)")
+# stdout: SeqE. [] MatchBindE.
+#           LiteralE. 0
+#           FunCallP.
+#             NounE. a
+#             [] FinalP.
+#               NounE. b
+#               null
+
 --- Via-pattern ---
 
 ? tp("via (a) b")
@@ -465,6 +532,7 @@ IntoExpr has precedence immediately above sequences.
 #           GetE.
 #             NounE. b
 #             [] NounE. c
+
 
 XXX test acceptance of line breaks everywhere
 XXX general parser tests for everything
