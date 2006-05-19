@@ -8,19 +8,21 @@
   # stdout: hi
   #         
   
-  ? if (E.toQuote(updoc) !~ `<updoc runner for <file:@{_}updoc.updoc>>`) { [updoc] }
+  ? if (E.toQuote(interp) !~ `<updoc loop for <file:@{_}/updoc.updoc>>`) { [interp] }
 
 This should be successful:
   
-  ? updoc.push(e`1 + 1`, [["value", "2"]])
+  ? interp.pushTestStep(e`1 + 1`, [["value", "2"]])
 
 This should fail:
 
-  x ? updoc.push(e`1 + 1`, [["value", "You should see a failure report, expecting the value 2."]])
+  x ? interp.pushTestStep(e`1 + 1`, [["value", "You should see a failure report, expecting the value 2."]])
 
 
   ? "something after pushed tests"
   # value: "something after pushed tests"
+  
+  XXX as shown by the disabled 'should fail' test, in order to do this properly we need to create a nested updoc runner and verify its output
   
 ---
 
@@ -47,7 +49,7 @@ waitAtTop / timing tests:
   ? 3
   # value: 3
 
-Bug: promise for null not treated equivalently to null:
+Bug: resolved promise for null not treated equivalently to null:
 
   ? def p; bind p := null; p
   

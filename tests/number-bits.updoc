@@ -40,11 +40,11 @@ left shift
 
   ? for x in [-2, -1, 0, 1, 2, 3, 4, 5, 2**32, 2**64] { 
   > for y in [-2, -1, 0, 1, 2, 3, 4, 5, 32, 64] { 
-  >   updoc.push(`$x << $y`, [["value", E.toQuote((x * 2 ** y).floor())]]) }}
+  >   interp.pushTestStep(`$x << $y`, [["value", E.toQuote((x * 2 ** y).floor())]]) }}
 
 right shift
 
   ? for x in [-2, -1, 0, 1, 2, 3, 4, 5, 2**32, 2**64] { 
   > for y in [-2, -1, 0, 1, 2, 3, 4, 5, 32, 64] { 
-  >   updoc.push(`$x >> $y`, [["value", E.toQuote((x / 2 ** y).floor())]]) }}
+  >   interp.pushTestStep(`$x >> $y`, [["value", E.toQuote((x / 2 ** y).floor())]]) }}
 

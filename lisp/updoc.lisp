@@ -280,9 +280,10 @@
                 (e. result-resolver |resolve| (e. handler |finish|))))))
             result-promise))
         scope-slot
-        (e-lambda "org.cubik.cle.updocInterp" ()
+        (e-lambda "org.cubik.cle.updoc.interp" ()
           (:|gc| () (e. e.extern:+gc+ |run|) nil)
           (:|getProps| () props)
+          ;; XXX other interp methods
           (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
             (e. wait-hook-slot |setValue|
               (call-when-resolved ref
@@ -304,50 +305,47 @@
           ((script (read-updoc s))
            (eval-out-stream (make-string-output-stream))
            (eval-err-stream (make-string-output-stream))
-           (stepper scope-slot interp 
+           (stepper scope-slot base-interp 
              (make-stepper :props e.knot::+eprops+ ;; XXX internal
                            :handler (make-updoc-handler :out eval-out-stream 
                                                         :err eval-err-stream
                                                         :print-steps print-steps
                                                         :file file)))
-           (runner (e-lambda "org.cubik.cle.updoc.Runner" ()
+           (updoc-interp (e-lambda "org.cubik.cle.updoc.$updocInterp" ()
               (:|__printOn| (tw)
                 (e-coercef tw +the-text-writer-guard+)
                 ; XXX we should eventually be using an e.extern file-cap for this, at which point we shouldn't be printing <file: ourselves
-                ; XXX giving all updoc scripts the authority to see their own pathname. This could be considered a problem when we implement confined updoc.
-                (e. tw |print| "<updoc runner for <file:" (enough-namestring file) ">>"))
-              (:|push| (expr answers-vector)
+                ; XXX giving all updoc scripts the authority to see their own pathname. This could be considered a problem.
+                (e. tw |print| "<updoc loop for <file:" (enough-namestring file) ">>"))
+              (:|pushTestStep| (expr answers-vector)
                 "Add another test to be executed immediately after the current one. 'expr' should be an E expression node, and 'answers-vector' should be like [[\"value\", \"<the-expected-object>\"]]. XXX this will eventually be changed to enter tests in sequence order when called within a single turn."
-                (push (list (e-print expr) ; XXX quote insufficient in the general case
+                (push (list (e-print expr) ; XXX print insufficient in the general case
                             (map 'list #'(lambda (x) (coerce x 'list))
                                  answers-vector)) script)
-                nil)))
+                nil)
+              (otherwise (mverb &rest args)
+                (apply #'e-call-dispatch base-interp mverb args))))
            (scope (if confine
-                    (e.
-                      (e. (e-import "org.cubik.cle.makeIOScope")
-                          |run| 
-                          "__main$"
-                          (vat-safe-scope *vat*)
-                          (make-scope "__updocConfinedPowers$"
-                            `(("interp" ,interp)
-                              ("stdout" ,(make-text-writer-to-cl-stream
-                                          eval-out-stream
-                                          :autoflush t
-                                          :should-close-underlying nil))
-                              ("stderr" ,(make-text-writer-to-cl-stream
-                                          eval-err-stream
-                                          :autoflush t
-                                          :should-close-underlying nil))
-                              ("props"  ,e.knot::+eprops+)
-                              #||#)))
-                      |or| 
-                      (e.knot:make-scope "updocAdditions$"
-                        `(("updoc" ,runner))))
-                    (e. (e. (make-io-scope :stdout eval-out-stream 
-                                           :stderr eval-err-stream
-                                           :interp interp) 
-                            |withPrefix| "__main$")
-                        |with| "updoc" runner)))
+                    (e. (e-import "org.cubik.cle.makeIOScope")
+                        |run| 
+                        "__main$"
+                        (vat-safe-scope *vat*)
+                        (make-scope "__updocConfinedPowers$"
+                          `(("interp" ,updoc-interp)
+                            ("stdout" ,(make-text-writer-to-cl-stream
+                                        eval-out-stream
+                                        :autoflush t
+                                        :should-close-underlying nil))
+                            ("stderr" ,(make-text-writer-to-cl-stream
+                                        eval-err-stream
+                                        :autoflush t
+                                        :should-close-underlying nil))
+                            ("props"  ,e.knot::+eprops+)
+                            #||#)))
+                    (e. (make-io-scope :stdout eval-out-stream 
+                                       :stderr eval-err-stream
+                                       :interp updoc-interp) 
+                        |withPrefix| "__main$")))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope
            )
       (e. scope-slot |setValue| scope)

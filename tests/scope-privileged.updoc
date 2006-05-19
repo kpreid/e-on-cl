@@ -66,13 +66,40 @@ SelflessStamp
 
 interp
 
-  XXX testing interp here isn't very useful since it's (currently) an updoc-specific interp implementation
-
-  ? interp
-  # value: <updocInterp>
+  x ? interp
+  x # value: <updocInterp>
   
   XXX more specific tests
   ? interp.getProps() :Map; null
+
+  XXX more tests for interp
+    to addStatusReactor(_ :any) :any
+    to blockAtTop() :any
+    to continueAtTop() :any
+    to enqueue(_ :any) :any
+    to exitAtTop() :any
+    to exitAtTop(_ :any) :any
+    to gc() :any
+    to getArgs() :any
+    to getExpand() :any
+    to getFinalExitStatusVow() :any
+    to getInteractive() :any
+    to getNextExitStatus() :any
+    to getPrintFunc() :any
+    to getProps() :any
+    to getResult(_ :any) :any
+    to getShowEStack() :any
+    to getShowJStack() :any
+    to getShowTransformed() :any
+    to getTopScope() :any
+    to pushResult(_ :any) :any
+    to setExpand(_ :any) :any
+    to setPrintFunc(_ :any) :any
+    to setShowEStack(_ :any) :any
+    to setShowJStack(_ :any) :any
+    to setShowTransformed(_ :any) :any
+    to setTopScope(_ :any) :any
+    to waitAtTop(_ :any) :any
 
 rune
 
