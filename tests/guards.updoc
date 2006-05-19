@@ -303,6 +303,23 @@ Intersection guards
 
   ? testSpecimenNotPrinted(Point)
   
+An intersection guard is also a (loose) intersection auditor.
+
+  ? { interface Foo {}
+  >   def both := all[Foo, DeepFrozen]
+  >   def bar implements both {}
+  >   bar :both }
+  # value: <bar>
+  
+  ? pragma.enable("trinary-define")
+  > escape e {
+  >   interface Foo {}
+  >   def both := all[Foo, def failer { to audit(_,_) :any {return false} to coerce(_,pe) {throw.eject(pe, "no")} }]
+  >   def bar implements both { }
+  >   def baz :both := (bar, e)
+  > }
+  # value: problem: no
+  
 Negated guards
 
   ? Not[int]

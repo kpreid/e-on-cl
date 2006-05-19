@@ -7,7 +7,7 @@ pragma.disable("explicit-result-guard")
 pragma.enable("function-implements")
 
 def _make(subGuards) implements DeepFrozen {
-  def intersectionGuard {
+  def intersectionGuard implements DeepFrozen."optionally"() {
     to __printOn(out :TextWriter) {
       out.print("all")
       out.quote(subGuards) # pun
@@ -17,6 +17,14 @@ def _make(subGuards) implements DeepFrozen {
     # to and(other) {
     #   return <elib:slot.makeIntersectionGuard>(subGuards.with(other))
     # }
+    
+    /** Audits objects with all of the subGuards, which must then be auditors. */
+    to audit(objectExpr, witness) {
+      for auditor in subGuards {
+        witness.ask(auditor)
+      }
+      return false
+    }
     
     to coerce(var specimen, optEjector) {
       for guard in subGuards {
