@@ -440,10 +440,14 @@
       (lambda () (updoc-file (pop file-paths) :print-steps print-steps :confine confine))
       (lambda (result)
         (profile-finish profiler)
-        (format t "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]~%" 
-          (result-failure-count result) 
-          (result-step-count result))
+        (format t "~A~%" (describe-result result))
+        (force-output)
         (values)))))
+
+(defun describe-result (result)
+  (format nil "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]"
+    (result-failure-count result) 
+    (result-step-count result)))
 
 (defun updoc-rune-entry (&rest args
     &aux profiler print-steps confine)
@@ -466,10 +470,9 @@
   (call-when-resolved
       (updoc-start (mapcar #'native-pathname args) :profiler profiler :print-steps print-steps :confine confine)
     (efun (result)
-      (declare (ignore result))
-      (force-output)
-      (return-from updoc-rune-entry)))
-  (top-loop))
+      (if (plusp (result-failure-count result))
+        (make-unconnected-ref (e-coerce (describe-result result) +the-exception-guard+))
+        nil))))
 
 (defun system-test (op system)
   "Invoked by an implementation of asdf:test-op."

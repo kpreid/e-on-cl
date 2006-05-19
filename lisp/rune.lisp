@@ -95,10 +95,8 @@
 (define-toplevel updoc-toplevel (args)
   "Invoke the Lisp-implemented Updoc implementation, interpreting the
       arguments as Updoc file pathnames."
-  (establish-vat :label "rune updoc toplevel")
-  (apply (system-symbol "UPDOC-RUNE-ENTRY" "E.UPDOC" :e-on-cl.updoc) args)
-  (force-output)
-  (global-exit 0))
+  (generic-toplevel "rune updoc toplevel"
+    (lambda () (apply (system-symbol "UPDOC-RUNE-ENTRY" "E.UPDOC" :e-on-cl.updoc) args))))
 
 (define-toplevel irc-repl-toplevel (args)
   "Start an IRC bot. The arguments are: <nick> <server> <channel>*"
