@@ -8,15 +8,26 @@ pragma.disable("explicit-result-guard")
 
 def memoizeAuthor(DeepFrozenStamp) {
   def _memoize implements DeepFrozen {
-    to run(base :DeepFrozen, options :Map ? options.size().isZero()) {
+    to run(base :DeepFrozen, 
+           #[=> cacheSize ...
+           # => memoOptional :boolean := false
+           # => cacheOptional :boolean := true
+           # ],
+           options :Map ? options.size().isZero(),
+           interning :boolean) {
     
-      # XXX add support for limited cache size
+      # XXX add support for limited cache size (must be rejected if interning)
+    
+      # XXX for DeepPassByCopy do we actually mean DeepSelfless, if that makes sense?
+      def CacheableResult := interning.pick(DeepFrozen, DeepPassByCopy)
     
       def cache := [].asMap().diverge()
     
       def memoized implements DeepFrozenStamp {
         to __printOn(out :TextWriter) {
-          out.write("<memoized:")
+          out.write("<")
+          out.write(interning.pick("interning", "memoized"))
+          out.write(":")
           out.quote(base)
           out.write(">")
         }
@@ -25,16 +36,17 @@ def memoizeAuthor(DeepFrozenStamp) {
           cache.fetch(msg, thunk {
             # xxx optimization: we could cache thrown errors as well.
             def result := E.callWithPair(base, msg)
-            if (result =~ dpbc :DeepPassByCopy) {
-              # If DeepPassByCopy coerces (I haven't determined whether it should), then we return the coercion, since doing so is safe (no non-DPBC objects escape)
-              cache[msg] := dpbc
+            if (result =~ ok :CacheableResult) {
+              cache[msg] := ok
             } else {
+              # if (!cacheOptional...)
               result
             }
           })
         }
         
         match msg {
+          # if (!cacheOptional...)
           E.callWithPair(base, msg)
         }
       }
@@ -46,9 +58,15 @@ def memoizeAuthor(DeepFrozenStamp) {
   /** Return a memoizing, yet DeepFrozen, version of a DeepFrozen function or other object. */
   def memoize implements DeepFrozen {
     /** Memoize 'base' with default options. */
-    to run(base) { return _memoize(base, [].asMap()) }
-    /** Memoize 'base' with options specified. There are no options defined yet. */
-    to run(base, options) { return _memoize(base, options) }
+    to run(base) { return _memoize(base, [].asMap(), false) }
+    /** Memoize 'base'. There are no defined options yet. */
+    to run(options, base) { return _memoize(base, options, false) }
+    
+    /** Allows the memoizer to cache DeepFrozen values.
+      * This changes the behavior of the memoized object; for example, given def f() :any {return def _ {}}, f() != f(), but def g := memoize(f, ["constant" => true]); g() == g().  */
+    to interning(base) {
+      return _memoize(base, [].asMap(), true)
+    }
   }
 
   return memoize

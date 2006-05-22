@@ -47,16 +47,33 @@
 
   # value: 2
 
---- (DeepFrozen &! DeepPassByCopy) are not cached, because that would make the memoizer observably magical.
+--- By default, (DeepFrozen &! DeepPassByCopy) are not cached, because that would cause multiple calls which would have returned different (fresh) results to return the same.
 
   ? { def h implements DeepFrozen { to run() :any { return [def x {}] }}
   >   [h(), h() == h()] }
   # value: [[<x>], false]
 
-  ? { def h := memoize(def _ implements DeepFrozen { to run() :any { return [def x {}] }})
+  ? { def h := memoize(def _ implements DeepFrozen { to run() :any { return [def x implements DeepFrozen {}] }})
   >   [h(), h() == h()] }
   # value: [[<x>], false]
-  
+
+--- However, this can be overridden.
+
+  ? { def h := memoize.interning(def _ implements DeepFrozen { to run() :any { return [def x implements DeepFrozen {}] }})
+  >   [h(), h() == h()] }
+  # value: [[<x>], true]
+
+--- Various erroneous inputs
+
+  x ? memoize(null, null)
+  x # problem: no such method: org.cubik.cle.prim.Null#extract/2
+  ? memoize([].asMap(), null)
+  # value: <memoized:null>
+  x ? memoize(["x" => "y"], null)
+  x # problem: unused elements in matched map: ["x" => "y"]
+  x ? memoize(["constant" => "foo"], null)
+  x # problem: the String "foo" doesn't coerce to a boolean
+  XXX these tests written when I thought I was going to add options
 
 XXX memoization options:
   Whether cache keys are weak:
@@ -64,3 +81,5 @@ XXX memoization options:
     * No, for Selfless keys that are likely to recur
     * Perhaps a default policy of keeping a weak and a non-weak map?
   Maximum table size, and therefore discard policy
+  Whether non-DeepFrozen returns are errors
+  Whether non-DeepFrozen base means to not memoize it
