@@ -208,7 +208,7 @@ def metaparser := makeLALR1Parser(
   ["tokenFunction" => __identityFunc])
 
 def memoValueMaker := 
-  <import:org.cubik.cle.memoize>(
+  <import:org.cubik.cle.memoize>.interning(
     def valueMaker implements DeepFrozen { to run(template) {
       return metaparser.parse(lex(template.asStream())) }})
 
