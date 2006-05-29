@@ -375,6 +375,11 @@ __getAllegedType, E object
   #         __order/2
   #         __reactToLostClient/1
   #         __getPropertySlot/1
+  #         and/1
+  #         not/0
+  #         or/1
+  #         pick/2
+  #         xor/1
   #         foo/3
   #         
 

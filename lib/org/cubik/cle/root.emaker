@@ -23,6 +23,13 @@ def root implements DeepFrozen {
       out.write(">")
     }
     
+    match [=="__getAllegedType", []] {
+      # Miranda __getAllegedType/0 invokes matchers
+      null.__getAllegedType()
+    }
+    
+    # match [=="__respondsTo", [verb, arity]] { # XXX not proven necessary yet
+    
     match [verb, args] {
       # XXX typed exception
       # XXX have built-in no-such-method give this more useful error

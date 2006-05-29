@@ -341,6 +341,18 @@
   "This function exists to make it clear in a backtrace that the condition did not originate at this location."
   (error condition))
 
+(defun %miranda-type-merge (base more)
+  ;; XXX should this be a method on TypeDesc?
+  ;; XXX coerce 'more'?
+  (e. +the-make-type-desc+ |run|
+    (e. base |getDocComment|)
+    (e. base |getFQName|)
+    (e. base |getSupers|) ;; XXX do something with this?
+    (e. base |getAuditors|)
+    (e. (e. (e. base |getMessageTypes|) |or| 
+            (e. more |getMessageTypes|)) 
+        |getValues|)))
+
 ;;; --- StaticContext ---
 
 ;; This is a class so that instances may be written to a compiled file.
@@ -399,29 +411,45 @@
     &aux (simple-name (simplify-fq-name qualified-name))
          (type-desc
            (e. object-expr |asTypeDesc|))
-         (method-body (getf generators :method-body)))
-  `(case mverb
-    ,@(loop for method across methods
-            for (nil verb patterns nil nil) = (node-elements method)
-            collect
-              `((,(e-util:mangle-verb verb (length patterns)))
-                ,(funcall method-body layout method 'args)))
-    ,@(miranda-case-maybe :|__printOn/1| methods `(default-print args ',simple-name))
-    ,@(miranda-case-maybe :|__getAllegedType/0| methods `',type-desc)
-    ,@(miranda-case-maybe :|__respondsTo/2| methods 
-      `(default-responds-to 
-        #',self-fsym args 
-        ',(loop for method across methods
-                for (nil verb patterns nil nil) = (node-elements method)
-                collect (e-util:mangle-verb verb (length patterns)))))
-    ((elib:audited-by-magic-verb) 
-      ,(if checker-sym
-         `(funcall ,checker-sym (first args)) 
-         nil))
-    (otherwise 
-      (elib:miranda #',self-fsym mverb args (lambda ()
-        ,(matchers-body generators layout matchers 'mverb 'args
-          `(no-such-method #',self-fsym mverb args)))))))
+         (method-body (getf generators :method-body))
+         (fail-fun (gensym "FAIL-FUN"))
+         (matcher-entry-fname (gensym "MATCHER-ENTRY"))
+         (matchers-form
+           (matchers-body generators layout matchers 'mmverb 'margs
+             `(funcall ,fail-fun))))
+  `(flet ((,matcher-entry-fname (mmverb margs ,fail-fun)
+            (declare (ignorable mmverb margs))
+            ,matchers-form))
+    (case mverb
+      ,@(loop for method across methods
+              for (nil verb patterns nil nil) = (node-elements method)
+              collect
+                `((,(e-util:mangle-verb verb (length patterns)))
+                  ,(funcall method-body layout method 'args)))
+      ,@(miranda-case-maybe :|__printOn/1| methods `(default-print args ',simple-name))
+      ,@(miranda-case-maybe :|__getAllegedType/0| methods
+        (if (plusp (length matchers))
+          `(block nil
+            (%miranda-type-merge ',type-desc
+                                 (,matcher-entry-fname
+                                   :|__getAllegedType/0|
+                                   nil
+                                   (lambda () (return ',type-desc)))))
+          `',type-desc))
+      ,@(miranda-case-maybe :|__respondsTo/2| methods 
+        `(default-responds-to 
+          #',self-fsym args 
+          ',(loop for method across methods
+                  for (nil verb patterns nil nil) = (node-elements method)
+                  collect (e-util:mangle-verb verb (length patterns)))))
+      ((elib:audited-by-magic-verb) 
+        ,(if checker-sym
+           `(funcall ,checker-sym (first args)) 
+           nil))
+      (otherwise 
+        (elib:miranda #',self-fsym mverb args (lambda ()
+          (,matcher-entry-fname mverb args (lambda () 
+            (no-such-method #',self-fsym mverb args)))))))))
 
 (defun default-print (args simple-name)
   (destructuring-bind (tw) args

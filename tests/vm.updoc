@@ -428,6 +428,39 @@ Alleged type
   ? objectOfInterestingType.getNested().__getAllegedType().getFQName()
   # value: "__main$objectOfInterestingType__C$nestedObject__C"
 
+  ? def objectWithMatcherType {
+  >   to additionalVerb(_) :any {}
+  >   match [=="__getAllegedType", []] { ooitType }
+  > }
+  > (objectWithMatcherType.__getAllegedType().getMessageTypes() &! null.__getAllegedType().getMessageTypes()).getKeys()
+  # value: ["additionalVerb/1", "getNested/0"]
+
+  ? def objectWithNonTypeMatcher {
+  >   to soleVerb(_) :any {}
+  >   match [=="foo", []] { ooitType }
+  > }
+  > (objectWithNonTypeMatcher.__getAllegedType().getMessageTypes() &! null.__getAllegedType().getMessageTypes()).getKeys()
+  # value: ["soleVerb/1"]
+  
+  ? def like(v) :any { return def conformer { to __conformTo(_) :any { return v }}}
+  # value: <like>
+
+  ? def objectWithMatcherLikeType {
+  >   to additionalVerb(_) :any {}
+  >   match [=="__getAllegedType", []] { like(ooitType) }
+  > }
+  > (objectWithMatcherLikeType.__getAllegedType().getMessageTypes() &! null.__getAllegedType().getMessageTypes()).getKeys()
+  # problem: no such method: __main$like__C$conformer__C#getMessageTypes/0
+  XXX is this appropriate behavior?
+
+  ? def objectWithMatcherDuckType {
+  >   to additionalVerb(_) :any {}
+  >   match [=="__getAllegedType", []] { def _ extends ooitType {} }
+  > }
+  > (objectWithMatcherDuckType.__getAllegedType().getMessageTypes() &! null.__getAllegedType().getMessageTypes()).getKeys()
+  # value: ["additionalVerb/1", "getNested/0"]
+  XXX is this appropriate behavior?
+
 ObjectExpr auditing moved to audit.updoc
 
 IfExpr
