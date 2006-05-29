@@ -531,7 +531,8 @@
   (:use :cl :e.util :e.elib :e.knot)
   (:documentation "Bootstrapping: setting up the E runtime environment after clrune starts the Lisp process.")
   (:export
-    :rune))
+    :rune
+    :in-e-user))
 
 (cl:defpackage :e.elib.vtable-methods
   (:use)

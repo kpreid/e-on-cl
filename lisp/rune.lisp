@@ -282,3 +282,29 @@ Lisp-level options:
     (setf *parse-cache-name* parse-cache-name))
 
   (funcall toplevel args))
+
+;; --- REPL tools ---
+
+(defpackage :e.user
+  (:nicknames :e-user)
+  (:use :cl :e.util :e.elib :e.elib.tables :e.knot :e.kernel :e.elang.node-impl :e.elang :e.elang.syntax :e.elang.compiler :e.extern :e.rune))
+
+(defun read-e-literal (stream character arg)
+  (declare (ignore character))
+  (check-type arg null)
+  (e.syntax:parse-to-kernel (read stream t nil t)))
+
+(defglobal +e-readtable+
+  (let ((rt (copy-readtable nil)))
+    (set-dispatch-macro-character #\# #\E 'read-e-literal rt)
+    rt))
+
+(defun %in-e-user ()
+  (setf *package* (find-package :e.user)
+        *readtable* +e-readtable+)
+  (values))
+
+(defmacro in-e-user ()
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (%in-e-user)))
+
