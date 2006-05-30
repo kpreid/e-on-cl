@@ -353,6 +353,13 @@
             (e. more |getMessageTypes|)) 
         |getValues|)))
 
+(declaim (notinline refer-to)
+         (ftype (function (t) null) refer-to))
+(defun refer-to (object)
+  "Force a function definition to close over the given OBJECT."
+  (declare (optimize (speed 3) (space 3)) (ignore object))
+  nil)
+
 ;;; --- StaticContext ---
 
 ;; This is a class so that instances may be written to a compiled file.
@@ -411,45 +418,52 @@
     &aux (simple-name (simplify-fq-name qualified-name))
          (type-desc
            (e. object-expr |asTypeDesc|))
-         (method-body (getf generators :method-body))
-         (fail-fun (gensym "FAIL-FUN"))
-         (matcher-entry-fname (gensym "MATCHER-ENTRY"))
-         (matchers-form
-           (matchers-body generators layout matchers 'mmverb 'margs
-             `(funcall ,fail-fun))))
-  `(flet ((,matcher-entry-fname (mmverb margs ,fail-fun)
-            (declare (ignorable mmverb margs))
-            ,matchers-form))
-    (case mverb
-      ,@(loop for method across methods
-              for (nil verb patterns nil nil) = (node-elements method)
-              collect
-                `((,(e-util:mangle-verb verb (length patterns)))
-                  ,(funcall method-body layout method 'args)))
-      ,@(miranda-case-maybe :|__printOn/1| methods `(default-print args ',simple-name))
-      ,@(miranda-case-maybe :|__getAllegedType/0| methods
-        (if (plusp (length matchers))
-          `(block nil
-            (%miranda-type-merge ',type-desc
-                                 (,matcher-entry-fname
-                                   :|__getAllegedType/0|
-                                   nil
-                                   (lambda () (return ',type-desc)))))
-          `',type-desc))
-      ,@(miranda-case-maybe :|__respondsTo/2| methods 
-        `(default-responds-to 
-          #',self-fsym args 
-          ',(loop for method across methods
-                  for (nil verb patterns nil nil) = (node-elements method)
-                  collect (e-util:mangle-verb verb (length patterns)))))
-      ((elib:audited-by-magic-verb) 
-        ,(if checker-sym
-           `(funcall ,checker-sym (first args)) 
-           nil))
-      (otherwise 
-        (elib:miranda #',self-fsym mverb args (lambda ()
-          (,matcher-entry-fname mverb args (lambda () 
-            (no-such-method #',self-fsym mverb args)))))))))
+         (method-body (getf generators :method-body)))
+  (flet ((build-method-case (build-matcher-call)
+           `(case mverb
+              ,@(loop for method across methods
+                      for (nil verb patterns nil nil) = (node-elements method)
+                      collect
+                        `((,(e-util:mangle-verb verb (length patterns)))
+                          ,(funcall method-body layout method 'args)))
+              ,@(miranda-case-maybe :|__printOn/1| methods `(default-print args ',simple-name))
+              ,@(miranda-case-maybe :|__getAllegedType/0| methods
+                (if (plusp (length matchers))
+                  `(block nil
+                    (%miranda-type-merge ',type-desc
+                                         ,(funcall build-matcher-call
+                                           :|__getAllegedType/0|
+                                           nil
+                                           `(return ',type-desc))))
+                  `',type-desc))
+              ,@(when (plusp (length methods))
+                  ;; implement __respondsTo iff this object has methods, otherwise elib:miranda will handle it
+                  (miranda-case-maybe :|__respondsTo/2| methods 
+                    `(default-responds-to 
+                      #',self-fsym args 
+                      ',(loop for method across methods
+                              for (nil verb patterns nil nil) = (node-elements method)
+                              collect (e-util:mangle-verb verb (length patterns))))))
+              ,@(when checker-sym
+                  `(((elib:audited-by-magic-verb) 
+                     (funcall ,checker-sym (first args)))))
+              (otherwise 
+                (elib:miranda #',self-fsym mverb args (lambda ()
+                  ,(funcall build-matcher-call
+                     'mverb 'args 
+                     `(no-such-method #',self-fsym mverb args))))))))
+    (if (plusp (length matchers))
+      (let ((matcher-entry-fname (gensym "MATCHER-ENTRY"))
+            (fail-fun (gensym "FAIL-FUN")))
+        `(flet ((,matcher-entry-fname (mmverb margs ,fail-fun)
+                (declare (ignorable mmverb margs))
+                ,(matchers-body generators layout matchers 'mmverb 'margs
+                   `(funcall ,fail-fun))))
+           ,(build-method-case (lambda (mverb args fail-form) 
+                                 `(,matcher-entry-fname ,mverb ,args (lambda () ,fail-form))))))
+      (build-method-case (lambda (mverb args fail-form)
+                           (declare (ignore mverb args))
+                           fail-form)))))
 
 (defun default-print (args simple-name)
   (destructuring-bind (tw) args
@@ -549,14 +563,13 @@ XXX This is an excessively large authority and will probably be replaced."
                          :rest layout))))
            (labels-fns
              `((,self-fsym (mverb &rest args)
-                 (when (eq mverb '.get-identity-token.)
-                   ;; Never actually happens. This is to prevent the CL
-                   ;; compiler from hoisting the closure, forcing it to generate
-                   ;; a fresh closure for each execution of this ObjectExpr.
-                   
-                   ;; xxx optimization: we could skip this token if the code is
-                   ;; known to close over something which varies sufficiently.
-                   (return-from ,self-fsym .identity-token.))
+                 ;; This is to prevent the CL compiler from hoisting the closure
+                 ;; closure, forcing it to generate a fresh closure for each
+                 ;; execution of this ObjectExpr.
+                 ;; 
+                 ;; xxx optimization: we could skip this token if the code is
+                 ;; known to close over something which varies sufficiently.
+                 (refer-to .identity-token.)
                  ,(funcall (if opt-methods
                              #'methodical-object-body
                              #'plumbing-object-body)
