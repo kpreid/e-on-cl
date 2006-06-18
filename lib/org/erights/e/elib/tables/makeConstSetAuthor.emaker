@@ -6,7 +6,7 @@ pragma.disable("explicit-result-guard")
 
 def makeConstSetAuthor(SelflessStamp) {
   def ConstSetStamp implements DeepFrozen { 
-    to audit(_, _) { return true }
+    to audit(_) { return true }
   }
   
   def ConstSet {

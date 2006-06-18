@@ -171,14 +171,15 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
 
   
 
-  def requireAudit(objectExpr, witness, fail) :void implements DeepFrozenStamp {
+  def requireAudit(audition, fail) :void implements DeepFrozenStamp {
+    def objectExpr := audition.getObjectExpr()
     for name => _ in objectExpr.staticScope().namesUsed() {
-      # # XXX figure out how to bootstrap so that the witness doesn't need a method so specific
-      # if (!witness.slotIsDeepFrozen(name)) {
+      # # XXX figure out how to bootstrap so that the audition doesn't need a method so specific
+      # if (!audition.slotIsDeepFrozen(name)) {
       #   throw("reference to non-DeepFrozen binding: " + E.toQuote(name))
       # }
       
-      def slot := witness.getSlot(name)
+      def slot := audition.getSlot(name)
       requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
         out.quote(name)
         out.print(" in the lexical scope of ")
@@ -190,9 +191,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
   OptionallyDeepFrozen__Resolver.resolve(
   /** Acts as the DeepFrozen auditor, but will not throw if the object is not acceptable. */
   def "%OptionallyDeepFrozen" implements DeepFrozenStamp {
-    to audit(objectExpr, witness) {
+    to audit(audition) {
       escape fail {
-        requireAudit(objectExpr, witness, fail)
+        requireAudit(audition, fail)
         return true
       }
       return false
@@ -205,9 +206,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     to getPeekBrand() { return peekBrand }
     to getPeekSealer() { return peekSealer }
   
-    to audit(objectExpr, witness) {
+    to audit(audition) {
       # xxx I am well aware that this code is an awful mess. I do plan to do something about it.
     
+      def objectExpr := audition.getObjectExpr()
+      
       def label := "EventuallyDeepFrozen: " + objectExpr.getQualifiedName()
       
       /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'. */
@@ -216,7 +219,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                                   precedingNodes # :Really[List[ENode]]
                                  ) :boolean {
         def nounExpr :NounExpr := (expr, fn _{return false})
-        return (witness.getSlot(def noun := nounExpr.getName()) == slot) \
+        return (audition.getSlot(def noun := nounExpr.getName()) == slot) \
                & accum true for p in precedingNodes {
                    _ & !(p.staticScope().outNames().maps(noun)) }
       }
@@ -281,8 +284,8 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       out.print("DeepFrozen")
     }
     
-    to audit(objectExpr, witness) :boolean {
-      requireAudit(objectExpr, witness, null)
+    to audit(audition) :boolean {
+      requireAudit(audition, null)
       return true
     }
     

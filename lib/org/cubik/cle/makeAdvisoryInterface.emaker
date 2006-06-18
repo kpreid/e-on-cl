@@ -17,7 +17,7 @@ def makeAdvisoryInterface implements DeepFrozen {
         }
       }
     
-      to audit(objectExpr, witness) :any {
+      to audit(_) :any {
         # XXX allow stamping?
         return false
       }

@@ -501,26 +501,34 @@
       (t
         (join-fq-name ,prefix-var ,qn-var)))))
 
+;; XXX finish renaming "witness" to "audition"
 (defun make-witness (fqn this-expr meta-state)
   (let (witness 
         (approvers '())
         (witness-ok t))
     (setf witness
-      (e-lambda "org.erights.e.elang.evm.AuditWitness" ()
+      (e-lambda "org.erights.e.elang.evm.Audition" ()
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. tw |write| (concatenate 'string
             "<"
             (if witness-ok "" "closed ")
-            "Witness for "
+            "Audition for "
             (aan fqn)
             ">"))
           nil)
+        (:|getObjectExpr| ()
+          "The ObjectExpr defining the object under audit."
+          this-expr)
         (:|ask| (other-auditor)
           "Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor"
           (assert witness-ok ()
             "~A is out of scope" (e-quote witness))
-          (when (e-is-true (e. other-auditor |audit| this-expr witness))
+          (when (if (and (e-is-true (e. other-auditor |__respondsTo| "audit" 2))
+                         (not (e-is-true (e. other-auditor |__respondsTo| "audit" 1))))
+                  ;; use old auditing protocol iff it is the only one supported
+                  (e-is-true (e. other-auditor |audit| this-expr witness))
+                  (e-is-true (e. other-auditor |audit| witness)))
             (push other-auditor approvers))
           nil)
         (:|getSlot| (slot-name)

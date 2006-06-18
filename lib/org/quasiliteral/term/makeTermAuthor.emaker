@@ -13,7 +13,7 @@ def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
 def makeTermAuthor(SelflessStamp) {
   def TermStamp implements DeepFrozen { 
-    to audit(_, _) { return true }
+    to audit(_) { return true }
   }
 
   def printSeps(tw, args) implements DeepFrozen {

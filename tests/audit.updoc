@@ -7,7 +7,7 @@ auditors actually invoked
   # value: 0
   
   ? def approver {
-  >   to audit(objectExpr, witness) :any {
+  >   to audit(audition) :any {
   >     timesCalled += 1
   >     return true
   >   }
@@ -24,8 +24,8 @@ auditors actually invoked
 objectExpr
 
   ? def exprTest {
-  >   to audit(objectExpr, witness) :any {
-  >     print(objectExpr.getDocComment())
+  >   to audit(audition) :any {
+  >     print(audition.getObjectExpr().getDocComment())
   >     return false
   >   }
   > }
@@ -63,7 +63,7 @@ check that an intervening near ref doesn't interfere '
 auditor that returns false
 
   ? def noop {
-  >   to audit(objectExpr, witness) :boolean {
+  >   to audit(_) :boolean {
   >     return false
   >   }
   > }
@@ -75,7 +75,7 @@ auditor that returns false
 auditor that returns funny value
 
   ? def brokenAuditor {
-  >   to audit(objectExpr, witness) :boolean {
+  >   to audit(_) :boolean {
   >     return 43
   >   }
   > }
@@ -115,11 +115,11 @@ e[-named]-lambda can't see audit '
   ? __auditedBy(approver, __loop)
   # value: false
 
-witness.ask
+audition.ask
 
   ? def delegatingAuditor {
-  >   to audit(objectExpr, witness) :boolean {
-  >     witness.ask(approver)
+  >   to audit(audition) :boolean {
+  >     audition.ask(approver)
   >     return false
   >   }
   > }
@@ -134,12 +134,12 @@ witness.ask
   ? __auditedBy(approver, x3)
   # value: true
 
-witness.getSlot
+audition.getSlot
 
   ? def slotCheckingAuditor {
-  >   to audit(objectExpr, witness) :boolean {
+  >   to audit(audition) :boolean {
   >     # NOTE: In a similar auditor attempting to actually prove security properties, we would check if x is a true FinalSlot or itself DeepFrozen.
-  >     if (witness.getSlot("x").getValue() == 2) {
+  >     if (audition.getSlot("x").getValue() == 2) {
   >       return true
   >     } else {
   >       throw("Bad!")
@@ -155,43 +155,45 @@ witness.getSlot
   # value: <x5>
 
 
---- check that auditor can't be asked after the object is constructed '
+--- check that audition can't be asked after the object is constructed '
 
-  ? def capturedWitness
+  ? def capturedAudition
   # value: <Resolver>
   
   ? def captureAuditor {
-  >   to audit(_, bind capturedWitness) :any {
-  >     print(capturedWitness)
+  >   to audit(bind capturedAudition) :any {
+  >     print(capturedAudition)
   >     return true
   >   }
   > }
   # value: <captureAuditor>
 
-  ? capturedWitness
+  ? capturedAudition
   # value: <Promise>
 
   ? def exampleObject implements captureAuditor { }
-  # stdout: <Witness for a __main$exampleObject__C>
+  # stdout: <Audition for a __main$exampleObject__C>
   
   # value: <exampleObject>
   
-  ? capturedWitness
-  # value: <closed Witness for a __main$exampleObject__C>
+  ? capturedAudition
+  # value: <closed Audition for a __main$exampleObject__C>
 
   ? __auditedBy(approver, exampleObject)
   # value: false
   
-  ? capturedWitness.ask(approver)
-  # problem: <closed Witness for a __main$exampleObject__C> is out of scope
+  ? capturedAudition.ask(approver)
+  # problem: <closed Audition for a __main$exampleObject__C> is out of scope
   
   ? __auditedBy(approver, exampleObject)
   # value: false
   
  not actually related, but using a handy witness object
  
-  ? help(capturedWitness)
-  # value: interface "org.erights.e.elang.evm.AuditWitness" {
+  ? help(capturedAudition)
+  # value: interface "org.erights.e.elang.evm.Audition" {
+  #            /** The ObjectExpr defining the object under audit. */
+  #            to getObjectExpr()
   #            /** Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor */
   #            to ask(::"other-auditor")
   #            /** Returns the named slot in the audited object's lexical scope.
@@ -199,6 +201,50 @@ witness.getSlot
   #            XXX This is an excessively large authority and will probably be replaced. */
   #            to getSlot(::"slot-name")
   #        }
+
+--- Old auditing protocol
+
+The original auditing protocol consisted of (objectExpr, witness), where a Witness is what is now called an Audition. The problem with it is that the auditor cannot know that the supplied witness matches the objectExpr, so if an auditor checks the objectExpr and then does witness.ask(SomeRubberStamp), it could be fooled into approving an object it should not.
+
+This could be avoided by each auditor by doing
+  to audit(_, witness :EWitness) {
+    witness.ask(def realAuditor {
+      to audit(expr, witness) {
+        ...
+      }
+    })
+  }
+but that would be silly.
+
+  ? def oldAuditor {
+  >   to audit(objectExpr, witness) :any {
+  >     return objectExpr.getQualifiedName() == "__main$oldAuditSample__C"
+  >   }
+  > }
+  # value: <oldAuditor>
+  
+  ? def oldAuditSample implements oldAuditor {
+  > }
+  # value: <oldAuditSample>
+
+  ? __auditedBy(oldAuditor, oldAuditSample)
+  # value: true
+
+  ? __auditedBy(oldAuditor, def oldFailure implements oldAuditor {})
+  # value: false
+  
+  ? def mixedAuditor {
+  >   to audit(objectExpr, witness) :any {
+  >     return false
+  >   }
+  >   to audit(audition) :any {
+  >     return true
+  >   }
+  > }
+  # value: <mixedAuditor>
+  
+  ? __auditedBy(mixedAuditor, def priorityTest implements mixedAuditor {})
+  # value: true
 
 xxx specific test for objectExpr being actually the expression of the object under audit / what transformation stage (if any) it's at '
 xxx auditors must be deep frozen?

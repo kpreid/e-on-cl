@@ -19,7 +19,7 @@ def makeBrandAuthor { # not DeepFrozen, for dependencies
         # Would be interface {} but that needs this via DeepFrozen
         /** Only SealedBoxes of this Brand */
         def BoxStamp {
-          to audit(_, _) :boolean { return true }
+          to audit(_) :boolean { return true }
         }
         
         def BoxGuard {

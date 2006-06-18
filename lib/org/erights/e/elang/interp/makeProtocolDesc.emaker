@@ -42,7 +42,7 @@ def makeProtocolDesc implements DeepFrozen {
         }
       }
     
-      to audit(objectExpr, witness) {
+      to audit(_) {
         return true
       }
     
@@ -123,7 +123,7 @@ def makeProtocolDesc implements DeepFrozen {
       }
       
       /** Rubber-stamping auditor - accepts anything. */
-      to audit(_, _) { return true }
+      to audit(_) { return true }
     }
 
     return [guard, stamp]

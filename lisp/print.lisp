@@ -17,8 +17,8 @@
 (defglobal +text-writer-stamp+ (e-lambda
     "org.erights.e.elib.print.TextWriterStamp"
     (:stamped +deep-frozen-stamp+)
-  (:|audit| (object-expr witness)
-    (declare (ignore object-expr witness))
+  (:|audit| (audition)
+    (declare (ignore audition))
     +e-true+)))
 
 (defglobal +the-text-writer-guard+ (e-lambda

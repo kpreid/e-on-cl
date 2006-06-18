@@ -1146,9 +1146,8 @@ While this is a process-wide object, its stamps should not be taken as significa
   (audited-by-magic-verb (auditor)
     ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
     (eql auditor +deep-frozen-stamp+))
-  (:|audit| (object-expr witness)
-    ; XXX audit/2 is an E-language-dependent interface, but we must implement it to allow E code to employ these stamps. Should we then define a more general interface? 'audit(language, expr, witness)'? Same questions apply to other primitive stamps.
-    (declare (ignore object-expr witness))
+  (:|audit| (audition)
+    (declare (ignore audition))
     +e-true+)))
 
 (defglobal +selfless-stamp+ (e-lambda
@@ -1173,8 +1172,8 @@ While this is a process-wide object, its stamps should not be taken as significa
       ((eql (ref-shorten auditor) +deep-frozen-stamp+)
         ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
         t)))
-  (:|audit| (object-expr witness)
-    (declare (ignore object-expr witness))
+  (:|audit| (audition)
+    (declare (ignore audition))
     +e-true+)))
 
 ; --- utilities referenced below ---

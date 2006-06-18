@@ -305,7 +305,7 @@ ObjectExpr
   # value: 13
   
  Scope of 'implements' includes the object, but not after it
-  ? { def x := 1; { def thing implements (def x {to audit(_,_) :any {return true}}) { to run() :any {x} }; [x, thing()] }}
+  ? { def x := 1; { def thing implements (def x {to audit(_) :any {return true}}) { to run() :any {x} }; [x, thing()] }}
   # value: [1, <x>]
   
 Matcher

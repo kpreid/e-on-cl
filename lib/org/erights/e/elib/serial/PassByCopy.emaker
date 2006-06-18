@@ -9,7 +9,7 @@ def PassByCopy0 {
     out.print("PassByCopy")
   }
   
-  to audit(objectExpr, witness) :boolean {
+  to audit(_) :boolean {
     throw("PassByCopy auditing not implemented")
   }
   
