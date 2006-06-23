@@ -103,6 +103,19 @@
     (e.elang.compiler.seq::sequence-expr expr '* 'return-value)
     'return-value))
 
+(defglobal +the-evaluator+ (e-lambda "$evaluator" (:stamped +deep-frozen-stamp+)
+  ; XXX eval, evalToSingleton, matchBind...
+  (:|getKernelNodes| ()
+    (let ((map (e. +the-make-const-map+ |fromIteratable|
+                 (e-lambda "$kernelNodesIterator" () (:|iterate| (f)
+                   (do-symbols (symbol :e.kernel)
+                     (block nil
+                       (e. f |run| (symbol-name symbol) (or (get symbol 'static-maker)
+                                                         (return)))))
+                   nil))
+                 +e-true+)))
+      (e. map |sortKeys|)))))
+
 ;;; --- Cached compilation ---
 
 (defvar *efasl-program*)

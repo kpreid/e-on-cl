@@ -35,6 +35,13 @@ XXX this ordering matches the Java-E implementation, but is surprising
 ? __makeMap.asType() == Map
 # value: true
 
+sortKeys
+
+  ? ["a" => 1, "" => 2, "aardvark" => 3, "aardwolf" => 4, "aa" => 5].sortKeys()
+  # value: ["" => 2, "a" => 1, "aa" => 5, "aardvark" => 3, "aardwolf" => 4]
+
+XXX sortKeys/2, sortValues
+
 or/3
 
   XXX this error should be caught and rewritten to be helpful in 'or'

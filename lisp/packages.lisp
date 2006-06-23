@@ -120,7 +120,7 @@
     :with-result-promise
     
     :def-vtable
-    :e-lambda :efun
+    :e-lambda :efun :e-lambda-type-desc
     :miranda
     :message-pairs-to-map-including-miranda-messages
     :or-miranda-message-descs

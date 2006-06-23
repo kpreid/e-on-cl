@@ -733,6 +733,13 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                    finally (intern free :e.elib.vtable-methods))))
         `(named-lambda ,name-sym ,@body))))
 
+  (defun symbol-to-param-desc (symbol)
+    (make-instance 'param-desc :opt-name
+      (let ((name (symbol-name symbol)))
+        (if (notany #'lower-case-p name)
+          (string-downcase name)
+          name))))
+
   (defun lambda-list-to-param-desc-vector (list arity prefix-arity
       &aux (end (or (position '&aux list) (length list))))
     (unless (= end (+ arity prefix-arity))
@@ -744,11 +751,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
         (when (member sym lambda-list-keywords)
           (error "constructing param-desc vector from lambda list ~S with keyword ~s not possible" list sym))
       collect 
-        (make-instance 'param-desc :opt-name
-          (with-standard-io-syntax
-            (let ((*print-case* :downcase)
-                  (*package* (or (symbol-package sym) (find-package :cl))))
-              (write-to-string sym))))) 'vector))
+        (symbol-to-param-desc sym)) 'vector))
                             
   (defun smethod-message-desc-pair (smethod &rest keys &key (prefix-arity 0) &allow-other-keys
       &aux (mverb (smethod-mverb smethod prefix-arity)))
@@ -804,40 +807,42 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       (declare (ignorable ,stamps-sym)) ;; will be ignored if there is an explicit audited-by-magic-verb method
       (nest-fq-name (,fqn)
         (labels ((,self-func (,mverb-sym &rest ,args-sym)
-          (case ,mverb-sym
-            ,@(loop for smethod in smethods
-                    collect (smethod-case-entry smethod args-sym '() :type-name fqn))
-            ,@(nl-miranda-case-maybe :|__printOn/1| smethods `(destructuring-bind (tw) ,args-sym
-              (e-coercef tw +the-text-writer-guard+)
-              (e. tw |print| ',(format nil "<~A>" (simplify-fq-name fqn)))
-              nil))
-            ,@(nl-miranda-case-maybe :|__getAllegedType/0| smethods `(destructuring-bind () ,args-sym
-              (make-instance 'type-desc
-                :doc-comment ',documentation
-                :fq-name ',fqn
-                :supers #()
-                :auditors #()
-                :message-types-v
-                  (or-miranda-message-descs
-                    ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) smethods)))))
-            
-            ,@(nl-miranda-case-maybe :|__respondsTo/2| smethods `(destructuring-bind (verb arity) ,args-sym
-              (e-coercef verb 'string)
-              (e-coercef arity '(integer 0))
-              (as-e-boolean (or
-                (member (e-util:mangle-verb verb arity) 
-                        ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
-                                  smethods))
-                (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
-            ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
-              (not (not (find auditor ,stamps-sym :test #'samep)))))
-            (otherwise 
-              (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
-                ,(let ((fallthrough
-                        `(no-such-method ,self-expr ,mverb-sym ,args-sym)))
-                  (if opt-otherwise-body
-                    (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
-                    fallthrough))))))))
+          (flet ((e-lambda-type-desc () ; deliberately accessible
+                   (make-instance 'type-desc
+                     :doc-comment ',documentation
+                     :fq-name ',fqn
+                     :supers #()
+                     :auditors #()
+                     :message-types-v
+                       (or-miranda-message-descs
+                         ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) smethods)))))
+            (case ,mverb-sym
+              ,@(loop for smethod in smethods
+                      collect (smethod-case-entry smethod args-sym '() :type-name fqn))
+              ,@(nl-miranda-case-maybe :|__printOn/1| smethods `(destructuring-bind (tw) ,args-sym
+                (e-coercef tw +the-text-writer-guard+)
+                (e. tw |print| ',(format nil "<~A>" (simplify-fq-name fqn)))
+                nil))
+              ,@(nl-miranda-case-maybe :|__getAllegedType/0| smethods `(destructuring-bind () ,args-sym
+                (e-lambda-type-desc)))
+              
+              ,@(nl-miranda-case-maybe :|__respondsTo/2| smethods `(destructuring-bind (verb arity) ,args-sym
+                (e-coercef verb 'string)
+                (e-coercef arity '(integer 0))
+                (as-e-boolean (or
+                  (member (e-util:mangle-verb verb arity) 
+                          ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
+                                    smethods))
+                  (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
+              ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
+                (not (not (find auditor ,stamps-sym :test #'samep)))))
+              (otherwise 
+                (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
+                  ,(let ((fallthrough
+                          `(no-such-method ,self-expr ,mverb-sym ,args-sym)))
+                    (if opt-otherwise-body
+                      (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
+                      fallthrough)))))))))
           ,self-expr))))
           
   ) ; end eval-when

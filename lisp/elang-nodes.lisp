@@ -15,16 +15,41 @@
 (defgeneric node-class-element-names (node-class))
 
 ;; XXX this macro used to be used on its own but is now only used by define-node-class - review and cleanup
-(defmacro %def-node-maker (class-sym subnode-flags param-types rest-p
+(defmacro %def-node-maker (class-sym subnode-flags param-names param-types rest-p
     &aux (span-sym (gensym "SPAN"))
          (jlayout-sym (gensym "SCOPE-JLAYOUT"))
-         (param-syms (loop repeat (length param-types) collect (gensym))))
+         (param-syms (mapcar (lambda (x) (make-symbol (string x))) param-names)))
   `(setf 
     (get ',class-sym 'static-maker)
     (e-lambda 
         ,(concatenate 'string "org.erights.e.elang.evm.make"
                               (symbol-name class-sym))
         ()
+      (:|__getAllegedType| ()
+        ; XXX figure out how to write this code better; withFoo would be an improvement, to start with
+        (let ((base (e-lambda-type-desc)))
+          (e. +the-make-type-desc+ |run|
+            (e. base |getOptFQName|)
+            (e. base |getDocComment|)
+            (e. base |getSupers|)
+            (e. base |getAuditors|)
+            (map 'vector (lambda (md)
+                           (if (not (samep (e. md |getVerb|) "run"))
+                             md
+                             (e. +the-make-message-desc+ |run|
+                               (e. md |getDocComment|)
+                               (e. md |getVerb|)
+                               (coerce
+                                 (loop for pd across (e-coerce (e. md |getParams|) 'vector)
+                                       for i from -1
+                                       collect
+                                   (e. +the-make-param-desc+ |run|
+                                     (e. pd |getOptName|)
+                                     (when (<= 0 i ,(1- (length param-types)))
+                                       (type-specifier-to-guard (elt ',param-types i)))))
+                                 'vector)
+                               (e. md |getOptResultGuard|))))
+                         (e-coerce (e. (e. base |getMessageTypes|) |getValues|) 'vector)))))
       (:|asType| () 
         (type-specifier-to-guard ',class-sym))
       (:|getParameterSubnodeFlags| ()
@@ -103,6 +128,7 @@
       
       (%def-node-maker ,class-name
         ,subnode-flags
+        ,property-names
         ,dnm-types
         ,rest-slot)
       

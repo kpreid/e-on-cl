@@ -424,6 +424,10 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           for value across (ref-shorten (e. map |getValues|))
           do (format stream "~A~W => ~W" sep key value))))
 
+(defun comparer-adapter ()
+  (let ((comparer (e. (vat-safe-scope *vat*) |get| "__comparer")))
+    (lambda (a b) (e-is-true (e. comparer |lessThan| a b)))))
+
 (def-vtable const-map
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
@@ -486,6 +490,16 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             nil))
           +e-true+))
       map))
+
+  (:|sortKeys| (map)
+    (e. +the-make-const-map+ |fromIteratable|
+      (e-lambda "org.cubik.cle.prim.sortKeysIterator" () (:|iterate| (f)
+        (loop for key across (stable-sort (copy-seq (e-coerce (e. map |getKeys|) 'sequence))
+                                          (comparer-adapter))
+              do
+          (e. f |run| key (e. map |get| key)))
+        nil))
+      +e-true+))
 
   (:|and| (map mask)
     (e-coercef mask +the-any-map-guard+)

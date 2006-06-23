@@ -293,6 +293,7 @@
                       (lambda () (selfless-authorize fqn)))))
             +selfless-maker-fqns+)))
 
+;; XXX consider rewriting this in terms of Evaluator#getKernelNodes?
 (defglobal +vm-node-maker-importer+
   (let* ((prefixes '("org.erights.e.elang.evm.make"
                      "org.erights.e.elang.evm.")))
@@ -610,7 +611,8 @@
           ("&vow"        ,(lazy-import "org.erights.e.elang.interp.vow"))
           ("&rcvr"       ,(lazy-import "org.erights.e.elang.interp.rcvr"))
           
-          ; --- E-syntax ---
+          ; --- E language ---
+          ("__eval" ,e.elang.compiler::+the-evaluator+) ; XXX fix package
           ("&e__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.makeEParser"))
           ("&epatt__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.epatt__quasiParser"))
           
