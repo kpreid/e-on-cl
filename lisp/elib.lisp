@@ -733,12 +733,14 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                    finally (intern free :e.elib.vtable-methods))))
         `(named-lambda ,name-sym ,@body))))
 
+  ;; XXX move this to e.util
+  (defun guess-lowercase-string (string)
+    (if (notany #'lower-case-p string)
+      (string-downcase string)
+      string))
+
   (defun symbol-to-param-desc (symbol)
-    (make-instance 'param-desc :opt-name
-      (let ((name (symbol-name symbol)))
-        (if (notany #'lower-case-p name)
-          (string-downcase name)
-          name))))
+    (make-instance 'param-desc :opt-name (guess-lowercase-string (symbol-name symbol))))
 
   (defun lambda-list-to-param-desc-vector (list arity prefix-arity
       &aux (end (or (position '&aux list) (length list))))

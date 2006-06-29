@@ -334,8 +334,8 @@
 (defmethod cl-type-fq-name ((type-sym t))
   (with-standard-io-syntax
     (format nil "org.cubik.cle.native.~A.~A" 
-      (string-downcase (package-name (symbol-package type-sym)))
-      (string-downcase (symbol-name type-sym)))))
+      (guess-lowercase-string (package-name (symbol-package type-sym)))
+      (guess-lowercase-string (symbol-name type-sym)))))
 
 (defmethod cl-type-parameters ((type-sym t) parameters)
   (if parameters

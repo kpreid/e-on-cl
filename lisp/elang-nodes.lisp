@@ -178,10 +178,8 @@
                 :type (or null source-span)
                 :initarg :source-span)))
 
-(define-node-class |EExpr|   (|ENode|)
-  ())
-(define-node-class |Pattern| (|ENode|)
-  ())
+(defclass |EExpr| (|ENode|) ())
+(defclass |Pattern| (|ENode|) ())
 
 (define-node-class |AssignExpr|      (|EExpr|)
   ((:|noun|   t |EExpr|)
@@ -278,7 +276,7 @@
   ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 
-(define-node-class |QuasiNode| (|ENode|)
+(defclass |QuasiNode| (|ENode|)
   ; XXX allow inheritance of slot layouts and thus make all quasi-nodes share one definition
   ())
 
@@ -287,9 +285,9 @@
 (define-node-class |QuasiPatternNode| (|QuasiNode|)
   ((:|index| nil (integer 0))))
 
-(define-node-class |QuasiExpr| (|EExpr| |QuasiNode|)
+(defclass |QuasiExpr| (|EExpr| |QuasiNode|)
   ())
-(define-node-class |QuasiPatt| (|Pattern| |QuasiNode|)
+(defclass |QuasiPatt| (|Pattern| |QuasiNode|)
   ())
 
 (define-node-class |QuasiLiteralExpr| (|QuasiLiteralNode| |QuasiExpr|)
