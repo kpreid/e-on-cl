@@ -612,6 +612,7 @@
           ("&rcvr"       ,(lazy-import "org.erights.e.elang.interp.rcvr"))
           
           ; --- E language ---
+          ("EAudition" ,e.elang.compiler::+e-audition-guard+)
           ("__eval" ,e.elang.compiler::+the-evaluator+) ; XXX fix package
           ("&e__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.makeEParser"))
           ("&epatt__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.epatt__quasiParser"))

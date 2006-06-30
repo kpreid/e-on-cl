@@ -154,6 +154,33 @@ audition.getSlot
   ? {def x := 2; def x5 implements slotCheckingAuditor {}}
   # value: <x5>
 
+--- Audition guard, and usage example
+
+  ? def gcStamp { to audit(_) :boolean { return true } }
+  > def gcAuditor {
+  >   to audit(audition :EAudition) :boolean {
+  >     if (audition.getObjectExpr().getQualifiedName() == "__main$gcPass__C") {
+  >       audition.ask(gcStamp)
+  >     }
+  >     return false
+  >   }
+  > }
+  # value: <gcAuditor>
+  
+  ? __auditedBy(gcStamp, def gcPass implements gcAuditor {})
+  # value: true
+
+  ? __auditedBy(gcStamp, def gcFail implements gcAuditor {})
+  # value: false
+  
+  ? gcAuditor.audit(def gcFalseAudition {
+  >   to getObjectExpr() :any { return e`def "__main$$gcPass__C" {}` }
+  >   to ask(gcStolenStamp) :void {
+  >     def gcFalseApproved implements gcStolenStamp {}
+  >     require(!__auditedBy(gcStamp, gcFalseApproved), "shouldn't happen")
+  >   }
+  > })
+  # problem: <gcFalseAudition> is not an E Audition
 
 --- check that audition can't be asked after the object is constructed '
 

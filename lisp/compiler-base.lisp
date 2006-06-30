@@ -501,13 +501,30 @@
       (t
         (join-fq-name ,prefix-var ,qn-var)))))
 
+(defglobal +e-audition-stamp+ (e-lambda 
+    "$eAuditionStamp" 
+    (:stamped +deep-frozen-stamp+)
+  (:|audit| (audition)
+    (declare (ignore audition))
+    +e-true+)))
+
+(defglobal +e-audition-guard+ (e-lambda 
+    "$EAudition"
+    (:stamped +deep-frozen-stamp+)
+  (:|coerce/2| (e.elib::standard-coerce
+                 (lambda (specimen) (approvedp +e-audition-stamp+ specimen))
+                 (lambda () +e-audition-guard+)
+                 (lambda (specimen) (format nil "~A is not an E Audition" (e-quote specimen)))
+                 :test-shortened nil))))
+
 ;; XXX finish renaming "witness" to "audition"
 (defun make-witness (fqn this-expr meta-state)
   (let (witness 
         (approvers '())
         (witness-ok t))
     (setf witness
-      (e-lambda "org.erights.e.elang.evm.Audition" ()
+      (e-lambda "org.erights.e.elang.evm.Audition" 
+          (:stamped +e-audition-stamp+)
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. tw |write| (concatenate 'string
