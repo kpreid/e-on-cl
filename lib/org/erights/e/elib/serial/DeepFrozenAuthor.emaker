@@ -98,9 +98,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     } else {
       def sofarther := sofar.with(specimenKey, null)
       
-      if (__auditedBy(DeepFrozen0, specimen) |
-          __auditedBy(OptionallyDeepFrozen, specimen) |
-          __auditedBy(DeepFrozenStamp, specimen)) {
+      if (__auditedBy(DeepFrozenStamp, specimen)) {
         # atomic DeepFrozenness
         rtrace("--rDF atomic")
         return
@@ -190,11 +188,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
 
   OptionallyDeepFrozen__Resolver.resolve(
   /** Acts as the DeepFrozen auditor, but will not throw if the object is not acceptable. */
-  def "%OptionallyDeepFrozen" implements DeepFrozenStamp {
-    to audit(audition) {
+  def "$OptionallyDeepFrozen" implements DeepFrozenStamp {
+    to audit(audition :EAudition) {
       escape fail {
         requireAudit(audition, fail)
-        return true
+        audition.ask(DeepFrozenStamp)
       }
       return false
     }
@@ -284,9 +282,10 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       out.print("DeepFrozen")
     }
     
-    to audit(audition) :boolean {
+    to audit(audition :EAudition) :boolean {
       requireAudit(audition, null)
-      return true
+      audition.ask(DeepFrozenStamp)
+      return false
     }
     
     to isDeepFrozen(specimen) :boolean {

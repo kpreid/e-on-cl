@@ -401,7 +401,7 @@ Plumbing
   ? __auditedBy(auditor, x)
   # value: true
   
-  ? __auditedBy(DeepFrozen, x)
+  ? __auditedBy(DeepFrozenStamp, x)
   # value: false
   
   Plumbing expressions can't have super '
