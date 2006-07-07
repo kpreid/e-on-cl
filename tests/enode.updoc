@@ -654,10 +654,6 @@ SlotPattern
   ? e`&any`.staticScope()
   # value: <[] := ["any"] =~ [] + var []>
   
-  cdr
-  ? epatt`[a, b] + c`.staticScope()
-  # value: <[] := [] =~ ["c", "b", "a"] + var []>
-  
   final
   ? epatt`a`.staticScope()
   # value: <[] := [] =~ ["a"] + var []>
@@ -897,20 +893,6 @@ evalToPair
   #             slotNoun
   #         
   
-  ? epatt`[car] + cdr`.welcome(makeVisitor(0))
-  # stdout: CdrPattern epatt`[car] + cdr`...
-  #           ListPattern epatt`[car]`...
-  #             _list null...
-  #               FinalPattern epatt`car`...
-  #                 NounExpr e`car`...
-  #                   car
-  #                 null
-  #           FinalPattern epatt`cdr`...
-  #             NounExpr e`cdr`...
-  #               cdr
-  #             null
-  #         
-  
   ? epatt`_`.welcome(makeVisitor(0))
   # stdout: IgnorePattern epatt`_`...
   #         
@@ -985,8 +967,6 @@ evalToPair
   
   ? (def listPatt := <vm:ListPattern>(null, [simplest], null)).getOptPrincipalNoun()
 
-  ? <vm:CdrPattern>(null, listPatt, listPatt, null).getOptPrincipalNoun()
-  
   ? <vm:IgnorePattern>(null, null).getOptPrincipalNoun()
 
 

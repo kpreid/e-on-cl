@@ -1,0 +1,70 @@
+# Copyright 2005 Mark S. Miller under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# 2006-07-06 Modified by Kevin Reid:
+#   DeepFrozen
+#   Use a custom exception type to avoid invoking simple__quasiParser too early
+
+pragma.enable("easy-return")
+pragma.enable("trinary-define")
+pragma.enable("function-implements")
+
+def EList := <import:org.erights.e.elib.tables.type.ConstList> # XXX variously wrong
+
+def makeException := <import:org.cubik.cle.prim.makeException>
+def ltsTypes := [meta.context().getFQNPrefix() + "ListTooShort"]
+def ltsPrinter implements DeepFrozen {
+  to run(tw :TextWriter, e ? (e._getProperties() =~ [=> specimen, => size, => expectedSize])) {  
+    tw.write("a ")
+    tw.quote(size)
+    tw.write(" size list doesn't match a >= ")
+    tw.quote(expectedSize)
+    tw.write(" size list pattern")
+  }
+}
+def makeListTooShort(specimen, size, expectedSize) implements DeepFrozen {
+  return makeException(ltsTypes, [=> specimen, => size, => expectedSize], ltsPrinter)
+}
+
+/**
+ * Defines the builtin '__splitList' via function template.
+ * <p>
+ * This is used to expand the pattern '[p0, ..., pn_1] + r' to
+ * 'via (__splitList(n)) =~ [p0, ..., pn_1, r]'.
+ *
+ * @author Mark S. Miller
+ */
+def splitList(cut :int) :any implements DeepFrozen {
+    def listSplitter(specimen, optEjector) :any implements DeepFrozen {
+        def list :EList := (specimen, optEjector)
+        def llen := list.size()
+        if (llen < cut) {
+            throw.eject(optEjector, makeListTooShort(specimen, llen, cut))
+        }
+        return list(0,cut).with(list(cut,llen))
+    }
+    return listSplitter
+}
+
+# The following elegant example is from Kevin Reid
+
+? pragma.enable("trinary-define")
+
+? def Termish {
+>     to coerce(specimen, optEjector) :any {
+>         def [tag :String] + elements :List[Termish] := (specimen, optEjector)
+>         return [tag] + elements
+>     }
+> }
+
+? var x :Termish := ["foo", ["bar"]]
+# value: ["foo", ["bar"]]
+
+? x
+# value: ["foo", ["bar"]]
+
+? x := "foo"
+# problem: <ClassCastException: Character doesn't coerce to a String
+
+? x := []
+# problem: a 0 size list doesn't match a >= 1 size list pattern

@@ -251,9 +251,6 @@
   ((:|optMethods| t (or null (e-list |EMethodoid|)))
    (:|matchers| t (e-list |EMatcher|))))
                                
-(define-node-class |CdrPattern|      (|Pattern|)
-  ((:|listPatt| t |ListPattern|) 
-   (:|restPatt| t |Pattern|)))
 (define-node-class |IgnorePattern|   (|Pattern|)
   ())
 (define-node-class |ListPattern|     (|Pattern|)
@@ -806,9 +803,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |SlotExpr|
   (! (e. builder |scopeRead| (:get :|noun|))))
 
-
-(def-scope-rule |CdrPattern|
-  (seq :|listPatt| :|restPatt|))
 
 (def-scope-rule |FinalPattern|
   (seq :|optGuardExpr|

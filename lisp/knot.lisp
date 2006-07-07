@@ -640,6 +640,7 @@
           ("&__comparer"     ,(lazy-import "org.erights.e.elang.interp.comparer"))
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
           ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.interp.booleanFlow"))
+          ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
           ("__validateFor"      ,(e-lambda "$__validateFor"
               (:stamped +deep-frozen-stamp+)
             (:|run| (flag)

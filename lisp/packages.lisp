@@ -329,7 +329,6 @@
     :|AssignExpr|
     :|CallExpr|
     :|CatchExpr|
-    :|CdrPattern|
     :|DefineExpr|
     :|EExpr|
     :|EMatcher|

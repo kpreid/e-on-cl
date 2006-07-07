@@ -7,6 +7,7 @@
     :|AccumExpr|
     :|AccumPlaceholderExpr|
     :|BinaryExpr|
+    :|CdrPattern|
     :|CoerceExpr|
     :|CompareExpr|
     :|ConditionalExpr|
@@ -1051,6 +1052,15 @@
         |recipient|
         (format nil "match__~A/~A" |verb| (length |args|))))
     (apply #'mn '|ListPattern| |args|)))
+
+(defemacro |CdrPattern| (|Pattern|) ((|listPatt| t |ListPattern|) 
+                                     (|restPatt| t |Pattern|))
+                                    ()
+  (let ((lefts (e. |listPatt| |getSubs|)))
+    (mn '|ViaPattern|
+      (mn '|FunCallExpr| (mn '|NounExpr| "__splitList") (node-quote (length lefts)))
+      (apply #'mn '|ListPattern|
+        (append (coerce lefts 'list) (list |restPatt|))))))
 
 (defemacro |FunCallPattern| (|Pattern|) ((|recipient| t |EExpr|)
                                          (|args| t (e-list |Pattern|)))

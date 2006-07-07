@@ -276,10 +276,13 @@ SlotExpr
   ? e`&a`
   # value: e`&a`
 
-CdrPattern, ListPattern
+ListPattern
 
-  ? epatt`[car, cadr] + cddr`
-  # value: epatt`[car, cadr] + cddr`
+  ? epatt`[a, b]`
+  # value: epatt`[a, b]`
+
+  ? epatt`[]`
+  # value: epatt`[]`
 
 Testing printing of nodes with no specific print code yet:
 

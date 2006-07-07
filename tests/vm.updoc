@@ -818,26 +818,6 @@ ListPattern
   ? listoid =~ [_, _, _]
   # value: true
 
-CdrPattern
-
-  ? [1, 2, 3] =~ [cp_a] + cp_b
-  # value: true
-  
-  ? cp_a
-  # value: 1
-  
-  ? cp_b
-  # value: [2, 3]
-  
-  ? def [_] + _ := []
-  # problem: a 0 size list doesn't match a >= 1 size list pattern
-
-  ? listoid =~ [cp_a, cp_b] + cp_c
-  # value: true
-  
-  ? [cp_a, cp_b, cp_c]
-  # value: [3, 3, [3, 3]]
-
 IgnorePattern
 
   ? 1 =~ _

@@ -390,23 +390,6 @@
 
 ;;; --- Patterns ---
 
-(define-sequence-patt |CdrPattern| (layout specimen ejector-spec list-patt rest-patt
-    &aux (coerced (gensym "CDRLIST"))
-         (head-var (gensym "CDRHEAD"))
-         (rest-var (gensym "CDRREST"))
-         (min-arity (length (node-elements list-patt))))
-  (values
-    (append `((,coerced 
-               (let ((,coerced (e-coerce-native ,specimen 'vector ,(opt-ejector-make-code ejector-spec))))
-                 (if (>= (length ,coerced) ,min-arity)
-                   ,coerced
-                   ,(eject-code ejector-spec `(%make-cdr-pattern-arity-error (length ,coerced) ',min-arity))))))
-            `((,head-var (subseq ,coerced 0 ',min-arity)))
-            (updating-sequence-patt list-patt layout head-var ejector-spec)
-            `((,rest-var (subseq ,coerced ',min-arity)))
-            (updating-sequence-patt rest-patt layout rest-var ejector-spec))
-    layout))
-
 (define-sequence-patt |IgnorePattern| (layout specimen ejector-spec)
   (declare (ignore specimen ejector-spec))
   (values '() layout))

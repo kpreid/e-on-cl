@@ -911,6 +911,30 @@ Call patterns are a form of extensible pattern which is more suitable than quasi
   
 The generated verb includes the arity since there are always exactly two arguments (the specimen and ejector), the arity being otherwise explicit only in the list pattern, which is too late for the matcher to see it.
 
+CdrPattern
+
+  ? tp("[] + a")
+  # value: epatt`via (__splitList.run(0)) [a]`
+
+  ? tp("[a] + b")
+  # value: epatt`via (__splitList.run(1)) [a, b]`
+
+  ? tp("[a, b] + c")
+  # value: epatt`via (__splitList.run(2)) [a, b, c]`
+
+  ? te("[[1, 2, 3] =~ [cp_a] + cp_b, cp_a, cp_b]")
+  # value: [true, 1, [2, 3]]
+    
+  ? te("def [_] + _ := []")
+  # problem: a 0 size list doesn't match a >= 1 size list pattern
+
+  ? te("[def listoid { 
+  >   to __conformTo(_) :any { return [3,3,3,3] } 
+  > } =~ [cp_a, cp_b] + cp_c, cp_a, cp_b, cp_c]")
+  # value: [true, 3, 3, [3, 3]]
+
+XXX now that CdrPattern is nonkernel, merge with TailPattern?
+
 'MapPattern'
   
   ? tp("[\"a\" => b]")
@@ -983,12 +1007,12 @@ The generated verb includes the arity since there are always exactly two argumen
 'TailPattern'
 
   list-pattern variety
-    XXX this test is trivial as long as we're working at the E-syntax layer '
-    ? tp("[a] + b")
-    # value: epatt`[a] + b`
-    
+    XXX this testing doesn't distinguish between TailPattern and CdrPattern '
     ? tp("[] + a")
-    # value: epatt`[] + a`
+    # value: epatt`via (__splitList.run(0)) [a]`
+  
+    ? tp("[a] + b")
+    # value: epatt`via (__splitList.run(1)) [a, b]`
 
   map-pattern variety
     ? tp("[\"a\" => b] | c")

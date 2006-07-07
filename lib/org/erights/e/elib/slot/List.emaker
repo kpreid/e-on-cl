@@ -4,10 +4,12 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
+pragma.enable("anon-lambda")
 
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def ConstList := <type:org.erights.e.elib.tables.ConstList>
 
 def List0 implements EventuallyDeepFrozen {
 
@@ -22,11 +24,8 @@ def List0 implements EventuallyDeepFrozen {
   }
 
   to coerce(specimen, optEjector) {
-    if (specimen =~ [] + list) {
-      return list
-    } else {
-      throw.eject(optEjector, makeCoercionFailure(specimen, List))
-    }
+    return ConstList.coerce(specimen, 
+                            fn _ { throw.eject(optEjector, makeCoercionFailure(specimen, List0)) })
   }
 
   to get(elementGuard) {
