@@ -631,15 +631,15 @@
 
           ; --- utility: used by expansions ---
           ;; XXX these FQNs and scope nouns should be discussed
-          ("&__bind"         ,(lazy-import "org.erights.e.elang.interp.makeViaBinder"))
-          ("&__mapEmpty"     ,(lazy-import "org.erights.e.elang.interp.viaEmptyMap"))
-          ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.interp.makeViaExtractor"))
-          ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.interp.makeViaQuasi"))
-          ("&__matchSame"    ,(lazy-import "org.erights.e.elang.interp.makeViaSame"))
-          ("&__suchThat"    ,(lazy-import "org.erights.e.elang.interp.suchThat"))
-          ("&__comparer"     ,(lazy-import "org.erights.e.elang.interp.comparer"))
-          ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.interp.__makeVerbFacet"))
-          ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.interp.booleanFlow"))
+          ("&__bind"         ,(lazy-import "org.erights.e.elang.expand.makeViaBinder"))
+          ("&__mapEmpty"     ,(lazy-import "org.erights.e.elang.expand.viaEmptyMap"))
+          ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.expand.makeViaExtractor"))
+          ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.expand.makeViaQuasi"))
+          ("&__matchSame"    ,(lazy-import "org.erights.e.elang.expand.makeViaSame"))
+          ("&__suchThat"     ,(lazy-import "org.erights.e.elang.expand.suchThat"))
+          ("&__comparer"     ,(lazy-import "org.erights.e.elang.expand.comparer"))
+          ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.expand.__makeVerbFacet"))
+          ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
           ("__validateFor"      ,(e-lambda "$__validateFor"
               (:stamped +deep-frozen-stamp+)
