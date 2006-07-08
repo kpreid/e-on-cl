@@ -142,9 +142,6 @@ OPERATOR options {testLiterals=true;} :
     |   '*'    BR
     |   '%'    BR
     |   "%%"   BR
-    |   "<<"   BR
-    |   "<="   BR
-    |   "<=>"  BR
     |   '^'    BR
     |   '|'    BR
     |   "||"   BR
@@ -163,13 +160,11 @@ OPERATOR options {testLiterals=true;} :
     |   "%="   BR
     |   "%%="  BR
     |   "**="  BR
-    |   "<<="  BR
     |   "^="   BR
     |   "|="   BR
     |   "&="   BR
 // Other tokens
     |   DOC_COMMENT        {$setType(DOC_COMMENT);}
-    |   "<-"   BR
     |   "->"   BR
     |   "=>"   BR
     |   "=~"   BR
@@ -185,11 +180,23 @@ OPERATOR options {testLiterals=true;} :
                             | ">=" BR {$setType(SR_ASSIGN);}
                             | ) // should have BR, except for terminating a
                                  // URI
-    |   ('<'  URISCHEME ('>' | ':')) =>
+    ;
+
+LT:   ('<'  URISCHEME ('>' | ':')) =>
                       '<'! URISCHEME ( '>'! {$setType(URIGetter);}
                                  | ':' (    (ANYWS)=> BR {$setType(URIStart);}
                                        |   URI '>'!  {$setType(URI);}))
-                |    '<' BR ;
+                |    a:LT2 {$setToken(a);} ;
+
+protected
+LT2 options {testLiterals=true;} :
+        "<"    BR
+    |   "<<"   BR
+    |   "<="   BR
+    |   "<=>"  BR
+    |   "<<="  BR
+    |   "<-"   BR
+;
 
 // Whitespace -- ignored
 WS:         (' '|'\t'|'\f'|ESCWS)+    {$setType(Token.SKIP);} ;
@@ -285,7 +292,7 @@ IDENT       options {testLiterals=true;}
 // the scheme component of a URI literal
 // NOTE: this should not be extended to Unicode; RFC 2396 lists this set specifically.
 protected
-URISCHEME   options {testLiterals=true;}
+URISCHEME   options {testLiterals=false;}
             :    ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'0'..'9'|'+'|'-'|'.')*
             ;
 

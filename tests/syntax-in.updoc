@@ -489,6 +489,30 @@ IntoExpr has precedence immediately above sequences.
 #             NounE. c
 #             null
 
+--- URISchemeExpr ---
+
+? t("<>")
+# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+
+? t("<a>")
+# stdout: URISchemeE. a
+
+case processing
+? t("<A>")
+# stdout: URISchemeE. A
+
+would-be-keywords
+? t("<to>")
+# stdout: URISchemeE. to
+
+erroneous
+? t("<ab cd>")
+# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+? t("<+a>")
+# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+? t("<a!b>")
+# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+
 --- CallPattern, FunCallPattern ---
 
 ? tp("a.b(c)")
