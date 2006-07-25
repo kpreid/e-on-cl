@@ -166,6 +166,7 @@
     
     :|NaN| :|Infinity| :float64 :float32 :e-list
     
+    :+the-thrower+
     :ejector
     :ejector-prethrow
     :eject-or-ethrow

@@ -287,10 +287,10 @@
       (mn '|NounExpr| "ValueGuard")
       "coerce"
       guard
-      (mn '|NullExpr|))
+      (mn '|NounExpr| "throw"))
     "coerce"
     value
-    (mn '|NullExpr|)))
+    (mn '|NounExpr| "throw")))
 
 (defemacro |CompareExpr| (|EExpr|) ((|op| nil string)
                                     (|left| t |EExpr|)

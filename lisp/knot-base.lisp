@@ -325,22 +325,6 @@
     "Call body.run(), which must return a boolean, until it returns false."
     (loop while (e-is-true (e. body |run|))))))
 
-(defglobal +the-thrower+ (e-lambda "org.erights.e.elib.prim.throw"
-    (:stamped +deep-frozen-stamp+)
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "throw")
-    nil)
-  (:|run| (problem)
-    (error (e-problem-to-condition (e-coerce problem 'condition))))
-  (:|eject| (opt-ejector problem)
-    (eject-or-ethrow opt-ejector (e-problem-to-condition problem)))
-  (:|free| (problem)
-    ; XXX there should be a function for this
-    (error (if *compatible-catch-leakage*
-             problem
-             (make-condition 'elib::free-problem :value problem))))))
-
 (defun split-fqn-prefix (fqn)
   ; xxx consider replacing with SPLIT-SEQUENCE
   ; XXX write tests for this particular function

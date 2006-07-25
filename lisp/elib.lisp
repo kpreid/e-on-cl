@@ -1206,7 +1206,10 @@ While this is a process-wide object, its stamps should not be taken as significa
   (if (ref-shorten ejector)
     (let ((r (e. ejector |run| condition)))
       (error "optEjector ~A returned: ~A" (e-quote ejector) (e-quote r)))
-    (error condition)))
+    (progn
+      ;; XXX once we've sufficiently moved to passing 'throw' not 'null', make this an error
+      (warn "gave null ejector to throw ~S ~A" condition condition)
+      (error condition))))
 
 (defun e-quote (o)
   (with-text-writer-to-string (tw)
@@ -1280,7 +1283,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 (declaim (ftype (function (t t &optional t cl-type-guard) t) e-coerce-native))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun e-coerce-native (long-specimen type &optional opt-ejector opt-guard)
+  (defun e-coerce-native (long-specimen type &optional (ejector +the-thrower+) opt-guard)
     (declare (optimize (speed 3) (space 3)))
     (funcall (standard-coerce #'(lambda (specimen) (typep specimen type))
                               #'(lambda () (or opt-guard
@@ -1290,7 +1293,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
                                                      :datum specimen 
                                                      :expected-type type)))
              long-specimen
-             opt-ejector)))
+             ejector)))
 
 
 ; XXX thread-safety: make these all vat-local or remove super arg

@@ -45,10 +45,10 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
           throw(E.toQuote(valueGuard.__getAllegedType().getFQName()) + " " + E.toQuote(valueGuard) + " failed to implement coerce/2")
         }
         
-        /** guard.coerce(x) should be equivalent to guard.coerce(x, null)
+        /** guard.coerce(x) should be equivalent to guard.coerce(x, throw)
           */
         to coerce(specimen) {
-          return valueGuard.coerce(specimen, null)
+          return valueGuard.coerce(specimen, throw)
         }
         
         /** Would coerce(specimen, ...) succeed?

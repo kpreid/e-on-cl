@@ -196,7 +196,7 @@ def makeInStreamShell implements DeepFrozen {
               }
             }
             
-            obtainNow(args, null) # XXX ejector parameter
+            obtainNow(args, throw) # XXX ejector parameter
           }
           match ==LATER { 
             waitersFlex.push([def result, args])

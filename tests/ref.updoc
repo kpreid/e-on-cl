@@ -80,7 +80,7 @@ Ref
   ? Ref.broken("bang")
   # value: <ref broken by problem: bang>
   
-  ? Ref.broken(def _ {to __conformTo(g) :any {return g.coerce("biff", null)}})
+  ? Ref.broken(def _ {to __conformTo(g) :any {return g.coerce("biff", throw)}})
   # value: <ref broken by problem: biff>
   
   ? Ref.broken(null)

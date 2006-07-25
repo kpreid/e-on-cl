@@ -89,9 +89,9 @@ def makeBrandAuthor { # not DeepFrozen, for dependencies
           /** Return the Brand of this sealer/unsealer set. */
           to getBrand() :any { return brand }
           
-          /** .unseal(specimen, null) */
+          /** .unseal(specimen, throw) */
           to unseal(specimen) :any {
-            return unsealer.unseal(specimen, null)
+            return unsealer.unseal(specimen, throw)
           }
           
           # The implementation structure is partially described in the

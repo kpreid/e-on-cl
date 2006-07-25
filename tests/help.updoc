@@ -190,10 +190,10 @@ __getAllegedType details, def-vtable-based
   ? def t := 43.__getAllegedType()
   # value: int
 
-  ? t.coerce(2389523789523745902364890237489, null)
+  ? t.coerce(2389523789523745902364890237489, throw)
   # value: 2389523789523745902364890237489
   
-  ? t.coerce(true, null)
+  ? t.coerce(true, throw)
   # problem: the boolean true doesn't coerce to an int
   
   ? t.getFQName()
@@ -279,7 +279,7 @@ __getAllegedType, e-lambda
   ? def t := EIO.__getPropertySlot("ALL").__getAllegedType()
   # value: DefaultPropertySlot
 
-  ? t.coerce(EIO.__getPropertySlot("NOW"), null)
+  ? t.coerce(EIO.__getPropertySlot("NOW"), throw)
   # problem: no such method: org.erights.e.elib.base.TypeDesc#coerce/2
   
   ? t.getFQName()
@@ -344,7 +344,7 @@ __getAllegedType, E object
   ? def t := typeSample.__getAllegedType()
   # value: TypeSample
 
-  ? t.coerce(typeSample, null)
+  ? t.coerce(typeSample, throw)
   # problem: no such method: org.erights.e.elib.base.TypeDesc#coerce/2
   
   ? t.getFQName()

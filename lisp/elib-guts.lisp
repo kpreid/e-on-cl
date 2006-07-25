@@ -277,7 +277,24 @@
     (e-coercef other 'e-boolean)
     (if (e-is-true this) (e. other |not|) other)))
 
-; --- Ejector ---
+; --- Throw and Ejector ---
+
+(defglobal +the-thrower+ (e-lambda "org.erights.e.elib.prim.throw"
+    (:stamped +deep-frozen-stamp+)
+  (:|__printOn| (tw)
+    (e-coercef tw +the-text-writer-guard+)
+    (e. tw |print| "throw")
+    nil)
+  (:|run| (problem)
+    (error (e-problem-to-condition (e-coerce problem 'condition))))
+  (:|eject| (opt-ejector problem)
+    (eject-or-ethrow opt-ejector (e-problem-to-condition problem)))
+  (:|free| (problem)
+    ; XXX there should be a function for this
+    ;; XXX this should be removed in accordance with the new sealer-based async exception plan
+    (error (if *compatible-catch-leakage*
+             problem
+             (make-condition 'elib::free-problem :value problem))))))
 
 (defun ejector-prethrow (ejector-spec value)
   "Implements elib:*break-on-ejections*, analogously to cl:*break-on-signals*."

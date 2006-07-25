@@ -339,7 +339,7 @@
                     (updating-sequence-expr opt-result-guard layout guard-var :may-inline (inlinable body)))
                   (updating-sequence-expr body layout result-var :may-inline t))
           (if opt-result-guard
-            `(e. ,guard-var |coerce| ,result-var nil)
+            `(e. ,guard-var |coerce| ,result-var +the-thrower+)
             result-var))))))
 
 (defun seq-matcher-body (layout matcher mverb-var args-var remaining-code)

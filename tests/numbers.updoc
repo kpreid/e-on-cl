@@ -161,7 +161,7 @@ Number formatting
 
 Integer coercion
 
-  ? float64.coerce(1, null)
+  ? float64.coerce(1, throw)
   # value: 1.0
   
   ? 1.__conformTo(any)
@@ -171,7 +171,7 @@ Integer coercion
   # value: 1
 
   Bug: integer's __conformTo would infintely recurse given a typical non-native guard '
-  ? List.coerce(1, null)
+  ? List.coerce(1, throw)
   # problem: the int 1 doesn't coerce to a List
 
 floor, ceil

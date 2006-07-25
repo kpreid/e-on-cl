@@ -139,7 +139,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
 'CoerceExpr'
 
   ? t("a :b")
-  # value: e`ValueGuard.coerce(b, null).coerce(a, null)`
+  # value: e`ValueGuard.coerce(b, throw).coerce(a, throw)`
 
   XXX order of evaluation reversal means we need usage rejection
 

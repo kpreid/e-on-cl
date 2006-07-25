@@ -89,7 +89,7 @@ def IPAuthor implements DeepFrozen {
             def outStream
             
             when (IP.getAddrInfo(hostSpec, serviceSpec, null)) -> done(address) {
-              def socket := fooConnectTcp(address, null)
+              def socket := fooConnectTcp(address, throw)
               
               # this value is semantically arbitrary, but matching the socket's default send buffer is, I hope, good for efficiency
               def maxOutAvailable := socket::sockoptSendBuffer
