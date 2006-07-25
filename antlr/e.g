@@ -155,6 +155,7 @@ tokens {
     EMatcher;
     MethodObject;
     PlumbingObject;
+    OneMethodObject;
     FunctionObject;
     FunctionVerb;
 
@@ -417,7 +418,7 @@ defRightSide:  ( "("! seq ","! ) =>
 
 // minimize the look-ahead for objectTail
 objectPredict:    ("def" objName | keywordPatt)
-                  ("extends" | "match" | (parenParams optGuard)? ("{" | "implements") ) ;
+                  ("extends" | "match" | ("." verb)? (parenParams optGuard)? ("{" | "implements") ) ;
 objectTail:     //(typeParamList)?
                 //optGuard
             extender
@@ -428,9 +429,12 @@ objectTail:     //(typeParamList)?
             |   matcher pocket["plumbing"]!
                 {##=#([PlumbingObject], ##);}
             )
-        |   parenParamList optResultGuard fImplements block getPocket["easy-return"]
-            {##=#([FunctionObject], ##);}
+        |   functionTail {##=#([FunctionObject], ##);}
+        |   "."^ pocket["one-method-object"]! verb 
+            functionTail {##.setType(OneMethodObject);}
     ;
+
+functionTail: parenParamList optResultGuard fImplements block getPocket["easy-return"] ;
 
 extender:    "extends"! br order ;
 oExtends:    extender

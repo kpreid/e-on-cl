@@ -1067,6 +1067,32 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`$<DefrecExpr d, e, null>$`)>
   XXX prettier error
 
+'OneMethodObject'
+
+This currently shares most of the implementation of FunctionExpr, so I'm not testing it much. '
+
+  ? t("pragma.enable(\"one-method-object\"); /** a */ def b.c() :d { e }")
+  # value: e`def b := def "$b__C" {
+  #            
+  #            /** a */
+  #            method c() :d {
+  #                escape __return {
+  #                    e
+  #                }
+  #            }
+  #        }`
+
+  ? t("pragma.enable(\"one-method-object\"); def b.c() :d { e }")
+  # value: e`def b := def "$b__C" {
+  #            
+  #            method c() :d {
+  #                escape __return {
+  #                    e
+  #                }
+  #            }
+  #        }`
+
+
 'ETo'
 
   ? t("def a { to b() :c { d } }")

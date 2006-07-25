@@ -127,7 +127,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (unknown:1)@11: unexpected token: [":=",<161>,line=1,col=11]
+# problem: (unknown:1)@11: unexpected token: [":=",<162>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -382,7 +382,7 @@ Parentheses disable modPow form
 #           NounE. a
 
 ? t("a :b :c")
-# problem: (unknown:1)@6: unexpected token: [":",<170>,line=1,col=6]
+# problem: (unknown:1)@6: unexpected token: [":",<171>,line=1,col=6]
 XXX prettier error
 
 --- ForExpr ---
@@ -489,10 +489,30 @@ IntoExpr has precedence immediately above sequences.
 #             NounE. c
 #             null
 
+--- ObjectExpr ---
+
+one-method-object
+? t("def a.b() :c {}")
+# problem: (unknown:1)@6: The optional "one-method-object" syntax is currently off.
+
+? t("pragma.enable(\"one-method-object\"); def a.b() :c {d}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           OneMethodObject
+#             b
+#             []
+#             NounE. c
+#             []
+#             NounE. d
+#             false
+
 --- URISchemeExpr ---
 
 ? t("<>")
-# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
 
 ? t("<a>")
 # stdout: URISchemeE. a
@@ -507,11 +527,11 @@ would-be-keywords
 
 erroneous
 ? t("<ab cd>")
-# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
 ? t("<+a>")
-# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
 ? t("<a!b>")
-# problem: (unknown:1)@1: unexpected token: ["<",<199>,line=1,col=1]
+# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
 
 --- CallPattern, FunCallPattern ---
 

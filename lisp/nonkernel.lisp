@@ -59,6 +59,7 @@
     :|TailPattern|
     :|FunctionObject|
     :|MethodObject|
+    :|OneMethodObject|
     :|PlumbingObject|
     :|ETo|
     :|MapPatternAssoc|
@@ -778,7 +779,7 @@
                                       ()
   ;; XXX possibly merge NKObjectExpr into this
   (multiple-value-bind (doc tail)
-      (if (typep |tail| '|FunctionObject|)
+      (if (typep |tail| '|OneMethodObject|)
         (values "" (e. |tail| |withFunctionDocumentation| |docComment|))
         (values |docComment| |tail|))
     (destructuring-bind (parent auditors script) 
@@ -1203,7 +1204,23 @@
                                          ()
   (vector |parent| |auditors| (mn '|EScript| |methods| |matchers|)))
 
-(defemacro |FunctionObject| (|ObjectTail|) 
+(defemacro |OneMethodObject| (|ObjectTail|) 
+    ((|verb| nil string)
+     (|patterns| t (e-list |Pattern|))
+     (|optResultGuard| t (or null |EExpr|))
+     (|auditors| t (e-list |EExpr|))
+     (|body| t |EExpr|)
+     (|isEasyReturn| nil e-boolean))
+    (&whole node)
+  (declare (ignore |verb| |patterns| |optResultGuard| |auditors| |body| |isEasyReturn|))
+  (expand-one-method-object node ""))
+
+(def-vtable |OneMethodObject|
+  (:|withFunctionDocumentation| (this doc)
+    (e-coercef doc '(or null string))
+    (expand-one-method-object this doc)))
+
+(defemacro |FunctionObject| (|OneMethodObject|) 
     ((|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
      (|auditors| t (e-list |EExpr|))
@@ -1211,17 +1228,33 @@
      (|isEasyReturn| nil e-boolean))
     (&whole node)
   (declare (ignore |patterns| |optResultGuard| |auditors| |body| |isEasyReturn|))
-  (expand-function-object node ""))
+  (expand-one-method-object node ""))
 
 (def-vtable |FunctionObject|
-  (:|withFunctionDocumentation| (this doc)
-    (e-coercef doc '(or null string))
-    (expand-function-object this doc)))
+  (:|getVerb| (node)
+    (declare (ignore node))
+    "run"))
 
-(defun expand-function-object (node doc)
-  (destructuring-bind
+;; XXX bring together this, convention-uncapitalize, and the __getPropertySlot stuff
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun convention-capitalize (string)
+    (string-upcase string :end (min 1 (length string)))))
+
+(defmacro e-prop-bind ((&rest props) object &body body)
+  "Using conventional property access, retrieve the properties of OBJECT named by the names of the symbols PROPS and bind them to those symbols."
+  (let ((object-temp (gensym "PROPS-FROM")))
+    `(let* ((,object-temp ,object)
+            ,@(mapcar (lambda (p) 
+                        `(,p (e. ,object-temp 
+                                 ,(format nil "get~A" 
+                                    (convention-capitalize (string p))))))
+                      props))
+       ,@body)))
+
+(defun expand-one-method-object (node doc)
+  (e-prop-bind
       (|patterns| |optResultGuard| |auditors| |body| |isEasyReturn|)
-      (node-elements node)
+      node
     (let ((kernel-patterns (e-macroexpand-all |patterns|))
           (kernel-guard (e-macroexpand-all |optResultGuard|))
           (kernel-auditors (e-macroexpand-all |auditors|)))
@@ -1232,7 +1265,7 @@
       (mn '|MethodObject|
         nil
         kernel-auditors
-        (vector (mn '|ETo| doc "run" kernel-patterns kernel-guard |body| |isEasyReturn|))
+        (vector (mn '|ETo| doc (e. node |getVerb|) kernel-patterns kernel-guard |body| |isEasyReturn|))
         #()))))
 
 (defemacro |PlumbingObject| (|ObjectTail|) ((|auditors| t (e-list |EExpr|))
