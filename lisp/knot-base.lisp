@@ -236,16 +236,14 @@
 (defun require-node-fits-scope (node scope ejector)
   (let ((ss (e. node |staticScope|)))
     (e. (e. ss |namesUsed|) |iterate| (efun (k v)
-      (declare (ignore v))
       (unless (e-is-true (e. scope |maps| k))
         ;; XXX message to be revised
-        (ejerror ejector "undefined variable: ~A" k))))
+        (ejerror ejector "undefined variable: ~A~/e.tables:~span/" k (e. v |getOptSpan|)))))
     (e. (e. ss |namesSet|) |iterate| (efun (k v)
-      (declare (ignore v))
       ;; XXX isFinal is possibly too loose a check. review.
       (when (e-is-true (e. (e. scope |getSlot| k) |isFinal|))
         ;; XXX message to be revised
-        (ejerror ejector "~A is not an assignable variable" k))))))
+        (ejerror ejector "~A is not an assignable variable~/e.tables:~span/" k (e. v |getOptSpan|)))))))
 
 ;;; --- structured classless exceptions ---
 

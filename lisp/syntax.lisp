@@ -710,9 +710,8 @@ XXX make precedence values available as constants"
 (defun e-source-to-tree (source &key syntax-ejector pattern quasi-info)
   (let ((location
           (let ((span (e. source |getOptSpan|)))
-            (if span
-              (e. span |getUri|)
-              "unknown"))))
+            (when span (e. span |getUri|)))))
+    ;; XXX should pass source-span spans into the parser
     (antlr-root 
       #-e.syntax::local-parser
         (query-or-die syntax-ejector "antlrParse" location source (as-e-boolean pattern) quasi-info)
@@ -720,7 +719,8 @@ XXX make precedence values available as constants"
         (handler-case
           (antlr-parse location source pattern nil)
           (error (c)
-            (eject-or-ethrow syntax-ejector c))))))
+            (eject-or-ethrow syntax-ejector c)))
+      location)))
 
 (declaim (inline e-coercer))
 (defun e-coercer (type-or-guard)
@@ -759,6 +759,8 @@ XXX make precedence values available as constants"
   (declaim (ftype function antlr-parse))
   (defglobal +ast-get-type+     (jmethod "antlr.collections.AST" "getType"))
   (defglobal +ast-get-text+     (jmethod "antlr.collections.AST" "getText"))
+  (defglobal +ast-get-line+     (jmethod "antlr.collections.AST" "getLine"))
+  (defglobal +ast-get-column+   (jmethod "antlr.collections.AST" "getColumn"))
   (defglobal +ast-first-child+  (jmethod "antlr.collections.AST" "getFirstChild"))
   (defglobal +ast-next-sibling+ (jmethod "antlr.collections.AST" "getNextSibling"))
   (defglobal +token-names+ (jfield-raw #|jfield did an incomplete translation|# "EParser" "_tokenNames"))
@@ -803,46 +805,54 @@ XXX make precedence values available as constants"
         (nodes-to-list (jcall get-ast parser))))))
 
 #-e.syntax::local-parser
-(defmacro ast-node-bind ((tag-var text-var children-var) node-var &body body)
-  `(destructuring-bind ((,tag-var ,text-var) &rest ,children-var) ,node-var
+(defmacro ast-node-bind ((tag-var line-var column-var text-var children-var) node-var &body body)
+  `(destructuring-bind ((,tag-var ,line-var ,column-var ,text-var) &rest ,children-var) ,node-var
      ,@body))
 
 #+e.syntax::local-parser
-(defmacro ast-node-bind ((tag-var text-var children-var) node-var &body body)
+(defmacro ast-node-bind ((tag-var line-var column-var text-var children-var) node-var &body body)
   `(let* ((,tag-var  (intern (jarray-ref +token-names+
                                          (jcall +ast-get-type+ ,node-var))
                              :e.grammar))
+          (,line-var (jcall +ast-get-line+ ,node-var))
+          (,column-var (jcall +ast-get-column+ ,node-var))
           (,text-var (jcall +ast-get-text+ ,node-var))
           (,children-var (nodes-to-list (jcall +ast-first-child+ ,node-var))))
      ,@body))
 
 (defun mn (name &rest elements)
   (make-instance name :elements elements))
+(defun mnp (name span &rest elements)
+  (make-instance name :source-span span :elements elements))
 
 (defun is-legitimate-toplevel-node (node)
   (if (typep node '(or |EExpr| |Pattern|))
     node
     (error "Non-expression/pattern ~S leaked out of antlr builder" node)))
 
-(defun antlr-root (ast-nodes)
-  (let ((enodes (map 'list #'is-legitimate-toplevel-node (map 'vector #'build-antlr-nodes ast-nodes))))
+(defun antlr-root (ast-nodes uri)
+  (let ((enodes (map 'list #'is-legitimate-toplevel-node (map 'vector (lambda (tree) (build-antlr-nodes tree :uri uri)) ast-nodes))))
     (etypecase (length enodes)
       ((integer 1 1)
         (first enodes))
       ((integer 2)  
         (apply #'mn '|SeqExpr| enodes)))))
 
-(defun build-antlr-nodes (ast-node &key path enclosing-doc-comment)
-  (ast-node-bind (tag text in-children) ast-node
+(defun build-antlr-nodes (ast-node &key uri path enclosing-doc-comment)
+  (ast-node-bind (tag line column text in-children) ast-node
     (let* ((next-path (cons ast-node path))
            (out-children 
              (unless (eql tag 'e.grammar::|DocComment|)
-               (mapcar (lambda (c) (build-antlr-nodes c :path next-path))
-                       in-children))))
+               (mapcar (lambda (c) (build-antlr-nodes c :path next-path :uri uri))
+                       in-children)))
+           (span (when (and uri (> line 0))
+                   (e. +the-make-source-span+ |run|
+                     uri +e-true+ line (1- column) line (1- column)))))
      (labels ((make-from-tag (&rest elements)
                 (make-instance (or (find-symbol (symbol-name tag) :e.kernel)
                                    (find-symbol (symbol-name tag) :e.nonkernel))
-                               :elements elements))
+                  :elements elements
+                  :source-span span))
               (pass () (apply #'make-from-tag out-children)))
       (case tag
         ;; -- misc. leaves and 'special' nodes --
@@ -860,7 +870,9 @@ XXX make precedence values available as constants"
           (destructuring-bind (comment-node body) in-children
             (build-antlr-nodes body 
               :path next-path 
+              :uri uri
               :enclosing-doc-comment (build-antlr-nodes comment-node
+                                       :uri uri
                                        :path next-path))))
         ((e.grammar::|INT|) 
           (assert (null out-children))
@@ -911,8 +923,9 @@ XXX make precedence values available as constants"
           (coerce out-children 'vector))
         (e.grammar::|"catch"| 
           (destructuring-bind (pattern body) out-children
-            (mn '|EMatcher| pattern body)))
+            (mnp '|EMatcher| span pattern body)))
         (e.grammar::|Assoc|
+          ;; XXX loses span info
           (list* 'assoc out-children))
         (e.grammar::|Export|
           ;; XXX kpreid expects this to go away by handling MapExpr the same way as MapPattern
@@ -920,21 +933,21 @@ XXX make precedence values available as constants"
         
         ;; -- node type de-confusion --  
         (e.grammar::|UpdateExpr|
-          (mn '|UpdateExpr| 
+          (make-from-tag
             (destructuring-bind (target verboid &rest args) out-children
               (etypecase verboid
-                ((cons (eql update-op)) (mn '|BinaryExpr| (cdr verboid) target (coerce args 'vector)))
-                (string (apply #'mn '|CallExpr| target verboid args))))))
+                ((cons (eql update-op)) (mnp '|BinaryExpr| span (cdr verboid) target (coerce args 'vector)))
+                (string (apply #'mnp '|CallExpr| span target verboid args))))))
         
         ;; -- operator handling --        
         (e.grammar::|PrefixExpr|
           (destructuring-bind (op arg) out-children
             (check-type op (cons (eql op) string))
-            (mn '|PrefixExpr| (cdr op) arg)))
+            (make-from-tag (cdr op) arg)))
         ((e.grammar::|BinaryExpr|)
           (destructuring-bind (left &rest rights) out-children
             ;; GRUMBLE: either .., ..! should be marked as RangeExpr by the parser or CompareExpr should be another kind of BinaryExpr
-            (mn '|BinaryExpr| text left (coerce rights 'vector))))
+            (make-from-tag text left (coerce rights 'vector))))
 
         ;; -- text introduction --
         ((e.grammar::|CompareExpr| 
@@ -949,12 +962,12 @@ XXX make precedence values available as constants"
         ;; -- negated-operator introduction --
         ((e.grammar::|SameExpr|)
           (destructuring-bind (left right) out-children
-            (mn '|SameExpr| left right (ecase (find-symbol text :keyword)
+            (make-from-tag left right (ecase (find-symbol text :keyword)
                                          (:!= +e-true+)
                                          (:== +e-false+)))))
         ((e.grammar::|SamePattern|)
           (destructuring-bind (value) out-children
-            (mn '|SamePattern| value (ecase (find-symbol text :keyword)
+            (make-from-tag value (ecase (find-symbol text :keyword)
                                        (:!= +e-true+)
                                        (:== +e-false+)))))
 
@@ -962,14 +975,14 @@ XXX make precedence values available as constants"
         (e.grammar::|SeqExpr|
           ;; XXX this is more like an expansion issue
           (if (null out-children)
-            (mn '|NullExpr|)
-            (apply #'mn '|SeqExpr| out-children)))
+            (mnp '|NullExpr| span)
+            (pass)))
         (e.grammar::|NounExpr|
           (destructuring-bind (noun) out-children
             (etypecase noun
-              (string (mn '|NounExpr| noun))
+              (string (make-from-tag noun))
               ((cons (eql e.grammar::|URIGetter|) t)
-                (mn '|URISchemeExpr| (cdr noun))))))
+                (mnp '|URISchemeExpr| span (cdr noun))))))
         (e.grammar::|MapExpr|
           ;; needs processing of its children
           (apply #'make-from-tag
@@ -994,19 +1007,19 @@ XXX make precedence values available as constants"
             (loop for thing in stuff do
               (cond 
                 ((typep thing '|EMatcher|)
-                  (setf expr (mn '|CatchExpr| expr (e. thing |getPattern|) (e. thing |getBody|))))
+                  (setf expr (mnp '|CatchExpr| (e. thing |getOptSpan|) expr (e. thing |getPattern|) (e. thing |getBody|))))
                 ((typep thing '|EExpr|)
                   ;; GRUMBLE: this is a finally block, and it isn't marked
-                  (setf expr (mn '|FinallyExpr| expr thing)))
+                  (setf expr (mnp '|FinallyExpr| (e. thing |getOptSpan|) expr thing)))
                 (t
                   (error "unexpected TryExpr element: ~S" thing))))
             expr))
         ((e.grammar::|InterfaceExpr|)
           (destructuring-bind (name &rest rest) out-children
-            (apply #'mn '|InterfaceExpr| 
+            (apply #'make-from-tag
               (or enclosing-doc-comment "")
               (if (typep name 'string)
-                (mn '|LiteralExpr| name)
+                (mnp '|LiteralExpr| span name)
                 name)
               rest)))
 
@@ -1014,7 +1027,7 @@ XXX make precedence values available as constants"
         ((e.grammar::|QUASIBODY|) 
           (assert (null out-children))
           ;; XXX parser or this level needs to unescape quasi syntax escapes
-          (mn '|QuasiText| text))
+          (mnp '|QuasiText| span text))
         
         (otherwise
           (let* ((tag-name (symbol-name tag))

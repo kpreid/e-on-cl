@@ -757,7 +757,7 @@ MatchBindExpr
 'WhenExpr'
 
   ? t("when (a) -> b(c) :d { e }")
-  # problem: (unknown:1)@25: The optional "easy-when" syntax is currently off.
+  # problem: (line 1)@25: The optional "easy-when" syntax is currently off.
   
   ? t("when (a) -> b(c) :d { e } catch f { g }")
   # value: e`{

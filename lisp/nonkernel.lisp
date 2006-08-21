@@ -129,7 +129,7 @@
         ;; XXX duplicated code
         (let ((maker (get (class-name (class-of node)) 'static-maker)))
           (e-call maker "run"
-            ((lambda (args) `(nil ,@args nil))
+            ((lambda (args) `(,(e. node |getOptSpan|) ,@args nil))
               (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
                     for sub in (elang::node-visitor-arguments node)
                     collect (if (e-is-true subnode-flag)
@@ -178,13 +178,20 @@
                   collect (if (e-is-true subnode-flag)
                             (e-macroexpand-all sub)
                             sub)))))
-        (e-call maker "run" `(nil ,@new-node-args nil))))))
+        (e-call maker "run" `(,(e. node |getOptSpan|) ,@new-node-args nil))))))
 
 ;;; --- conveniences ---
 
 ;; XXX look into load-time-value-izing constant mn calls automatically
+;; XXX these functions are duplicated between here and syntax.lisp, e.syntax. consider defining a package to export them
 (defun mn (name &rest elements)
   (make-instance name :elements elements))
+(defun mnp (name span &rest elements)
+  (make-instance name
+    :elements elements
+    :source-span (typecase span
+                   (|ENode| (e. span |getOptSpan|))
+                   (t span))))
 
 (defun node-quote (value)
   (etypecase value
@@ -698,7 +705,7 @@
 
 (defemacro |NKAssignExpr| (|EExpr|) ((|place| t |EExpr|)
                                      (|value| t |EExpr|))
-                                    ()
+                                    (&whole nkassign)
   (setf |place| (e-macroexpand-all |place|)) ;; expand function calls, etc.
   (typecase |place|
     (|CallExpr|
@@ -724,7 +731,7 @@
               (error "assignment can only be done to nouns and collection elements (not ~A call)" (e-quote verb) #| XXX ejector? |#)))
            value-noun))))
     ((or |NounExpr| |TemporaryExpr|)
-     (mn '|AssignExpr| |place| |value|))
+     (mnp '|AssignExpr| nkassign |place| |value|))
     (t
      (error "Assignment can only be done to nouns and collection elements (not ~A)" (e-quote |place|) #| XXX ejector? |#))))
 

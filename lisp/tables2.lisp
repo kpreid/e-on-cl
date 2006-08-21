@@ -123,6 +123,16 @@
                                 :start-col start-col
                                 :end-col end-col))))
 
+(defun ~span (stream arg colon at)
+  "Print a SourceSpan, if present, preceded by \" @\". For use in format strings."
+  (declare (ignore colon at))
+  (let ((tw (make-text-writer-to-cl-stream stream)))
+    (unwind-protect 
+      (when (ref-shorten arg)
+        (e. tw |write| " @ ")
+        (e. tw |print| arg))
+      (e. tw |close|))))
+
 ; --- Twine ---
 
 (defgeneric twine-string (twine)

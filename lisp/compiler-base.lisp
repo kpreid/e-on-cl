@@ -364,7 +364,8 @@
 
 ;; This is a class so that instances may be written to a compiled file.
 (defclass static-context ()
-  ((fqn-prefix :initarg :fqn-prefix
+  ((source-span :initarg :source-span)
+   (fqn-prefix :initarg :fqn-prefix
                :initform (error "fqn-prefix not supplied"))
    (opt-object-source :initarg :opt-object-source
                       :initform (error "object-source not supplied")))
@@ -372,7 +373,8 @@
 
 (defmethod make-load-form ((a static-context) &optional environment)
   (make-load-form-saving-slots a :environment environment))
-  
+
+;; XXX static contexts must be selfless or fresh, or they break equivalence of separate evaluation
 (def-vtable static-context
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
@@ -385,12 +387,13 @@
     (slot-value this 'opt-object-source))
   (:|getSource| (this)
     (or (ref-shorten (e. this |getOptSource|))
-        (error "There is no enclosing object expression at ~A" (e. this |getFQNPrefix|))))
+        (error "There is no enclosing object expression at ~A~/e.tables:~span/" (e. this |getFQNPrefix|) (slot-value this 'source-span))))
   (:|getFQNPrefix| (this)
     (slot-value this 'fqn-prefix)))
 
-(defun scope-layout-static-context (layout)
+(defun scope-layout-static-context (layout &key source-span)
   (make-instance 'static-context
+    :source-span source-span
     :fqn-prefix (scope-layout-fqn-prefix layout)
     :opt-object-source (scope-layout-opt-object-expr layout)))
 

@@ -10,6 +10,12 @@ This file contains tests for the E parser's grammar; specifically excluding expa
 ? def t(s) :any { return dumpENodes(pp.run(s), stdout) }; null
 ? def tp(s) :any { return dumpENodes(pp.pattern(s, null, null), stdout) }; null
 
+--- Basic source positions ---
+
+? pp.run("ab".asFrom("file:///foo")).getOptSpan()
+# value: <file:///foo#:span::1:0::1:0>
+should be 1:0::1:1 but we don't have span information yet
+
 --- Function syntax ---
 
 ? t("pragma.enable(\"anon-lambda\"); fn { a }")
@@ -127,7 +133,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (unknown:1)@11: unexpected token: [":=",<162>,line=1,col=11]
+# problem: (line 1)@11: unexpected token: [":=",<162>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -169,13 +175,13 @@ XXX produce a nice error for this?
 ? t("pragma.disable(\"easy-return\")
 >    pragma.enable(\"explicit-result-guard\")
 >    def \"$a\"() {}")
-# problem: (unknown:3)@13: You must specify a result guard or disable "explicit-result-guard".
+# problem: (line 3)@13: You must specify a result guard or disable "explicit-result-guard".
 XXX source position
 
 ? t("pragma.disable(\"easy-return\")
 >    pragma.enable(\"explicit-result-guard\")
 >    def \"$a\"{ to b() {} }")
-# problem: (unknown:3)@19: You must specify a result guard or disable "explicit-result-guard".
+# problem: (line 3)@19: You must specify a result guard or disable "explicit-result-guard".
 XXX source position
 
 ? t("pragma.disable(\"easy-return\")
@@ -254,7 +260,7 @@ XXX source position
 #             false
 
 ? t("def \"$a\"() :b implements c {}")
-# problem: (unknown:1)@26: The optional "function-implements" syntax is currently off.
+# problem: (line 1)@26: The optional "function-implements" syntax is currently off.
 
 ? t("pragma.enable(\"function-implements\"); def \"$a\"() :b implements c {}")
 # stdout: SeqE. [] ObjectHeadE.
@@ -382,7 +388,7 @@ Parentheses disable modPow form
 #           NounE. a
 
 ? t("a :b :c")
-# problem: (unknown:1)@6: unexpected token: [":",<171>,line=1,col=6]
+# problem: (line 1)@6: unexpected token: [":",<171>,line=1,col=6]
 XXX prettier error
 
 --- ForExpr ---
@@ -456,7 +462,7 @@ XXX more tests (this section was written to test guardless ParamDesc)
 #             null
 
 ? t("a into ! b c")
-# problem: (unknown:1)@10: expecting "(", found 'b'
+# problem: (line 1)@10: expecting "(", found 'b'
 
 IntoExpr has precedence immediately above sequences.
 
@@ -493,7 +499,7 @@ IntoExpr has precedence immediately above sequences.
 
 one-method-object
 ? t("def a.b() :c {}")
-# problem: (unknown:1)@6: The optional "one-method-object" syntax is currently off.
+# problem: (line 1)@6: The optional "one-method-object" syntax is currently off.
 
 ? t("pragma.enable(\"one-method-object\"); def a.b() :c {d}")
 # stdout: SeqE. [] ObjectHeadE.
@@ -512,7 +518,7 @@ one-method-object
 --- URISchemeExpr ---
 
 ? t("<>")
-# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
 
 ? t("<a>")
 # stdout: URISchemeE. a
@@ -527,18 +533,18 @@ would-be-keywords
 
 erroneous
 ? t("<ab cd>")
-# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
 ? t("<+a>")
-# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
 ? t("<a!b>")
-# problem: (unknown:1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
 
 --- CallPattern, FunCallPattern ---
 
 ? tp("a.b(c)")
-# problem: (unknown:1)@6: The optional "call-pattern" syntax is currently off.
+# problem: (line 1)@6: The optional "call-pattern" syntax is currently off.
 ? tp("a(b)")
-# problem: (unknown:1)@4: The optional "call-pattern" syntax is currently off.
+# problem: (line 1)@4: The optional "call-pattern" syntax is currently off.
 
 ? t("pragma.enable(\"call-pattern\"); 0 =~ a.b(c)")
 # stdout: SeqE. [] MatchBindE.

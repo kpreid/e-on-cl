@@ -280,6 +280,7 @@
   (:use :cl :e.util :elib :net.hexapodia.hashtables)
   (:documentation "Collection implementations.")
   (:export
+    :~span
     :const-map ; type
     :+the-make-array+))
 

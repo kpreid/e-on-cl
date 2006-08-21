@@ -285,7 +285,8 @@
 
 (define-sequence-expr |MetaContextExpr| (layout result)
   (values
-    `((,result ',(scope-layout-static-context layout)))
+    ;; XXX revise define-sequence-expr so the source-span can be accessed
+    `((,result ',(scope-layout-static-context layout #| :source-span ... |#)))
     layout))
 
 (define-sequence-expr |MetaStateExpr| (layout result)

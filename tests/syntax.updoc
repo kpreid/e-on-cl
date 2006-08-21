@@ -409,7 +409,7 @@ makeEParser
   # value: e`hi`
 
   ? escape fail { makeEParser.xTryParse("try", fail) } catch p { print(p) }
-  # stdout: problem: (unknown:1)@4: expecting "{", found 'null'
+  # stdout: problem: (line 1)@4: expecting "{", found 'null'
   XXX "found 'null'" is a bizarre error; fix
 
 Quasi-E-source issues

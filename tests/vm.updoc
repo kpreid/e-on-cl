@@ -406,7 +406,7 @@ Plumbing
   
   Plumbing expressions can't have super '
   ? def x extends y match msg {}
-  # problem: (unknown:1)@17: expecting "{", found 'match'
+  # problem: (line 1)@17: expecting "{", found 'match'
   XXX will be 'syntax error', wording to change, gain file position info
 
 Alleged type
@@ -897,6 +897,18 @@ Miscellaneous scoping
   # value: 2
   ? { def a := 1; def f match a { a }; f(2) }
   # value: ["run", [2]]
+
+Source position in errors
+
+  ? e__quasiParser.run("a".asFrom("file:///foo")).eval(safeScope)
+  # problem: undefined variable: a @ <file:///foo#:span::1:0::1:0>
+
+  ? e__quasiParser.run("null := 1".asFrom("file:///foo")).asKernelE().eval(safeScope)
+  # problem: null is not an assignable variable @ <file:///foo#:span::1:0::1:0>
+
+  XXX see MetaContextExpr implementation
+  x ? e__quasiParser.run("meta.context().getSource()".asFrom("file:///foo")).eval(safeScope)
+  x # problem: There is no enclosing object expression at __main$ @ <file:///foo#:span::1:0::1:0>
 
 
 XXX test perverse scoping cases:

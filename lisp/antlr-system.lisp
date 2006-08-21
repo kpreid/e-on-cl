@@ -108,7 +108,8 @@
   :depends-on (:e-on-cl)
   :pathname (merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
   :components
-    ((:java-source-file "CountingCharBuffer")
+    ((:java-source-file "ExtAST")
+     (:java-source-file "CountingCharBuffer")
      (:java-source-file "CountingLexerSharedInputState")
      (:antlr-source-file "e"
                          :output-names (("EParser" "java") 
