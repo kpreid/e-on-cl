@@ -316,7 +316,7 @@
       (error "ejector ~S no longer in scope" label))))
 
 (defun ejector (label fn)
-  (e-lambda "$ejector" ()
+  (e-lambda "org.erights.e.elib.base$ejector" ()
     (:|__printOn| (tw)
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<" label " ejector>"))

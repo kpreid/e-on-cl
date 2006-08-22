@@ -186,18 +186,28 @@
             (updating-sequence-patt pattern layout result (when opt-ejector `(ejector ,ej))))
     layout))
 
+(defgeneric pattern-has-no-side-effects (node)
+  (:documentation "Pattern failure counts as a side effect."))
+(defmethod pattern-has-no-side-effects ((node |Pattern|)) nil)
+(defmethod pattern-has-no-side-effects ((node |IgnorePattern|))
+  (assert (null (node-elements node))) ; IgnorePattern may get a guard in the future; this is so we don't forget to change this to fit
+  t)
+(defmethod pattern-has-no-side-effects ((node |FinalPattern|))
+  (null (ref-shorten (e. node |getOptGuardExpr|))))
+(defmethod pattern-has-no-side-effects ((node |VarPattern|))
+  (null (ref-shorten (e. node |getOptGuardExpr|))))
+(defmethod pattern-has-no-side-effects ((node |SlotPattern|))
+  (null (ref-shorten (e. node |getOptGuardExpr|))))
+
 (define-sequence-expr |EscapeExpr| (layout result ejector-patt body opt-catch-pattern opt-catch-body
     &aux (outer-block (gensym "ESCAPE"))
          (ejector-block (gensym "ESCAPE-BODY-"))
          (catch-value-var (gensym "CAUGHT"))
          (inner-result-var (gensym "ESCRESULT"))
          (body-scope (e. body |staticScope|)))
-  (when (and (typep ejector-patt '|FinalPattern|)
-             (null (ref-shorten (e. ejector-patt |getOptGuardExpr|)))
-             (not (e-is-true (e. (e. body-scope |namesUsed|) 
-                                 |maps| 
-                                 (e. (e. ejector-patt |getNoun|) |getName|))))
-             (not (e-is-true (e. body-scope |hasMetaStateExpr|))))
+  (when (and (pattern-has-no-side-effects ejector-patt)
+             (not (e-is-true (e. body-scope |uses| 
+                               (e. (e. ejector-patt |getNoun|) |getName|)))))
     #+(or) 
     (e. e.knot:+sys-trace+ |run| (format nil "triggered ejector optimization for ~S in ~S" ejector-patt (scope-layout-fqn-prefix layout)))
     (return-from sequence-expr ;; XXX dependence on existence of block

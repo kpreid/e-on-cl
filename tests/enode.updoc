@@ -586,6 +586,30 @@ SlotPattern
   ? makeStaticScope.scopeMeta().hide()
   # value: <[] := [] =~ [] + var [], meta.getState()>
 
+ uses
+ 
+  ? makeStaticScope.scopeMeta()."uses"("x")
+  # value: true
+
+  ? empty."uses"("x")
+  # value: false
+
+  ? readAny."uses"("any")
+  # value: true
+
+  ? readAny."uses"("x")
+  # value: false
+
+  ? setPi."uses"("pi")
+  # value: true
+  
+  ? sdef1."uses"("x")
+  # value: false
+
+  ? varI."uses"("i")
+  # value: false
+  
+
 --- node scope computation ---
 
   assign
@@ -631,6 +655,19 @@ SlotPattern
   ? e`meta.context()`.staticScope()
   # value: <[] := [] =~ [] + var []>
   
+  meta-state
+
+  ? e`meta.getState()`.staticScope()
+  # value: <[] := [] =~ [] + var [], meta.getState()>
+
+  ? def mSSS := e`thunk { meta.getState() }`.staticScope()
+  # value: <[] := [] =~ [] + var [], { meta.getState() }>
+  
+  ? [mSSS.hasMetaStateExpr(),
+  >  mSSS.hasOuterMetaStateExpr(),
+  >  mSSS."uses"("x")]
+  # value: [true, false, false]
+
   noun
   ? e`boolean`.staticScope()
   # value: <[] := ["boolean"] =~ [] + var []>

@@ -579,10 +579,13 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defun make-static-scope (&key
     (has-meta-state-expr +e-false+)
+    (has-outer-meta-state-expr +e-false+)
     (def-names  (e. #() |asMap|))
     (var-names  (e. #() |asMap|))
     (read-names (e. #() |asMap|))
     (set-names  (e. #() |asMap|)))
+  (assert (not (and (e-is-true has-outer-meta-state-expr) 
+                    (not (e-is-true has-meta-state-expr)))))
   (with-result-promise (self)
     (e-lambda "org.erights.e.elang.evm.StaticScope" (:stamped +selfless-stamp+)
       (:|__printOn| (tw)
@@ -591,9 +594,13 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                            (e. read-names |getKeys|) " =~ "
                            (e. def-names  |getKeys|) " + var "
                            (e. var-names  |getKeys|) 
-                           (if (e-is-true has-meta-state-expr)
-                             ", meta.getState()" 
-                             "") 
+                           (cond
+                             ((e-is-true has-outer-meta-state-expr)
+                              ", meta.getState()")
+                             ((e-is-true has-meta-state-expr)
+                              ", { meta.getState() }")
+                             (t 
+                              "")) 
                        ">"))
       (:|__optUncall| ()
         `#(,+the-make-static-scope+
@@ -602,37 +609,66 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
              ,def-names ,var-names 
              ,has-meta-state-expr)))
       (:|add| (right &aux (left self))
+        "Yields the sequential composition of the two scopes."
         (let ((left-out   (e. left |outNames|))
               (left-def   def-names)
               (left-var   var-names)
               (left-read  read-names)
               (left-set   set-names)
               (left-meta  has-meta-state-expr)
+              (left-oeta  has-outer-meta-state-expr)
               (right-def  (e. right |defNames|))
               (right-var  (e. right |varNames|))
               (right-read (e. right |namesRead|))
               (right-set  (e. right |namesSet|))
-              (right-meta (e. right |hasMetaStateExpr|)))
+              (right-meta (e. right |hasMetaStateExpr|))
+              (right-oeta (e. right |hasOuterMetaStateExpr|)))
           (make-static-scope
             :def-names  (e. left-def  |or| right-def)
             :var-names  (e. left-var  |or| right-var)
             :read-names (e. left-read |or| (e. right-read |butNot| left-out))
             :set-names  (e. left-set  |or| (e. right-set  |butNot| left-out))
-            :has-meta-state-expr (e. left-meta |or| right-meta))))
+            :has-meta-state-expr (e. left-meta |or| right-meta)
+            :has-outer-meta-state-expr (e. left-oeta |or| right-oeta))))
       (:|namesRead|        () read-names)
       (:|namesSet|         () set-names)
       (:|namesUsed|        () (e. read-names |or| set-names))
       (:|defNames|         () def-names)
       (:|varNames|         () var-names)
       (:|outNames|         () (e. def-names |or| var-names))
-      (:|hasMetaStateExpr| () has-meta-state-expr)
-      (:|hide|             () (make-static-scope 
-                                :read-names read-names
-                                :set-names set-names
-                                :has-meta-state-expr has-meta-state-expr)))))
+      (:|hasMetaStateExpr| () 
+        "Whether the node contains a MetaStateExpr."
+        ;; XXX after hasOuterMetaStateExpr is implemented, review whether this is needed at all
+        has-meta-state-expr)
+      (:|hasOuterMetaStateExpr| () 
+        "Whether the node contains a MetaStateExpr not enclosed in an object expression."
+        has-outer-meta-state-expr)
+      (:|hide| () 
+        "Yields the StaticScope of this expression as seen enclosed in a block, i.e. hiding definitions."
+        (make-static-scope 
+          :read-names read-names
+          :set-names set-names
+          :has-meta-state-expr has-meta-state-expr
+          :has-outer-meta-state-expr has-outer-meta-state-expr))
+      (:|script| ()
+        "Yields the StaticScope of this expression as seen enclosed in an EScript, i.e. hiding definitions and outer meta.getState()."
+        (make-static-scope 
+          :read-names read-names
+          :set-names set-names
+          :has-meta-state-expr has-meta-state-expr))
+      
+      ;; convenience
+      (:|uses| (name)
+        "Whether execution of the node for which this is the static scope might be affected by the presence of 'name'; that is, whether it contains an explicit usage of 'name' or a MetaStateExpr not inside an object expression."
+        (as-e-boolean
+          (or (e-is-true (e. read-names |maps| name))
+              (e-is-true (e. set-names |maps| name))
+              (e-is-true has-outer-meta-state-expr)))))))
 
 (defglobal +empty-static-scope+ (make-static-scope))
-(defglobal +has-meta-static-scope+ (make-static-scope :has-meta-state-expr +e-true+))
+(defglobal +has-meta-static-scope+ 
+  (make-static-scope :has-outer-meta-state-expr +e-true+
+                     :has-meta-state-expr +e-true+))
 
 (flet ((make (node kind label)
         ;; muffle non-constant keyword argument warning
@@ -689,6 +725,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
               if foo is not nil
     (seq <forms>) -- sequencing, as in StaticScope#add/1
     (hide <form>) -- hiding, as in StaticScope#hide/0
+    (script <form>) -- as in StaticScope#script/0
     (flatten :|foo|) -- the sequencing of the list property foo of this node
     (! <CL-form>) -- CL code to return a static scope
     
@@ -705,6 +742,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
               ((eql (first expr) 'hide)
                 (assert (= (length expr) 2))
                 `(e. ,(transform (second expr)) |hide|))
+              ((eql (first expr) 'script)
+                (assert (= (length expr) 2))
+                `(e. ,(transform (second expr)) |script|))
               ((eql (first expr) 'seq)
                 (reduce #'(lambda (a b) `(e. ,a |add| ,b)) 
                         (rest expr)
@@ -835,8 +875,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
              :|body|)))
 
 (def-scope-rule |EScript|
-  (seq (flatten :|optMethods|)
-       (flatten :|matchers|)))
+  (script (seq (flatten :|optMethods|)
+               (flatten :|matchers|))))
 
 ;;; --- scope utilities ---
 
@@ -918,6 +958,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                (:|_getFinals| () finals)
                (:|_getAssigns| () assigns)
                (:|hide| () (make nil nil))
+               (:|script| () (make nil nil))
                (:|add| (other &aux (bad (intersection finals (e. other |_getAssigns|) :test #'string=)))
                  (if bad
                    ;; XXX message could use some improvement

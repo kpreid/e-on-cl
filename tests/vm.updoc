@@ -213,6 +213,20 @@ EscapeExpr bug: ejector should be valid in the pattern
   > escape via (fn ej,_ {ej("ok");ej}) ej { ej("oops") } catch v { v + "." }
   # value: "ok."
 
+EscapeExpr optimizer testing
+
+  There is an optimization routine which deletes block and ejector creation for EscapeExprs whose ejectors are not used. These are tests for visible failures.
+  
+  meta.getState can see it
+  ? def _() :any { escape x { meta.getState()["&x"] } } ()
+  # value: <& <x ejector>>
+
+  failing patterns
+  ? def _() :any { escape [x] {} } ()
+  # problem: the "org.erights.e.elib.base$ejector" <null ejector> doesn't coerce to a ConstList
+  ? def _() :any { escape x :int {} } ()
+  # problem: the "org.erights.e.elib.base$ejector" <x ejector> doesn't coerce to an int
+
 List expressions for further testing
 
   ? [1, 2, 3]
