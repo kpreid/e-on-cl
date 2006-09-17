@@ -447,7 +447,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       for prefix = "" then sep
       do (e. tw |print| prefix)
          (e. tw |quote| elem))
-    (e. tw |print| right)))
+    (e. tw |print| right))
+  (:|sort| (vector)
+    (stable-sort (copy-seq vector)
+                 (e.elib.tables::comparer-adapter)))
+  (:|sort| (vector comparer)
+    (stable-sort (copy-seq vector) 
+                 (lambda (a b) (e-is-true (e. (e. comparer |run| a b) |belowZero|))))))
 
 (defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
     (:stamped  +deep-frozen-stamp+)
@@ -535,9 +541,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|op__cmp| (this other)
     (e-coercef other 'number)
     (cond
-      ((< this other) -1.0)
-      ((> this other) 1.0)
-      ((= this other) 0.0)
+      ((< this other) -1d0)
+      ((> this other) 1d0)
+      ((= this other) 0d0)
       (t              |NaN|)))
   
   (:|toString| (this)

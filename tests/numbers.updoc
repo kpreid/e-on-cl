@@ -189,3 +189,23 @@ floor, ceil
 
   ? fc(-1.5)
   # value: [-2, -1]
+
+Float comparison
+
+  ? NaN.op__cmp(NaN)
+  # value: NaN
+  
+  ? NaN.op__cmp(1.0)
+  # value: NaN
+
+  ? 1.0.op__cmp(1.1)
+  # value: -1.0
+
+  ? 1.0.op__cmp(0.9)
+  # value: 1.0
+
+  ? (-1.0).op__cmp(-0.9)
+  # value: -1.0
+
+  ? (-0.0).op__cmp(0.0)
+  # value: 0.0

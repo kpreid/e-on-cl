@@ -77,7 +77,10 @@ bind makeListShell implements EventuallyDeepFrozen {
       to readOnly() {
         return makeReadOnlyList(self)
       }
-    
+      
+      to sort()         { return self.snapshot().sort()         }
+      to sort(compFunc) { return self.snapshot().sort(compFunc) }
+      
       to printOn(openS, sepS, closeS, out :TextWriter) {
         out.write(openS)
         var first := true

@@ -306,6 +306,13 @@ iterate
   #         2 50.0
   #         
 
+sort
+
+  ? floatList.sort()
+  # value: [3.0, 40.0, 50.0]
+
+  ? floatList.sort(def reverseCompare(a, b) :any { -(a.op__cmp(b)) })
+  # value: [50.0, 40.0, 3.0]
 
 
 Regression test: push works on trivial-value-less typed lists:
