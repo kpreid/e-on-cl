@@ -15,7 +15,9 @@
                :clos #| allegro, clisp, lispworks |#))))
     (cl:when cl:package
       `(:import-from ,(cl:package-name cl:package)
-         :class-precedence-list)))
+         :class-precedence-list
+         :class-finalized-p
+         :finalize-inheritance)))
   
   (:export
     :defglobals
@@ -54,6 +56,8 @@
     :nreverse-here
     
     :class-precedence-list
+    :class-finalized-p
+    :finalize-inheritance
     :with-appropriate-floating-point-rules
     
     :function-lambda-list :<unknown-lambda-list>

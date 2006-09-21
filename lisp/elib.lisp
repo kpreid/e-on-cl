@@ -1068,7 +1068,12 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   `(let (,@(when is-eql
              `((,eql-instance-var ,(second type-spec))))
          (,vtable-class-var ,(unless is-eql `(find-class ',type-spec))))
-             
+    
+    ,@(unless is-eql
+        `((let ((class (find-class ',type-spec)))
+            (unless (class-finalized-p class)
+              (finalize-inheritance class)))))
+    
     #+(or e.vtable-collect.use-example e.vtable-collect.use-typelist)
     (assert (not (gethash ',type-spec *vtable-message-types-cache*)))
     #+e.vtable-collect.use-typelist 
