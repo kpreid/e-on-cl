@@ -47,7 +47,14 @@
                            ;; XXX this looks wrong - not giving the buffer a
                            ;; chance to be emptied - but we haven't proven it
                            ;; wrong yet
-                           (e. fd-ref |shutdown| :output nil))
+                           (e. fd-ref |shutdown| :output
+                             (efun (condition)
+                               (setf condition (ref-shorten condition))
+                               (typecase condition
+                                 ((or #+sbcl sb-bsd-sockets:not-connected-error)
+                                  nil)
+                                 (t 
+                                  (e. e.knot:+trace+ |run| (format nil "Error from attempted shutdown of ~A for writing at end of stream: ~A" (e-quote fd-ref) condition)))))))
                          (when (> end-of-buffer 0)
                            (flush))))))
                    (values))
