@@ -171,4 +171,8 @@ This is for creating a scope with the usual safeScope structure but with differe
   ? anIOScope["interp"] == anInterp
   # value: true
 
+  Checking for missing nestOuter
+  ? anIOScope.withSlot("interp", &null)
+  # value: <scope testiing$>
+
 XXX write tests for the e-on-cl makeIOScope which is what ScopeSetup is based on

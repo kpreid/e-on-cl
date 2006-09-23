@@ -171,6 +171,6 @@ def makeIOScope implements DeepFrozen {
       },
     ])
     
-    return bind ioScope := makeScope.fromState(ioAdd, fqnPrefix) | vatPrivScope
+    return bind ioScope := (makeScope.fromState(ioAdd, fqnPrefix) | vatPrivScope).nestOuter()
   }
 }
