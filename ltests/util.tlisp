@@ -7,9 +7,10 @@
 
 (deftest defglobal.simple
   (let ((s (gensym)))
-    (values (eval `(ignore-errors ,s))
-            (eval `(eql (e.util:defglobal ,s 44) ',s))
-            (eval `,s)))
+    (handler-bind ((warning #'muffle-warning))
+      (values (eval `(ignore-errors ,s))
+              (eval `(eql (e.util:defglobal ,s 44) ',s))
+              (eval `,s))))
   nil
   t
   44)
