@@ -46,13 +46,12 @@
             (funcall ',gf-name ,@args)))))))
 
 
-; I wrote this and found I didn't need it, but here it is in case it's useful later. Untested.
-;(defmacro escape ((ejector-var) &body forms
-;    &aux (block-name ejector-var))
-;  `(block ,block-name
-;    (let ((,ejector-var (ejector ',(symbol-name ejector-var) 
-;                                 (lambda (v) (return-from ,block-name v)))))
-;      ,@forms)))
+(defmacro escape ((ejector-var) &body forms)
+  (let ((escape-block (gensym (symbol-name ejector-var))))
+    `(block ,escape-block
+      (let ((,ejector-var (ejector ',(symbol-name ejector-var) 
+                                   (lambda (v) (return-from ,escape-block v)))))
+        ,@forms))))
 
 (defmacro escape-bind ((ejector-var) try-form (result-var) &body catch-forms)
   "Execute TRY-FORM with an ejector bound to EJECTOR-VAR. If the ejector is used, control is transferred to the CATCH-FORMS with the ejector's argument bound to RESULT-VAR. Returns the value of whichever of TRY-FORM or the last of CATCH-FORMS returns."

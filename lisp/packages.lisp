@@ -225,7 +225,7 @@
     
     :e-slot-value :place-slot
     :def-shorten-methods
-    :escape-bind
+    :escape :escape-bind
     :ejerror
     :with-vat :call-when-resolved :when-resolved
     :mapping-bind

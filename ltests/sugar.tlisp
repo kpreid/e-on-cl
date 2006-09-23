@@ -20,6 +20,16 @@
       (list value))
   ("out"))
 
+(deftest escape.no
+  (escape (foo)
+    (*))
+  1)
+
+(deftest escape.yes
+  (escape (foo)
+    (e. foo |run| "out"))
+  "out")
+
 
 (deftest mapping-bind.trivial
   (mapping-bind (e. #() |asMap|)
