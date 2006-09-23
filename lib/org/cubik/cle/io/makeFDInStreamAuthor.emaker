@@ -59,7 +59,9 @@ def makeFDInStreamAuthor {
           to terminate(t) { 
             # XXX proper error handling?
             removeHandler()
-            fdRef.shutdown(l`:input`, throw)
+            fdRef.shutdown(l`:input`, def shutdownError(error) {
+              trace(`error from shutdown for $inStream: $error`)
+            })
           }
           
         })
