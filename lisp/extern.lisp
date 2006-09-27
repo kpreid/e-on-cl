@@ -329,9 +329,9 @@
                             :status-hook
                               (lambda (u-process)
                                 ;; XXX this is a signal handler in sbcl - make safe 
-                                (when (member (sb-ext:process-status u-process) 
+                                (when (member (external-process-status u-process) 
                                               '(:exited :signaled))
-                                  (e<- exit-resolver |resolve| (sb-ext:process-exit-code u-process))))))
+                                  (e<- exit-resolver |resolve| (external-process-exit-code u-process))))))
                (e-stdin (convert-stream (external-process-input-stream u-process) :stdin))
                (e-stdout (convert-stream (external-process-output-stream u-process) :stdout))
                (e-stderr (convert-stream (external-process-error-stream u-process) :stderr)))

@@ -247,32 +247,26 @@
   )
 
 #-(or lispworks clisp) (progn
-  (defun external-process-input-stream (&rest args)
-    (apply 
-      #+ccl  #'ccl:external-process-input-stream
-      #+sbcl #'sb-ext:process-input
-      #+cmu  #'extensions:process-input
-      #-(or sbcl ccl cmu)
-        (error "Don't know where to find external-process-input-stream")
-      args))
-  
-  (defun external-process-output-stream (&rest args)
-    (apply 
-      #+ccl  #'ccl:external-process-output-stream
-      #+sbcl #'sb-ext:process-output
-      #+cmu  #'extensions:process-output
-      #-(or sbcl ccl cmu)
-        (error "Don't know where to find external-process-output-stream")
-      args))
 
-  (defun external-process-error-stream (&rest args)
-    (apply 
-      #+ccl  #'ccl:external-process-error-stream
-      #+sbcl #'sb-ext:process-error
-      #+cmu  #'extensions:process-error
-      #-(or sbcl ccl cmu)
-        (error "Don't know where to find external-process-error-stream")
-      args)))
+  (define-if-available 
+    (#+sbcl :sb-ext
+     #+cmu  :extensions
+     #+ccl  :ccl)
+    ((external-process-input-stream
+      #+ccl           :external-process-input-stream
+      #+(or sbcl cmu) :process-input)
+     (external-process-output-stream
+      #+ccl           :external-process-output-stream
+      #+(or sbcl cmu) :process-output)
+     (external-process-error-stream
+      #+ccl           :external-process-error-stream
+      #+(or sbcl cmu) :process-error)
+     (external-process-status
+      #+ccl           :external-process-status
+      #+(or sbcl cmu) :process-status)
+     (external-process-exit-code
+      #+ccl           :external-process-exit-code
+      #+(or sbcl cmu) :process-exit-code))))
 
 (unless (fboundp 'run-program)
   (defun run-program (&rest args)

@@ -45,6 +45,8 @@
     :external-process-input-stream
     :external-process-output-stream
     :external-process-error-stream
+    :external-process-status
+    :external-process-exit-code
     
     :mangle-verb
     :unmangle-verb

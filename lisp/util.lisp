@@ -266,6 +266,8 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
   native-namestring
   
   run-program
+  external-process-status
+  external-process-exit-code
   external-process-input-stream
   external-process-output-stream
   external-process-error-stream
