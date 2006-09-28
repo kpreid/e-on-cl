@@ -23,6 +23,9 @@ LOADQUIET=nil
 # Print usage help
 DO_USAGE=
 
+# Going to make an image
+SAVING=
+
 # Extra arguments for the Lisp executable
 # code copied from E rune; I don't know how bash arrays work -- kpreid 2005-08-06
 declare -a LISP_EXTRA
@@ -61,6 +64,9 @@ while [ $(($# >= 1)) = 1 ]; do
         
         --end-clrune-options)
                       shift; break;;
+
+        --save)
+                      SAVING=t; break;;
                       
         -- | *)       # not shifting
                       OPTION_PARSING_ENDED=t; break;;
@@ -145,6 +151,9 @@ QUOTED_JHOME=`echo "$JHOME/" | perl -pe 's&(["\\\\])&\\$1&g'`
 
 COMMON_INIT1='(progn
   (setf *compile-print* nil)
+  (when '"$SAVING"'
+    ;; using *features* because we have no packages to put a variable in yet
+    (pushnew :e.saving-image *features*))
   (when '"$LOADQUIET"'
     (setf *compile-verbose* nil)
     (setf *load-verbose* nil))

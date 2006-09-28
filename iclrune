@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# If t, attempts to remove all startup-progress-related messages  
+LOADQUIET=nil
+
+# --- Option parsing ---
+
+OPTION_PARSING_ENDED=
+
+# Interpret our own command-line options
+# modified from rune-template.txt
+while [ $(($# >= 1)) = 1 ]; do
+    case $1 in
+        --help)       DO_USAGE=t; shift;;
+        
+        --quiet | -q) LOADQUIET=t; shift;;
+        
+        --end-clrune-options)
+                      shift; break;;
+                      
+        -- | *)       # not shifting
+                      OPTION_PARSING_ENDED=t; break;;
+    esac
+done
+
+# I'm feeling too lazy to look up the syntax for logical and
+if [ "$OPTION_PARSING_ENDED" ]; then
+  if [ "$LOADQUIET" = nil ]; then
+    echo "; $0: assuming '$1' ends my options" >&2
+  fi
+fi
+
+# --- Usage ---
+
+if [ "$DO_USAGE" ]; then
+  cat <<USAGE
+$0:
+  This is iclrune, the image-mode startup script for E-on-Common-Lisp.
+
+  Command line options:
+    --help           Print this help.
+    --quiet|-q       Avoid printing messages about startup progress.
+    --end-clrune-options
+                     Pass all further options to the Lisp level.
+
+  An unrecognized argument or "--" terminates iclrune option parsing;
+  that and all further arguments are passed to the Lisp level.
+
+  Now attempting to start the image to give further usage help...
+
+USAGE
+  exec $0 --quiet --end-clrune-options --help "$@"
+fi
+
+# --- Startup general ---
+
+HERE=`dirname $0`
+
+# --- Image startup ---
+
+IMAGE_ENTRY="$HERE/e-image-run"
+IMAGE_SECOND="$HERE/e-image-main"
+
+if [ -e "$IMAGE_ENTRY" ]; then
+  if "$IMAGE_ENTRY" $IMAGE_ARGS "--not-stale?"; then
+    true
+  else
+    if [ "$LOADQUIET" = nil ]; then
+      echo "; $0: Deleting stale image file." >&2
+    fi
+    rm "$IMAGE_ENTRY" "$IMAGE_SECOND"
+  fi
+fi
+
+if [ ! -e "$IMAGE_ENTRY" ]; then
+  if [ "$LOADQUIET" = nil ]; then
+    echo "; $0: Attempting to save image file." >&2
+  fi
+  "$HERE/clrune" -l openmcl --save "$IMAGE_ENTRY" "$IMAGE_SECOND"
+fi
+
+if [ -e "$IMAGE_ENTRY" ]; then
+  if [ "$LOADQUIET" = nil ]; then
+    echo "; $0: Launching image." >&2
+  fi
+  exec "$IMAGE_ENTRY" $IMAGE_ARGS "$@"
+else
+  echo "; $0: Image not found." >&2
+  exit 255
+fi

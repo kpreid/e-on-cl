@@ -114,8 +114,10 @@
       (list
         (list
           (handler-case
-              (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) 
-                       (merge-pathnames #p"e.jar" dir-pathname))
+              (if (member :e.saving-image *features*)
+                (error "saving an image")
+                (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) 
+                         (merge-pathnames #p"e.jar" dir-pathname)))
             (error (c)
               (warn "Could not use e.jar because: ~A" c)
               (e.extern:pathname-to-file (merge-pathnames #p"src/esrc/" dir-pathname))))

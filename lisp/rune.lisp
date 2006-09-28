@@ -114,37 +114,61 @@
   (force-output)
   (global-exit 0))
 
+(define-toplevel stale-test-toplevel (args)
+  (check-type args null)
+  (let ((answer (not (stale))))
+    ;(print answer)
+    (global-exit (if answer 0 1))))
+
 (define-toplevel nothing-toplevel (args)
   "Do nothing. In particular, do not exit, and do not run the vat.
       This usually results in a Lisp REPL."
   (declare (ignore args))
   (values))
 
+(defvar *image-is-detached*)
+(setf (documentation '*image-is-detached* 'variable)
+  "Indicates, if bound, whether the current Lisp image is intended to be an independent packaged E-on-CL system (T), or is a caching of loaded source files (NIL).")
+
 (define-toplevel save-toplevel (args)
   "Generate an image file of the Lisp implementation with E-on-CL loaded.
       If supported, it will be executable. Under CLISP, the first argument to
       the resulting executable must be \"--\" for correct argument processing.
       The sole argument is the name of the image file to create."
-  (assert (= 1 (length args))) ;; will be options later, regarding how much to include
-  (let ((image-file (native-pathname (first args)))
+  (assert (= 2 (length args))) ;; will be options later, regarding how much to include
+  (let ((executable-file (native-pathname (first args)))
+        (secondary-file (native-pathname (second args)))
         (executable-p t)
         #| XXX todo: (may-enter-debugger t) |#)
     
     (save-flush)
+    (setf *image-is-detached* nil)
     
     #.(locally 
         (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note)) 
         (or
           #+sbcl
           (quote
-            (sb-ext:save-lisp-and-die
-              image-file
-              :executable executable-p
-              :toplevel #'%revive-start))
+            (progn
+              (with-open-file (script-out executable-file :direction :output)
+                (format script-out
+                  "#!/bin/sh~%~
+                   exec ~S --noinform --end-runtime-options \"$@\"~%"
+                  (native-namestring (merge-pathnames secondary-file))))
+              ;; XXX replace the below with sb-posix:chmod and a proper mode computation
+              (run-program "chmod" 
+                (list "+x" 
+                      (native-namestring (merge-pathnames executable-file)))
+                :wait t
+                :search t)
+              (sb-ext:save-lisp-and-die
+                secondary-file
+                :executable executable-p
+                :toplevel #'%revive-start)))
           #+cmu
           (quote
             (ext:save-lisp 
-              image-file 
+              executable-file
               :purify t
               :init-function #'%revive-start
               :load-init-file nil
@@ -157,13 +181,13 @@
           (quote
             ;; reference: http://www.clozure.com/pipermail/openmcl-devel/2003-May/001062.html
             (ccl:save-application
-              image-file
+              executable-file
               :toplevel-function #'%revive-start
               :prepend-kernel executable-p))
           #+clisp
           (quote
             (ext:saveinitmem
-              image-file
+              executable-file
               :quiet t
               ; :norc t ; XXX is this appropriate?
               :init-function #'%revive-start
@@ -176,6 +200,8 @@
     ;; or may not reach here
     (global-exit 0)))
 
+#+sbcl (defvar *sbcl-home-transport*)
+
 (defun save-flush ()
   (assert (null *vat*))
 
@@ -185,10 +211,56 @@
   ;; stuff-changing-out-from-under-our-image problem
   (asdf:operate 'asdf:load-op :e-on-cl.updoc)
   ;(asdf:operate 'asdf:load-op :e-on-cl.sockets)
-  #|XXX review what should go here|#)
+  #|XXX review what should go here|#
+  
+  ;; workaround for sbcl/asdf bugs as of 0.9.11.24: unset SBCL_HOME causes FIND-SYSTEM to fail
+  #+(and sbcl (or))
+  (progn
+    (setf asdf:*system-definition-search-functions*
+      (remove 'asdf::contrib-sysdef-search
+              asdf:*system-definition-search-functions*))
+    (setf asdf:*central-registry*
+      (remove 'asdf::contrib-sysdef-search
+              asdf:*central-registry*))
+              :test #'equal)
+  
+  #+sbcl
+  (setf *sbcl-home-transport* (sb-ext:posix-getenv "SBCL_HOME"))
+
+  (setf *features* (delete :e.saving-image *features*))
+  
+  (values))
 
 (defun revive-flush ()
-  #|XXX review what should go here|#)
+  #+sbcl (progn
+    (sb-posix:putenv (format nil "SBCL_HOME=~A" *sbcl-home-transport*))
+    (makunbound '*sbcl-home-transport*))
+
+  #| XXX review what should go here
+     
+     - should we somehow arrange so that changes to an asdf system in our dependencies while we're running won't reload it? |#
+  (values))
+
+(defun deep-operation-done-p (operation component)
+  (loop for (o . c) in (asdf::traverse operation component) 
+        always (asdf:operation-done-p o c)))
+
+(defun operation-used-p (operation component)
+  (and (gethash (type-of operation)
+                (asdf::component-operation-times component))
+       t))
+
+(defun defined-systems ()
+  (map-from-hash 'list 
+                 (lambda (k v) (declare (ignore k)) (cdr v)) 
+                 asdf::*defined-systems*))
+
+(defun stale ()
+  (let ((op (make-instance 'asdf:load-op :original-initargs nil)))
+    (not (every (lambda (system) 
+                  (or (not (operation-used-p op system))
+                      (deep-operation-done-p op system)))
+                (defined-systems)))))
 
 (defun %revive-start ()
   (revive-flush)
@@ -196,18 +268,19 @@
                     #+clisp ext:*args*
                     #+openmcl (rest ccl::*command-line-argument-list*)
                     #+cmucl (rest ext:*command-line-strings*)))
-  (warn "Fell out of ~S; exiting." 'rune)
+  (break "Fell out of ~S." 'rune)
   ;; XXX have an overall exit status policy
   (global-exit 255))
 
-(defparameter *toplevels* '(("--updoc"     updoc-toplevel)
-                            ("--selftest"  selftest-toplevel)
-                            ("--lisptest"  lisptest-toplevel)
-                            ("--translate" translate-toplevel)
-                            ("--lrepl"     repl-toplevel)
-                            ("--irc"       irc-repl-toplevel)
-                            ("--nothing"   nothing-toplevel)
-                            ("--save"      save-toplevel)))
+(defparameter *toplevels* '(("--updoc"      updoc-toplevel)
+                            ("--selftest"   selftest-toplevel)
+                            ("--lisptest"   lisptest-toplevel)
+                            ("--translate"  translate-toplevel)
+                            ("--lrepl"      repl-toplevel)
+                            ("--irc"        irc-repl-toplevel)
+                            ("--nothing"    nothing-toplevel)
+                            ("--save"       save-toplevel)
+                            ("--not-stale?" stale-test-toplevel)))
 
 (defun document-toplevels (stream data colon at)
   (declare (ignore colon at))
