@@ -24,7 +24,7 @@ LOADQUIET=nil
 DO_USAGE=
 
 # Going to make an image
-SAVING=
+SAVING=nil
 
 # Extra arguments for the Lisp executable
 # code copied from E rune; I don't know how bash arrays work -- kpreid 2005-08-06
