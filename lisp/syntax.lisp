@@ -555,7 +555,7 @@ XXX make precedence values available as constants"
 (defun start-parser ()
   (assert (not (boundp '*parser-process*)))
   ; XXX pipe this through common tracing architecture
-  (e. e.knot:+sys-trace+ |run| "starting Java-E parsing subprocess")
+  (efuncall e.knot:+sys-trace+ "starting Java-E parsing subprocess")
   (asdf:operate 'asdf:compile-op :e-on-cl.antlr-parser)
   (setf *parser-process* (e.util:run-program
     "/usr/bin/env" ;; XXX platform assumption - we should have a way of telling our portable-run-program to "search" with unspecified means
@@ -653,7 +653,7 @@ XXX make precedence values available as constants"
           (error 'link-out-of-sync-error))
         tree-expr)
     ((or end-of-file link-out-of-sync-error) (condition)
-      (e. e.knot:+sys-trace+ |run| (format nil "error in parser communication: ~A (second time: ~A)" condition trying-again))
+      (efuncall e.knot:+sys-trace+ (format nil "error in parser communication: ~A (second time: ~A)" condition trying-again))
       (kill-parser)
       (if trying-again
         (error condition)

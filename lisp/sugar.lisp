@@ -3,6 +3,18 @@
 
 (in-package :e.elib)
 
+(declaim (inline eelt efuncall))
+(defun eelt (container &rest indexes)
+  "Like CL:ELT, but for E containers. Equivalent to the idiom (e. container |get| index...)"
+  (e-call container "get" indexes))
+(defun efuncall (function &rest args)
+  "Like CL:FUNCALL, but for E functions. Equivalent to the idiom (e. function |run| arg...)"
+  (e-call function "run" args))
+(define-compiler-macro eelt (container &rest indexes)
+  `(e. ,container "get" ,@indexes))
+(define-compiler-macro efuncall (function &rest args)
+  `(e. ,function "run" ,@args))
+
 ; XXX not fully tested
 ; get-setf-expansion usage provided by Robert J. Macomber ("Thas") on <irc://irc.freenode.net/%23lisp> 2005-03-25; used with permission
 (defmacro place-slot (place &environment environment)
@@ -103,7 +115,7 @@
                  (unless (e-is-true (e. result-resolver |isDone|))
                    (e. result-resolver |resolve| (e<- ereactor |run| ref)))
                  (e<- ref |__whenMoreResolved| safe-reactor))))))
-      (e. safe-reactor |run| nil)
+      (efuncall safe-reactor nil)
       result)))
 
 (defmacro when-resolved ((result-var) ref-form &body forms)
@@ -143,10 +155,7 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
 (defun e-import (fqn)
   "Retrieve an object for the given FQN in the current vat's importer; in E notation, <import>[fqn]."
   (e-coercef fqn 'string)
-  (e. (e. (vat-safe-scope *vat*) 
-          |get| 
-          "import__uriGetter")
-      |get|
-      fqn))
+  (eelt (eelt (vat-safe-scope *vat*) "import__uriGetter")
+        fqn))
 
 ()

@@ -7,13 +7,13 @@
 
 (defglobal +local-ref-guard+ (e-lambda "org.cubik.cle.socket.SocketLocalRef" ()
   (:|coerce| (specimen opt-ejector)
-    (if (e-is-true (e. +the-audit-checker+ |run| +local-ref-guard+ specimen))
+    (if (e-is-true (efuncall +the-audit-checker+ +local-ref-guard+ specimen))
       specimen
       (eject-or-ethrow opt-ejector (make-e-type-error specimen +local-ref-guard+))))))
 
 (defglobal +peer-ref-guard+ (e-lambda "org.cubik.cle.socket.SocketPeerRef" ()
   (:|coerce| (specimen opt-ejector)
-    (if (e-is-true (e. +the-audit-checker+ |run| +peer-ref-guard+ specimen))
+    (if (e-is-true (efuncall +the-audit-checker+ +peer-ref-guard+ specimen))
       specimen
       (eject-or-ethrow opt-ejector (make-e-type-error specimen +peer-ref-guard+))))))
 
@@ -71,7 +71,7 @@
                            (decf end-of-buffer n)
                            (wait-for-available))
                        (error)
-                         #+(or) (e. e.knot:+trace+ |run| error)
+                         #+(or) (efuncall e.knot:+trace+ error)
                          (unless (ref-is-resolved (e. stream |terminates|))
                            (e. stream |fail| error)))))
           (let ((impl
@@ -93,15 +93,14 @@
                      (setf should-shutdown t)
                      (flush)))))
             (wait-for-available)
-            (e. (e-import "org.erights.e.elib.eio.makeOutStreamShell")
-                |run|
-                '(unsigned-byte 8)
-                backend-resolver
-                impl)))))))
+            (efuncall (e-import "org.erights.e.elib.eio.makeOutStreamShell")
+              '(unsigned-byte 8)
+              backend-resolver
+              impl)))))))
 
 (defun make-socket-in-stream (our-socket impl-socket)
-  (let ((make-fd-in-stream (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor") |run| e.knot::+lisp+)))
-    (e. make-fd-in-stream |run| our-socket (socket-shorten impl-socket) (foo-sockopt-receive-buffer (socket-shorten impl-socket)))))
+  (let ((make-fd-in-stream (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor") e.knot::+lisp+)))
+    (efuncall make-fd-in-stream our-socket (socket-shorten impl-socket) (foo-sockopt-receive-buffer (socket-shorten impl-socket)))))
 
 (defun make-retriable-lazy-slot (maker &aux value-box)
   "For lazy making that can fail and be retried later."
@@ -190,7 +189,7 @@
           (e-coercef opt-backlog '(or null integer))
           (foo-listen impl-socket opt-backlog)
           (foo-add-receive-handler impl-socket (efun ()
-            (e. handler |run| (make-socket-wrapper (foo-accept impl-socket nil)
+            (efuncall handler (make-socket-wrapper (foo-accept impl-socket nil)
                                                    domain
                                                    type
                                                    :did-bind-visible t
@@ -259,13 +258,11 @@
   (make-fd-out-stream name (make-fd-ref (sb-sys:fd-stream-fd stream)) 4096))
 
 (defun fd-to-eio-in-stream (fd name buffer)
-  (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
-          |run|
-          e.knot::+lisp+) 
-      |run| 
-      name
-      (make-fd-ref fd)
-      buffer))
+  (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
+                      e.knot::+lisp+) 
+    name
+    (make-fd-ref fd)
+    buffer))
 
 ;; XXX this is not really about sockets
 (defglobal +the-make-pipe+ (e-lambda "$makePipe" ()

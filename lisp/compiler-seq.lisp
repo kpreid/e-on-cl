@@ -209,7 +209,7 @@
              (not (e-is-true (e. body-scope |uses| 
                                (e. (e. ejector-patt |getNoun|) |getName|)))))
     #+(or) 
-    (e. e.knot:+sys-trace+ |run| (format nil "triggered ejector optimization for ~S in ~S" ejector-patt (scope-layout-fqn-prefix layout)))
+    (efuncall e.knot:+sys-trace+ (format nil "triggered ejector optimization for ~S in ~S" ejector-patt (scope-layout-fqn-prefix layout)))
     (return-from sequence-expr ;; XXX dependence on existence of block
       (values `((,result ,(hide-sequence body layout))) layout)))
   (values
@@ -438,7 +438,7 @@
   (values
     (append (updating-sequence-expr function layout function-var)
             `((,post-specimen-var 
-               (e. ,function-var |run| ,specimen
+               (efuncall ,function-var ,specimen
                                        ,(opt-ejector-make-code ejector-spec))))
             (updating-sequence-patt pattern layout post-specimen-var ejector-spec))
     layout))

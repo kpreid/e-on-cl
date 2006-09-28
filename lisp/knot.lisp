@@ -178,9 +178,9 @@
           (load-emaker-from-file file fqn 
                                  (funcall scope-fn) 
                                  (when opt-compiled-file-root
-                                   (e. opt-compiled-file-root |get|
+                                   (eelt opt-compiled-file-root
                                      (fqn-to-slash-path fqn +emaker-fasl-type+))))
-          (e. absent-thunk |run|))))))
+          (efuncall absent-thunk))))))
 
 (defun make-emaker-loader-from-desc (desc)
   (destructuring-bind (emaker-root compiled-root) desc
@@ -205,7 +205,7 @@
             for file = (e. root |getOpt| subpath)
             when file
               return (e. file |readOnly|)
-            finally (return (e. absent-thunk |run|))))))
+            finally (return (efuncall absent-thunk))))))
 
 
 
@@ -218,8 +218,8 @@
 
 (defun selfless-authorize (fqn)
   "Perform the typical load and authorization for an E-implemented maker of selfless objects."
-  (e. (e-import (concatenate 'string fqn "Author")) 
-      |run| elib:+selfless-stamp+))
+  (efuncall (e-import (concatenate 'string fqn "Author")) 
+            elib:+selfless-stamp+))
 
 ; xxx review which of these ought to be moved to safe-extern-scope
 (defun make-primitive-loader ()
@@ -265,21 +265,20 @@
     (:|gc|               e.extern:+gc+)
     
     (:|DeepFrozen|
-      (e. (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
-          |run| 
-          elib:+deep-frozen-stamp+))
+      (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
+                elib:+deep-frozen-stamp+))
     
     (:|makeBaseGuard|
-      (e. (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
-          |run| elib:+deep-frozen-stamp+ elib:+selfless-stamp+))
+      (efuncall (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
+                elib:+deep-frozen-stamp+ elib:+selfless-stamp+))
     
     (:|makeBrand|
-      (e. (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
-          |run| elib:+deep-frozen-stamp+))
+      (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
+                elib:+deep-frozen-stamp+))
     
     (:|memoize|
-      (e. (e-import "org.cubik.cle.memoizeAuthor")
-          |run| elib:+deep-frozen-stamp+))))
+      (efuncall (e-import "org.cubik.cle.memoizeAuthor")
+                elib:+deep-frozen-stamp+))))
 
 (defglobal +selfless-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"
@@ -309,8 +308,8 @@
             (let* ((sym (find-symbol local-name :e.elang.vm-node)))
               (or (and sym
                        (get sym 'static-maker))
-                  (e. absent-thunk |run|)))
-            (e. absent-thunk |run|))))
+                  (efuncall absent-thunk)))
+            (efuncall absent-thunk))))
       (:|optUnget| (specimen)
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
@@ -331,16 +330,16 @@
         (let* ((sym (find-symbol local-name :e.elang.vm-node)))
           (if sym
             (make-instance 'cl-type-guard :type-specifier sym)
-            (e. absent-thunk |run|)))
-        (e. absent-thunk |run|))))))
+            (efuncall absent-thunk)))
+        (efuncall absent-thunk))))))
 
 ; XXX move this utility function elsewhere
 ; XXX avoiding loading deep-frozen auditor because we need this during the construction of the path loader - so we reject some we could accept. the Right Solution is to add lazy auditing as MarkM suggested
 (defun deep-frozen-if-every (subs
-    &aux #-(and) (deep-frozen-guard (e. (vat-safe-scope *vat*) |get| "DeepFrozen")))
+    &aux #-(and) (deep-frozen-guard (eelt (vat-safe-scope *vat*) "DeepFrozen")))
   (if (every (lambda (x)
                #-(and) (e-is-true (e. deep-frozen-guard |isDeepFrozen| x))
-               (e-is-true (e. +the-audit-checker+ |run| +deep-frozen-stamp+ x))) subs)
+               (e-is-true (efuncall +the-audit-checker+ +deep-frozen-stamp+ x))) subs)
     +deep-frozen-stamp+
     (e-lambda "org.cubik.cle.prim.deepFrozenIfEveryStubAuditor" () (:|audit/2| (constantly +e-false+)))))
 
@@ -369,21 +368,21 @@
             (e. (e. tw |indent|         "       ") |print| message)
             (e. tw |write| "..."))
           (unwind-protect
-            (e. thunk |run|)
+            (efuncall thunk)
             (format stream "done.~%")))
         (:|runAsTurn| (thunk context-thunk)
           "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
     
     If a log message is produced, context-thunk is run to produce a string describing the origin of the failure."
           (handler-case
-            (e. thunk |run|)
+            (efuncall thunk)
             (error (condition)
-              (e. |trace| |run|
+              (efuncall |trace|
                 (e-lambda nil ()
                   (:|__printOn| (tw)
                     (e-coercef tw +the-text-writer-guard+)
                     (e. tw |print| "caught problem in ")
-                    (e. tw |quote| (e. context-thunk |run|))
+                    (e. tw |quote| (efuncall context-thunk))
                     (e. tw |print| ": " (e-print condition)))))
               (make-unconnected-ref (transform-condition-for-e-catch condition)))))))))
 
@@ -438,9 +437,9 @@
     ("org.apache.oro.text.regex.Perl5Matcher"  e.extern:+rx-perl5-matcher+)
     
     ("org.cubik.cle.parser.makeLALR1Parser"
-     (e. (e-import "org.cubik.cle.parser.makeLALR1ParserAuthor") 
-         ;; XXX smaller authority: actually just wants access to cl-yacc
-         |run| +lisp+))
+     (efuncall (e-import "org.cubik.cle.parser.makeLALR1ParserAuthor") 
+               ;; XXX smaller authority: actually just wants access to cl-yacc
+               +lisp+))
     
     ("org.cubik.cle.prim.parser"               e.syntax:+prim-parser+)
     ("org.cubik.cle.prim.ePrinter"             e.syntax:+e-printer+)
@@ -460,28 +459,27 @@
 
 ; XXX simplify the amount of wrapping this requires / make those of these primitives which are safe (all of them?) importable
 (defglobal +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
-  (e. (e. +builtin-emaker-loader+ |fetch|
+  (efuncall (e. +builtin-emaker-loader+ |fetch|
         "org.erights.e.elib.ref.RefAuthor" 
         (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
-      |run|
-      (wrap-function (f+ #'vector #'make-promise)
-                     :stamps (list +deep-frozen-stamp+))
-      (wrap-function #'ref-state
-                     :stamps (list +deep-frozen-stamp+))
-      (wrap-function (f+ #'as-e-boolean #'ref-is-resolved)
-                     :stamps (list +deep-frozen-stamp+))
-      (wrap-function #'make-unconnected-ref
-                     :stamps (list +deep-frozen-stamp+))
-      (wrap-function #'ref-opt-problem
-                     :stamps (list +deep-frozen-stamp+))
-      'elib:broken
-      'elib:near
-      'elib:eventual
-      +deep-frozen-stamp+))))
+    (wrap-function (f+ #'vector #'make-promise)
+                   :stamps (list +deep-frozen-stamp+))
+    (wrap-function #'ref-state
+                   :stamps (list +deep-frozen-stamp+))
+    (wrap-function (f+ #'as-e-boolean #'ref-is-resolved)
+                   :stamps (list +deep-frozen-stamp+))
+    (wrap-function #'make-unconnected-ref
+                   :stamps (list +deep-frozen-stamp+))
+    (wrap-function #'ref-opt-problem
+                   :stamps (list +deep-frozen-stamp+))
+    'elib:broken
+    'elib:near
+    'elib:eventual
+    +deep-frozen-stamp+))))
 
 (defun default-safe-scope-roots ()
   (let* ((bare-emaker-loader
-           (e. +the-make-path-loader+ |run| "__importUncachedEmaker" 
+           (efuncall +the-make-path-loader+ "__importUncachedEmaker" 
              (map 'vector 
                   #'make-emaker-loader-from-desc
                   *emaker-search-list*)))
@@ -495,14 +493,14 @@
                    (if cache-present
                      cache-value
                      (let ((result (e. bare-emaker-loader |fetch| fqn absent-thunk)))
-                       (when (e-is-true (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |isDeepFrozen| result))
+                       (when (e-is-true (e. (eelt (vat-safe-scope *vat*) "DeepFrozen") |isDeepFrozen| result))
                          (setf (gethash fqn deep-frozen-cache) result))
                        result))))))))
     (make-scope "__defaultSafeScopeRoots.thisShouldNotBeVisible$"
       `(("&import__uriGetter"  ,(make-lazy-apply-slot (lambda ()
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles
           (let ((real-loader 
-                  (e. +the-make-path-loader+ |run| "import" (vector 
+                  (efuncall +the-make-path-loader+ "import" (vector 
                     (make-primitive-loader)
                     (make-safe-extern-loader)
                     (make-selfless-loader)
@@ -521,7 +519,7 @@
     (labels ((typical-lazy (source)
                (make-lazy-eval-slot safe-scope-vow source))
              (lazy-import (fqn)
-               (make-lazy-apply-slot (lambda () (e. (e. &<import> |getValue|) |get| fqn)))))
+               (make-lazy-apply-slot (lambda () (eelt (e. &<import> |getValue|) fqn)))))
       (make-scope fqn-prefix
       
         `(; --- self-referential / root ---
@@ -675,8 +673,7 @@
                   ("SelflessStamp"     ,elib:+selfless-stamp+)
                   ("makeProxyResolver" ,elib:+the-make-proxy-resolver+)))
             |or| (vat-safe-scope *vat*))))
-    (e. (e-import "org.cubik.cle.makeIOScope")
-        |run| 
+    (efuncall (e-import "org.cubik.cle.makeIOScope")
         "__privileged$"
         vat-priv-scope
         (make-scope "__ioPowers$"
@@ -686,9 +683,10 @@
             ("unsafeNearSpawn"      ,e.extern:+spawn+)
             ("&stdin"     ,(make-lazy-apply-slot (lambda ()
                              (warn "making stdin")
-                             (e. (e. (e-import "org.cubik.cle.charsets") |get| e.extern:+standard-external-format-common-name+) |decode| (e. (e. (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
-                                 |run|
-                                 +lisp+) |run| (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input*) 4096) (e. #() |asMap|)))))
+                             (e. (eelt (e-import "org.cubik.cle.charsets") e.extern:+standard-external-format-common-name+)
+                                 |decode|
+                                (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
+                                   +lisp+) (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input*) 4096) (e. #() |asMap|)))))
             ("stdout"     ,(make-text-writer-to-cl-stream
                             out-cl-stream
                             :autoflush t
@@ -702,9 +700,7 @@
             ,@(when interp-supplied
               `(("interp" ,interp)))
             ("&IP"        ,(make-lazy-apply-slot (lambda ()
-                             (e. (e-import "org.cubik.cle.IPAuthor")
-                                 |run|
-                                 +lisp+))))
+                             (efuncall (e-import "org.cubik.cle.IPAuthor") +lisp+))))
             ("&getSocketPeerRef"        
              ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
             ("&getSocketLocalRef"

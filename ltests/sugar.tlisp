@@ -15,7 +15,7 @@
 
 (deftest escape-bind.yes
   (escape-bind (foo)
-      (e. foo |run| "out")
+      (efuncall foo "out")
     (value)
       (list value))
   ("out"))

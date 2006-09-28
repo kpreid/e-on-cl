@@ -559,7 +559,7 @@ XXX This is an excessively large authority and will probably be replaced."
             "~A is out of scope" (e-quote witness))
           ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
           ;; XXX also, cross-layer reference into the current compiler implementation
-          (e. meta-state |get| (e. "&" |add| slot-name)))))
+          (eelt meta-state (e. "&" |add| slot-name)))))
     (values witness 
             (lambda () (setf witness-ok nil)) 
             (lambda (auditor)

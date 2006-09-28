@@ -114,7 +114,7 @@
                     (funcall finalizer accumulator)))
                 (error (condition backtrace)
                   (let ((*print-level* 5))
-                    (e. e.knot:+sys-trace+ |run| (format nil "caught problem in updoc chaining: ~A~%~S" (e-print condition) backtrace)))
+                    (efuncall e.knot:+sys-trace+ (format nil "caught problem in updoc chaining: ~A~%~S" (e-print condition) backtrace)))
                   (e. result-resolver |smash| (transform-condition-for-e-catch condition))))))
       (proceed))
     result-promise))
@@ -326,22 +326,21 @@
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch base-interp mverb args))))
            (scope (if confine
-                    (e. (e-import "org.cubik.cle.makeIOScope")
-                        |run| 
-                        "__main$"
-                        (vat-safe-scope *vat*)
-                        (make-scope "__updocConfinedPowers$"
-                          `(("interp" ,updoc-interp)
-                            ("stdout" ,(make-text-writer-to-cl-stream
-                                        eval-out-stream
-                                        :autoflush t
-                                        :should-close-underlying nil))
-                            ("stderr" ,(make-text-writer-to-cl-stream
-                                        eval-err-stream
-                                        :autoflush t
-                                        :should-close-underlying nil))
-                            ("props"  ,e.knot::+eprops+)
-                            #||#)))
+                    (efuncall (e-import "org.cubik.cle.makeIOScope")
+                      "__main$"
+                      (vat-safe-scope *vat*)
+                      (make-scope "__updocConfinedPowers$"
+                        `(("interp" ,updoc-interp)
+                          ("stdout" ,(make-text-writer-to-cl-stream
+                                      eval-out-stream
+                                      :autoflush t
+                                      :should-close-underlying nil))
+                          ("stderr" ,(make-text-writer-to-cl-stream
+                                      eval-err-stream
+                                      :autoflush t
+                                      :should-close-underlying nil))
+                          ("props"  ,e.knot::+eprops+)
+                          #||#)))
                     (e. (make-io-scope :stdout eval-out-stream 
                                        :stderr eval-err-stream
                                        :interp updoc-interp) 
@@ -516,7 +515,7 @@
                                  :interp interp) 
                   |withPrefix| "__main$")))
     (e. scope-slot |setValue| scope)
-    (multiple-value-let* ((stdin (e. scope |get| "stdin"))
+    (multiple-value-let* ((stdin (eelt scope "stdin"))
                           (buf (make-array 0 :element-type 'character :adjustable t :fill-pointer 0))
                           (result resolver (make-promise)))
       ;; XXX this is assortedly bad

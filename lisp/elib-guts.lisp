@@ -69,7 +69,7 @@
       (cond
         ((and (not (eql mverb :|get/0|))
               (eql mverb (e-util:mangle-verb "get" (length args))))
-          (e. (e-import "org.erights.e.elib.slot.makeUnionGuard") |run| (coerce args 'vector)))
+          (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (coerce args 'vector)))
         ((and (eql mverb :|__respondsTo/2|) 
               (string= (aref args 0) "get"))
           +e-true+)
@@ -100,7 +100,7 @@
 ;;; XXX look for ways to reduce the duplication of these common makers
 
 (defun import-uncall (fqn)
-  `#(,(e. (vat-safe-scope *vat*) |get| "import__uriGetter") "get" #(,fqn)))
+  `#(,(eelt (vat-safe-scope *vat*) "import__uriGetter") "get" #(,fqn)))
 
 (defglobal +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
     (:stamped +deep-frozen-stamp+)
@@ -558,7 +558,7 @@
     (e. tw |print| "<sorted queue of " (length (slot-value this 'elements)) ">"))
   (:|peek| (this absent-thunk)
     (block nil
-      (let ((p (sorted-queue-peek this (lambda () (return (e. absent-thunk |run|))))))
+      (let ((p (sorted-queue-peek this (lambda () (return (efuncall absent-thunk))))))
         (vector (car p) (cdr p)))))
   (:|pop| (this)
     (let ((p (sorted-queue-pop this)))
@@ -591,7 +591,7 @@
           (when (sb-c::constant-lvar-p guardl)
             (let ((guard (sb-c::lvar-value guardl)))
               (when (typep guard 'cl-type-guard)
-                #+(or) (e. e.knot:+sys-trace+ |run| (format nil "~&deriving guard call type ~S~%" (cl-type-specifier guard)))
+                #+(or) (efuncall e.knot:+sys-trace+ (format nil "~&deriving guard call type ~S~%" (cl-type-specifier guard)))
                 (sb-c::ir1-transform-specifier-type 
                   (cl-type-specifier guard))))))))))
 

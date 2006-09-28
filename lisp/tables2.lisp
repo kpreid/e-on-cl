@@ -41,7 +41,7 @@
   (when (plusp (length text))
     (multiple-value-bind (end-line end-col)
         (moved-text-position 1 0 text #'drop-newline-op)
-      (e. +the-make-source-span+ |run| 
+      (efuncall +the-make-source-span+ 
         uri
         (as-e-boolean (not (drop-newline-op #'find text)))
         1        0
@@ -202,7 +202,7 @@
               ;; one-to-one and adjacent
               (make-instance 'leaf-twine 
                 :string (strings)
-                :span (e. +the-make-source-span+ |run| 
+                :span (efuncall +the-make-source-span+ 
                         (e. span1 |getUri|)
                         +e-true+
                         (e. span1 |getStartLine|)
@@ -279,7 +279,7 @@
     (e-coercef start 'integer)
     (e-coercef end 'integer)
     (e. +the-make-twine+ |fromString|
-      (e. (twine-string this) |run| start end)
+      (efuncall (twine-string this) start end)
       (when (plusp (- end start))
         (let* ((span (slot-value this 'span))
                (string (twine-string this))
@@ -292,7 +292,7 @@
                 (moved-text-position run-start-line run-start-col drun)
               ;(print (list run-start-line run-start-col run-end-line run-end-col))
               ;(force-output)
-              (e. +the-make-source-span+ |run| 
+              (efuncall +the-make-source-span+ 
                 (e. span |getUri|)
                 (as-e-boolean (not (all-newline-op #'find drun)))
                 run-start-line run-start-col
@@ -435,7 +435,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           do (format stream "~A~W => ~W" sep key value))))
 
 (defun comparer-adapter ()
-  (let ((comparer (e. (vat-safe-scope *vat*) |get| "__comparer")))
+  (let ((comparer (eelt (vat-safe-scope *vat*) "__comparer")))
     (lambda (a b) (e-is-true (e. comparer |lessThan| a b)))))
 
 (def-vtable const-map
@@ -474,7 +474,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda "org.cubik.cle.prim.mapWithIterator" () (:|iterate| (f)
         (e. map |iterate| f)
-        (e. f |run| new-key new-value)
+        (efuncall f new-key new-value)
         nil))
       +e-false+))
 
@@ -491,11 +491,11 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             (e. map |iterate| (efun (key value)
               (cond
                 ((and last-pair removing-nonlast (samep key key-to-remove))
-                  (e. f |run| (first last-pair) (second last-pair)))
+                  (efuncall f (first last-pair) (second last-pair)))
                 ((samep key (first last-pair))
                   #|do nothing|#)
                 (t
-                  (e. f |run| key value)))
+                  (efuncall f key value)))
               nil))
             nil))
           +e-true+))
@@ -507,7 +507,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
         (loop for key across (stable-sort (copy-seq (e-coerce (e. map |getKeys|) 'sequence))
                                           (comparer-adapter))
               do
-          (e. f |run| key (e. map |get| key)))
+          (efuncall f key (eelt map key)))
         nil))
       +e-true+))
 
@@ -517,7 +517,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (e-lambda "org.cubik.cle.prim.mapAndIterator" () (:|iterate| (f)
         (e. map |iterate| (efun (key value)
           (when (e-is-true (e. mask |maps| key))
-            (e. f |run| key value))
+            (efuncall f key value))
           nil))
         nil))
       +e-true+))
@@ -529,7 +529,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   ;    (e-lambda (:|iterate| (f)
   ;      (e. map |iterate| (e-lambda (:|run| (key value)
   ;        (unless (e-is-true (e. mask |maps| key))
-  ;          (e. f |run| key value))
+  ;          (efuncall f key value))
   ;        nil)))
   ;      nil))
   ;    +e-true+))
@@ -550,7 +550,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (e. +the-make-const-map+ |fromIteratable|
         (e-lambda "org.cubik.cle.prim.mapButNotIterator" () (:|iterate| (f)
           (loop for key across ordering do
-            (e. f |run| key (e. map |get| key)))
+            (efuncall f key (eelt map key)))
           nil))
         +e-true+)))
   
@@ -572,7 +572,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (let* ((pair (ref-shorten (e. map |getPair|))))
       (loop for key   across (aref pair 0)
             for value across (aref pair 1)
-            do (e. func |run| key value))
+            do (efuncall func key value))
       nil))
   
   (:|printOn| (map left-s map-s sep-s right-s tw)
@@ -636,7 +636,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (let ((index (hashref key table)))
         (if index
           (aref values index)
-          (e. absent-thunk |run|)))))
+          (efuncall absent-thunk)))))
   (:|size| (this)
     (with-slots (keys) this (length keys)))
   (:|getKeys| (this)
@@ -754,7 +754,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
         (let ((index (hashref key table)))
           (if index
             (aref values index)
-            (e. absent-thunk |run|))))))
+            (efuncall absent-thunk))))))
 
   (:|getPair| (this)
     (with-slots (snapshot keys values) this 
@@ -780,7 +780,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (e. tw |print| "__makeMap"))
   (:|asType| ()
     ; XXX we provide the sugared Map guard instead of the primitive one - is this really appropriate?
-    (e. (vat-safe-scope *vat*) |get| "Map"))
+    (eelt (vat-safe-scope *vat*) "Map"))
   (:|fromPairs| (pairs)
     (e-coercef pairs 'vector)
     (loop
@@ -850,8 +850,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                 :key-guard key-guard
                 :value-guard value-guard))
              (map-shell
-              (e. (e-import "org.erights.e.elib.tables.makeFlexMapShell")
-                |run|
+              (efuncall (e-import "org.erights.e.elib.tables.makeFlexMapShell")
                 map
                 impl)))
         (e-lambda "org.erights.e.elib.tables.GenhashFlexMapImplOuter" ()

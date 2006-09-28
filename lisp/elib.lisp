@@ -500,7 +500,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (multiple-value-bind (promise resolver) (make-promise)
     (enqueue-turn *vat* (lambda ()
       ; XXX direct this into a *configurable* tracing system once we have one
-      ;(e. e.knot:+sys-trace+ |run| (format nil "running ~A ~A <- ~A ~A" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector))))
+      ;(efuncall e.knot:+sys-trace+ (format nil "running ~A ~A <- ~A ~A" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector))))
       (e. resolver |resolve| 
         (handler-case 
           (apply #'e-call-dispatch rec mverb args)
@@ -508,7 +508,7 @@ If there is no current vat at initialization time, captures the current vat at t
             ;; XXX using e printing routines here is invoking objects outside a proper turn; do one of:
             ;;   (a) CL print instead
             ;;   (b) make printing the error done in yet another turn (possible object's-print-representation-has-changed problem)
-            (e. e.knot:+sys-trace+ |run| (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
+            (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
             (make-unconnected-ref (transform-condition-for-e-catch p)))))))
     promise))
 
@@ -1209,7 +1209,7 @@ While this is a process-wide object, its stamps should not be taken as significa
   (setf condition (e-problem-to-condition condition))
   (e-coercef condition +the-exception-guard+)
   (if (ref-shorten ejector)
-    (let ((r (e. ejector |run| condition)))
+    (let ((r (efuncall ejector condition)))
       (error "optEjector ~A returned: ~A" (e-quote ejector) (e-quote r)))
     (progn
       ;; XXX once we've sufficiently moved to passing 'throw' not 'null', make this an error

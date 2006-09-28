@@ -155,7 +155,7 @@
       (multiple-value-bind (slot present) (gethash noun slot-table)
         (if present
           (e. slot |getValue|)
-          (e. absent-thunk |run|)))))
+          (efuncall absent-thunk)))))
   (:|put| (this noun value)
     "Set the value of this scope's slot for the given noun string, or throw if it has no slot."
     (e. (e. this |getSlot| noun) |setValue| value))
@@ -166,7 +166,7 @@
     "Iterate over the bindings in this scope, as \"&\" + noun => slot."
     (with-slots (slot-table) scope
       (loop for noun across (scope-slot-ordering scope) do
-        (e. afunc |run| (concatenate 'string "&" noun) 
+        (efuncall afunc (concatenate 'string "&" noun) 
                         (gethash noun slot-table)))
       nil))
   (:|nestOuter| (scope)
@@ -257,7 +257,7 @@
              (let ((tw (make-text-writer-to-cl-stream stream
                          :autoflush nil
                          :should-close-underlying nil)))
-               (e. (se-printer condition) |run| tw condition)))))
+               (efuncall (se-printer condition) tw condition)))))
 
 (defun property-name-to-get-verb (name)
   (if (string= name "")
@@ -270,21 +270,21 @@
   (:|__printOn| (condition tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |write| "problem: ")
-    (e. (se-printer condition) |run| tw condition))
+    (efuncall (se-printer condition) tw condition))
   (:|__getAllegedType| (condition)
-    (e. +the-make-type-desc+ |run|
+    (efuncall +the-make-type-desc+
       "StructureException instance type" 
       nil
       (map 'vector
            (lambda (type)
-             (e. +the-make-type-desc+ |run|
+             (efuncall +the-make-type-desc+
                "StructureException autodefined supertype" type #() #() #()))
            (se-types condition))
       #()
       (map 'vector
            (lambda (name)
              (e-coercef name 'string)
-             (e. +the-make-message-desc+ |run|
+             (efuncall +the-make-message-desc+
                "" (property-name-to-get-verb name) #() nil))
            (e. (se-properties condition) |getKeys|))))
   (:|_getProperties/0| 'se-properties))
@@ -303,7 +303,7 @@
   (:|run| (types properties printer)
     (setf types (map 'vector (lambda (x) (e-coercef x 'string)) (e-coerce types 'vector)))
     (e-coercef properties +the-map-guard+)
-    (e-coercef printer (e. (vat-safe-scope *vat*) |get| "DeepFrozen"))
+    (e-coercef printer (eelt (vat-safe-scope *vat*) "DeepFrozen"))
     (make-condition
       'e-structure-exception
       :types types
@@ -321,7 +321,7 @@
     nil)
   (:|run| (body)
     "Call body.run(), which must return a boolean, until it returns false."
-    (loop while (e-is-true (e. body |run|))))))
+    (loop while (e-is-true (efuncall body))))))
 
 (defun split-fqn-prefix (fqn)
   ; xxx consider replacing with SPLIT-SEQUENCE
@@ -388,11 +388,11 @@
 
 (defun e-to-lisp-function (e-function)
   "Wrap an E function (object with run/* methods) as an equivalent Lisp function."
-  (lambda (&rest args) (e-call e-function "run" args)))
+  (lambda (&rest args) (apply #'efuncall e-function args)))
 
 (defun e-to-lisp-mv-function (e-function)
   "Wrap an E function (object with run/* methods) as an equivalent Lisp function, treating a returned ConstList as multiple values."
-  (lambda (&rest args) (values-list (coerce (e-coerce (e-call e-function "run" args) 'vector) 'list))))
+  (lambda (&rest args) (values-list (coerce (e-coerce (apply #'efuncall e-function args) 'vector) 'list))))
 
 ;;; --- scope construction utilities ---
 
@@ -401,7 +401,7 @@
 (defglobal +the-make-path-loader+ (e-lambda "org.cubik.cle.prim.makePathLoader"
     (:stamped +deep-frozen-stamp+)
   (:|run| (name fetchpath
-      &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (e. (vat-safe-scope *vat*) |get| "DeepFrozen") |eventually|)))
+      &aux #+eventually-frozen-path-loader (eventually-deep-frozen (e. (eelt (vat-safe-scope *vat*) "DeepFrozen") |eventually|)))
     (e-coercef name 'string)
     (e-coercef fetchpath 'vector)
     (e-lambda |loader| ()
@@ -423,10 +423,10 @@
       (:|fetch| (fqn absent-thunk)
         (e-coercef fqn 'string)
         (if (string= ".*" fqn :start2 (- (length fqn) 2))
-          (e. (e-import "org.erights.e.elang.interp.makePackageLoader") |run| |loader| (concatenate 'string name ":") fqn)
+          (efuncall (e-import "org.erights.e.elang.interp.makePackageLoader") |loader| (concatenate 'string name ":") fqn)
           (loop for sub across fetchpath
                 do (block continue (return (e. sub |fetch| fqn (e-lambda "$continueSearchThunk" () (:|run| () (return-from continue))))))
-                finally (e. absent-thunk |run|))))
+                finally (efuncall absent-thunk))))
       (:|get| (fqn) 
         (e. |loader| |fetch| fqn 
           (e-lambda "$getFailureThunk" () (:|run| () (error "~A can't find ~A" (e-quote |loader|) (e-quote fqn))))))
@@ -434,7 +434,7 @@
         (loop for sub across fetchpath thereis
           (and (e-is-true (e. sub |__respondsTo| "optUnget" 1))
                (progn
-                 #+(or) (e. e.knot:+sys-trace+ |run| (format nil "~A for optUnget of ~A querying sub ~A" (e-quote |loader|) (e-quote specimen) (e-quote sub)))
+                 #+(or) (efuncall e.knot:+sys-trace+ (format nil "~A for optUnget of ~A querying sub ~A" (e-quote |loader|) (e-quote specimen) (e-quote sub)))
                  (unget-to-uncall |loader| (e. sub |optUnget| specimen))))))
       (:|optUnget| (specimen)
         ; xxx this is how Java-E does it, and claims a justification, but *what*?

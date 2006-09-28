@@ -322,7 +322,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda "org.cubik.cle.prim.listAsKeysIterator" () (:|iterate| (f)
         (loop for key across vector do
-          (e. f |run| key nil))))
+          (efuncall f key nil))))
       +e-false+))
   (:|asSet| (vector)
     "Return a ConstSet with the elements of this list, omitting duplicates."
@@ -333,8 +333,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Return a stream providing the elements of this list."
     ;; XXX this is a mess. Revisit this once we have multiple uses of InStreamShell and figure out how the interface should be fixed to make common uses simple.
     (reprint
-      (e. (e-import "org.erights.e.elib.eio.makeInStreamShell")
-        |run|
+      (efuncall (e-import "org.erights.e.elib.eio.makeInStreamShell")
         +the-any-guard+ ; XXX should be (e. vector |valueType|)
         (e-lambda nil () (:|resolve| (backend)
           (e. backend |setAvailable| (length vector))
@@ -389,7 +388,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|iterate| (vector func)
     (loop for i from 0
           for elem across vector
-          do  (e. func |run| i elem))
+          do  (efuncall func i elem))
     nil)
   (:|indexOf1| (vector elem)
     (setf elem (ref-shorten elem))
@@ -453,7 +452,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                  (e.elib.tables::comparer-adapter)))
   (:|sort| (vector comparer)
     (stable-sort (copy-seq vector) 
-                 (lambda (a b) (e-is-true (e. (e. comparer |run| a b) |belowZero|))))))
+                 (lambda (a b) (e-is-true (e. (efuncall comparer a b) |belowZero|))))))
 
 (defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
     (:stamped  +deep-frozen-stamp+)
@@ -569,7 +568,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
           (if (and (not (typep this ts))
                    (typep float ts))
             float
-            (e. ej |run|)))
+            (efuncall ej)))
       (problem)
         (declare (ignore problem))
         this))

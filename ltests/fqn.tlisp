@@ -24,8 +24,7 @@
   "world$hello")
 
 (deftest fqn.nest
-  (fqn-of (e. 
+  (fqn-of (efuncall
             (with-path (make-pathname :name "world") 
-              (eval `(e-lambda "$hello" () (:|run| () (e-lambda "$sub" ())))))
-            |run|))
+              (eval `(e-lambda "$hello" () (:|run| () (e-lambda "$sub" ())))))))
   "world$hello$sub")

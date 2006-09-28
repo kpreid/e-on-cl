@@ -84,9 +84,8 @@
 (defun trace-error-print-handler (thing)
   ; XXX printing the backtrace is too noisy for running the tests - we need a 'store-but-don't-print' trace facility, or a tracelog like E-on-Java.
   (lambda (raw-condition)
-    (e. 
-      (e. (vat-safe-scope *vat*) |get| "traceln") 
-      |run|
+    (efuncall 
+      (eelt (vat-safe-scope *vat*) "traceln") 
       (format nil "problem while printing ~S: ~A (~S)~%~:W" 
         thing 
         (e-quote raw-condition) 
@@ -115,8 +114,8 @@
 
 (defun make-text-writer (&key syntax delegate is-quoting autoflush (indent-step "    ")
     &aux (seen (e.elib.tables::make-primitive-flex-map)))
-  (unless (e-is-true (e. +the-audit-checker+ |run| +deep-frozen-stamp+ syntax))
-    (e-coercef syntax (e. (vat-safe-scope *vat*) |get| "DeepFrozen")))
+  (unless (e-is-true (efuncall +the-audit-checker+ +deep-frozen-stamp+ syntax))
+    (e-coercef syntax (eelt (vat-safe-scope *vat*) "DeepFrozen")))
   (labels ((spawn (&key syntax should-close autoflush in-error-printing open-flags
               &aux (delegate delegate))
             "Makes an individual TextWriter."
@@ -220,7 +219,7 @@
                           (dolist (arg args) (e. tw |printSame| arg))))
                       (t
                         (no-such-method tw mverb args)))))))))
-    (spawn :syntax (let ((base (e. syntax |run| delegate)))
+    (spawn :syntax (let ((base (efuncall syntax delegate)))
                      (if is-quoting
                        (e. base |asQuoting|)
                        base))

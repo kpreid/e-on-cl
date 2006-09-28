@@ -22,7 +22,7 @@
     (let ((entries (maphash #'list e.elib::*instrument-ref-shorten-kinds*)))
       (mapcar #'(lambda (l) (destructuring-bind (key times) l
                (when (> times 0)
-                 (e. e.knot:+sys-trace+ |run| (format nil "profiling: ~A shortened ~A times" key times)))))
+                 (efuncall e.knot:+sys-trace+ (format nil "profiling: ~A shortened ~A times" key times)))))
               (sort entries #'< :key #'second)))
 
   #+sbcl
@@ -51,8 +51,8 @@
 (define-toplevel script-toplevel (args)
   (establish-vat :label "rune script toplevel")
   (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
-         (Ref (e. scope |get| "Ref"))
-         (outcome-vow (e. (e. scope |get| "rune") |run| (coerce args 'vector))))
+         (Ref (eelt scope "Ref"))
+         (outcome-vow (efuncall (eelt scope "rune") (coerce args 'vector))))
     (e. Ref |whenResolved| outcome-vow
       (e-lambda "org.erights.e.elang.interp.RuneTerminator" ()
         (:|run| (outcome 

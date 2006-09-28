@@ -199,7 +199,7 @@
     :input
     (named-lambda e-receive-handler (x)
       (declare (ignore x)) 
-      (e. e-function |run|))))
+      (efuncall e-function))))
 
 (defun foo-remove-receive-handler (handler)
   (vr-remove-io-handler handler))

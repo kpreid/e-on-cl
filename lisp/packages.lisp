@@ -231,7 +231,8 @@
     :ejerror
     :with-vat :call-when-resolved :when-resolved
     :mapping-bind
-    :e-import))
+    :e-import
+    :eelt :efuncall))
 
 (e.util:defglobals
   elib:+the-make-simple-slot+

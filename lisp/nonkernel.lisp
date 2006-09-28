@@ -405,7 +405,7 @@
       (setf what (ref-shorten what))
       (etypecase what
         (null nil)
-        (vector (map 'vector (lambda (x) (e. noun-substitute-visitor |run| x)) what))
+        (vector (map 'vector (lambda (x) (efuncall noun-substitute-visitor x)) what))
         (|ENode| (e. what |welcome| noun-substitute-visitor))))
     (:|visitNounExpr| (opt-original name)
       (declare (ignore name))
@@ -420,7 +420,7 @@
             (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
                   for sub in args
                   collect (if (e-is-true subnode-flag)
-                            (e. noun-substitute-visitor |run| sub)
+                            (efuncall noun-substitute-visitor sub)
                             sub))))))))
 
 (defemacro |DefrecExpr| (|EExpr|) ((|pattern| t |Pattern|)

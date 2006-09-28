@@ -123,7 +123,7 @@
       (:|getOpt| (subpath)
         ;; XXX needs tests
         "Return the file at 'subpath' in this directory if it exists, otherwise null."
-        (let ((sub (e. |file| |get| subpath)))
+        (let ((sub (eelt |file| subpath)))
           (when (e-is-true (e. sub |exists|))
             sub)))
       (:|getText| ()
@@ -142,9 +142,9 @@
             (read-entire-stream stream))))
       (:|iterate| (f)
         (loop for subpath in (cl-fad:list-directory pathname)
-          do (e. f |run| (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))
+          do (efuncall f (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))
       (:|readOnly| ()
-        (e. (e-import "org.cubik.cle.file.makeReadOnlyFile") |run| |file|))
+        (efuncall (e-import "org.cubik.cle.file.makeReadOnlyFile") |file|))
       (:|_clFileWriteDate| ()
         "XXX this interface needs changing. no tests. quick fix to support changes in emaker loading."
         (file-write-date pathname))
@@ -222,7 +222,7 @@
       (multiple-value-bind (p r) (make-promise)
         (enqueue-timed *vat* utime (lambda ()
           (e. r |resolve|
-            (e. (e. (vat-safe-scope *vat*) |get| "trace") |runAsTurn|
+            (e. (eelt (vat-safe-scope *vat*) "trace") |runAsTurn|
               thunk
               (efun () (format nil "timer whenPast at ~A" time))))))
         p)))))
@@ -290,7 +290,7 @@
 
 (defun make-pseudo-far (near)
   ;; XXX avoid using the author every time
-  (e. (e. (e-import "org.cubik.cle.makePseudoFarRefAuthor") |run| e.elib:+the-make-proxy-resolver+) |run| near))
+  (efuncall (efuncall (e-import "org.cubik.cle.makePseudoFarRefAuthor") e.elib:+the-make-proxy-resolver+) near))
 
 (defun convert-stream-option (option which)
   (cond
@@ -312,7 +312,7 @@
 
 (defglobal +spawn+ (e-lambda "org.cubik.cle.prim.spawn" ()
   (:|run| (file args)
-    (e. +spawn+ |run| file args (e. #() |asMap|)))
+    (efuncall +spawn+ file args (e. #() |asMap|)))
   (:|run| (file args options)
     (e-coercef args 'vector)
     (mapping-bind options

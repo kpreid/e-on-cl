@@ -110,7 +110,7 @@
                  (e-lambda "$kernelNodesIterator" () (:|iterate| (f)
                    (do-symbols (symbol :e.kernel)
                      (block nil
-                       (e. f |run| (symbol-name symbol) (or (get symbol 'static-maker)
+                       (efuncall f (symbol-name symbol) (or (get symbol 'static-maker)
                                                          (return)))))
                    nil))
                  +e-true+)))
@@ -150,14 +150,14 @@
                    (escape-bind (fail)
                        (let* ((slot (if opt-scope
                                       (e. opt-scope |getSlot| noun)
-                                      (e. fail |run|)))
+                                      (efuncall fail)))
                               (value (progn
                                        (unless (typep slot 'e-simple-slot)
-                                         (e. fail |run|))
+                                         (efuncall fail))
                                        (ref-shorten (e. slot |getValue|)))))
                          (unless (typep value 'externalizable-for-efasl)
                            ;; xxx in principle, this can be extended to any externalizable value 
-                           (e. fail |run|))
+                           (efuncall fail))
                          (cons noun (make-instance 'value-binding :value value)))
                      (-unused-)
                        (declare (ignore -unused-))
