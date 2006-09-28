@@ -374,11 +374,33 @@
 (defmethod make-load-form ((a static-context) &optional environment)
   (make-load-form-saving-slots a :environment environment))
 
+(defglobal +the-make-static-context+ (e-lambda
+    "org.erights.e.elang.scope.makeStaticContext"
+    (:stamped +deep-frozen-stamp+)
+  (:|asType| () (type-specifier-to-guard 'static-context))
+  (:|run| (fqn-prefix syn-env opt-object-source source-span)
+    (e-coercef fqn-prefix 'string)
+    (e-coercef syn-env 'null)
+    (e-coercef opt-object-source '(or null e.kernel:|ObjectExpr|))
+    (e-coercef source-span '(or null source-span))
+    (make-instance 'static-context
+      :source-span source-span
+      :fqn-prefix fqn-prefix
+      :opt-object-source opt-object-source))))
+
+(def-fqn static-context "org.erights.e.elang.scope.StaticContext")
+
 ;; XXX static contexts must be selfless or fresh, or they break equivalence of separate evaluation
 (def-vtable static-context
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +selfless-stamp+)))
+  (:|__optUncall| (this)
+    (with-slots (source-span fqn-prefix opt-object-source) this
+      `#(,+the-make-static-context+
+         "run"
+         #(,fqn-prefix nil ,opt-object-source ,source-span))))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)

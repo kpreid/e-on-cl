@@ -288,6 +288,18 @@ MetaContextExpr
   #            }
   #        }`
 
+A MetaContextExpr must not produce a result which allows one to distinguish multiple evaluations of the same code; it must be always the same *or* always fresh.
+
+  ? def expr := e`thunk { meta.context() }`
+  > def [f1, f2] := [expr.eval(safeScope), expr.eval(safeScope)]
+  > (f1() == f1()) == (f1() == f2())
+  # value: true
+  
+Furthermore, we choose that it be always the same, i.e. selfless.
+  
+  ? { (def c := meta.context()) == E.call(E, "call", c.__optUncall()) }
+  # value: true
+
 MetaStateExpr
 
   ? (def _() :any { def x := &int; meta.getState() })()
