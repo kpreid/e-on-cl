@@ -79,7 +79,7 @@ if [ ! -e "$IMAGE_ENTRY" ]; then
   if [ "$LOADQUIET" = nil ]; then
     echo "; $0: Attempting to save image file." >&2
   fi
-  "$HERE/clrune" -l openmcl --save "$IMAGE_ENTRY" "$IMAGE_SECOND"
+  "$HERE/clrune" --save "$IMAGE_ENTRY" "$IMAGE_SECOND"
 fi
 
 if [ -e "$IMAGE_ENTRY" ]; then
