@@ -66,6 +66,8 @@ def exprShorten(expr) {
     }
 }
 
+def emptyStatic := <import:org.cubik.cle.prim.makeStaticScope>.getEmptyScope()
+
 def DeepFrozenAuthor(DeepFrozenStamp) {
 
   def DeepFrozen0
@@ -171,18 +173,25 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
 
   def requireAudit(audition, fail) :void implements DeepFrozenStamp {
     def objectExpr := audition.getObjectExpr()
-    for name => _ in objectExpr.staticScope().namesUsed() {
-      # # XXX figure out how to bootstrap so that the audition doesn't need a method so specific
-      # if (!audition.slotIsDeepFrozen(name)) {
-      #   throw("reference to non-DeepFrozen binding: " + E.toQuote(name))
-      # }
+    
+    def auditorExprOut := accum emptyStatic for e in objectExpr.getAuditorExprs() { _ + e.staticScope() }.outNames()
+    
+    for name => _ in objectExpr.getScript().staticScope().namesUsed() {
       
-      def slot := audition.getSlot(name)
-      requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
-        out.quote(name)
-        out.print(" in the lexical scope of ")
-        out.print(objectExpr.getQualifiedName()) 
-      }})
+      
+      if (auditorExprOut.maps(name)) {
+        # XXX This is ugly and should be made unnecessary. See
+        #   <http://www.eros-os.org/pipermail/e-lang/2006-October/011528.html>
+        throw.eject(fail, E.toQuote(name) + " defined in the auditor expressions of " + objectExpr.getQualifiedName() + " cannot be confirmed DeepFrozen")
+      } else {
+        def slot := audition.getSlot(name)
+        
+        requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
+          out.quote(name)
+          out.print(" in the lexical scope of ")
+          out.print(objectExpr.getQualifiedName()) 
+        }})
+      }
     }
   }
 

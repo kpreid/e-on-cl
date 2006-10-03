@@ -56,6 +56,23 @@ Broken references are DeepFrozen if the exception is
   
   XXX test with a disconnected ref (ex-Far ref)
 
+--- DeepFrozen auditing details
+
+Auditor exprs are a funny case because they're part of the ObjectExpr, yet closed over. '
+
+  ? { var x := 0
+  >   {def testAuditorHidesState implements (def x := 1; DeepFrozen) {
+  >     to run() { x }
+  >   }}
+  > }
+  # problem: "x" defined in the auditor expressions of __main$testAuditorHidesState__C cannot be confirmed DeepFrozen
+  
+  ? def x := 0
+  > {def testAuditorProvidesState implements (var x := 1; DeepFrozen) {
+  >   to run() { x } 
+  > }}
+  # problem: "x" defined in the auditor expressions of __main$testAuditorProvidesState__C cannot be confirmed DeepFrozen
+
 --- 'Lazy' checking
 
   ? def EventuallyDeepFrozen := DeepFrozen."eventually"()
