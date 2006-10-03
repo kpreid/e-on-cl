@@ -789,8 +789,7 @@ namePatt:       nounExpr optGuard    {##=#([FinalPattern],##);}
             ;
 
 justNoun:       IDENT
-            |   "::"^ pocket["noun-string"]!
-                (STRING | IDENT)
+            |   "::"! pocket["noun-string"]! (STRING | IDENT)
             |   URIGetter
             ;
 

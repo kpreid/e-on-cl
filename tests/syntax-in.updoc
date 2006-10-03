@@ -16,6 +16,17 @@ This file contains tests for the E parser's grammar; specifically excluding expa
 # value: <file:///foo#:span::1:0::1:0>
 should be 1:0::1:1 but we don't have span information yet
 
+--- Nouns ---
+
+? t("a")
+# stdout: NounE. a
+
+? t("pragma.enable(\"noun-string\"); a")
+# stdout: SeqE. [] NounE. a
+
+? t("pragma.enable(\"noun-string\"); ::\"a\"")
+# stdout: SeqE. [] NounE. a
+
 --- Function syntax ---
 
 ? t("pragma.enable(\"anon-lambda\"); fn { a }")
