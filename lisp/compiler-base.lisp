@@ -540,19 +540,18 @@
                  (lambda (specimen) (format nil "~A is not an E Audition" (e-quote specimen)))
                  :test-shortened nil))))
 
-;; XXX finish renaming "witness" to "audition"
-(defun make-witness (fqn this-expr meta-state)
-  (let (witness 
+(defun make-audition (fqn this-expr meta-state)
+  (let (audition 
         (approvers '())
-        (witness-ok t))
-    (setf witness
+        (audition-ok t))
+    (setf audition
       (e-lambda "org.erights.e.elang.evm.Audition" 
           (:stamped +e-audition-stamp+)
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)
           (e. tw |write| (concatenate 'string
             "<"
-            (if witness-ok "" "closed ")
+            (if audition-ok "" "closed ")
             "Audition for "
             (aan fqn)
             ">"))
@@ -567,26 +566,26 @@
           this-expr)
         (:|ask| (other-auditor)
           "Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor"
-          (assert witness-ok ()
-            "~A is out of scope" (e-quote witness))
+          (assert audition-ok ()
+            "~A is out of scope" (e-quote audition))
           (when (if (and (e-is-true (e. other-auditor |__respondsTo| "audit" 2))
                          (not (e-is-true (e. other-auditor |__respondsTo| "audit" 1))))
                   ;; use old auditing protocol iff it is the only one supported
-                  (e-is-true (e. other-auditor |audit| this-expr witness))
-                  (e-is-true (e. other-auditor |audit| witness)))
+                  (e-is-true (e. other-auditor |audit| this-expr audition))
+                  (e-is-true (e. other-auditor |audit| audition)))
             (push other-auditor approvers))
           nil)
         (:|getSlot| (slot-name)
           "Returns the named slot in the audited object's lexical scope.
 
 XXX This is an excessively large authority and will probably be replaced."
-          (assert witness-ok ()
-            "~A is out of scope" (e-quote witness))
+          (assert audition-ok ()
+            "~A is out of scope" (e-quote audition))
           ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
           ;; XXX also, cross-layer reference into the current compiler implementation
           (eelt meta-state (e. "&" |add| slot-name)))))
-    (values witness 
-            (lambda () (setf witness-ok nil)) 
+    (values audition 
+            (lambda () (setf audition-ok nil)) 
             (lambda (auditor)
               (when (position auditor 
                               approvers
@@ -636,15 +635,15 @@ The scope layout provided should include the binding for the object's name patte
                   (labels ,labels-fns ,@post-forms #',self-fsym))))
         (if (not has-auditors)
           (build-labels '())
-          (let ((witness-sym  (make-symbol "WITNESS"))
-                (finisher-sym (make-symbol "WITNESS-FINISH")))
-            `(multiple-value-bind (,witness-sym ,finisher-sym ,checker-sym) 
-                (make-witness ',fqn 
+          (let ((audition-sym  (make-symbol "AUDITION"))
+                (finisher-sym (make-symbol "AUDITION-FINISH")))
+            `(multiple-value-bind (,audition-sym ,finisher-sym ,checker-sym) 
+                (make-audition ',fqn 
                               ',this-expr
                               ,(e.compiler.seq::leaf-sequence 
                                 (make-instance '|MetaStateExpr| :elements '()) inner-layout))
               ,@(loop for auditor-form in auditor-forms collect
-                  `(funcall ,witness-sym :|ask/1| ,auditor-form))
+                  `(funcall ,audition-sym :|ask/1| ,auditor-form))
               ,(build-labels
                  ;; This does not need to be in an unwind-protect, because in
                  ;; the event of a nonlocal exit the object reference will not
