@@ -278,27 +278,16 @@ ObjectExpr, EScript
   ? def makeEMatcher := <import:org.erights.e.elang.evm.EMatcher>
   # value: <makeEMatcher>
 
-  ? def emptyObject := makeObjectExpr(null, "foo", "bar", [], def emptyScript := makeEScript(null, [], [], null), null)
+  ? def emptyObject := makeObjectExpr(null, "foo", makeFinalPattern(null, makeNounExpr(null, "bar", null), null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
   # value: e`/** foo */
-  #        def "bar" {
+  #        def bar {
   #        }`
   
   ? emptyObject.getDocComment()
   # value: "foo"
   
-  ? emptyObject.getQualifiedName()
-  # value: "bar"
-  
-  ? emptyObject.withQualifiedName("baz.bar")
-  # value: e`/** foo */
-  #        def "baz.bar" {
-  #        }`
-
-  ? emptyObject.withQualifiedName(1)
-  # problem: the :|qualifiedName| of a E.KERNEL:|ObjectExpr| must be a STRING (The value 1
-  #                                                                            is not of type
-  #                                                                              STRING.)
-  XXX E-style error for this
+  ? emptyObject.getPattern()
+  # value: epatt`bar`
   
   ? emptyObject.getAuditorExprs()
   # value: []
@@ -307,14 +296,14 @@ ObjectExpr, EScript
   # value: e??` {
   #        }`
   
-  ? emptyObject.asTypeDesc() == emptyObject.eval(safeScope).__getAllegedType()
+  ? emptyObject.asTypeDesc(safeScope.getFQNPrefix()) == emptyObject.eval(safeScope).__getAllegedType()
   # value: true
   
   ? emptyObject.staticScope()
-  # value: <[] := [] =~ [] + var []>
+  # value: <[] := [] =~ ["bar"] + var []>
   
   Implements expression is not visible
-  ? makeObjectExpr(null, "foo", "bar", [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null)], emptyScript, null).staticScope()
+  ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null)], emptyScript, null).staticScope()
   # value: <[] := ["b"] =~ [] + var []>
   
   ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
@@ -329,8 +318,8 @@ ObjectExpr, EScript
   ? thunkScript.staticScope()
   # value: <[] := ["foo"] =~ [] + var []>
   
-  ? def fooThunk := makeObjectExpr(null, "", "fooThunk", [], thunkScript, null)
-  # value: e`def "fooThunk" {
+  ? def fooThunk := makeObjectExpr(null, "", makeFinalPattern(null, makeNounExpr(null, "fooThunk", null), null, null), [], thunkScript, null)
+  # value: e`def fooThunk {
   #            
   #            method run() {
   #                foo
@@ -338,21 +327,21 @@ ObjectExpr, EScript
   #        }`
   
   ? fooThunk.staticScope()
-  # value: <[] := ["foo"] =~ [] + var []>
+  # value: <[] := ["foo"] =~ ["fooThunk"] + var []>
 
   ? fooThunk.getScript() == thunkScript
   # value: true
 
-  ? fooThunk.asTypeDesc() == fooThunk.eval(safeScope.with("foo", 1)).__getAllegedType()
+  ? fooThunk.asTypeDesc(safeScope.getFQNPrefix()) == fooThunk.eval(safeScope.with("foo", 1)).__getAllegedType()
   # value: true
 
   printing implements
-  ? makeObjectExpr(null, "", "audited", [makeNounExpr(null, "auditor", null)], emptyScript, null)
-  # value: e`def "audited" implements auditor {
+  ? makeObjectExpr(null, "", makeFinalPattern(null, makeNounExpr(null, "audited", null), null, null), [makeNounExpr(null, "auditor", null)], emptyScript, null)
+  # value: e`def audited implements auditor {
   #        }`
   
   printing _
-  ? makeObjectExpr(null, "", "_", [], def emptyScript := makeEScript(null, [], [], null), null)
+  ? makeObjectExpr(null, "", makeIgnorePattern(null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
   # value: e`def _ {
   #        }`
 
@@ -673,15 +662,15 @@ SlotPattern
   # value: <[] := ["boolean"] =~ [] + var []>
   
   object
-  ? e`def "x" implements a, b {
+  ? e`def x implements a, b {
   >   method y(c) :d { e }
   >   match f { g }
   > }`.staticScope()
-  # value: <[] := ["g", "e", "d", "b", "a"] =~ [] + var []>
+  # value: <[] := ["g", "e", "d", "b", "a"] =~ ["x"] + var []>
 
   plumbing
-  ? e`def "x" implements a match b { c }`.staticScope()
-  # value: <[] := ["c", "a"] =~ [] + var []>
+  ? e`def x implements a match b { c }`.staticScope()
+  # value: <[] := ["c", "a"] =~ ["x"] + var []>
   
   seq
   ? e`(def aa := a); (def bb := b)`.staticScope()
@@ -864,13 +853,16 @@ evalToPair
   #           noun
   #         
   
-  ? e`def "obj1" implements auditor {
+  ? e`def obj1 implements auditor {
   >   method aMethod(param) :resultGuard { methodBody }
   >   match matcherPatt { matcherBody }
   > }`.welcome(makeVisitor(0))
-  # stdout: ObjectExpr e`def "obj1" implements auditor {...
+  # stdout: ObjectExpr e`def obj1 implements auditor {...
   #           
-  #           obj1
+  #           FinalPattern epatt`obj1`...
+  #             NounExpr e`obj1`...
+  #               obj1
+  #             null
   #           _list null...
   #             NounExpr e`auditor`...
   #               auditor
@@ -898,10 +890,13 @@ evalToPair
   #                   matcherBody
   #         
   
-  ? e`def "obj2" match plumbingPatt { plumbingBody }`.welcome(makeVisitor(0))
-  # stdout: ObjectExpr e`def "obj2" match plumbingPatt {...
+  ? e`def obj2 match plumbingPatt { plumbingBody }`.welcome(makeVisitor(0))
+  # stdout: ObjectExpr e`def obj2 match plumbingPatt {...
   #           
-  #           obj2
+  #           FinalPattern epatt`obj2`...
+  #             NounExpr e`obj2`...
+  #               obj2
+  #             null
   #           _list null...
   #           EScript e??` match plumbingPatt {...
   #             null

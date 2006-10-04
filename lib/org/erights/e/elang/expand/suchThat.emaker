@@ -15,7 +15,7 @@ def defineExceptionGuard := <import:org.cubik.cle.fail.defineExceptionGuard>
 
 def makeSuchThatFailure := defineException(
   [def failureFQN := meta.context().getFQNPrefix() + "SuchThatFailure"], 
-  def "$printer"(tw :TextWriter, [=> expr, => specimen]) implements DeepFrozen {  
+  def _(tw :TextWriter, [=> expr, => specimen]) implements DeepFrozen {  
     tw.write("<such-that-error: ") # XXX what to do with this?
     tw.print(expr)
     tw.write(" was false for ")

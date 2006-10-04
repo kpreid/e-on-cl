@@ -8,7 +8,7 @@ def DeepPassByCopy0 :=
 /** DeepPassByCopy: The object is PassByCopy and all of its components are DeepPassByCopy.
 
 This guard's result is always == to the specimen. */
-def "org.erights.e.elib.serial.DeepPassByCopy" implements DeepFrozen {
+def DeepPassByCopy implements DeepFrozen {
   to coerce(specimen, optEjector) {
     # XXX should be a FlexSet but they aren't implemented yet
     def seen := [].asMap().diverge()

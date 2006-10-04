@@ -11,7 +11,7 @@ def enums {
 
 def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := enums
 
-def EIO0 := def "org.erights.e.elib.eio.EIO" implements DeepFrozen {
+def EIO implements DeepFrozen {
   to getRange() { return nullOk[int >= 0] }
 
   /** The value denoting all remaining elements in an EIO stream. */

@@ -273,7 +273,7 @@ MetaContextExpr
   # value: [null]
 
   ? thunk { meta.context().getSource() } ()
-  # value: e`def "__main$_" {
+  # value: e`def _ {
   #            
   #            method run() {
   #                meta.context().getSource()
@@ -281,7 +281,7 @@ MetaContextExpr
   #        }`
   
   ? thunk { meta.context().getOptSource() } ()
-  # value: e`def "__main$_" {
+  # value: e`def _ {
   #            
   #            method run() {
   #                meta.context().getOptSource()
@@ -309,7 +309,7 @@ MetaStateExpr
 
 ObjectExpr
   
-  ? def "trivialObject" {}
+  ? {def trivialObject {}}
   # value: <trivialObject>
   
   ? def thing {
@@ -350,7 +350,7 @@ Matcher
   # value: <nonmatches>
 
   ? nonmatches.hi("there")
-  # problem: no such method: __main$nonmatches__C#hi/1
+  # problem: no such method: __main$nonmatches#hi/1
   
   ? try { nonmatches.hi("there") } catch p {"ok"}
   # value: "ok"
@@ -365,7 +365,7 @@ Matcher
   # value: 2
   
   ? maybes.no(3, 4)
-  # problem: no such method: __main$maybes__C#no/2
+  # problem: no such method: __main$maybes#no/2
   
   ? maybes.regular()
   # value: "yep"
@@ -449,10 +449,10 @@ Alleged type
   # value: ObjectOfInterestingType
   
   ? ooitType.getFQName()
-  # value: "__main$objectOfInterestingType__C"
+  # value: "__main$objectOfInterestingType"
   
   ? objectOfInterestingType.getNested().__getAllegedType().getFQName()
-  # value: "__main$objectOfInterestingType__C$nestedObject__C"
+  # value: "__main$objectOfInterestingType$nestedObject"
 
   ? def objectWithMatcherType {
   >   to additionalVerb(_) :any {}
@@ -476,7 +476,7 @@ Alleged type
   >   match [=="__getAllegedType", []] { like(ooitType) }
   > }
   > (objectWithMatcherLikeType.__getAllegedType().getMessageTypes() &! null.__getAllegedType().getMessageTypes()).getKeys()
-  # problem: no such method: __main$like__C$conformer__C#getMessageTypes/0
+  # problem: no such method: __main$like$conformer#getMessageTypes/0
   XXX is this appropriate behavior?
 
   ? def objectWithMatcherDuckType {
@@ -535,7 +535,7 @@ IfExpr
   # value: "n"
 
   ? if (def conformist { to __conformTo(_) :any {return conformist} }) {"y"} else {"n"}
-  # problem: the "__main$conformist__C" <conformist> doesn't coerce to a boolean
+  # problem: the "__main$conformist" <conformist> doesn't coerce to a boolean
 
 IntoExpr
 

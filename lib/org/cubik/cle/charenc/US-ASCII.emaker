@@ -4,12 +4,14 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
+pragma.enable("noun-string")
+
 def ASCIIRange := 0..!128
 
 def mapStream := <import:org.cubik.cle.io.mapStream>
 def getCharacter := <import:org.cubik.cle.prim.getCharacter>
 
-def "US-ASCII" { # implements DeepFrozen 
+def ::"US-ASCII" { # implements DeepFrozen 
   to __printOn(tw :TextWriter) { tw.print("<US-ASCII encoding>") }
   to decode(octetStream, ==([].asMap())) {
   

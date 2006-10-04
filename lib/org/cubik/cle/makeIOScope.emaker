@@ -155,7 +155,7 @@ def makeIOScope implements DeepFrozen {
     if (exits =~ [=> <file>] | _) {
       unsafeImports with= ("org.erights.e.meta.java.io.FileGetter", 
         /** Java-E compatibility - just provides file__uriGetter access. */
-        def "org.erights.e.meta.java.io.makeFileGetter" {
+        def makeFileGetterMetaCompat {
           to getTHE_ONE() :any { return <file> }
         })
     }

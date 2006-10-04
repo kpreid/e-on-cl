@@ -35,7 +35,7 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   # value: 0
   
   ? def f2 implements DeepFrozen { to run() :void { f2x += 1 } }
-  # problem: "f2x" in the lexical scope of __main$f2__C is not DeepFrozen because <var 0> is not
+  # problem: "f2x" in the lexical scope of __main$f2 is not DeepFrozen because <var 0> is not
   
   ? DeepFrozen :DeepFrozen
   # value: DeepFrozen
@@ -52,7 +52,7 @@ Broken references are DeepFrozen if the exception is
   # value: <ref broken by problem: a>
   
   ? Ref.broken(<import:org.cubik.cle.fail.makeCoercionFailure>(def x {}, int)) :DeepFrozen
-  # problem: <ref broken by problem: the "__main$x__C" <x> doesn't coerce to an int> is not DeepFrozen because <x> is not
+  # problem: <ref broken by problem: the "__main$x" <x> doesn't coerce to an int> is not DeepFrozen because <x> is not
   
   XXX test with a disconnected ref (ex-Far ref)
 
@@ -65,13 +65,13 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     to run() { x }
   >   }}
   > }
-  # problem: "x" defined in the auditor expressions of __main$testAuditorHidesState__C cannot be confirmed DeepFrozen
+  # problem: "x" defined in the auditor expressions of __main$testAuditorHidesState cannot be confirmed DeepFrozen
   
   ? def x := 0
   > {def testAuditorProvidesState implements (var x := 1; DeepFrozen) {
   >   to run() { x } 
   > }}
-  # problem: "x" defined in the auditor expressions of __main$testAuditorProvidesState__C cannot be confirmed DeepFrozen
+  # problem: "x" defined in the auditor expressions of __main$testAuditorProvidesState cannot be confirmed DeepFrozen
 
 --- 'Lazy' checking
 
@@ -82,20 +82,20 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   # value: <Resolver>
   
   ? def lazyFailer1 implements EventuallyDeepFrozen {}
-  # problem: EventuallyDeepFrozen: __main$lazyFailer1__C: no __optSealedDispatch/1 method found
+  # problem: EventuallyDeepFrozen: __main$lazyFailer1: no __optSealedDispatch/1 method found
   
   ? def lazyFailer2 implements EventuallyDeepFrozen match msg {}
-  # problem: EventuallyDeepFrozen: __main$lazyFailer2__C: auditing plumbing not yet supported
+  # problem: EventuallyDeepFrozen: __main$lazyFailer2: auditing plumbing not yet supported
   
   ? def lazyFailer3 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch() :void {}
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer3__C: no __optSealedDispatch/1 method found
+  # problem: EventuallyDeepFrozen: __main$lazyFailer3: no __optSealedDispatch/1 method found
   
   ? def lazyFailer4 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch(brand) :void {}
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer4__C: __optSealedDispatch result guard is not any
+  # problem: EventuallyDeepFrozen: __main$lazyFailer4: __optSealedDispatch result guard is not any
   
   ? def lazyFailer5 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand :void) :any {
@@ -104,7 +104,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer5__C: __optSealedDispatch argument pattern must not have a guard
+  # problem: EventuallyDeepFrozen: __main$lazyFailer5: __optSealedDispatch argument pattern must not have a guard
 
   ? def lazyFailer5 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(var brand) :any {
@@ -113,7 +113,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer5__C: __optSealedDispatch argument pattern is not simple
+  # problem: EventuallyDeepFrozen: __main$lazyFailer5: __optSealedDispatch argument pattern is not simple
   
   ? def lazyFailer6 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :void {
@@ -122,7 +122,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer6__C: __optSealedDispatch result guard is not any
+  # problem: EventuallyDeepFrozen: __main$lazyFailer6: __optSealedDispatch result guard is not any
   
   XXX can't do this test because Java-E rejects redefining "any" - see if we can replace the node builder or some such to fix this - if not, build an expression using ENode constructors and eval that '
   x ? def lazyFailer7 implements (def any := int; EventuallyDeepFrozen) {
@@ -132,7 +132,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   x >     }
   x >   }
   x > }
-  x # problem: EventuallyDeepFrozen: __main$lazyFailer7__C: __optSealedDispatch/1 does not have appropriate structure
+  x # problem: EventuallyDeepFrozen: __main$lazyFailer7: __optSealedDispatch/1 does not have appropriate structure
   
   ? def lazyFailer8 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch(brand) :any {
@@ -141,7 +141,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer8__C: __optSealedDispatch body is not an if, but the EscapeExpr e`escape __return {
+  # problem: EventuallyDeepFrozen: __main$lazyFailer8: __optSealedDispatch body is not an if, but the EscapeExpr e`escape __return {
   #              if (__equalizer.sameEver(brand, EventuallyDeepFrozen.getPeekBrand())) {
   #                  EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
   #              } else {
@@ -156,7 +156,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer9__C: __optSealedDispatch argument pattern is not simple
+  # problem: EventuallyDeepFrozen: __main$lazyFailer9: __optSealedDispatch argument pattern is not simple
   
   ? def lazyFailer10 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :any {
@@ -165,7 +165,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer10__C: __optSealedDispatch if test does not compare the given brand to the peek brand
+  # problem: EventuallyDeepFrozen: __main$lazyFailer10: __optSealedDispatch if test does not compare the given brand to the peek brand
   
   ? def lazyFailer11 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :any {
@@ -174,7 +174,7 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer11__C: __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+  # problem: EventuallyDeepFrozen: __main$lazyFailer11: __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
   
   ? def opaqueButDeepFrozen implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand) :any {

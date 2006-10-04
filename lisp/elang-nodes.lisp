@@ -226,7 +226,7 @@
   ((:|name| nil string)))
 (define-node-class |ObjectExpr|      (|EExpr|)
   ((:|docComment| nil string)
-   (:|qualifiedName| nil string) 
+   (:|pattern| t |Pattern|) 
    (:|auditorExprs| t (e-list |EExpr|)) 
    (:|script| t |EScriptoid|)))
 (define-node-class |SeqExpr|         (|EExpr|)
@@ -493,17 +493,14 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (declare (ignore this))
     "epatt"))
 
+(defun pattern-qualified-name (pattern)
+  (concatenate 'string "$" (or (pattern-opt-noun pattern) "_")))
+
 (def-vtable |ObjectExpr|
-  (:|withQualifiedName| (this new)
-    ;; XXX write generalized withFoo for all nodes?
-    (make-instance '|ObjectExpr| :elements
-      (let ((e (copy-list (node-elements this))))
-        (setf (second e) new)
-        e)))
-  (:|asTypeDesc| (object-expr)
+  (:|asTypeDesc| (object-expr fqn-prefix)
     (e. +the-make-type-desc+ |run|
       (e. object-expr |getDocComment|)
-      (e. object-expr |getQualifiedName|)
+      (join-fq-name fqn-prefix (pattern-qualified-name (e. object-expr |getPattern|)))
       #()
       #()
       (or-miranda-message-descs
@@ -835,7 +832,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (! (e. builder |scopeRead| node)))
 
 (def-scope-rule |ObjectExpr|
-  (hide (seq (flatten :|auditorExprs|) :|script|)))
+  (seq :|pattern|
+       (hide (seq (flatten :|auditorExprs|) :|script|))))
 
 (def-scope-rule |SeqExpr|
   (flatten :|subs|))

@@ -4,9 +4,8 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def JE := 
 /** E-on-CL approximation of the Java static 'E', since elang/interp/require.emaker uses it. Deprecated. */
-def "org.erights.e.elib.prim.E" { # implements DeepFrozen
+def JE { # implements DeepFrozen
   
   to require(cond :boolean, problem :any) :void {
     if (!cond) {

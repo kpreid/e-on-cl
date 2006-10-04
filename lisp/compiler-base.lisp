@@ -439,10 +439,8 @@
                  remaining-code)))
       (m-b-list (coerce matchers 'list)))))
 
-(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym object-expr
+(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym type-desc
     &aux (simple-name (simplify-fq-name qualified-name))
-         (type-desc
-           (e. object-expr |asTypeDesc|))
          (method-body (getf generators :method-body)))
   (flet ((build-method-case (build-matcher-call)
            `(case mverb
@@ -502,8 +500,8 @@
       (or (member (e-util:mangle-verb verb arity) mangled-verbs)
           (e-is-true (elib:miranda self :|__respondsTo/2| args nil))))))
 
-(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym object-expr)
-  (declare (ignore self-fsym methods object-expr))
+(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym type-desc)
+  (declare (ignore self-fsym methods type-desc))
   `(case mverb
     ((elib:audited-by-magic-verb) 
       ,(if checker-sym
@@ -559,6 +557,11 @@
             (aan fqn)
             ">"))
           nil)
+        (:|getFQName| ()
+          ;; I note that with the addition of this method, the audition is
+          ;; starting to resemble a StaticContext. -- kpreid 2006-10-02
+          "The fully-qualified name of the object under audit."
+          fqn)
         (:|getObjectExpr| ()
           "The ObjectExpr defining the object under audit."
           this-expr)
@@ -598,10 +601,14 @@ XXX This is an excessively large authority and will probably be replaced."
 
 (defun object-form (generators layout this-expr auditor-forms
     &aux (script (e. this-expr |getScript|)))
+  "...
+  
+The scope layout provided should include the binding for the object's name pattern."
   (destructuring-bind (opt-methods matchers) (node-elements script)
     (let* ((has-auditors (> (length auditor-forms) 0))
            (checker-sym (when has-auditors (make-symbol "APPROVEDP")))
-           (fqn (e. this-expr |getQualifiedName|))
+           (type-desc (e. this-expr |asTypeDesc| (scope-layout-fqn-prefix layout)))
+           (fqn (e. type-desc |getFQName|))
            (self-fsym (make-symbol fqn))
            (inner-layout
              (scope-layout-nest
@@ -623,7 +630,7 @@ XXX This is an excessively large authority and will probably be replaced."
                  ,(funcall (if opt-methods
                              #'methodical-object-body
                              #'plumbing-object-body)
-                  generators self-fsym inner-layout opt-methods matchers fqn checker-sym this-expr)))))
+                  generators self-fsym inner-layout opt-methods matchers fqn checker-sym type-desc)))))
       (flet ((build-labels (post-forms)
                `(let ((.identity-token. (cons nil nil)))
                   (labels ,labels-fns ,@post-forms #',self-fsym))))
@@ -635,7 +642,7 @@ XXX This is an excessively large authority and will probably be replaced."
                 (make-witness ',fqn 
                               ',this-expr
                               ,(e.compiler.seq::leaf-sequence 
-                                (make-instance '|MetaStateExpr| :elements '()) layout))
+                                (make-instance '|MetaStateExpr| :elements '()) inner-layout))
               ,@(loop for auditor-form in auditor-forms collect
                   `(funcall ,witness-sym :|ask/1| ,auditor-form))
               ,(build-labels

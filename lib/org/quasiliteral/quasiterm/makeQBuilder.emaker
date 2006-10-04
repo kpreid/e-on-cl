@@ -298,7 +298,7 @@ def _make(astroBuilder) implements DeepFrozen {
     return quasiFunctor    
   }
 
-  bind qBuilder := def "$qBuilder" extends baseBuilder implements EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
+  bind qBuilder extends baseBuilder implements EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
     method __optSealedDispatch(brand) :any {
       if (brand == EventuallyDeepFrozen.getPeekBrand()) {
         EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -674,12 +674,12 @@ def makeQBuilder implements DeepFrozen {
     def parser := makeTermParser(_make(<import:org.quasiliteral.term.makeTermBuilder>()))
     def qparse := # memoize({
       # XXX reenable memoization when TermParser is freezable
-      def "$qparse"(template :String) implements DeepFrozen.optionally() {
+      {def qparse(template :String) implements DeepFrozen.optionally() {
         return parser.parseText(template.asStream())
-      }
+      }}
     # })
     
-    return def "$term__quasiParser" implements DeepFrozen.optionally() {
+    return def term__quasiParser implements DeepFrozen.optionally() {
       to valueMaker(template :String) {
         return qparse(template)
       }

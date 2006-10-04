@@ -176,28 +176,28 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     
     def auditorExprOut := accum emptyStatic for e in objectExpr.getAuditorExprs() { _ + e.staticScope() }.outNames()
     
-    for name => _ in objectExpr.getScript().staticScope().namesUsed() {
+    for name => _ in objectExpr.getScript().staticScope().namesUsed() &! objectExpr.getPattern().staticScope().outNames() {
       
       
       if (auditorExprOut.maps(name)) {
         # XXX This is ugly and should be made unnecessary. See
         #   <http://www.eros-os.org/pipermail/e-lang/2006-October/011528.html>
-        throw.eject(fail, E.toQuote(name) + " defined in the auditor expressions of " + objectExpr.getQualifiedName() + " cannot be confirmed DeepFrozen")
+        throw.eject(fail, E.toQuote(name) + " defined in the auditor expressions of " + audition.getFQName() + " cannot be confirmed DeepFrozen")
       } else {
         def slot := audition.getSlot(name)
         
         requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
           out.quote(name)
           out.print(" in the lexical scope of ")
-          out.print(objectExpr.getQualifiedName()) 
+          out.print(audition.getFQName()) 
         }})
       }
     }
   }
 
-  OptionallyDeepFrozen__Resolver.resolve(
+  OptionallyDeepFrozen__Resolver.resolve({
   /** Acts as the DeepFrozen auditor, but will not throw if the object is not acceptable. */
-  def "$OptionallyDeepFrozen" implements DeepFrozenStamp {
+  def OptionallyDeepFrozen implements DeepFrozenStamp {
     to audit(audition :EAudition) {
       escape fail {
         requireAudit(audition, fail)
@@ -205,11 +205,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       }
       return false
     }
-  })
+  }})
   
-  EventuallyDeepFrozen__Resolver.resolve(
+  EventuallyDeepFrozen__Resolver.resolve({
   /** Allows objects to be verified as DeepFrozen without requiring either transparency or that their components be settled at audit time, by having them implement a method to ...XXX finish writing this documentation */
-  def "$EventuallyDeepFrozen" implements DeepFrozenStamp {
+  def EventuallyDeepFrozen implements DeepFrozenStamp {
     to getPeekBrand() { return peekBrand }
     to getPeekSealer() { return peekSealer }
   
@@ -218,7 +218,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     
       def objectExpr := audition.getObjectExpr()
       
-      def label := "EventuallyDeepFrozen: " + objectExpr.getQualifiedName()
+      def label := "EventuallyDeepFrozen: " + audition.getFQName()
       
       /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'. */
       def expressionWillHaveValue(expr :Really[EExpr], 
@@ -232,7 +232,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       }
 
       def script := objectExpr.getScript()
-      def auditorExprs := objectExpr.getAuditorExprs()
+      def precedingExprs := [objectExpr.getPattern()] + objectExpr.getAuditorExprs()
       
       # The matcher is irrelevant provided that our method exists
       if ((def methds := script.getOptMethods()) != null) {
@@ -266,13 +266,13 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
             requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null)) \
-                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
-                      & expressionWillHaveValue(eDF`__equalizer`, &__equalizer, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
+                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
+                      & expressionWillHaveValue(eDF`__equalizer`, &__equalizer, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
               thunk{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
               
             # overly restrictive in the same way as the previous
             requireDF((exprShorten(ifExpr.getThen()) == eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`) \
-                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
+                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
               thunk{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
             
             break true
@@ -284,9 +284,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       
       return true
     }
-  })
+  }})
 
-  DeepFrozen0__Resolver.resolve(def "$DeepFrozen" implements DeepFrozenStamp {
+  DeepFrozen0__Resolver.resolve(def DeepFrozen implements DeepFrozenStamp {
     to __printOn(out :TextWriter) :void {
       out.print("DeepFrozen")
     }

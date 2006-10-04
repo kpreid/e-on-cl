@@ -53,7 +53,7 @@ def makeStreamShell implements DeepFrozen {
       to whenAvailable(minimum, reactor) {
         availableHandler.requireNone()
         def result
-        availableHandler := def "$activeAvailableHandler" {
+        availableHandler := def activeAvailableHandler {
           to requireNone() {
             throw(`whenAvailable reactor ${E.toQuote(reactor)} already registered`)
           }

@@ -17,5 +17,5 @@
   
   XXX wording of message to be revised
   ? a2.aardvarks(9)
-  # problem: the __main$a2__C <a2> does not understand aardvarks/1 [9]
+  # problem: the __main$a2 <a2> does not understand aardvarks/1 [9]
   

@@ -371,17 +371,32 @@
         ;; if we reach here, the ejector was used
         ,remaining-code))))
 
-(define-inline-expr |ObjectExpr| (layout doc-comment qualified-name auditor-exprs script
+(define-sequence-expr |ObjectExpr| (layout result doc-comment pattern auditor-exprs script
     &aux (auditor-vars (loop for nil across auditor-exprs collect (gensym "AUDITOR")))
-         (fqn (updating-fully-qualify-name layout qualified-name)))
-  (sequence-to-form
-    (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
-          for auditor-var-cell on auditor-vars
-          append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
-    (object-form +seq-object-generators+
-                 layout 
-                 (make-instance '|ObjectExpr| :elements (list doc-comment fqn auditor-exprs script))
-                 auditor-vars)))
+         (object-var (gensym (or (pattern-opt-noun pattern) "G"))))
+  (assert (or (and (typep pattern '|FinalPattern|)
+                   (null (e. pattern |getOptGuardExpr|)))
+              (typep pattern '|IgnorePattern|)) 
+    (pattern)
+    "Non-final object-naming patterns are not yet supported.")
+  (assert (not (e.elang::usesp pattern auditor-exprs)))
+  (values
+    (append
+      `((,object-var 'the-compiler-is-broken-if-you-have-this))
+      ;; XXX assuming this is a final pattern or ignore pattern or similar, and that final patterns keep the specimen var (rather than taking its value)
+      ;; XXX instead of using the regular compiler for these patterns, make our own bindings which are explicitly aware of this. this will also fix the object name being available (with the above bogus value) in auditing environments.
+      (updating-sequence-patt pattern layout object-var nil)
+      (let ((layout layout)) (append
+        (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
+              for auditor-var-cell on auditor-vars
+              append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
+        `((,result
+           (setf ,object-var
+                 ,(object-form +seq-object-generators+
+                               layout 
+                               (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditor-exprs script))
+                               auditor-vars)))))))
+    layout))
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values

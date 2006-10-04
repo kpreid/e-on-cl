@@ -386,17 +386,13 @@ XXX make precedence values available as constants"
             (declare (ignore opt-original))
             (e. +e-printer+ |printNoun| tw noun))
           
-          (:|visitObjectExpr| (opt-original doc-comment qualified-name auditors script)
+          (:|visitObjectExpr| (opt-original doc-comment pattern auditors script)
             (declare (ignore opt-original))
             (e-coercef doc-comment 'string)
-            (e-coercef qualified-name 'string)
             (e-coercef auditors 'vector)
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
-            (if (string= qualified-name "_")
-              ;; XXX is this condition correct?
-              (e. tw |print| "_")
-              (e. +e-printer+ |printString| tw qualified-name))
+            (subprint pattern nil)
             (when (> (length auditors) 0)
               (e. tw |print| " implements ")
               (loop for sep = "" then ", "

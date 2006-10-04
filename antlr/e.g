@@ -460,7 +460,6 @@ objName:        nounExpr        filler {##=#([FinalPattern],##);}
             |   "bind"^ noun    filler {##.setType(BindPattern);}
             |   "var"^ nounExpr filler {##.setType(VarPattern);}
             |   "&"^ nounExpr   filler {##.setType(SlotPattern);}
-            |   STRING
             ;
 
 //TODO MARK: what is typeParamList for?  it appears to come right after "def name"
@@ -499,7 +498,7 @@ optResultGuard: ":"! guard
                               "You must specify a result guard or disable \"explicit-result-guard\"."]
                 {##=#([Absent]);} ;
 
-interfaceExpr:  "interface"! objName
+interfaceExpr:  "interface"! (objName | STRING)
                 //optGuard
                 (   iguards
                     multiExtends

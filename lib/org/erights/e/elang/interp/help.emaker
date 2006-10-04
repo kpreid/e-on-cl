@@ -35,7 +35,7 @@ def formatType(type) :any implements DeepFrozen {
   return makeUnQuote(sb.snapshot())
 }
 
-def "$help" implements DeepFrozen {
+def help implements DeepFrozen {
   to run(specimen) :any {
     if (Ref.isNear(specimen)) {
       return formatType(specimen.__getAllegedType())

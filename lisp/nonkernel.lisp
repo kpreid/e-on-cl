@@ -497,7 +497,7 @@
           (mn '|CallExpr| |collection| "iterate"
             (mn '|ObjectExpr|
               ""
-              "_"
+              (mn '|IgnorePattern|)
               #()
               (mn '|EScript| 
                 (vector (mn '|EMethod| 
@@ -544,7 +544,7 @@
                                  ()
   (mn '|ObjectExpr|
       ""
-      "_"
+      (mn '|IgnorePattern|)
       #()
       (mn '|EScript| (vector (mn '|EMethod| "" "run" |patterns| nil |body|)) 
                              #())))
@@ -573,7 +573,7 @@
   (destructuring-bind (test then) (node-visitor-arguments body)
     (mn '|If1Expr| test (expand-accum-body then accum-var))))
 
-;; using LiteralExpr for the name is a bit clunky but necessary: when it's a pattern the slot must be marked as a subnode. XXX come up with a better solution, and apply it to NKObjectExpr too
+;; using LiteralExpr for the name is a bit clunky but necessary: when it's a pattern the slot must be marked as a subnode. XXX come up with a better solution
 (defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil string)
                                       (|name| t (or null |Pattern| |LiteralExpr|))
                                       (|optStamp| t (or null |Pattern|))
@@ -736,52 +736,53 @@
      (error "Assignment can only be done to nouns and collection elements (not ~A)" (e-quote |place|) #| XXX ejector? |#))))
 
 (defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil string)
-                                     (|name| nil (or null |Pattern| string))
+                                     (|name| t |Pattern|)
                                      (|parent| t (or null |EExpr|))
                                      (|auditors| t (e-list |EExpr|))
                                      (|script| t e.elang::|EScriptoid|))
                                     ()
   (etypecase |name|
-    (|Pattern|
+    (|BindPattern|
       (mn '|DefrecExpr| 
         |name| 
-        (mn '|NKObjectExpr| 
-          |docComment|
-          (let ((noun-string (pattern-opt-noun |name|)))
-            (if noun-string
-              ;; XXX remove the __C once we're out of the compatibility phase
-              (format nil "$~A__C" noun-string)
-              "_"))
-          |parent|
-          |auditors|
-          |script|) 
-        nil))
-    ((or null string)
-      (if |parent|
         (mn '|HideExpr|
-          (mn '|SeqExpr|
-            (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
-                              |parent|
-                              nil)
-            (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
-                                (mn '|EScript|
-                                  (e. |script| |getOptMethods|)
-                                  (e. (e. |script| |getMatchers|) |with|
-                                    (let ((msg-noun (gennoun "message")))
-                                      (mn '|EMatcher|
-                                        (mn '|FinalPattern| msg-noun nil)
-                                        (mn '|CallExpr| (mn '|NounExpr| "E")
-                                                        "callWithPair"
-                                                        (mn '|NounExpr| "super")
-                                                        msg-noun))))))))
+          (mn '|NKObjectExpr| 
+            |docComment|
+            (mn '|FinalPattern| (e. |name| |getNoun|) nil)
+            |parent|
+            |auditors|
+            |script|))
+        nil))
+    ((or |FinalPattern| |IgnorePattern|)
+      (if |parent|
+        (mn '|DefrecExpr|
+          |name|
+          (mn '|HideExpr|
+            (mn '|SeqExpr|
+              (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
+                                |parent|
+                                nil)
+              (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
+                                  (mn '|EScript|
+                                    (e. |script| |getOptMethods|)
+                                    (e. (e. |script| |getMatchers|) |with|
+                                      (let ((msg-noun (gennoun "message")))
+                                        (mn '|EMatcher|
+                                          (mn '|FinalPattern| msg-noun nil)
+                                          (mn '|CallExpr| (mn '|NounExpr| "E")
+                                                          "callWithPair"
+                                                          (mn '|NounExpr| "super")
+                                                          msg-noun))))))))
+          nil)
         ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
-        (mn '|ObjectExpr| |docComment| (or |name| "_") |auditors| |script|)))))
+        (mn '|ObjectExpr| |docComment| |name| |auditors| |script|)))
+    (t (error "Don't know what to do for object name of type ~A." (type-of |name|)))))
 
 (defemacro |NullExpr| (|EExpr|) () ()
   (mn '|NounExpr| "null"))
 
 (defemacro |ObjectHeadExpr| (|EExpr|) ((|docComment| nil string)
-                                       (|name| nil (or null |Pattern| string))
+                                       (|name| t |Pattern|)
                                        (|tail| t |ObjectTail|))
                                       ()
   ;; XXX possibly merge NKObjectExpr into this
@@ -908,7 +909,7 @@
                                  ()
   (mn '|ObjectExpr|
       ""
-      "_"
+      (mn '|IgnorePattern|)
       #()
       (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
                              #())))
@@ -1008,7 +1009,7 @@
     (mn '|CallExpr| (mn '|NounExpr| "__loop") "run"
       (mn '|ObjectExpr|
         ""
-        "_"
+        (mn '|IgnorePattern|)
         #()
         (mn '|EScript| 
           (vector (mn '|EMethod| 

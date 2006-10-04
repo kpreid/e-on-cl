@@ -414,7 +414,7 @@ __makeVerbFacet
   # value: false
   
   ? rr(1, 2, 3)
-  # problem: no such method: org.erights.e.elib.ref.RefAuthor$RefAuthor__C$Ref#isResolved/3
+  # problem: no such method: org.erights.e.elib.ref.RefAuthor$RefAuthor$Ref#isResolved/3
   
   ? rr :DeepFrozen
   # value: <calling "isResolved" facet>

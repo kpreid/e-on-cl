@@ -348,7 +348,7 @@ __getAllegedType, E object
   # problem: no such method: org.erights.e.elib.base.TypeDesc#coerce/2
   
   ? t.getFQName()
-  # value: "__main$typeSample__C"
+  # value: "__main$typeSample"
 
   ? t.getDocComment()
   # value: "This is an object defined to test many aspects of __getAllegedType."

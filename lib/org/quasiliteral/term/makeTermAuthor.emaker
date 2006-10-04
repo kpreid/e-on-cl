@@ -29,25 +29,25 @@ def makeTermAuthor(SelflessStamp) {
     }
   }
   
-  def magicPrintTable := [
-    makeAstroTag(null, ".bag.", nullOk) => def "$bagPrinter"(out, term)  implements DeepFrozen {
+  def magicPrintTable := {[
+    makeAstroTag(null, ".bag.", nullOk) => def bagPrinter(out, term)  implements DeepFrozen {
       out.write("{")
       printSeps(out, term.getArgs())
       out.write("}")
     },
-    makeAstroTag(null, ".tuple.", nullOk) => def "$tuplePrinter"(out, term)  implements DeepFrozen {
+    makeAstroTag(null, ".tuple.", nullOk) => def tuplePrinter(out, term)  implements DeepFrozen {
       out.write("[")
       printSeps(out, term.getArgs())
       out.write("]")
     },
-    makeAstroTag(null, ".attr.", nullOk) => def "$attrPrinter"(out, term) implements DeepFrozen {
+    makeAstroTag(null, ".attr.", nullOk) => def attrPrinter(out, term) implements DeepFrozen {
       def [attrBody] := term.getArgs() # XXX handle "wrong" number of args case
       out.print(attrBody.getTag().getTagName()) # XXX wrong: doesn't print data, for example
       out.write(": ")
       def [attrValue] := attrBody.getArgs()
       out.print(attrValue)
     },
-  ]
+  ]}
 
   def defaultTermPrint(tw, term) implements DeepFrozen {
     def tag := term.getTag()
@@ -126,7 +126,7 @@ def makeTermAuthor(SelflessStamp) {
   }
   bind _StandardTerm := StandardTerm[AstroTag, any[nullOk, int, float64, char, Twine], _StandardTerm]
      
-  bind makeTerm := def "$makeTerm" implements EventuallyDeepFrozen {
+  bind makeTerm implements EventuallyDeepFrozen {
     method __optSealedDispatch(brand) :any {
       if (brand == EventuallyDeepFrozen.getPeekBrand()) {
         EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

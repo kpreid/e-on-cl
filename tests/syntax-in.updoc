@@ -185,22 +185,24 @@ XXX produce a nice error for this?
 
 ? t("pragma.disable(\"easy-return\")
 >    pragma.enable(\"explicit-result-guard\")
->    def \"$a\"() {}")
-# problem: (line 3)@13: You must specify a result guard or disable "explicit-result-guard".
+>    def a() {}")
+# problem: (line 3)@10: You must specify a result guard or disable "explicit-result-guard".
 XXX source position
 
 ? t("pragma.disable(\"easy-return\")
 >    pragma.enable(\"explicit-result-guard\")
->    def \"$a\"{ to b() {} }")
-# problem: (line 3)@19: You must specify a result guard or disable "explicit-result-guard".
+>    def a{ to b() {} }")
+# problem: (line 3)@16: You must specify a result guard or disable "explicit-result-guard".
 XXX source position
 
 ? t("pragma.disable(\"easy-return\")
 >    pragma.disable(\"explicit-result-guard\")
->    def \"$a\"() {}")
+>    def a() {}")
 # stdout: SeqE. [] ObjectHeadE.
 #           
-#           $a
+#           FinalP.
+#             NounE. a
+#             null
 #           FunctionObject
 #             []
 #             null
@@ -210,10 +212,12 @@ XXX source position
 
 ? t("pragma.disable(\"easy-return\")
 >    pragma.disable(\"explicit-result-guard\")
->    def \"$a\"{ to b() {} }")
+>    def a{ to b() {} }")
 # stdout: SeqE. [] ObjectHeadE.
 #           
-#           $a
+#           FinalP.
+#             NounE. a
+#             null
 #           MethodObject
 #             null
 #             []
@@ -228,10 +232,12 @@ XXX source position
 
 ? t("pragma.enable(\"easy-return\")
 >    pragma.disable(\"explicit-result-guard\")
->    def \"$a\"() {}")
+>    def a() {}")
 # stdout: SeqE. [] ObjectHeadE.
 #           
-#           $a
+#           FinalP.
+#             NounE. a
+#             null
 #           FunctionObject
 #             []
 #             null
@@ -241,10 +247,12 @@ XXX source position
 
 ? t("pragma.enable(\"easy-return\")
 >    pragma.disable(\"explicit-result-guard\")
->    def \"$a\"{ to b() {} }")
+>    def a{ to b() {} }")
 # stdout: SeqE. [] ObjectHeadE.
 #           
-#           $a
+#           FinalP.
+#             NounE. a
+#             null
 #           MethodObject
 #             null
 #             []
@@ -259,10 +267,12 @@ XXX source position
 
 --- Function expressions ---
 
-? t("def \"$a\"() :b {}")
+? t("def a() :b {}")
 # stdout: ObjectHeadE.
 #           
-#           $a
+#           FinalP.
+#             NounE. a
+#             null
 #           FunctionObject
 #             []
 #             NounE. b
@@ -270,13 +280,15 @@ XXX source position
 #             NullE.
 #             false
 
-? t("def \"$a\"() :b implements c {}")
-# problem: (line 1)@26: The optional "function-implements" syntax is currently off.
+? t("def a() :b implements c {}")
+# problem: (line 1)@23: The optional "function-implements" syntax is currently off.
 
-? t("pragma.enable(\"function-implements\"); def \"$a\"() :b implements c {}")
+? t("pragma.enable(\"function-implements\"); def a() :b implements c {}")
 # stdout: SeqE. [] ObjectHeadE.
 #           
-#           $a
+#           FinalP.
+#             NounE. a
+#             null
 #           FunctionObject
 #             []
 #             NounE. b

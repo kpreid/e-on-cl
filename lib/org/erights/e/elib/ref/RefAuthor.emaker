@@ -19,7 +19,7 @@ def RefAuthor {
       out.write(" is not broken")
     }
 
-    def Ref0 := def "$Ref" implements DeepFrozenStamp {
+    def Ref implements DeepFrozenStamp {
       to promise() :any { makePromise() }
       
       to isBroken(r)   :any { refState(r) == sElibBroken }

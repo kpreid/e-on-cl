@@ -36,7 +36,7 @@ def makeTermBuilder implements DeepFrozen {
                                             ["BAstroArg" => AstroArg,
                                              ])
   
-    bind termBuilder := def "termBuilder" extends baseBuilder implements EventuallyDeepFrozen {
+    bind termBuilder extends baseBuilder implements EventuallyDeepFrozen {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

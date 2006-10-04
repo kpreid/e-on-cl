@@ -4,6 +4,8 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
+pragma.enable("noun-string")
+
 def mapStream := <import:org.cubik.cle.io.mapStream>
 def getCharacter := <import:org.cubik.cle.prim.getCharacter>
 
@@ -28,7 +30,7 @@ def utf8DecodeTable := {
   t.snapshot()
 }
 
-def "UTF-8" { # implements CharacterEncoding, DeepFrozen
+def ::"UTF-8" { # implements CharacterEncoding, DeepFrozen
   to decode(octetStream, ==([].asMap())) {
     var bits :nullOk[int] := null
     var expect :nullOk[int] := null

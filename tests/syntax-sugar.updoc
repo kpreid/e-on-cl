@@ -444,7 +444,7 @@ MatchBindExpr
   
  Form of smashed remnants from binding patterns
  
-  ? def q := def "shortProblemGuard" { to coerce(_, e) :void { throw.eject(e, "Q") } }
+  ? def q := def shortProblemGuard { to coerce(_, e) :void { throw.eject(e, "Q") } }
   # value: <shortProblemGuard>
  
   ? [1 =~ matchBindNoun :q, &matchBindNoun]
@@ -518,44 +518,60 @@ MatchBindExpr
 'NKObjectExpr'
 
   base case
-  ? t("def \"a\" {}")
-  # value: e`def "a" {
-  #        }`
-  
-  named
   ? t("def a {}")
-  # value: e`def a := def "$a__C" {
+  # value: e`def a {
+  #        }`
+
+  named by bind-pattern
+  ? t("bind a {}")
+  # value: e`def via (__bind.run(a__Resolver)) a__1 := {
+  #            def a {
+  #            }
   #        }`
   
-  named with recursion (implemented by DefrecExpr)
-  ? t("def a { method run() :any { a } }")
-  # value: e`def [a__1, aR__2] := Ref.promise()
-  #        def value__3 := def a := def "$a__C" {
-  #            
-  #            method run() :any {
-  #                a__1
-  #            }
-  #        }
-  #        aR__2.resolve(a)
-  #        value__3`
+  XXX named by var-pattern
   
   parent
-  ? t("def \"a\" extends b {}")
-  # value: e`{
+  ? t("def a extends b {}")
+  # value: e`def a := {
   #            def super := b
-  #            def "a" {
+  #            def a {
   #                match message__1 {
   #                    E.callWithPair(super, message__1)
   #                }
   #            }
   #        }`
 
+  parent with bind name
+  ? t("def bind a extends b {}")
+  # value: e`def via (__bind.run(a__Resolver)) a__1 := {
+  #            def a := {
+  #                def super := b
+  #                def a {
+  #                    match message__2 {
+  #                        E.callWithPair(super, message__2)
+  #                    }
+  #                }
+  #            }
+  #        }`
+  
+  XXX The following expansion would be better. Right now, the code doesn't know that if we're inside a bind-expansion then reintroducing the name outside the super-expansion is unnecessary.
+
+    value: e`def via (__bind.run(a__Resolver)) a__1 := {
+               def super := b
+               def a {
+                   match message__2 {
+                       E.callWithPair(super, message__2)
+                   }
+               }
+           }`
+   
   parent with reference to name
   ? t("def a extends b(a) {}")
   # value: e`def [a__1, aR__2] := Ref.promise()
   #        def value__3 := def a := {
   #            def super := b.run(a__1)
-  #            def "$a__C" {
+  #            def a__1 {
   #                match message__4 {
   #                    E.callWithPair(super, message__4)
   #                }
@@ -564,11 +580,11 @@ MatchBindExpr
   #        aR__2.resolve(a)
   #        value__3`
   
-  named by bind-expr
-  ? t("bind a {}")
-  # value: e`def via (__bind.run(a__Resolver)) a__1 := def "$a__C" {
-  #        }`
-
+  XXX the above expansion is flawed: the object's pattern should use the original name. Hypothesis: DefrecExpr is overeager.
+  
+  
+  XXX parent with var name
+  
 'NullExpr'
 
   ? t("{}")
@@ -761,7 +777,7 @@ MatchBindExpr
   
   ? t("when (a) -> b(c) :d { e } catch f { g }")
   # value: e`{
-  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #            Ref.whenResolved(a, def b {
   #                
   #                method run(resolution__1) :d {
   #                    escape __return {
@@ -778,7 +794,7 @@ MatchBindExpr
   
   ? t("when (a) -> b(c) :d { e } catch f { g } catch h { i } finally { j }")
   # value: e`{
-  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #            Ref.whenResolved(a, def b {
   #                
   #                method run(resolution__1) :d {
   #                    escape __return {
@@ -803,7 +819,7 @@ MatchBindExpr
   
   ? t("pragma.enable(\"easy-when\"); when (a) -> b(c) :d { e }")
   # value: e`{
-  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #            Ref.whenResolved(a, def b {
   #                
   #                method run(resolution__1) :d {
   #                    escape __return {
@@ -820,7 +836,7 @@ MatchBindExpr
   
   ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d, e) :e { f }")
   # value: e`{
-  #            Ref.whenResolved(promiseAllFulfilled.run(__makeList.run(a, b)), def c := def "$c__C" {
+  #            Ref.whenResolved(promiseAllFulfilled.run(__makeList.run(a, b)), def c {
   #                
   #                method run(resolution__1) :e {
   #                    escape __return {
@@ -833,7 +849,7 @@ MatchBindExpr
 
   ? t("pragma.enable(\"easy-return\"); when (a) -> b(c) :d { e } catch f { g }")
   # value: e`{
-  #            Ref.whenResolved(a, def b := def "$b__C" {
+  #            Ref.whenResolved(a, def b {
   #                
   #                method run(resolution__1) :d {
   #                    escape __return {
@@ -881,7 +897,9 @@ MatchBindExpr
   # value: epatt`via (__bind.run(a__uriGetter__Resolver, b)) a__uriGetter__1`
 
   ? t("def bind <a> {}")
-  # value: e`def via (__bind.run(a__uriGetter__Resolver)) a__uriGetter__1 := def "$a__uriGetter__C" {
+  # value: e`def via (__bind.run(a__uriGetter__Resolver)) a__uriGetter__1 := {
+  #            def a__uriGetter {
+  #            }
   #        }`
   
   
@@ -1027,7 +1045,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
 'FunctionObject'
 
   ? t("/** a */ def b() :c { d }")
-  # value: e`def b := def "$b__C" {
+  # value: e`def b {
   #            
   #            /** a */
   #            method run() :c {
@@ -1038,7 +1056,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   #        }`
 
   ? t("pragma.enable(\"easy-return\"); /** a */ def b() :c { d }")
-  # value: e`def b := def "$b__C" {
+  # value: e`def b {
   #            
   #            /** a */
   #            method run() :c {
@@ -1050,7 +1068,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   #        }`
 
   ? t("pragma.enable(\"function-implements\"); /** a */ def b() :c implements d { e }")
-  # value: e`def b := def "$b__C" implements d {
+  # value: e`def b implements d {
   #            
   #            /** a */
   #            method run() :c {
@@ -1072,7 +1090,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
 This currently shares most of the implementation of FunctionExpr, so I'm not testing it much. '
 
   ? t("pragma.enable(\"one-method-object\"); /** a */ def b.c() :d { e }")
-  # value: e`def b := def "$b__C" {
+  # value: e`def b {
   #            
   #            /** a */
   #            method c() :d {
@@ -1083,7 +1101,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
   #        }`
 
   ? t("pragma.enable(\"one-method-object\"); def b.c() :d { e }")
-  # value: e`def b := def "$b__C" {
+  # value: e`def b {
   #            
   #            method c() :d {
   #                escape __return {
@@ -1096,7 +1114,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
 'ETo'
 
   ? t("def a { to b() :c { d } }")
-  # value: e`def a := def "$a__C" {
+  # value: e`def a {
   #            
   #            method b() :c {
   #                escape __return {
@@ -1106,7 +1124,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
   #        }`
   
   ? t("pragma.disable(\"explicit-result-guard\"); def a { to b() { d } }")
-  # value: e`def a := def "$a__C" {
+  # value: e`def a {
   #            
   #            method b() :void {
   #                escape __return {
@@ -1116,7 +1134,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
   #        }`
 
   ? t("pragma.enable(\"easy-return\"); def a { to b() :c { d } }")
-  # value: e`def a := def "$a__C" {
+  # value: e`def a {
   #            
   #            method b() :c {
   #                escape __return {

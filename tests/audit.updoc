@@ -148,10 +148,10 @@ audition.getSlot
   > }
   # value: <slotCheckingAuditor>
   
-  ? {def x := 1; def x4 implements slotCheckingAuditor {}}
+  ? {def x := 1; def x4 implements slotCheckingAuditor { to f() :any { x } }}
   # problem: Bad!
   
-  ? {def x := 2; def x5 implements slotCheckingAuditor {}}
+  ? {def x := 2; def x5 implements slotCheckingAuditor { to f() :any { x } }}
   # value: <x5>
 
 --- Audition guard, and usage example
@@ -159,7 +159,8 @@ audition.getSlot
   ? def gcStamp { to audit(_) :boolean { return true } }
   > def gcAuditor {
   >   to audit(audition :EAudition) :boolean {
-  >     if (audition.getObjectExpr().getQualifiedName() == "__main$gcPass__C") {
+  >     # XXX this will eventually need to be =~ (which isn't implemented yet)
+  >     if (audition.getObjectExpr().getPattern() == epatt`gcPass`) {
   >       audition.ask(gcStamp)
   >     }
   >     return false
@@ -174,7 +175,7 @@ audition.getSlot
   # value: false
   
   ? gcAuditor.audit(def gcFalseAudition {
-  >   to getObjectExpr() :any { return e`def "__main$$gcPass__C" {}` }
+  >   to getObjectExpr() :any { return e`def gcPass {}` }
   >   to ask(gcStolenStamp) :void {
   >     def gcFalseApproved implements gcStolenStamp {}
   >     require(!__auditedBy(gcStamp, gcFalseApproved), "shouldn't happen")
@@ -199,18 +200,18 @@ audition.getSlot
   # value: <Promise>
 
   ? def exampleObject implements captureAuditor { }
-  # stdout: <Audition for a __main$exampleObject__C>
+  # stdout: <Audition for a __main$exampleObject>
   
   # value: <exampleObject>
   
   ? capturedAudition
-  # value: <closed Audition for a __main$exampleObject__C>
+  # value: <closed Audition for a __main$exampleObject>
 
   ? __auditedBy(approver, exampleObject)
   # value: false
   
   ? capturedAudition.ask(approver)
-  # problem: <closed Audition for a __main$exampleObject__C> is out of scope
+  # problem: <closed Audition for a __main$exampleObject> is out of scope
   
   ? __auditedBy(approver, exampleObject)
   # value: false
@@ -219,6 +220,8 @@ audition.getSlot
  
   ? help(capturedAudition)
   # value: interface "org.erights.e.elang.evm.Audition" {
+  #            /** The fully-qualified name of the object under audit. */
+  #            to getFQName()
   #            /** The ObjectExpr defining the object under audit. */
   #            to getObjectExpr()
   #            /** Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor */
@@ -245,7 +248,7 @@ but that would be silly.
 
   ? def oldAuditor {
   >   to audit(objectExpr, witness) :any {
-  >     return objectExpr.getQualifiedName() == "__main$oldAuditSample__C"
+  >     return objectExpr.getPattern() == epatt`oldAuditSample`
   >   }
   > }
   # value: <oldAuditor>

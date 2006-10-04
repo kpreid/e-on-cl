@@ -26,7 +26,7 @@ http://www.opengroup.org/onlinepubs/009695399/functions/xsh_chap02_10.html#tag_0
   # value: <socket peer localhost:80>
   
   ? socket.connect(def test extends localHTTP {})
-  # problem: the "__main$test__C" <test> doesn't coerce to a <SocketPeerRef>
+  # problem: the "__main$test" <test> doesn't coerce to a <SocketPeerRef>
 
   In the ideal model, these *should* work, and they do in SBCL (XXX make it possible to test this), but many CL implementations don't offer a socket interface with true unconnected sockets. '
   x ? def outs := socket.getOut()

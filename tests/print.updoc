@@ -163,7 +163,7 @@ The "you should use a guard" hint
   >     }
   >   })
   > } catch p { throw(p) }
-  # problem: <unguarded-text-writer-error: __main$unguarded2__C#__printOn/1 should have coerced its argument by TextWriter, but instead called it: ["print", ["EHLO WORLD"]]>
+  # problem: <unguarded-text-writer-error: __main$unguarded2#__printOn/1 should have coerced its argument by TextWriter, but instead called it: ["print", ["EHLO WORLD"]]>
 
 Custom syntax (experimental)
 
@@ -286,7 +286,7 @@ Custom syntax (experimental)
   XXX should the fqn be __getAllegedType-based instead?
 
   ? def [tw, sb] := makeTextWriter.makeBufferingPair(["syntax" => xhtmlPrintSyntax]); null
-  ? tw.print(def "$boing" match _ {throw("boing")})
+  ? tw.print(def boing match _ {throw("boing")})
   ? print(sb.snapshot())
   # stdout: <span><em class="error">(<span>org.cubik.cle.prim.any</span>) <span><span>&lt;sealed problem&gt;</span></span></em></span>
 
