@@ -12,3 +12,7 @@
 ;(pushnew :e.vtable-collect.use-typelist *features*)
 
 ;(pushnew :e.instrument.ref-shorten-uses *features*)
+
+;; The presence of this feature causes method bodies to be wrapped in (apply (named-lambda "fqn#method" (...) ...) args) instead of being direct CASE clause forms. This may be helpful for backtraces, but may have a speed/space penalty.
+;; Default policy is to use this under OpenMCL, since OpenMCL is poor at displaying function arguments in backtraces.
+#+openmcl (pushnew :e.method-lambdas *features*)

@@ -713,12 +713,38 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
     `((,mverb)
       ,(smethod-function-form (rest smethod) :type-name type-name :verb-name mverb)))
 
+  (defun functional-smethod-body-p (body)
+    (= 1 (length body)))
+    
+  (defun delete-documentation (decls-and-forms)
+    "Remove from DECLS-AND-FORMS a value that would be interpreted as a documentation string according to CLHS section 3.4.11, thus allowing it to be used as a body in forms like DESTRUCTURING-BIND."
+    (loop with head = '()
+          for (thing . rest) on decls-and-forms
+          when (and (stringp thing) rest)
+            do (return (nreconc head rest))
+          do (push thing head)
+          finally (return decls-and-forms)))
+
   (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
-    `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) ,@prefix-args (if (and ',(keywordp verb-name) *exercise-reffiness*) (reffify-args ,args-sym) ,args-sym)))
+    (let ((args-form 
+           `(if (and ',(keywordp verb-name) *exercise-reffiness*) 
+              (reffify-args ,args-sym)
+              ,args-sym)))
+      #+e.method-lambdas 
+        `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) 
+                ,@prefix-args ,args-form)
+      #-e.method-lambdas
+        (declare (ignore type-name verb-name))
+      #-e.method-lambdas
+        (if (functional-smethod-body-p body)
+          `(apply ,(first body) ,@prefix-args ,args-form)
+          `(destructuring-bind ,(first body)
+               (list* ,@prefix-args ,args-form)
+             ,@(delete-documentation (rest body))))))
   
   (defun smethod-function-form (body &key type-name verb-name)
     "XXX transfer the relevant portions of smethod-case-entry's documentation here"
-    (if (= 1 (length body))
+    (if (functional-smethod-body-p body)
       (first body)
       (let* ((name (format nil "~A#~A" type-name verb-name))
              (name-sym
@@ -896,7 +922,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   "The reason for this macro's existence is to allow compiling the miranda-methods into a single function and simultaneously capturing the method names and comments for alleged-type purposes. I realize this is ugly, and I'd be glad to hear of better solutions."
   (multiple-value-bind (otherwises specifics) 
       (partition (lambda (x) (eq (first x) 'otherwise)) smethods)
-    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (smethod) (smethod-mverb smethod 0)) smethods)))
+    `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (smethod) (smethod-mverb smethod 0)) specifics)))
       (defglobal ,descs-name 
         ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) specifics))
       (defun ,func-name (,self-var ,mverb-litem ,args-litem else-func)
@@ -904,7 +930,10 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
           ,@(loop for smethod in specifics collect
               (smethod-case-entry smethod args-litem '() :type-name fqn))
           ,@(loop for desc in otherwises collect
-              `(otherwise (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" fqn)) ,@(cdr desc)) ,mverb-litem ,args-litem))))))))
+              `(otherwise 
+                 #+e.method-lambdas (funcall (named-lambda ,(make-symbol (format nil "~A#<match>" fqn)) () ,@(cdr desc)))
+                 #-e.method-lambdas 
+                   ,@(cdr desc))))))))
  
 ;(declaim (inline miranda))
 (def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args miranda-mverbs)
@@ -981,8 +1010,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
           nil)
         (:|isFinal| () +e-false+))))
 
-    (otherwise (mverb args)
-      (declare (ignore mverb args))
+    (otherwise
       (funcall else-func)))
 
 ; --- Native object cross-calling support ---
