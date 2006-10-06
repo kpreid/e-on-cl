@@ -58,20 +58,10 @@ Broken references are DeepFrozen if the exception is
 
 --- DeepFrozen auditing details
 
-Auditor exprs are a funny case because they're part of the ObjectExpr, yet closed over. '
+  x ? {var x implements DeepFrozen { to run() { x } }}
+  x # problem: "x" in the definition of __main$x is variable and therefore not DeepFrozen
 
-  ? { var x := 0
-  >   {def testAuditorHidesState implements (def x := 1; DeepFrozen) {
-  >     to run() { x }
-  >   }}
-  > }
-  # problem: "x" defined in the auditor expressions of __main$testAuditorHidesState cannot be confirmed DeepFrozen
-  
-  ? def x := 0
-  > {def testAuditorProvidesState implements (var x := 1; DeepFrozen) {
-  >   to run() { x } 
-  > }}
-  # problem: "x" defined in the auditor expressions of __main$testAuditorProvidesState cannot be confirmed DeepFrozen
+XXX enable this and the similar below as soon as we support var patterns
 
 --- 'Lazy' checking
 
@@ -201,6 +191,9 @@ Auditor exprs are a funny case because they're part of the ObjectExpr, yet close
   
   ? opaqueButDeepFrozen :DeepFrozen
   # value: <opaqueButDeepFrozen>
+
+  x ? {var x implements EventuallyDeepFrozen { to run() { x } }}
+  x # problem: "x" in the definition of __main$x is variable and therefore not DeepFrozen
 
 XXX test that redefinitions of __equalizer are rejected
 

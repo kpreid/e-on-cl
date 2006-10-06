@@ -833,7 +833,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |ObjectExpr|
   (seq :|pattern|
-       (hide (seq (flatten :|auditorExprs|) :|script|))))
+       (hide (flatten :|auditorExprs|))
+       (hide :|script|)))
 
 (def-scope-rule |SeqExpr|
   (flatten :|subs|))
@@ -1003,6 +1004,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (this-reject-usage t   :|rValue|         :|pattern|)
   (this-reject-usage t   :|optEjectorExpr| :|pattern|))
 
+(define-kernel-e-check-method |ObjectExpr|
+  (this-reject-usage nil :|auditorExprs| :|script|)
+  (this-reject-usage t   :|pattern|      :|auditorExprs|)
+  (check-property-types
+    (:|script| |EScript|)))
+
 (define-kernel-e-type-constraints |AssignExpr|
   (:|noun| |NounExpr|))
 
@@ -1015,9 +1022,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                        (observable-type-of node)
                        (e-quote (e. node |getNoun|))
                        (e-quote guard)))))
-
-(define-kernel-e-type-constraints |ObjectExpr|
-  (:|script| |EScript|))
 
 (define-kernel-e-type-constraints |EScript|
   (:|optMethods| (or null (e-list |EMethod|)))

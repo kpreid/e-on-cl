@@ -386,16 +386,17 @@
       ;; XXX assuming this is a final pattern or ignore pattern or similar, and that final patterns keep the specimen var (rather than taking its value)
       ;; XXX instead of using the regular compiler for these patterns, make our own bindings which are explicitly aware of this. this will also fix the object name being available (with the above bogus value) in auditing environments.
       (updating-sequence-patt pattern layout object-var nil)
-      (let ((layout layout)) (append
+      (let ((layout layout))
+        ;; auditor exprs are disallowed from mentioning the object
         (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
               for auditor-var-cell on auditor-vars
-              append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))
-        `((,result
-           (setf ,object-var
-                 ,(object-form +seq-object-generators+
-                               layout 
-                               (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditor-exprs script))
-                               auditor-vars)))))))
+              append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail))))
+      `((,result
+          (setf ,object-var
+                ,(object-form +seq-object-generators+
+                              layout 
+                              (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditor-exprs script))
+                              auditor-vars)))))
     layout))
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)

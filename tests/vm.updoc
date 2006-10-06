@@ -330,9 +330,27 @@ ObjectExpr
   ? thing.foo()
   # value: 13
   
- Scope of 'implements' includes the object, but not after it
+  ? { def x implements x {} }
+  # problem: <misleading-actual-usage-error: a ObjectExpr's auditorExprs ([e`x`]) may not use definitions from its pattern (epatt`x`)>
+  
+  
+ Apparent usage of 'implements' in the script is rejected (this test once tested that it was actual usage and allowed)
   ? { def x := 1; { def thing implements (def x {to audit(_) :any {return true}}) { to run() :any {x} }; [x, thing()] }}
-  # value: [1, <x>]
+  # problem: <misleading-apparent-usage-error: a ObjectExpr's script (e??` {
+  #              
+  #              method run() :any {
+  #                  escape __return {
+  #                      x
+  #                  }
+  #              }
+  #          }`) may not appear to use definitions from its auditorExprs ([e`def x {
+  #              
+  #              method audit(_) :any {
+  #                  escape __return {
+  #                      __return.run(true)
+  #                  }
+  #              }
+  #          }`])>
   
 Matcher
 

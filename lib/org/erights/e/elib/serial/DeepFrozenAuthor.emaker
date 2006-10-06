@@ -174,15 +174,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
   def requireAudit(audition, fail) :void implements DeepFrozenStamp {
     def objectExpr := audition.getObjectExpr()
     
-    def auditorExprOut := accum emptyStatic for e in objectExpr.getAuditorExprs() { _ + e.staticScope() }.outNames()
+    def patternSS := objectExpr.getPattern().staticScope()
     
-    for name => _ in objectExpr.getScript().staticScope().namesUsed() &! objectExpr.getPattern().staticScope().outNames() {
-      
-      
-      if (auditorExprOut.maps(name)) {
-        # XXX This is ugly and should be made unnecessary. See
-        #   <http://www.eros-os.org/pipermail/e-lang/2006-October/011528.html>
-        throw.eject(fail, E.toQuote(name) + " defined in the auditor expressions of " + audition.getFQName() + " cannot be confirmed DeepFrozen")
+    for name => _ in objectExpr.getScript().staticScope().namesUsed() &! patternSS.defNames() {
+      if (patternSS.varNames().maps(name)) {
+        throw.eject(fail, E.toQuote(name) + " in the definition of " + audition.getFQName() + " is a variable pattern and therefore not DeepFrozen")
       } else {
         def slot := audition.getSlot(name)
         
