@@ -49,23 +49,21 @@
      (defun ,name ,lambda-list ,doc ,@body)))
 
 (define-toplevel script-toplevel (args)
-  (establish-vat :label "rune script toplevel")
-  (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
-         (Ref (eelt scope "Ref"))
-         (outcome-vow (efuncall (eelt scope "rune") (coerce args 'vector))))
-    (e. Ref |whenResolved| outcome-vow
-      (e-lambda "org.erights.e.elang.interp.RuneTerminator" ()
-        (:|run| (outcome 
-            &aux (opt-problem (e. Ref |optProblem| outcome)))
-          (if opt-problem
-            (progn
-              (format *error-output* "# problem: ~A" (e-quote (e-problem-unseal opt-problem))) ; xxx no indent on multiple lines
-              (global-exit -1))
-            (global-exit 0)))))
-    (top-loop)))
+  (generic-toplevel "rune script toplevel"
+    (lambda ()
+      (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
+             (Ref (eelt scope "Ref")))
+        (e. Ref |whenResolved| (efuncall (eelt scope "rune") 
+                                        (coerce args 'vector))
+          (e-lambda "org.erights.e.elang.interp.RuneTerminator" ()
+            (:|run| (outcome 
+                &aux (opt-problem (e. Ref |optProblem| outcome)))
+              (when opt-problem
+                (format *error-output* "# problem: ~A" (e-quote (e-problem-unseal opt-problem))))
+              outcome)))))))
 
 (defun generic-toplevel (label starter)
-  (establish-vat :label label)
+  (declare (ignore label)) ;; XXX reestablish use? formerly vat label
   (call-when-resolved
     (funcall starter)
     (efun (result)
@@ -88,7 +86,9 @@
 (define-toplevel lisptest-toplevel (args)
   "Run those tests for E-on-CL which do not involve executing the E language."
   (assert (zerop (length args)))
-  (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil +the-asdf-system+)
+  (let ((*vat* nil)
+        (*runner* nil)) ;; XXX kludge
+    (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil +the-asdf-system+))
   (force-output)
   (global-exit 0))
 
@@ -100,25 +100,28 @@
 
 (define-toplevel irc-repl-toplevel (args)
   "Start an IRC bot. The arguments are: <nick> <server> <channel>*"
-  (establish-vat :label "rune irc toplevel")
-  (apply (system-symbol "START-IRC-REPL" :e.irc-repl :e-on-cl.irc-repl) args)
-  (top-loop))
+  (generic-toplevel "rune irc toplevel"
+    (lambda ()
+      (apply (system-symbol "START-IRC-REPL" :e.irc-repl :e-on-cl.irc-repl) args)
+      (make-promise))))
 
 (define-toplevel translate-toplevel (args)
   "Parse the sole argument as E source and print the Common Lisp form
       it is compiled into."
   (assert (= 1 (length args)))
-  (establish-vat :label "rune --translate toplevel")
-  (print (e.elang:get-translation (e.syntax:parse-to-kernel (first args))))
-  (fresh-line)
-  (force-output)
-  (global-exit 0))
+  (generic-toplevel "rune --translate toplevel"
+    (lambda () 
+      (print (e.elang:get-translation (e.syntax:parse-to-kernel (first args))))
+      (fresh-line)
+      (force-output)
+      nil)))
 
 (define-toplevel stale-test-toplevel (args)
   (check-type args null)
-  (let ((answer (not (stale))))
-    ;(print answer)
-    (global-exit (if answer 0 1))))
+  (let ((answer (stale)))
+    (when answer
+      (format *trace-output* "~&; Stale: ~A~%" answer))
+    (global-exit (if answer 1 0))))
 
 (define-toplevel nothing-toplevel (args)
   "Do nothing. In particular, do not exit, and do not run the vat.
@@ -203,7 +206,7 @@
 #+sbcl (defvar *sbcl-home-transport*)
 
 (defun save-flush ()
-  (assert (null *vat*))
+  (assert *vat*)
 
   (setf *parse-cache-name* nil)
   
@@ -227,7 +230,15 @@
   #+sbcl
   (setf *sbcl-home-transport* (sb-ext:posix-getenv "SBCL_HOME"))
 
+  ;; XXX why is this a feature? why not an ordinary variable?
   (setf *features* (delete :e.saving-image *features*))
+  
+  (e. (vat-safe-scope *vat*) |iterate| (efun (k v)
+    (e. e.knot:+sys-trace+ |doing| (format nil "preloading ~A" k) (efun ()
+      ;; XXX once we have vat-killing errors we must not catch them here
+      (prin1 (nth-value 1 (ignore-errors (e. (e. v |getValue|) |__getAllegedType|))) *trace-output*)))))
+  
+  (e.syntax::sub-save-flush)
   
   (values))
 
@@ -240,6 +251,8 @@
      
      - should we somehow arrange so that changes to an asdf system in our dependencies while we're running won't reload it? |#
   (values))
+
+;;; --- Staleness testing ---
 
 (defun deep-operation-done-p (operation component)
   (loop for (o . c) in (asdf::traverse operation component) 
@@ -255,12 +268,28 @@
                  (lambda (k v) (declare (ignore k)) (cdr v)) 
                  asdf::*defined-systems*))
 
+
+(defun file-incorporated (vat file time)
+  (push (list file time) (incorporated-files vat)))
+
+(defun stale-files (vat)
+  (some (lambda (record)
+          (destructuring-bind (file time) record
+            (when (/= time (e. file |_clFileWriteDate|))
+              record)))
+        (incorporated-files vat)))
+
+
 (defun stale ()
-  (let ((op (make-instance 'asdf:load-op :original-initargs nil)))
-    (not (every (lambda (system) 
-                  (or (not (operation-used-p op system))
-                      (deep-operation-done-p op system)))
-                (defined-systems)))))
+  (or (let ((op (make-instance 'asdf:load-op :original-initargs nil)))
+        (not (every (lambda (system) 
+                      (or (not (operation-used-p op system))
+                          (deep-operation-done-p op system)))
+                    (defined-systems))))
+      (and *vat*
+           (stale-files *vat*))))
+
+;;; --- End of staleness testing ---
 
 (defun %revive-start ()
   (revive-flush)
@@ -354,6 +383,9 @@ Lisp-level options:
     (e.syntax:load-parse-cache-file parse-cache-name)
     (setf *parse-cache-name* parse-cache-name))
 
+  (unless *vat*
+    (establish-vat :label "initial"))
+  
   (funcall toplevel args))
 
 ;; --- REPL tools ---

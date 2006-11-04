@@ -144,15 +144,17 @@
   (let* ((fqn-prefix (concatenate 'string fqn "$"))
          (compile-target (when opt-compiled-file (e.extern::file-ref-pathname opt-compiled-file)))
          (scope (scope-for-fqn scope fqn)))
+    (e.rune::file-incorporated *vat* file (e. file |_clFileWriteDate|)
+      #| XXX once we have proper filesystem change hiding, this operation should
+         happen at exactly that point |#)
     (if (and +compile-emakers+ compile-target)
       (progn
         (let ((*standard-output* *trace-output*))
           (ensure-directories-exist compile-target :verbose t))
         (when (or (not (probe-file compile-target))
-                  ;; XXX fix this interface and remove the respondsTo test
-                  (and (e-is-true (e. file |__respondsTo| "_clFileWriteDate" 0))
-                       (> (e. file |_clFileWriteDate|)
-                          (file-write-date compile-target))))
+                  ;; XXX fix this interface - exposing CL things not good
+                  (> (e. file |_clFileWriteDate|)
+                     (file-write-date compile-target)))
           ;; If we have a compile-target, then we have the authority
           ;; to write to it.
           (e.compiler:compile-e-to-file
@@ -176,7 +178,7 @@
       (let* ((file (e. source-file-root |getOpt| (fqn-to-slash-path fqn "emaker"))))
         (if file
           (load-emaker-from-file file fqn 
-                                 (funcall scope-fn) 
+                                 (funcall scope-fn)
                                  (when opt-compiled-file-root
                                    (eelt opt-compiled-file-root
                                      (fqn-to-slash-path fqn +emaker-fasl-type+))))

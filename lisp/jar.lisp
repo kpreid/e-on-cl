@@ -18,6 +18,10 @@
         (let ((zip-entry (get-zipfile-entry subpath zipfile)))
           (when zip-entry
             (e-lambda |entry| ()
+              (:|_clFileWriteDate| ()
+                "XXX this interface to be revised.
+                 The modification date of an item in a jar is that of the jar itself, for our purposes."
+                (file-write-date pathname))
               (:|getText| ()
                 ;; XXX merge this with whatever our overall encoding strategy turns out to be
                 (let ((data (zipfile-entry-contents zip-entry)))

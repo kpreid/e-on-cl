@@ -582,6 +582,13 @@ XXX make precedence values available as constants"
   (unless (boundp '*parser-process*)
     (start-parser)))
 
+
+(defun sub-save-flush ()
+  "Public, but not exported"
+  #-e.syntax::local-parser
+  (kill-parser)
+  (values))
+
 #-e.syntax::local-parser
 (defun build-nodes (tree)
   (if (consp tree)
