@@ -79,7 +79,9 @@
 (define-toplevel selftest-toplevel (args)
   "Run the tests for E-on-CL."
   (assert (zerop (length args)))
-  (time (asdf:operate 'asdf:test-op +the-asdf-system+))
+  (let ((*vat* nil)
+        (*runner* nil)) ;; XXX kludge
+    (time (asdf:operate 'asdf:test-op +the-asdf-system+)))
   (force-output)
   (global-exit 0))
 
