@@ -242,9 +242,14 @@ protected boolean isPocket(String key) throws RecognitionException, TokenStreamE
     } else if ("enable".equals(v)) {
         return true;
     } else {
-        throwSemanticHere("" + key + " must be \"enable\" or \"disable\" here, not: " + key);
+        throwSemanticHere(quoteForMessage(key) + " must be \"enable\" or \"disable\" here, not " + quoteForMessage(v));
         throw new RuntimeException("can't happen");
     }
+}
+
+private String quoteForMessage(String v) {
+    // XXX do this properly
+    return "\"" + v + "\"";
 }
 
 }
@@ -264,7 +269,7 @@ pocket![String key]: {
     if ("warn".equals(v)) {
         reportWarning(key + " in pocket");
     } else if (!v.equals("enable")) {
-        throwSemanticHere("The optional \"" + key + "\" syntax is currently off.");
+        throwSemanticHere("The optional " + quoteForMessage(key) + " syntax is currently off.");
     }
 } ;
 
@@ -283,6 +288,21 @@ setPocket![Token key, String value]: {
     if (false) {throw new RecognitionException("warn");}
 } ;
 
+setSyntax![Token arg]: {
+    String syntaxName = arg.getText(); // string literal token
+    // XXX these should be in syntax-definition files; this is a quick hack
+    if ("0.8".equals(syntaxName)) {
+        myPocket.put("easy-return", "disable");
+        myPocket.put("explicit-result-guard", "enable");
+    } else if ("0.9".equals(syntaxName)) {
+        myPocket.put("easy-return", "enable");
+        myPocket.put("explicit-result-guard", "disable");
+    } else {
+        throwSemanticHere("Unknown syntax version " + quoteForMessage(syntaxName) + ".");
+    }
+} ;
+
+
 getPocket![String key]:
                 {isPocket(key)}? {##=#([True],##);}
             |                    {##=#([False],##);} ;
@@ -299,10 +319,15 @@ topSeqMore:     topExpr ((seqSep)+ (topSeqMore)?)? ;
 topExpr:    eExpr | pragma ;
 
 pragma!:     "pragma"^ "."! verb
-            ( {is("enable")}? "("! en:STRING ")"!    setPocket[en, "enable"]!
-            | {is("disable")}? "("! dis:STRING ")"!  setPocket[dis, "disable"]!
-            | {is("warn")}? "("! wn:STRING ")"!      setPocket[wn, "warn"]!
-            | {is("syntax")}? pocket["syntax"]!  );
+            ( {is("enable")}?  "("! e:STRING ")"! setPocket[e, "enable"]!
+            | {is("disable")}? "("! d:STRING ")"! setPocket[d, "disable"]!
+            | {is("warn")}?    "("! w:STRING ")"! setPocket[w, "warn"]!
+            | {is("syntax")}?  "("! s:STRING ")"! setSyntax[s]!
+            | { throwSemanticHere("Unknown pragma "
+                                  + quoteForMessage(returnAST.getText())
+                                  + "."); }
+              parenParamList // for antlr's lookahead
+            ) ;
 
 metaExpr:  "meta"^ "."! verb
             (   {is("getState")}? {##=#([MetaStateExpr,"MetaScope"]);}

@@ -265,6 +265,52 @@ XXX source position
 #               true
 #             []
 
+--- pragma.syntax ---
+
+? t("pragma.aardvarks()")
+# problem: (line 1)@18: Unknown pragma "aardvarks".
+
+? t("pragma.syntax(\"fnorg\")")
+# problem: (line 1)@22: Unknown syntax version "fnorg".
+
+0.8 has explicit-result-guard on and easy-return off.
+
+? t("pragma.syntax(\"0.8\")
+>    def a() {}")
+# problem: (line 2)@10: You must specify a result guard or disable "explicit-result-guard".
+
+? t("pragma.syntax(\"0.8\")
+>    def a() :void {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           FunctionObject
+#             []
+#             NounE. void
+#             []
+#             NullE.
+#             false
+
+0.9 has explicit-result-guard off and easy-return on.
+
+? t("pragma.syntax(\"0.9\")
+>    def a() {}")
+# stdout: SeqE. [] ObjectHeadE.
+#           
+#           FinalP.
+#             NounE. a
+#             null
+#           FunctionObject
+#             []
+#             null
+#             []
+#             NullE.
+#             true
+
+XXX should we add a pragma.state() or parser state output so we can inspect the results?
+
 --- Function expressions ---
 
 ? t("def a() :b {}")
