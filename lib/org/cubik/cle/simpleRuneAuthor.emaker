@@ -7,6 +7,8 @@ pragma.disable("explicit-result-guard")
 pragma.enable("importer")
 pragma.enable("exporter")
 
+def makeEParser := <import:org.erights.e.elang.syntax.makeEParser>
+
 def simpleRuneAuthor {
   to defaultAuths(<unsafe>) {
     def privilegedScope := <unsafe:org.cubik.cle.boot.privilegedScope>
@@ -28,7 +30,7 @@ def simpleRuneAuthor {
           def interp extends privilegedScope["interp"] {
             to getArgs() { return scriptArgs }})
         
-        return e__quasiParser(<file>[scriptName].getTwine()) <- eval(scope)
+        return makeEParser.run(<file>[scriptName].getTwine()).asKernelE() <- eval(scope)
       }
     }
     return simpleRune
