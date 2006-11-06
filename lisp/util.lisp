@@ -218,7 +218,7 @@
           (let ((*package* (find-package :cl-user)))
             (read-from-string
               (kernel:%function-arglist function)))) ; XXX is this a supported interface? probably not
-      (cdr (function-lambda-expression function))
+      (second (function-lambda-expression function))
       '((&rest <unknown-lambda-list>)))))
 
 (defun lambda-list-arguments-range (lambda-list)

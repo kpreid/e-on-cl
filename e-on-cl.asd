@@ -59,7 +59,7 @@
             :depends-on ("compiler-base" 
                          "knot-base" #| for scopes |#))
      (:file "rune"
-            :depends-on ("elib" "compiler-entry" "knot"))
+            :depends-on ("elib" "compiler-entry" "knot" "syntax"))
      
      (:file "antlr-system"
             :depends-on ("knot"))))))

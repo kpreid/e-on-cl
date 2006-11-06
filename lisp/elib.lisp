@@ -729,6 +729,8 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
           finally (return decls-and-forms)))
 
   (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
+    #-e.method-lambdas
+      (declare (ignore type-name))
     (let ((args-form 
            `(if (and ',(keywordp verb-name) *exercise-reffiness*) 
               (reffify-args ,args-sym)
@@ -736,8 +738,6 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       #+e.method-lambdas 
         `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) 
                 ,@prefix-args ,args-form)
-      #-e.method-lambdas
-        (declare (ignore type-name verb-name))
       #-e.method-lambdas
         (if (functional-smethod-body-p body)
           `(apply ,(first body) ,@prefix-args ,args-form)
