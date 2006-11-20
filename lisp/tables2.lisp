@@ -438,6 +438,10 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (let ((comparer (eelt (vat-safe-scope *vat*) "__comparer")))
     (lambda (a b) (e-is-true (e. comparer |lessThan| a b)))))
 
+(defun maps-no-sugar (map key)
+  (e. map |fetch| key (efun () (return-from maps-no-sugar nil)))
+  t)
+
 (def-vtable const-map
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
@@ -458,17 +462,6 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   
   ; The folowing are methods equally applicable to non-const maps, but all of them are currently implemented in E.
   
-  (:|get| (this key)
-    (e. this |fetch|
-      key
-      (efun ()
-        ; XXX can this error be made more informative?
-        (error "~A not found" (e-quote key)))))
-  (:|maps| (this key)
-    (block nil
-      (e. this |fetch| key (efun () (return +e-false+)))
-      +e-true+))
-  
   ; xxx with is generally used repeatedly: have a special efficiently-accumulating map
   (:|with| (map new-key new-value)
     (e. +the-make-const-map+ |fromIteratable|
@@ -481,7 +474,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   ; xxx using more complicated and slow version to imitate Java-E's ordering behavior
   (:|without| (map key-to-remove)
     "Return a ConstMap including all entries in this map except for the given key, which is replaced in the ordering with the last element of the map."
-    (if (e-is-true (e. map |maps| key-to-remove))
+    (if (maps-no-sugar map key-to-remove)
       (let (last-pair 
             removing-nonlast)
         (e. map |iterate| (efun (k v) (setf last-pair (list k v))))
@@ -516,7 +509,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda "org.cubik.cle.prim.mapAndIterator" () (:|iterate| (f)
         (e. map |iterate| (efun (key value)
-          (when (e-is-true (e. mask |maps| key))
+          (when (maps-no-sugar mask key)
             (efuncall f key value))
           nil))
         nil))
@@ -542,7 +535,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                                  :fill-pointer t)))
       (loop with i = 0
             while (< i (length ordering))
-            do (if (e-is-true (e. mask |maps| (aref ordering i)))
+            do (if (maps-no-sugar mask (aref ordering i))
                  (if (= i (1- (length ordering)))
                    (vector-pop ordering)
                    (setf (aref ordering i) (vector-pop ordering)))
@@ -550,7 +543,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (e. +the-make-const-map+ |fromIteratable|
         (e-lambda "org.cubik.cle.prim.mapButNotIterator" () (:|iterate| (f)
           (loop for key across ordering do
-            (efuncall f key (eelt map key)))
+            (efuncall f key (e. map |fetch| key nil)))
           nil))
         +e-true+)))
   
@@ -562,42 +555,22 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       ((eql 0 (e. behind |size|)) (e. front |snapshot|))
       (t 
         (e. +the-make-const-map+ |fromIteratable|
-          (e-lambda "org.cubik.cle.prim.mapButNotIterator" () (:|iterate| (f)
+          (e-lambda "org.cubik.cle.prim.mapOrIterator" () (:|iterate| (f)
             (e. behind |iterate| f)
             (e. front |iterate| f)
             nil))
           strict opt-ejector))))
-  
+
+  ;; XXX move this into mapSugar  
   (:|iterate| (map func)
     (let* ((pair (ref-shorten (e. map |getPair|))))
       (loop for key   across (aref pair 0)
             for value across (aref pair 1)
             do (efuncall func key value))
-      nil))
-  
-  (:|printOn| (map left-s map-s sep-s right-s tw)
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |write| left-s)
-    (let ((this-sep ""))
-      (e. map |iterate| (efun (key value)
-        (e. tw |write| this-sep)
-        (e. tw |quote| key)
-        (e. tw |write| map-s)
-        (e. tw |quote| value)
-        (setf this-sep sep-s))))
-    (e. tw |write| right-s))
-  
-  (:|diverge| (this) (e. this |diverge| +the-any-guard+ +the-any-guard+))
-  (:|diverge| (this key-guard value-guard)
-    (let ((flex-map (e. +the-make-flex-map+ |fromTypes| key-guard value-guard)))
-      (e. flex-map |putAll| this +e-true+ (efun (problem)
-        ; xxx explain exactly what keys, after the problem argument becomes more informative
-        (declare (ignore problem))
-        (error "duplicate keys in ~A under ~A coercion"
-          (e-quote this)
-          (e-quote key-guard))))
-      flex-map)))
+      nil)))
 
+(defmethod e-call-match ((rec const-map) mverb &rest args)
+  (e-call (e-import "org.erights.e.elib.tables.mapSugar") (unmangle-verb mverb) (cons rec args)))
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
 (def-class-opaque const-map)

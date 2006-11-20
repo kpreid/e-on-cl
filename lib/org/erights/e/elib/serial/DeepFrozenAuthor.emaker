@@ -24,6 +24,9 @@ def Really {
   }
 }
 
+/** Version of collection.maps(key) that has fewer dependencies. */
+def _maps(collection, key) { collection.fetch(key, fn { return false }); return true }
+
 def ConstList := <import:org.cubik.cle.prim.ConstList>
 
 /** Version of safeScope["require"] that has fewer dependencies. */
@@ -94,7 +97,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
   def requireDeepFrozen(specimen, sofar, optEjector, root) :void {
     rtrace(thunk{ "requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root) })
     def specimenKey := __equalizer.makeTraversalKey(specimen)
-    if (sofar.maps(specimenKey)) {
+    if (_maps(sofar, specimenKey)) {
       # recursion check
       return
     } else {
@@ -177,7 +180,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     def patternSS := objectExpr.getPattern().staticScope()
     
     for name => _ in objectExpr.getScript().staticScope().namesUsed() &! patternSS.defNames() {
-      if (patternSS.varNames().maps(name)) {
+      if (_maps(patternSS.varNames(), name)) {
         throw.eject(fail, E.toQuote(name) + " in the definition of " + audition.getFQName() + " is a variable pattern and therefore not DeepFrozen")
       } else {
         def slot := audition.getSlot(name)
@@ -224,7 +227,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         def nounExpr :NounExpr := (expr, fn _{return false})
         return (audition.getSlot(def noun := nounExpr.getName()) == slot) \
                & accum true for p in precedingNodes {
-                   _ & !(p.staticScope().outNames().maps(noun)) }
+                   _ & !(_maps(p.staticScope().outNames(), noun)) }
       }
 
       def script := objectExpr.getScript()

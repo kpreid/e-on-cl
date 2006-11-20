@@ -658,8 +658,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       (:|uses| (name)
         "Whether execution of the node for which this is the static scope might be affected by the presence of 'name'; that is, whether it contains an explicit usage of 'name' or a MetaStateExpr not inside an object expression."
         (as-e-boolean
-          (or (e-is-true (e. read-names |maps| name))
-              (e-is-true (e. set-names |maps| name))
+          (or (e.tables::maps-no-sugar read-names name)
+              (e.tables::maps-no-sugar set-names name)
               (e-is-true has-outer-meta-state-expr)))))))
 
 (defglobal +empty-static-scope+ (make-static-scope))

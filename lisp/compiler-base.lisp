@@ -583,7 +583,8 @@ XXX This is an excessively large authority and will probably be replaced."
             "~A is out of scope" (e-quote audition))
           ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
           ;; XXX also, cross-layer reference into the current compiler implementation
-          (eelt meta-state (e. "&" |add| slot-name)))))
+          (e. meta-state |fetch| (e. "&" |add| slot-name)
+            (efun () (error "There is no slot named ~A in ~A." (e-quote slot-name ) (e-quote audition)))))))
     (values audition 
             (lambda () (setf audition-ok nil)) 
             (lambda (auditor)

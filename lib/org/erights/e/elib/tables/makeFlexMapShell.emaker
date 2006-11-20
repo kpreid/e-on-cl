@@ -4,17 +4,25 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-def makeMapShell := <elib:tables.makeMapShell>
+def mapSugar := <elib:tables.mapSugar>
 
 /** Makes a full FlexMap given an object implementing the data storage. */
 def makeFlexMapShell implements DeepFrozen {
   to run(self, impl) {
-    def flexMap extends makeMapShell(self, impl) { # implements FlexMap
+    def flexMap { # implements FlexMap
       
       to __printOn(out :TextWriter) {
         out.printSame(impl)
       }
       
+      method keyType()   { impl.keyType() }
+      method valueType() { impl.valueType() }
+ 
+      method size() { impl.size() }
+      method fetch(key, absentThunk) { impl.fetch(key, absentThunk) }
+      method getKeys() { impl.getKeys() }
+      method getPair() { impl.getPair() }
+ 
       to put(key, value) {
         impl.put(key, value, false, throw) }
       to put(key, value, strict :boolean) {
@@ -46,7 +54,7 @@ def makeFlexMapShell implements DeepFrozen {
         }
       }
       
-      
+      match [v,a] { E.call(mapSugar, v, [flexMap] + a) }
     }
     return flexMap
   }

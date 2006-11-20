@@ -68,6 +68,7 @@
     :function-arguments-range
     :function-responds-to
     
+    :handler-case-with-backtrace
     :backtrace-value
     
     :+the-asdf-system+))

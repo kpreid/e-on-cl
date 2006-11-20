@@ -96,7 +96,9 @@
 ; XXX make this a defclass iff we relax the various E-level Throwable guards to not be cl:condition
 (define-condition local-throw-sealed-box (error)
   ((value :initarg :value
-          :reader local-throw-sealed-box-value)))
+          :reader local-throw-sealed-box-value)
+   (backtrace :initarg :backtrace
+              :reader local-throw-sealed-box-backtrace)))
 
 (defmethod print-object ((c local-throw-sealed-box) stream)
   (print-unreadable-object (c stream :type t :identity nil)
@@ -108,12 +110,14 @@
           :reader free-problem-value)))
   
 
-(defun transform-condition-for-e-catch (condition)
+(defun transform-condition-for-e-catch (condition &key backtrace)
   (if *compatible-catch-leakage*
     condition
     (if (typep condition 'free-problem)
       (free-problem-value condition)
-      (make-condition 'local-throw-sealed-box :value condition))))
+      (make-condition 'local-throw-sealed-box 
+        :value condition
+        :backtrace backtrace))))
   
 (defgeneric e-problem-to-condition (problem))
 
@@ -121,6 +125,7 @@
   problem)
 
 (defmethod e-problem-to-condition ((problem local-throw-sealed-box))
+  ;; XXX discarding backtrace
   (e-problem-to-condition (local-throw-sealed-box-value problem)))
 
 ; XXX e-problem-to-condition and e-problem-unseal are currently identical - will they ever be different?

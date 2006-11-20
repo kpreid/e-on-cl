@@ -56,18 +56,25 @@
       (list a b c d)))
   ("alpha" 1 "gamma" 1))
 
+(defmacro with-vat-1 (&body b)
+  `(block nil
+     (with-vat ()
+       (return (progn ,@b)))))
+
 (deftest mapping-bind.missing
-  (mapcar #'e-print (multiple-value-list (ignore-errors
-    (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
-                    #(#(1 2)))
-                  ((a 3))
-      a))))
+  (with-vat-1
+    (mapcar #'e-print (multiple-value-list (ignore-errors
+      (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
+                      #(#(1 2)))
+                    ((a 3))
+        a)))))
   ("null" "problem: needs a mapping for 3, got [1 => 2]"))
 
 (deftest mapping-bind.too-many
-  (mapcar #'e-print (multiple-value-list (ignore-errors
-    (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
-                    #(#(1 2)))
-                  ()
-      "nok"))))
+  (with-vat-1
+    (mapcar #'e-print (multiple-value-list (ignore-errors
+      (mapping-bind (e. e.elib:+the-make-const-map+ |fromPairs| 
+                      #(#(1 2)))
+                    ()
+        "nok")))))
   ("null" "problem: unexpected map entries [1 => 2]"))

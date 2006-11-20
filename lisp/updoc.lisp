@@ -78,17 +78,6 @@
 
 ; --- Utilities ---
 
-(defmacro handler-case-with-backtrace (form &rest clauses
-    &aux (backtrace-var (gensym)))
-  `(let (,backtrace-var)
-    (handler-case
-      (handler-bind (((or ,@(mapcar #'first clauses)) 
-                      #'(lambda (c) (declare (ignore c)) (setf ,backtrace-var (e.util:backtrace-value)))))
-        ,form)
-      ,@(loop for (type . lambda) in clauses collect
-         `(,type (,(caar lambda)) 
-            ((lambda ,@lambda) ,(caar lambda) ,backtrace-var))))))
-
 (defun make-problem-answer (condition)
   ; xxx sloppy
   "problem: foo -> (list \"problem\" \"foo\")"
@@ -115,7 +104,7 @@
                 (error (condition backtrace)
                   (let ((*print-level* 5))
                     (efuncall e.knot:+sys-trace+ (format nil "caught problem in updoc chaining: ~A~%~S" (e-print condition) backtrace)))
-                  (e. result-resolver |smash| (transform-condition-for-e-catch condition))))))
+                  (e. result-resolver |smash| (transform-condition-for-e-catch condition :backtrace backtrace))))))
       (proceed))
     result-promise))
 

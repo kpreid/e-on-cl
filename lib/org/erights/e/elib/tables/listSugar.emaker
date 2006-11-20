@@ -1,0 +1,99 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+pragma.enable("function-implements")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def sugarRoot := <import:org.cubik.cle.sugarRoot>
+
+def listSugar
+
+# XXX I expect to move this to a separate emaker.
+def makeReadOnlyList implements EventuallyDeepFrozen {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
+  to run(rwImpl) {
+    return def roList {
+      method get(i) { rwImpl[i] }
+      method size() { rwImpl.size() }
+      method snapshot() { rwImpl.snapshot() }
+      to __printOn(out :TextWriter) :void {
+        out.printSame(rwImpl)
+        out.write(".readOnly()")
+      }
+      match [v,a] { E.call(listSugar, v, [roList] + a) }
+    }
+  }
+}
+
+def childResponsibility(self, mverb) implements DeepFrozen {
+  throw(E.toQuote(self) + " failed to implement " + mverb)
+}
+
+bind listSugar extends sugarRoot implements EventuallyDeepFrozen {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
+  to get(self, i) { childResponsibility(self, "get/1") }
+  to size(self) { childResponsibility(self, "size/0") }
+  to valueType(self) { childResponsibility(self, "valueType/0") }
+
+  to iterate(self, assocFunc) {
+    var i := 0
+    def size := self.size()
+    while (i < size) {
+      assocFunc(i, self[i])
+      i += 1
+    }
+  }
+  
+  to run(self, start :int, endd :int) {
+    return __makeList.fromIteratableValues(
+      def _ { to iterate(assocFunc) {
+        # could use the for-in-.. here but I want to keep options open
+        var i := start
+        while (i < endd) {
+          assocFunc(null, self[i])
+          i += 1}}})
+  }
+  
+  to snapshot(self) {
+    return __makeList.fromIteratableValues(self)
+  }
+  to diverge(self, valueGuard) {
+    return self.snapshot().diverge(valueGuard) # XXX unnecessarily inefficient
+  }
+  to diverge(self) {
+    return self.diverge(any)
+  }
+  to readOnly(self) {
+    return makeReadOnlyList(self)
+  }
+  
+  to sort(self)           { return self.snapshot().sort()         }
+  to sort(self, compFunc) { return self.snapshot().sort(compFunc) }
+  
+  to printOn(self, openS, sepS, closeS, out :TextWriter) {
+    out.write(openS)
+    var first := true
+    for value in self {
+      if (first) {
+        first := false
+      } else {
+        out.write(sepS)
+      }
+      out.quote(value)
+    }
+    out.write(closeS)
+  }
+}

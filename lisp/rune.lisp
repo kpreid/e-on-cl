@@ -237,8 +237,7 @@
   
   (e. (vat-safe-scope *vat*) |iterate| (efun (k v)
     (e. e.knot:+sys-trace+ |doing| (format nil "preloading ~A" k) (efun ()
-      ;; XXX once we have vat-killing errors we must not catch them here
-      (prin1 (nth-value 1 (ignore-errors (e. (e. v |getValue|) |__getAllegedType|))) *trace-output*)))))
+      (e. (e. v |getValue|) |__getAllegedType|)))))
   
   (e.syntax::sub-save-flush)
   

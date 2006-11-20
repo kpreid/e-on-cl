@@ -1,0 +1,51 @@
+# Copyright 2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.enable("easy-return")
+pragma.disable("explicit-result-guard")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+
+def sugarRoot implements EventuallyDeepFrozen {
+
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+  
+  match [=="__getAllegedType", []] {
+    # Miranda __getAllegedType/0 invokes matchers
+    # This is necessary for proper behavior of our own __getAllegedType because
+    # we have the catch-all matcher below, and has nothing to do with the
+    # __getAllegedType behavior of the sugared object.
+    null.__getAllegedType()
+  }
+
+  match [=="__getAllegedType", [_]] {
+    # __getAllegedType/0 for the sugar
+    null.__getAllegedType()
+  }
+  
+  # match [=="__respondsTo", [verb, arity]] { # XXX not proven necessary yet
+  
+  match [verb, [self] + args] {
+    # XXX typed exception
+    # XXX have built-in no-such-method give this more useful error
+    
+    # this form disabled because simple__quasiParser is too unprimitive
+    #throw(`the ${self.__getAllegedType().getFQName()} ${E.toQuote(self)} does not understand $verb/${args.size()} $args`)
+   
+    throw(E.toString(def _{to __printOn(out :TextWriter) {
+      out.write("the ")
+      out.print(self.__getAllegedType().getFQName())
+      out.write(" ")
+      out.quote(self)
+      out.write(" does not understand ")
+      out.print(verb)
+      out.write("/")
+      out.print(args.size())
+      args.printOn(" (", ", ", ")", out) # XXX enable this sometime
+    }}))
+  }
+} 

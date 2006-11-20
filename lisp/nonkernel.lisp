@@ -122,7 +122,7 @@
                 (mn '|NounExpr| 
                   (loop with label = (symbol-name symbol)
                         for name = (format nil "~A__~A" label index)
-                        while (e-is-true (e. names |maps| name))
+                        while (e.tables::maps-no-sugar names name)
                         do (incf index)
                         finally (return name))))))))
       (|ENode| 

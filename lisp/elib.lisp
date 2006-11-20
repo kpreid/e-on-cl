@@ -505,14 +505,14 @@ If there is no current vat at initialization time, captures the current vat at t
       ; XXX direct this into a *configurable* tracing system once we have one
       ;(efuncall e.knot:+sys-trace+ (format nil "running ~A ~A <- ~A ~A" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector))))
       (e. resolver |resolve| 
-        (handler-case 
+        (handler-case-with-backtrace
           (apply #'e-call-dispatch rec mverb args)
-          (error (p)
+          (error (p b)
             ;; XXX using e printing routines here is invoking objects outside a proper turn; do one of:
             ;;   (a) CL print instead
             ;;   (b) make printing the error done in yet another turn (possible object's-print-representation-has-changed problem)
             (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
-            (make-unconnected-ref (transform-condition-for-e-catch p)))))))
+            (make-unconnected-ref (transform-condition-for-e-catch p :backtrace b)))))))
     promise))
 
 (defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))

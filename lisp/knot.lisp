@@ -376,9 +376,9 @@
           "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
     
     If a log message is produced, context-thunk is run to produce a string describing the origin of the failure."
-          (handler-case
+          (handler-case-with-backtrace
             (efuncall thunk)
-            (error (condition)
+            (error (condition backtrace)
               (efuncall |trace|
                 (e-lambda nil ()
                   (:|__printOn| (tw)
@@ -386,7 +386,9 @@
                     (e. tw |print| "caught problem in ")
                     (e. tw |quote| (efuncall context-thunk))
                     (e. tw |print| ": " (e-print condition)))))
-              (make-unconnected-ref (transform-condition-for-e-catch condition)))))))))
+              (make-unconnected-ref
+                (transform-condition-for-e-catch condition
+                                                 :backtrace backtrace)))))))))
 
 ;; XXX threading: if tracers have state they need to become nonglobal
 (defglobal +trace+ (make-tracer :label "misc"))
@@ -403,12 +405,10 @@
           (multiple-value-bind (promise resolver) (make-promise)
             (setf value  promise
                   source nil)
-            (handler-case
-              (progn
-                (setf value (elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|)))))
-                (e. resolver |resolve| value))
-              (error (p)
-                (e. resolver |smash| p))))))
+            (e. resolver |resolve| (e. +sys-trace+ |runAsTurn|
+              (efun ()
+                (setf value (elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|))))))
+              (efun () (format nil "knot lazy eval of ~S" source)))))))
       value)
     (:|setValue| (new)
       (declare (ignore new))

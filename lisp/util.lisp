@@ -158,6 +158,19 @@
   nreverse
   "In-place updating version of cl:nreverse.")
 
+(defmacro handler-case-with-backtrace (form &rest clauses
+    &aux (backtrace-var (gensym)))
+  "Like HANDLER-CASE, but the handlers get second arguments which are as much backtrace information as the Lisp provides."
+  `(let (,backtrace-var)
+    (handler-case
+      (handler-bind (((or ,@(mapcar #'first clauses)) 
+                      #'(lambda (c) (declare (ignore c)) (setf ,backtrace-var (backtrace-value)))))
+        ,form)
+      ,@(loop for (type . lambda) in clauses collect
+         `(,type (,(caar lambda)) 
+            ((lambda ,@lambda) ,(caar lambda) ,backtrace-var))))))
+
+
 ; --- floating-point rules ---
 
 ; I was going to use this to get NaN/Infinity for OpenMCL, but when I tried:

@@ -5,7 +5,7 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("function-implements")
 
-def makeListShell := <import:org.erights.e.elib.tables.makeListShell>
+def listSugar := <import:org.erights.e.elib.tables.listSugar>
 
 /** Check that start..!endd is a subrange of 0..!size. */
 def listRangeChecks(start, endd, size, name) implements DeepFrozen {
@@ -16,9 +16,12 @@ def listRangeChecks(start, endd, size, name) implements DeepFrozen {
         
 def makeFlexListShell implements DeepFrozen {
   to run(self, impl, valueGuard) {
-    def flexList extends makeListShell(self, impl) {
+    def flexList {
       # XXX programmatically provide FlexList interface doc
       
+      method get(i) { impl.get(i) }
+      method size() { impl.size() }
+
       # The implementation must do range checking.
       to put(index :int, value) { impl.put(index, value) }
       
@@ -107,6 +110,8 @@ def makeFlexListShell implements DeepFrozen {
           impl[insertIndex] := moving
         }
       }
+      
+      match [v,a] { E.call(listSugar, v, [self] + a) }
     }
     return flexList
   }
