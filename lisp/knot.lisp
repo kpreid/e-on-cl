@@ -514,7 +514,13 @@
               (:|__printOn| (tw) (e. real-loader |__printOn| tw))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
- 
+
+(defglobal +validate-for+ (e-lambda "$__validateFor"
+    (:stamped +deep-frozen-stamp+)
+  (:|run| (flag)
+    (unless (e-is-true flag)
+      (error "For-loop body isn't valid after for-loop exits.")))))
+
 (defun make-safe-scope (&optional (fqn-prefix "__safe$") (roots (default-safe-scope-roots))
     &aux (&<import> (e. roots |getSlot| "import__uriGetter")))
   (with-result-promise (safe-scope-vow)
@@ -643,11 +649,7 @@
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.expand.__makeVerbFacet"))
           ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
-          ("__validateFor"      ,(e-lambda "$__validateFor"
-              (:stamped +deep-frozen-stamp+)
-            (:|run| (flag)
-              (unless (e-is-true flag)
-                (error "For-loop body isn't valid after for-loop exits.")))))
+          ("__validateFor"    ,+validate-for+)
 
           ; --- utility: miscellaneous ---
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))

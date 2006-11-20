@@ -196,3 +196,46 @@
     (during ("execute ~A" (file-namestring file))
       (destructuring-bind (names function) *efasl-result*
         (apply function scope (mapcar (lambda (n) (e. scope |getSlot| n)) names))))))
+
+;;; --- ASDF-integrated compilation ---
+
+;; XXX reduce internal symbol references
+(defglobal +core-scope+ (e.knot:make-scope "__core$"
+  `(("null"        ,nil)
+    ("true"        ,+e-true+)
+    ("false"       ,+e-false+)
+    ("any"         ,+the-any-guard+)
+    ("E"           ,+the-e+) 
+    ("throw"       ,+the-thrower+) 
+    ("trace"       ,e.knot:+trace+) 
+    ("__makeList"  ,+the-make-list+)
+    ("__equalizer" ,e.elib.same-impl::*the-equalizer*)
+    ("__makeMap"   ,+the-make-const-map+)
+    ("void"        ,+the-void-guard+)
+    ("String"      ,(type-specifier-to-guard 'string))
+    ("ConstList"   ,(type-specifier-to-guard 'vector)) ;; XXX twines are lists
+    ("TextWriter"  ,elib:+the-text-writer-guard+)
+    
+    ("__validateFor" ,e.knot::+validate-for+)
+    
+    ("getSafeScope" ,(efun () (vat-safe-scope *vat*)))
+    
+    ("lisp"            ,e.knot:+lisp+)
+    ("DeepFrozenStamp" ,elib:+deep-frozen-stamp+))))
+
+(defmethod asdf:perform ((o asdf:compile-op) (c e.system:e-core-source-file))
+  (loop for input-file in (asdf:input-files o c)
+        for output-file in (asdf:output-files o c)
+        do
+    (compile-e-to-file 
+      (e.syntax:parse-to-kernel 
+        (e. (e.extern:pathname-to-file input-file) |getTwine|))
+      output-file
+      (format nil "org.cubik.cle.core$~A"
+        (pathname-name input-file))
+      +core-scope+)))
+
+(defmethod asdf:perform ((o asdf:load-op) (c e.system:e-core-source-file))
+  (dolist (file (asdf:input-files o c))
+    (load-compiled-e file +core-scope+)))
+

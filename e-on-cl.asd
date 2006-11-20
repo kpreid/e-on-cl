@@ -1,10 +1,23 @@
 ; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
+(defpackage :e.system
+  (:use :cl :asdf)
+  (:export :e-core-source-file))
+(in-package :e.system)
+
+(defclass e-core-source-file (source-file)
+  ())
+(defmethod source-file-type ((c e-core-source-file) (s module)) "eexpr")
+(defmethod output-files ((operation compile-op) (c e-core-source-file))
+  (list (compile-file-pathname (component-pathname c))))
+;; The perform method is defined later in compiler-entry.lisp.
+
 (defsystem e-on-cl
   :depends-on (:cl-ppcre :genhash :cl-fad)
   ; cl-ppcre dependency could be made lazy
-  :components ((:module "lisp" :components
+  :components
+  ((:module "lisp" :components
     ((:file "packages")
      (:file "compile-options")
      (:file "util"
@@ -57,12 +70,19 @@
             :depends-on ("compiler-base"))
      (:file "compiler-entry"
             :depends-on ("compiler-base" 
-                         "knot-base" #| for scopes |#))
+                         "knot-base" #| for scopes |#
+                         "knot" #| for +lisp+ |#))
      (:file "rune"
             :depends-on ("elib" "compiler-entry" "knot" "syntax"))
      
      (:file "antlr-system"
-            :depends-on ("knot"))))))
+            :depends-on ("knot"))
+     (:file "final-init"
+            :depends-on ("knot"))))
+   (:module "e-core" :default-component-class e-core-source-file
+                     :depends-on ("lisp")
+                     :components
+    ((:file "knot")))))
 
 ;;; --- Auxiliary systems ---
 

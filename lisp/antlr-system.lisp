@@ -105,7 +105,9 @@
   (values))
 
 (defsystem e-on-cl.antlr-parser
-  :depends-on (:e-on-cl)
+  ;; This system actually depends on E-on-CL, but E-on-CL needs to load it
+  ;; midway through its own loading, which asdf doesn't understand sufficiently.
+  :depends-on (#+(or) :e-on-cl)
   :pathname (merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
   :components
     ((:java-source-file "ExtAST")

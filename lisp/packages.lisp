@@ -223,7 +223,6 @@
     :twine :+the-make-twine+
     
     :+the-make-weak-ref+
-    
     :+the-make-proxy-resolver+
     
     :e-slot-value :place-slot
@@ -308,6 +307,7 @@
     :found-e-on-java-home
     :*emaker-search-list*
     
+    :+lisp+
     :+trace+
     :+sys-trace+))
   
