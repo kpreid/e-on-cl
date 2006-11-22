@@ -390,7 +390,6 @@
 (def-fqn insufficiently-settled-error "org.erights.e.elib.tables.InsufficientlySettledException")
 (def-fqn not-settled-error "org.erights.e.elib.tables.NotSettledException")
 
-(def-fqn flex-list "org.erights.e.elib.tables.FlexList")
 (def-fqn string "org.erights.e.elib.tables.String")
 (def-fqn float64 "org.cubik.cle.prim.float64")
 (def-fqn float32 "org.cubik.cle.prim.float32")

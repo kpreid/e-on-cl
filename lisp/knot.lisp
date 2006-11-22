@@ -22,7 +22,12 @@
             ((:|__printOn/1|) (destructuring-bind (tw) args
               (e-coercef tw +the-text-writer-guard+)
               (e. tw |print| "<native function ")
-              (e. tw |quote| (nth-value 2 (function-lambda-expression f)))
+              (e. tw |quote| 
+                (nth-value 2
+                  (function-lambda-expression
+                    (etypecase f
+                      (function f)
+                      (t        (fdefinition f))))))
               (e. tw |print| ">")
               nil))
             ((:|__respondsTo/2|) (destructuring-bind (verb arity) args
@@ -210,8 +215,14 @@
             finally (return (efuncall absent-thunk))))))
 
 
+(defmacro prefix-scope ((fqn-form prefix) &body entries)
+  (declare (string prefix))
+  `(make-scope ,fqn-form (list
+    ,@(loop for (name value-form) in entries collect
+      `(list ,(concatenate 'string "&" prefix (string name))
+             (e. +the-make-simple-slot+ |run| ,value-form))))))
 
-(defmacro lazy-value-scope ((fqn-form prefix) &body entries)
+(defmacro lazy-prefix-scope ((fqn-form prefix) &body entries)
   (declare (string prefix))
   `(make-scope ,fqn-form (list
     ,@(loop for (name value-form) in entries collect
@@ -223,9 +234,8 @@
   (efuncall (e-import (concatenate 'string fqn "Author")) 
             elib:+selfless-stamp+))
 
-; xxx review which of these ought to be moved to safe-extern-scope
-(defun make-primitive-loader ()
-  (lazy-value-scope ("org.cubik.cle.prim.primLoader" "org.cubik.cle.prim.")
+(defglobal +shared-safe-loader+
+  (prefix-scope ("org.cubik.cle.prim.sharedPrimLoader" "org.cubik.cle.prim.")
     (:|loop|             +the-looper+)
     (:|throw|            +the-thrower+)
 
@@ -247,7 +257,7 @@
     (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
     (:|makeScope|        +the-make-scope+)
     (:|makeStaticScope|  elang:+the-make-static-scope+)
-    (:|makeSafeScope|    (wrap-function #'make-safe-scope))
+    (:|makeSafeScope|    (wrap-function 'make-safe-scope))
     (:|makeTextWriter|   elib:+the-make-text-writer+)
     
     (:|makeTypeDesc|     +the-make-type-desc+)
@@ -258,13 +268,17 @@
     (:|makeFlexMap|      elib:+the-make-flex-map+)
     (:|makeSortedQueue|  elib:+the-make-sorted-queue+)
     
-    (:|FlexList|         elib:+the-flex-list-guard+)
     (:|Throwable|        elib:+the-exception-guard+)
-    
-    (:|equalizer|        (make-equalizer))
+
+    (:|equalizer|        (make-equalizer)) ;; yes, equalizers are thread safe
     (:|E|                elib:+the-e+)
+    
+    (:|gc|               e.extern:+gc+)))
+
+; xxx review which of these ought to be moved to safe-extern-scope
+(defun make-primitive-loader ()
+  (lazy-prefix-scope ("org.cubik.cle.prim.primLoader" "org.cubik.cle.prim.")
     (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
-    (:|gc|               e.extern:+gc+)
     
     (:|DeepFrozen|
       (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
@@ -334,16 +348,6 @@
             (make-instance 'cl-type-guard :type-specifier sym)
             (efuncall absent-thunk)))
         (efuncall absent-thunk))))))
-
-; XXX move this utility function elsewhere
-; XXX avoiding loading deep-frozen auditor because we need this during the construction of the path loader - so we reject some we could accept. the Right Solution is to add lazy auditing as MarkM suggested
-(defun deep-frozen-if-every (subs
-    &aux #-(and) (deep-frozen-guard (eelt (vat-safe-scope *vat*) "DeepFrozen")))
-  (if (every (lambda (x)
-               #-(and) (e-is-true (e. deep-frozen-guard |isDeepFrozen| x))
-               (e-is-true (efuncall +the-audit-checker+ +deep-frozen-stamp+ x))) subs)
-    +deep-frozen-stamp+
-    (e-lambda "org.cubik.cle.prim.deepFrozenIfEveryStubAuditor" () (:|audit/2| (constantly +e-false+)))))
 
 (defun make-tracer (&key (label "UNDEFINED TRACE LABEL") (stream *trace-output*))
   (let* ((first-prefix (format nil "; ~A " (e-print label)))
@@ -431,7 +435,7 @@
     (:|isFinal| () elib:+e-true+)))
 
 (defun make-safe-extern-loader ()
-  (lazy-value-scope ("__cle_safe_extern" "")
+  (lazy-prefix-scope ("__cle_safe_extern" "")
 
     ("org.erights.e.elib.base.makeSourceSpan" e.elib:+the-make-source-span+)
 
@@ -503,6 +507,7 @@
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles
           (let ((real-loader 
                   (efuncall +the-make-path-loader+ "import" (vector 
+                    +shared-safe-loader+
                     (make-primitive-loader)
                     (make-safe-extern-loader)
                     (make-selfless-loader)
@@ -521,6 +526,59 @@
     (unless (e-is-true flag)
       (error "For-loop body isn't valid after for-loop exits.")))))
 
+(defglobal +shared-safe-scope+
+  (labels ((prim (name) (e. +shared-safe-loader+ |get| name)))
+    (make-scope "__shared"
+      `(; --- primitive: values not available as literals ---
+        ; XXX true can be defined as (0 =~ _), and false as (!true) or (0 =~ []). Do we want to do so?
+        ("null"       ,nil)
+        ("false"      ,elib:+e-false+)
+        ("true"       ,elib:+e-true+)
+        ("NaN"        ,elib:|NaN|)
+        ("Infinity"   ,elib:|Infinity|)
+
+        ; --- primitive: guards ---
+        ("any"        ,(type-specifier-to-guard 't))
+        ("void"       ,elib:+the-void-guard+)
+
+        ; --- primitive: flow control ---
+        ("E"          ,(prim "org.cubik.cle.prim.E")) ; XXX should be interp.E
+        ("throw"      ,(prim "org.cubik.cle.prim.throw")) ; XXX should be elang.interp.throw
+        ("__loop"     ,(prim "org.cubik.cle.prim.loop")) ; XXX should be elang.interp.loop
+
+        ; --- primitive: tracing ---
+        ("trace"      ,+trace+)
+        ("traceln"    ,+trace+)
+
+        ; --- data constructors (shared) ---
+        ("__makeFinalSlot"     ,elib:+the-make-simple-slot+)
+        ("__makeVarSlot"       ,elib:+the-make-var-slot+)
+        ("__makeGuardedSlot"   ,elib:+the-make-guarded-slot+)
+        ("__makeInt"           ,elib:+the-make-int+)
+        ("__makeList"          ,elib:+the-make-list+)
+        ("__makeMap"           ,elib:+the-make-const-map+)
+        ("__makeTwine"         ,elib:+the-make-twine+)
+
+        ; --- data guards: atomic (shared) ---
+        ; XXX should boolean be an ordered space?
+        ("boolean"    ,(type-specifier-to-guard 'e-boolean))
+        ("String"     ,(type-specifier-to-guard 'string))
+        ("Twine"      ,(type-specifier-to-guard 'elib:twine))
+        ("TextWriter" ,elib:+the-text-writer-guard+)
+
+        ; --- primitive: reference operations (shared) ---        
+        ("__auditedBy" ,+the-audit-checker+)
+        ("__equalizer" ,(prim "org.cubik.cle.prim.equalizer")) ; XXX should be elib.tables.equalizer
+
+        ; --- used by expansions ---
+        ("__validateFor"    ,+validate-for+)
+        
+        )))
+  "Environment containing only objects which are common across vats, and are therefore safe for sharing, file compilation, etc.")
+
+(defun make-union-scope (prefix base desc)
+  (e. (make-scope prefix desc) |or| base))
+
 (defun make-safe-scope (&optional (fqn-prefix "__safe$") (roots (default-safe-scope-roots))
     &aux (&<import> (e. roots |getSlot| "import__uriGetter")))
   (with-result-promise (safe-scope-vow)
@@ -528,56 +586,27 @@
                (make-lazy-eval-slot safe-scope-vow source))
              (lazy-import (fqn)
                (make-lazy-apply-slot (lambda () (eelt (e. &<import> |getValue|) fqn)))))
-      (make-scope fqn-prefix
+      (make-union-scope fqn-prefix +shared-safe-scope+
       
         `(; --- self-referential / root ---
           ("safeScope"  ,safe-scope-vow)
           ("&import__uriGetter"  ,&<import>)
-
-          ; --- primitive: values not available as literals ---
-          ; XXX true can be defined as (0 =~ _), and false as (!true) or (0 =~ []). Do we want to do so?
-          ("null"       ,nil)
-          ("false"      ,elib:+e-false+)
-          ("true"       ,elib:+e-true+)
-          ("NaN"        ,elib:|NaN|)
-          ("Infinity"   ,elib:|Infinity|)
           
-          ; --- primitive: guards ---
-          ("any"        ,(make-instance 'cl-type-guard :type-specifier 't))
-          ("void"       ,elib:+the-void-guard+)
-      
-          ; --- primitive: flow control ---
-          ("&E"         ,(lazy-import "org.cubik.cle.prim.E")) ; XXX should be interp.E
-          ("&throw"     ,(lazy-import "org.cubik.cle.prim.throw")) ; XXX should be elang.interp.throw
-          ("&__loop"    ,(lazy-import "org.cubik.cle.prim.loop")) ; XXX should be elang.interp.loop
-          
-          ; --- primitive: tracing ---
-          ("trace"      ,+trace+)
-          ("traceln"    ,+trace+)
+          ; --- primitive: reference operations (non-shared) ---        
+          ("&Ref"        ,(lazy-import "org.cubik.cle.prim.Ref")) ; XXX should be elib.ref.Ref
+          ("&DeepFrozen" ,(lazy-import "org.cubik.cle.prim.DeepFrozen")) ; XXX fqn
 
           ; --- nonprimitive flow control ---
           ("&require"   ,(lazy-import "org.erights.e.elang.interp.require"))
           
-          ; --- data constructors ---
-          ("__makeFinalSlot"     ,elib:+the-make-simple-slot+)
-          ("__makeVarSlot"       ,elib:+the-make-var-slot+)
-          ("__makeGuardedSlot"   ,elib:+the-make-guarded-slot+)
-          ("__makeInt"           ,elib:+the-make-int+)
-          ("__makeList"          ,elib:+the-make-list+)
-          ("__makeMap"           ,elib:+the-make-const-map+)
-          ("__makeTwine"         ,elib:+the-make-twine+)
+          ; --- data constructors (non-shared) ---
           ("&__makeOrderedSpace" ,(lazy-import "org.erights.e.elang.coord.OrderedSpaceMaker"))
           ("&term__quasiParser"  ,(typical-lazy "<import:org.quasiliteral.quasiterm.makeQBuilder>.getTerm__quasiParser()"))
       
-          ; --- data guards: atomic ---
-          ; XXX should boolean be an ordered space?
-          ("boolean"    ,(make-instance 'cl-type-guard :type-specifier 'e-boolean))
+          ; --- data guards: atomic (non-shared) ---
           ("&int"       ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.int>, \"int\")"))
           ("&float64"   ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.float64>, \"float64\")"))
           ("&char"      ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.char>, \"char\")"))    
-          ("String"     ,(make-instance 'cl-type-guard :type-specifier 'string))
-          ("Twine"      ,(make-instance 'cl-type-guard :type-specifier 'elib:twine))
-          ("TextWriter" ,elib:+the-text-writer-guard+)
           
           ; --- data guards: nonatomic, nonprimitive ---
           ("&all"         ,(lazy-import "org.erights.e.elib.slot.makeIntersectionGuard"))
@@ -599,12 +628,6 @@
           ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
           ("&Guard"       ,(lazy-import "org.erights.e.elib.slot.type.Guard"))
       
-          ; --- primitive: reference operations ---        
-          ("__auditedBy" ,+the-audit-checker+)
-          ("&Ref"        ,(lazy-import "org.cubik.cle.prim.Ref")) ; XXX should be elib.ref.Ref
-          ("&__equalizer",(lazy-import "org.cubik.cle.prim.equalizer")) ; XXX should be elib.tables.equalizer
-          ("&DeepFrozen" ,(lazy-import "org.cubik.cle.prim.DeepFrozen")) ; XXX fqn
-          
           ; --- utility: guards ---
           ("&nullOk"    ,(lazy-import "org.erights.e.elib.slot.nullOk"))
           ("&notNull"   ,(lazy-import "org.erights.e.elang.interp.notNull"))
@@ -649,7 +672,6 @@
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.expand.__makeVerbFacet"))
           ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
-          ("__validateFor"    ,+validate-for+)
 
           ; --- utility: miscellaneous ---
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))

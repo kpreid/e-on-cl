@@ -144,10 +144,8 @@ function quote_args {
   perl -e 'print map {(my $x=$_) =~ s&(["\\\\])&\\$1&g; qq& "$x" &} @ARGV' -- $CLRUNE_PASS_ARGS
 }
 
-JHOME=`rune -show | grep -- '^-De.home=' | cut -c 10-`
-QUOTED_JHOME=`echo "$JHOME/" | perl -pe 's&(["\\\\])&\\$1&g'`
-
-# COMMON_INIT1/2 are separated since INIT2 needs to be read after INIT1 is evaluated, as the E.KNOT package will not exist until then.
+# Called COMMON_INIT1 because there used to be a COMMON_INIT2 (for reader
+# sequencing) and might be again.
 
 COMMON_INIT1='(progn
   (setf *compile-print* nil)
@@ -161,10 +159,6 @@ COMMON_INIT1='(progn
   (asdf:operate (quote asdf:load-op) :e-on-cl :verbose (not '"$LOADQUIET"'))
   (values))'
 
-COMMON_INIT2='(progn
-  (values))'
-
-
 if [ "$LOADQUIET" = nil ]; then
   echo "; $0 starting $LISP as $LISPTYPE: $@" >&2
 fi
@@ -176,7 +170,6 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
-      --eval "$COMMON_INIT2" \
       --eval '(apply (function e.rune:rune) (cdr sb-ext:*posix-argv*))' \
       --end-toplevel-options \
       "$@"
@@ -187,7 +180,6 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
-      -eval "$COMMON_INIT2" \
       -eval "(e.rune:rune `quote_args`)"
   ;;
   openmcl)
@@ -195,7 +187,6 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       -e '(require :asdf)' \
       -e "$COMMON_INIT1" \
-      -e "$COMMON_INIT2" \
       -e "(e.rune:rune `quote_args`)"
   ;;
   ecl)
@@ -203,7 +194,6 @@ case "$LISPTYPE" in
     "$EXEC" "$LISP" \
       -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
-      -eval "$COMMON_INIT2" \
       -eval "(e.rune:rune $QUOTED_ARGS)"
   ;;
   clisp)
@@ -223,7 +213,6 @@ case "$LISPTYPE" in
     #"$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
     #  -x "(require :asdf)" \
     #     "$COMMON_INIT1" \
-    #     "$COMMON_INIT2" \
     #     "(e.rune:rune `quote_args`)"
     # xxx Ick! We load .clisprc because using this form of clisp startup unconditionally disables the rc file, and we want the rc so that the user's ASDF configuration is available.
     "$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
@@ -232,7 +221,7 @@ case "$LISPTYPE" in
                       (probe-file (merge-pathnames ".clisprc" (user-homedir-pathname)))))) 
            (when p (load p)))' \
         "(require :asdf)" \
-        "$COMMON_INIT1" "$COMMON_INIT2" \
+        "$COMMON_INIT1" \
         "(apply (function e.rune:rune) ext:*args*)") \
       "$@"                    
   ;;
@@ -243,16 +232,16 @@ case "$LISPTYPE" in
     "$EXEC" "$LISP" -batch \
       "${LISP_EXTRA[@]}" \
        -eval "(require :asdf)" \
-       -eval "$COMMON_INIT1" "$COMMON_INIT2" \
+       -eval "$COMMON_INIT1" \
        -eval "(e.rune:rune `quote_args`)"
   ;;
   abcl-jar)
     # XXX using e.jar only as a source of Antlr
+    JHOME=`rune -show | grep -- '^-De.home=' | cut -c 10-`    
     "$EXEC" java -cp "$LISP":"$HERE/antlr/":"$JHOME/e.jar" org.armedbear.lisp.Main \
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
-      --eval "$COMMON_INIT2" \
       --eval "(e.rune:rune `quote_args`)"
   ;;
   abcl)
@@ -261,7 +250,6 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
-      --eval "$COMMON_INIT2" \
       --eval "(e.rune:rune `quote_args`)"
   ;;
   *)

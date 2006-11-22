@@ -367,23 +367,6 @@
         (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
           (error "character U+~16,4,'0R not supported"))))))
 
-(defun uncall-to-unget (loader portrayal)
-  (e-coercef portrayal '(or null vector))
-  ; xxx I do not understand the justification in the doc-comment of Java-E baseLoader#optUnget.
-  "Converts an optional uncall value into an optional unget value. That is, returns 'name' if 'portrayal' matches [==loader, ==\"get\", [name]]; otherwise null."
-  (when (and portrayal 
-             (=               (length portrayal) 3)
-             (same-yet-p (aref portrayal 0) loader)
-             (same-yet-p (aref portrayal 1) "get"))
-    (let ((args (e-coerce (aref portrayal 2) 'vector)))
-      (when (= (length args) 1)
-        (aref args 0)))))
-
-(defun unget-to-uncall (loader name)
-  "Converts an optional unget value into an optional uncall value. Currently does not check whether 'name' is a string."
-  (if name
-    `#(,loader "get" #(,name))))
-
 ;;; --- Additional E/Lisp bridging ---
 
 (defun e-to-lisp-function (e-function)

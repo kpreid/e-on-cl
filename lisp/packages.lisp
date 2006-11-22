@@ -161,7 +161,6 @@
     :+the-any-guard+
     :+the-text-writer-guard+
     :+the-exception-guard+
-    :+the-flex-list-guard+
     
     :approvedp
     :+the-audit-checker+
@@ -240,7 +239,6 @@
   elib:+the-make-guarded-slot+
 
   elib:+the-any-map-guard+
-  elib:+the-flex-list-guard+
   elib:+the-make-const-map+
   elib:+the-make-twine+
   elib:+the-text-writer-guard+
@@ -301,6 +299,8 @@
     :make-scope
     :require-node-fits-scope
     
+    :+shared-safe-loader+
+    :+shared-safe-scope+
     :make-safe-scope
     :make-io-scope
     
