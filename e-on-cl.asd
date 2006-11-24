@@ -51,6 +51,7 @@
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
      (:file "knot"
             :depends-on ("knot-base" "extern" "elib-guts" "tables2"
+                         "elang-nodes" #| +the-make-static-scope+ |#
                          "print" #| constructing global tracers |#))
      (:file "elang-nodes"
             :depends-on ("elib" 
