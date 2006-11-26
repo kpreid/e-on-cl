@@ -88,7 +88,7 @@
 ;;; --- Auxiliary systems ---
 
 (defsystem e-on-cl.jar
-  :depends-on (:e-on-cl :zip)
+  :depends-on (#|:e-on-cl would be circular|# :zip)
   :components ((:module "lisp" :components
     ((:file "jar")))))
 

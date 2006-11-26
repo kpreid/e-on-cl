@@ -5,6 +5,7 @@ pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 pragma.enable("accumulator")
 pragma.enable("anon-lambda")
+pragma.enable("one-method-object")
 
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
@@ -40,9 +41,61 @@ def List0 implements EventuallyDeepFrozen {
       to coerce(var specimen, optEjector) {
         specimen := List0.coerce(specimen, optEjector)
         
-        # XXX we need a more efficient way of doing this which doesn't require accumulating a new list for non-coercing cases
-        return accum [] for subSpecimen in specimen {
-          _.with(elementGuard.coerce(subSpecimen, optEjector))
+        #trace("coerce " + E.toQuote([specimen, elementGuard]))
+        if (elementGuard == any) {
+          # If the guard is any, then no elementwise coercion or testing need be
+          # done.
+          #trace("  any case")
+          return specimen
+        } else {
+          def coerceReturn := __return
+          # Scan the specimen for an element which changes when coerced, and
+          # prepare to create a new list.
+          #trace("  general guard case")
+          return __makeList.fromIteratableValues(def adapter.iterate(f) {
+            
+            #trace("  inside adapter")
+            var building := false
+            
+            for i => elem in specimen {
+              #trace("  element " + E.toQuote(i) + " " + E.toQuote(elem) + " in specimen")
+              if (building) {
+                #trace("  building")
+                # If we're building a new list, coerce and pass each element.
+                f(i, def v := elementGuard.coerce(elem, optEjector))
+                #trace("value was " + E.toQuote(v))
+              } else {
+                # If we're *not* building a new list, then we check if the
+                # element under consideration changes when coerced.
+                def coerced := elementGuard.coerce(elem, optEjector)
+                #trace("not building; coerced is " + E.toQuote(coerced))
+                if (coerced == elem) {
+                  # If it doesn't, then we do nothing, possibly falling out
+                  # to the return-the-original-list case below
+                  #trace("equal, continuing")
+                  continue
+                } else {
+                  #trace("unequal, entering build")
+                  # The element changed, so we need to put together a new list.
+                  building := true
+                  
+                  # Collect everything we skipped so far, not in need of
+                  # coercion
+                  specimen.run(0, i).iterate(f)
+                  
+                  # The coerced value
+                  f(i, coerced)
+                }
+              }
+            }
+            if (!building) {
+              # Returning the original list, because none of the elements changed
+              # under coercion. We've already built most of the list, but this
+              # at least saves the final construction and introducing a new
+              # nontrivially-equal value.
+              coerceReturn(specimen)
+            }
+          })
         }
       }
     
