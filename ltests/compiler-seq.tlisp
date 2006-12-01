@@ -59,13 +59,13 @@
   2)
 
 (deftest eval.define.nothing
-  (ev '(|DefineExpr| (|IgnorePattern|) (|LiteralExpr| 0) nil))
+  (ev '(|DefineExpr| (|IgnorePattern|) nil (|LiteralExpr| 0)))
   0)
 
 (deftest eval.define.final
-  (ev '(|SeqExpr| (|DefineExpr| (|FinalPattern| (|NounExpr| "x") nil) 
-                                (|LiteralExpr| 0) 
-                                nil)
+  (ev '(|SeqExpr| (|DefineExpr| (|FinalPattern| (|NounExpr| "x") nil)
+                                nil
+                                (|LiteralExpr| 0))
                   (|NounExpr| "x")))
   0)
 
@@ -78,9 +78,11 @@
 (deftest eval.if.elaborate
   (ev '(|SeqExpr|
          (|DefineExpr| (|FinalPattern| (|NounExpr| "x") nil)
-                       (|NounExpr| "true") nil)
+                       nil
+                       (|NounExpr| "true"))
          (|IfExpr| (|DefineExpr| (|FinalPattern| (|NounExpr| "y") nil)
-                                 (|NounExpr| "x") nil)
+                                 nil
+                                 (|NounExpr| "x"))
                    (|NounExpr| "x")
                    (|LiteralExpr| "b"))))
   #.+e-true+)

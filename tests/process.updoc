@@ -15,18 +15,18 @@ Basic test, and exit status.
   ? info
   # value: [null, null]
 
-  ? [process, def exit := process <- getExitValue()]
+  ? [process, def status := process <- getExitValue()]
   # value: [<Far ref>, <Promise>]
   
-  ? interp.waitAtTop(exit)
-  ? exit
+  ? interp.waitAtTop(status)
+  ? status
   # value: 0
   XXX an early version of this test script had the exit value as [0] -- why? something to do with signal exit values?
 
 Exit status again.
 
-  ? interp.waitAtTop(def exit := spawn <- (<file:///usr/bin/false>, []) <- getExitValue())
-  ? exit
+  ? interp.waitAtTop(def status := spawn <- (<file:///usr/bin/false>, []) <- getExitValue())
+  ? status
   # value: 1
   
 Streams.

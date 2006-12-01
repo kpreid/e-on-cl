@@ -144,7 +144,7 @@ def _make(astroBuilder) implements DeepFrozen {
     return def baseQAstro extends root[self] {
       # XXX blindly imitating EoJ. review after I understand this
       to matchBind(args :List, specimen, ejector) {
-        def specimenTerm :TagTerm := (specimen, ejector)
+        def specimenTerm :TagTerm exit ejector := specimen
         def bindings := [].diverge()
         def matched :int := self.matchBindSlice(args, [specimenTerm], bindings, EMPTY_INDEX)
         if (matched <=> 1) {

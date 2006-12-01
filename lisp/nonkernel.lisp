@@ -233,7 +233,7 @@
                                  ()
   (let ((accum-var (gennoun "accum")))
     (mn '|SeqExpr|
-      (mn '|DefineExpr| (mn '|VarPattern| accum-var nil) |initialValue| nil)
+      (mn '|DefineExpr| (mn '|VarPattern| accum-var nil) nil |initialValue|)
       (expand-accum-body |loop| accum-var)
       accum-var)))
 
@@ -348,8 +348,8 @@
                  (nconc
                    (map 'list (lambda (noun) 
                                 (mn '|DefineExpr| (mn '|SlotPattern| noun nil)
-                                                  broken
-                                                  nil))
+                                                  nil
+                                                  broken))
                               failed-nouns)
                    (list success-list)))))
       (mn '|SeqExpr|
@@ -358,6 +358,7 @@
                  (mn '|FinalPattern| result-var nil)
                  (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
                             both-nouns))
+          nil
           (ecase (find-symbol |op| :keyword)
             (:\|\|
              (let* ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
@@ -372,8 +373,7 @@
                            (mn '|IfExpr| kernel-right
                                          success-list
                                          failure-list)
-                           failure-list)))
-          nil)
+                           failure-list))))
         result-var))))
 
 (defemacro |CurryExpr| (|EExpr|) ((|expr| t (or |CallExpr| |SendExpr|)))
@@ -394,8 +394,8 @@
     (mn '|ListPattern|
       (mn '|FinalPattern| |promiseNoun| nil)
       (mn '|FinalPattern| |resolverNoun| nil))
-    (mn '|CallExpr| (mn '|NounExpr| "Ref") "promise")
-    nil))
+    nil
+    (mn '|CallExpr| (mn '|NounExpr| "Ref") "promise")))
 
 
 (defun make-noun-substitute-visitor (map)
@@ -424,18 +424,18 @@
                             sub))))))))
 
 (defemacro |DefrecExpr| (|EExpr|) ((|pattern| t |Pattern|)
-                                   (|rValue| t |EExpr|)
-                                   (|optEjectorExpr| t (or null |EExpr|)))
+                                   (|optEjectorExpr| t (or null |EExpr|))
+                                   (|rValue| t |EExpr|))
                                   ()
   (let* ((kernel-pattern (e-macroexpand-all |pattern|))
-         (kernel-r-value (e-macroexpand-all |rValue|))
          (kernel-ejector (e-macroexpand-all |optEjectorExpr|))
+         (kernel-r-value (e-macroexpand-all |rValue|))
          (left-scope (e. kernel-pattern |staticScope|))
-         (right-scope (e. (e. kernel-r-value |staticScope|)
-                          |add|
-                          (if kernel-ejector
+         (right-scope (e. (if kernel-ejector
                             (e. kernel-ejector |staticScope|)
-                            elang::+empty-static-scope+)))
+                            elang::+empty-static-scope+)
+                          |add|
+                          (e. kernel-r-value |staticScope|)))
          (common-names
            (e. (e. (e. left-scope |outNames|) |and| (e. right-scope |namesUsed|)) |getKeys|)))
     (if (plusp (length common-names))
@@ -461,18 +461,17 @@
                      |run| expr)))
           (apply #'mn '|SeqExpr|
             `(,@forward-exprs
-              ,(mn '|DefineExpr| (mn '|FinalPattern| result-noun nil)
+              ,(mn '|DefineExpr| (mn '|FinalPattern| result-noun nil) nil
                  (mn '|DefineExpr| kernel-pattern 
                                    (substitute-recursions
-                                     kernel-r-value) 
+                                     kernel-ejector)
                                    (substitute-recursions
-                                     kernel-ejector))
-                 nil)
+                                     kernel-r-value)))
               ,@(loop for vn across common-nouns 
                       for rn in resolver-nouns
                       collect (mn '|CallExpr| rn "resolve" vn))
               ,result-noun))))
-      (mn '|DefineExpr| kernel-pattern kernel-r-value kernel-ejector))))
+      (mn '|DefineExpr| kernel-pattern kernel-ejector kernel-r-value))))
 
 (defemacro |ForExpr| (|EExpr|) ((|optKeyPattern| t (or |Pattern| null))
                                 (|valuePattern| t |Pattern|)
@@ -492,7 +491,8 @@
     (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
       (mn '|SeqExpr|
         (mn '|DefineExpr| (mn '|VarPattern| valid-flag-var nil)
-                          (mn '|NounExpr| "true") nil)
+                          nil
+                          (mn '|NounExpr| "true"))
         (mn '|FinallyExpr|
           (mn '|CallExpr| |collection| "iterate"
             (mn '|ObjectExpr|
@@ -513,10 +513,10 @@
                         (mn '|EscapeExpr| (mn '|FinalPattern|
                                             pattern-escape-var nil)
                           (mn '|SeqExpr|
-                            (mn '|DefineExpr| key-pattern 
-                                              key-var pattern-escape-var)
-                            (mn '|DefineExpr| |valuePattern| 
-                                              value-var pattern-escape-var)
+                            (mn '|DefineExpr| key-pattern pattern-escape-var
+                                              key-var)
+                            (mn '|DefineExpr| |valuePattern| pattern-escape-var
+                                              value-var)
                             |body|)
                           nil nil)
                         ;; this null-expr prevents the pattern failures or the loop body's final expression from being returned from the iterate callback; only __continue can return non-null
@@ -616,14 +616,14 @@
               |name|
               (mn '|IgnorePattern|))
             |optStamp|)
-          (make-expr (whatever-to-qn |name|) "makePair")
-          nil)
+          nil
+          (make-expr (whatever-to-qn |name|) "makePair"))
         "get" (node-quote 0)))
     ((typep |name| '|Pattern|)
       (mn '|DefrecExpr|
-        |name| 
-        (make-expr (whatever-to-qn |name|) "run")
-        nil))
+        |name|
+        nil
+        (make-expr (whatever-to-qn |name|) "run")))
     ((typep |name| '(or null |LiteralExpr|))
       (make-expr (whatever-to-qn |name|) "run")))))
   
@@ -634,11 +634,12 @@
       (coerce |subs| 'list)))
 
 (defun kdef (specimen ej pattern)
-  (mn '|IntoExpr| specimen ej pattern))
+  ;; XXX the existence of this is stale
+  (mn '|DefineExpr| pattern ej specimen))
 
 (defemacro |MatchBindExpr| (|EExpr|) ((|specimen| t |EExpr|)
                                       (|pattern| t |Pattern|))
-                                     ()
+                                     (&whole node)
   (let* ((specimen (gennoun "sp"))
          (ejector (gennoun "fail"))
          (result (gennoun "ok"))
@@ -646,6 +647,7 @@
          (broken (gennoun "b"))
          (kernel-pattern (e-macroexpand-all |pattern|))
          (pattern-nouns (keys-to-nouns (e. (e. kernel-pattern |staticScope|) |outNames|))))
+    (elang::reject-definition-usage node +the-thrower+ t :|pattern| :|specimen|)
     (mn '|SeqExpr|
       (kdef |specimen| nil (mn '|FinalPattern| specimen nil))
       (kdef (mn '|EscapeExpr|
@@ -711,7 +713,7 @@
     (|CallExpr|
      (let* ((verb (e. |place| |getVerb|))
             (value-noun (gennoun "ares"))
-            (definer (mn '|DefineExpr| (mn '|FinalPattern| value-noun nil) |value| nil)))
+            (definer (mn '|DefineExpr| (mn '|FinalPattern| value-noun nil) nil |value|)))
        (flet ((make-call (out-verb)
                 (apply #'mn '|CallExpr| (e. |place| |getRecipient|) 
                                         out-verb
@@ -743,25 +745,24 @@
                                     ()
   (etypecase |name|
     (|BindPattern|
-      (mn '|DefrecExpr| 
-        |name| 
+      (mn '|DefrecExpr| |name| nil
         (mn '|HideExpr|
           (mn '|NKObjectExpr| 
             |docComment|
             (mn '|FinalPattern| (e. |name| |getNoun|) nil)
             |parent|
             |auditors|
-            |script|))
-        nil))
+            |script|))))
     ((or |FinalPattern| |IgnorePattern|)
       (if |parent|
         (mn '|DefrecExpr|
-          |name|
+          |name| 
+          nil
           (mn '|HideExpr|
             (mn '|SeqExpr|
               (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
-                                |parent|
-                                nil)
+                                nil
+                                |parent|)
               (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
                                   (mn '|EScript|
                                     (e. |script| |getOptMethods|)
@@ -772,8 +773,7 @@
                                           (mn '|CallExpr| (mn '|NounExpr| "E")
                                                           "callWithPair"
                                                           (mn '|NounExpr| "super")
-                                                          msg-noun))))))))
-          nil)
+                                                          msg-noun)))))))))
         ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
         (mn '|ObjectExpr| |docComment| |name| |auditors| |script|)))
     (t (error "Don't know what to do for object name of type ~A." (type-of |name|)))))
@@ -886,7 +886,7 @@
     ;; might be for a special slot.
     (mn '|HideExpr|
       (mn '|SeqExpr|
-        (mn '|DefineExpr| (mn '|FinalPattern| specimen-var nil) |specimen| nil)
+        (mn '|DefineExpr| (mn '|FinalPattern| specimen-var nil) nil |specimen|)
         (labels ((match-chain (list) 
                   (if list
                     (let ((matcher (first list)))
@@ -894,8 +894,8 @@
                         (mn '|FinalPattern| next-ej nil)
                         (mn '|SeqExpr|
                           (mn '|DefineExpr| (e. matcher |getPattern|)
-                                            specimen-var
-                                            next-ej)
+                                            next-ej
+                                            specimen-var)
                           (e. matcher |getBody|))
                         (mn '|IgnorePattern|)
                         (match-chain (rest list))))
@@ -928,7 +928,7 @@
           (let ((defs '()))
             (flet ((nsub (node label)
                      (let ((temp (gennoun label)))
-                       (push (mn '|DefineExpr| (mn '|FinalPattern| temp nil) node nil) defs)
+                       (push (mn '|DefineExpr| (mn '|FinalPattern| temp nil) nil node) defs)
                        temp)))
               (let* ((onceized (apply #'mn '|CallExpr| 
                                  (nsub (e. target |getRecipient|) "recip") 
@@ -997,8 +997,8 @@
                 (if (= 1 (length |params|))
                   (elt |params| 0)
                   (apply #'mn '|ListPattern| (coerce |params| 'list)))
-                (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution)
-                nil)
+                nil
+                (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution))
               |body|))))
         |isEasyReturn|))))
 

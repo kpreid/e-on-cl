@@ -195,8 +195,8 @@
    (:|catcher| t |EExpr|)))
 (define-node-class |DefineExpr|      (|EExpr|)
   ((:|pattern| t |Pattern|)
-   (:|rValue| t |EExpr|)
-   (:|optEjectorExpr| t (or null |EExpr|))))
+   (:|optEjectorExpr| t (or null |EExpr|))
+   (:|rValue| t |EExpr|)))
 (define-node-class |EscapeExpr|      (|EExpr|)
   ((:|ejectorPattern| t |Pattern|)
    (:|body| t |EExpr|) 
@@ -211,10 +211,6 @@
   ((:|test| t |EExpr|) 
    (:|then| t |EExpr|) 
    (:|else| t |EExpr|)))
-(define-node-class |IntoExpr|        (|EExpr|)
-  ((:|rValue| t |EExpr|)
-   (:|optEjectorExpr| t (or null |EExpr|))
-   (:|pattern| t |Pattern|)))
 (define-node-class |LiteralExpr|     (|EExpr|)
   ;; XXX loosen restriction to DeepPassByCopy? different set of literals? include other CL float types?
   ((:|value| nil (or string character rational float64))))
@@ -796,8 +792,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |DefineExpr|
   (seq :|pattern|
-       :|rValue| 
-       :|optEjectorExpr|))
+       :|optEjectorExpr|
+       :|rValue|))
 
 (def-scope-rule |EscapeExpr|
   (hide (seq (hide (seq :|ejectorPattern| :|body|))
@@ -813,11 +809,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |IfExpr|
   (seq (hide (seq :|test| :|then|)) (hide :|else|)))
-
-(def-scope-rule |IntoExpr|
-  (seq :|rValue| 
-       :|optEjectorExpr|
-       :|pattern|))
 
 (def-scope-rule |LiteralExpr|
   nil)

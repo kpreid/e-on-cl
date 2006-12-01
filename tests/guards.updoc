@@ -314,9 +314,9 @@ An intersection guard is also a (loose) intersection auditor.
   ? pragma.enable("trinary-define")
   > escape e {
   >   interface Foo {}
-  >   def both := all[Foo, def failer { to audit(_,_) :any {return false} to coerce(_,pe) {throw.eject(pe, "no")} }]
+  >   def both := all[Foo, def failer { to audit(_,_) :any {return false} to coerce(_,pe) :any {throw.eject(pe, "no")} }]
   >   def bar implements both { }
-  >   def baz :both := (bar, e)
+  >   def baz :both exit e := bar
   > }
   # value: problem: no
   

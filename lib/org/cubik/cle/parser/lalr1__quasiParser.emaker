@@ -6,8 +6,8 @@ pragma.disable("explicit-result-guard")
 pragma.enable("dot-props")
 pragma.enable("verb-curry")
 pragma.enable("accumulator")
-pragma.enable("trinary-define")
 pragma.enable("function-implements")
+pragma.enable("trinary-define")
 
 def makeLALR1Parser := <import:org.cubik.cle.parser.makeLALR1Parser>
 def makeParseError := makeLALR1Parser::makeParseError
@@ -71,10 +71,11 @@ def lex(textIn) implements DeepFrozen {
 
       match rx`(?s)"(@mid.*)` {
         def lexerRet := __return
-        def rx`(?s)(@t(?:[^@@$$"]|@@@@|$$$$|\\[\\"])*)"(@r.*)` := \
-          (mid, def fail(p) {
-                  lexerRet(Ref.broken(`unclosed/malformed string literal ($p): "$mid`))
-                })
+        def rx`(?s)(@t(?:[^@@$$"]|@@@@|$$$$|\\[\\"])*)"(@r.*)` \
+          exit def fail(p) {
+                 lexerRet(Ref.broken(`unclosed/malformed string literal ($p): "$mid`))
+               } \
+          := mid
         # XXX doesn't handle \<doesn't need quoting>
         text := r
         def unquote := t.replaceAll("@@", "@").replaceAll("$$", "$").replaceAll("\\\\", "\\").replaceAll("\\\"", "\"")

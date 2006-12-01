@@ -85,7 +85,7 @@ var slot with guard
   
   Bug: assignment to a var was using coerce/1 instead of coerce/2
   ? { def var x :(def guard { to coerce(sp,ej) :any {return sp} 
-  >                           to coerce(_) {throw("oops")} }) \
+  >                           to coerce(_) :any {throw("oops")} }) \
   >       := 1
   >   x := 2
   >   x }
@@ -246,16 +246,16 @@ List expressions for further testing
 
 FinalPattern guards
   
-  ? escape e {[92 into !(e) x, x]}
+  ? pragma.enable("trinary-define"); escape e {[def x exit e := 92, x]}
   # value: [92, 92]
   
-  ? escape e {[93 into !(e) x :tint, x]}
+  ? pragma.enable("trinary-define"); escape e {[def x :tint exit e := 93, x]}
   # value: [93, 93]
   
-  ? escape e {[94 into !(e) x :tfloat64, x]}
+  ? pragma.enable("trinary-define"); escape e {[def x :tfloat64 exit e := 94, x]}
   # value: [94, 94.0]
   
-  ? escape e {[95.0 into !(e) x :tint, x]}
+  ? pragma.enable("trinary-define"); escape e {[def x :tint exit e := 95.0, x]}
   # value: problem: the float64 95.0 doesn't coerce to an int
   
 MetaContextExpr
@@ -555,30 +555,6 @@ IfExpr
   ? if (def conformist { to __conformTo(_) :any {return conformist} }) {"y"} else {"n"}
   # problem: the "__main$conformist" <conformist> doesn't coerce to a boolean
 
-IntoExpr
-
-  success
-  ? { (1 into ia); ia }
-  # value: 1
-
-  ? escape e { (1 into !(e) ia); ia }
-  # value: 1
-
-  failure
-  ? { (1 into ia :char); ia }
-  # problem: the int 1 doesn't coerce to a char
-
-  ? { (1 into !(null) ia :char); ia }
-  # problem: the int 1 doesn't coerce to a char
-
-  ? escape e { (1 into !(e) ia :char); ia }
-  # value: problem: the int 1 doesn't coerce to a char
-
-  non-recursion
-  ? { 1 into ia; { ia + 1 into ia; ia } }
-  # value: 2
-
-
 FinallyExpr
 
   ? [try {} finally {}]
@@ -630,23 +606,23 @@ Trinary DefineExpr
 
  Equivalent to binary define
   ? pragma.enable("trinary-define")
-  > def x :tint := (9, null)
+  > def x :tint exit null := 9
   # value: 9
   
   ? x
   # value: 9
   
   ? pragma.enable("trinary-define")
-  > def x :String := (9, null)
+  > def x :String exit null := 9
   # problem: the int 9 doesn't coerce to a String
   
  With non-null ejector
   ? pragma.enable("trinary-define")
-  > def x :tint := (9, def _(e) :void { print(e); throw("biff") })
+  > def x :tint exit def _(e) :void { print(e); throw("biff") } := 9
   # value: 9
 
   ? pragma.enable("trinary-define")
-  > def x :String := (9, def _(e) :void { print(e); throw("biff") })
+  > def x :String exit def _(e) :void { print(e); throw("biff") } := 9
   # stdout: problem: the int 9 doesn't coerce to a String
   
   # problem: biff
@@ -655,11 +631,11 @@ Trinary DefineExpr
  
   ? pragma.enable("trinary-define")
   > pragma.enable("anon-lambda")
-  > def via(fn s,_ {println("patt");throw("exit")}) x := \
-  >   ((println("specimen"); 8),
-  >    (println("ejector"); null))
-  # stdout: specimen
-  #         ejector
+  > def via(fn s,_ {println("patt");throw("exit")}) x \
+  >   exit (println("ejector"); null) \
+  >   := (println("specimen"); 8)
+  # stdout: ejector
+  #         specimen
   #         patt
   #         
   
@@ -668,12 +644,12 @@ Trinary DefineExpr
  Returning "ejector"
   XXX in Java-E this creates a note in the trace that the ejector returned and proceeds as if the ejector was null
   ? pragma.enable("trinary-define")
-  > def x :String := (9, def _(_) :void {})
+  > def x :String exit def _(_) :void {} := 9
   # problem: optEjector <_> returned: null
   
  Scoping
   ? pragma.enable("trinary-define")
-  > {def y := "NOT-AN-EJECTOR"; {def ==0 := (def y := null, y)}}
+  > {def y := 0; {def ==0 exit (def y := null) := y}}
   # problem: null is not 0
 
 SlotExpr, SlotPattern, AssignExpr
@@ -884,17 +860,17 @@ ViaPattern
 
   success
   ? pragma.enable("trinary-define")
-  > escape a { [def via (def _(b,_):any{return b+1}) c := (1, a), c] }
+  > escape a { [def via (def _(b,_):any{return b+1}) c exit a := 1, c] }
   # value: [1, 2]
 
   failure in via
   ? pragma.enable("trinary-define")
-  > escape a { [def via (def _(_,b):any{throw.eject(b,"fail")}) c := (1, a), c] }
+  > escape a { [def via (def _(_,b):any{throw.eject(b,"fail")}) c exit a := 1, c] }
   # value: problem: fail
 
   failure in subpattern
   ? pragma.enable("trinary-define")
-  > escape a { [def via (def _(b,_):any{return b+1}) c :char := (1, a), c] }
+  > escape a { [def via (def _(b,_):any{return b+1}) c :char exit a := 1, c] }
   # value: problem: the int 2 doesn't coerce to a char
   
   pattern noun

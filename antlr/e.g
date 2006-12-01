@@ -73,7 +73,6 @@ tokens {
     HideExpr;
     IfExpr;
     If1Expr;
-    IntoExpr;
     ForExpr;
     WhenExpr;
     CoerceExpr;
@@ -223,7 +222,6 @@ private void throwSemanticHere(String text) throws RecognitionException, TokenSt
 }
 
 
-// pocket mechanisms: add a boolean, and test in the grammar with {foo}?
 private java.util.Properties myPocket = new java.util.Properties();
 
 public java.util.Properties getPockets() {
@@ -294,9 +292,13 @@ setSyntax![Token arg]: {
     if ("0.8".equals(syntaxName)) {
         myPocket.put("easy-return", "disable");
         myPocket.put("explicit-result-guard", "enable");
+        myPocket.put("anon-lambda", "enable");
+        myPocket.put("plumbing", "enable");
     } else if ("0.9".equals(syntaxName)) {
         myPocket.put("easy-return", "enable");
         myPocket.put("explicit-result-guard", "disable");
+        myPocket.put("anon-lambda", "enable");
+        myPocket.put("plumbing", "enable");
     } else {
         throwSemanticHere("Unknown syntax version " + quoteForMessage(syntaxName) + ".");
     }
@@ -344,11 +346,7 @@ seqMore:    eExpr ((seqSep)+ (seqMore)?)? ;
 
 seqSep:     (";"! | LINESEP!);
 
-eExpr:      withinInto
-            ("into"^ {##.setType(IntoExpr);} intoOptEjector pattern)* ;
-
-intoOptEjector: "!"! parenExpr | filler ;
-withinInto:     assign | ejector ;
+eExpr:      assign | ejector ;
 
 basic:      ifExpr | forExpr | whileExpr | switchExpr | tryExpr
             |   escapeExpr | whenExpr | metaExpr | accumExpr
@@ -428,18 +426,16 @@ objectExpr:     "def"^ objName objectTail           {##.setType(ObjectHeadExpr);
                 | keywordPatt objectTail    {##=#([ObjectHeadExpr],##);}
             ;
 
-defExpr:    "def"^  ( (nounExpr ":=") => pattern ":="! defRightSide  {##.setType(DefrecExpr);}
+defExpr:    "def"^  ( (nounExpr (":="|"exit")) => pattern defExit ":="! assign  {##.setType(DefrecExpr);}
                     | (nounExpr) => nounExpr {##.setType(ForwardExpr);}
-                    | pattern ":="! defRightSide  {##.setType(DefrecExpr);}
+                    | pattern defExit ":="! assign  {##.setType(DefrecExpr);}
                     )
-            | keywordPatt ":="! defRightSide {##=#([DefrecExpr],##);}
+            | keywordPatt defExit ":="! assign {##=#([DefrecExpr],##);}
             ;
 
-// trinary-define support
-defRightSide:  ( "("! seq ","! ) =>
-                 "("! seq ","! seq ")"! pocket["trinary-define"]!
-               | assign filler
-               ;
+defExit:        "exit"! order pocket["trinary-define"]!
+            |   filler
+            ;
 
 // minimize the look-ahead for objectTail
 objectPredict:    ("def" objName | keywordPatt)

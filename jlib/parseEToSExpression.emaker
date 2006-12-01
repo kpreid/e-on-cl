@@ -73,7 +73,7 @@ def author(<unsafe>) {
       match [vh, ph] { elexer.setHoles(vh, ph) }
       match ==null {}
     }
-    parser.setPocket(<antlr:CommonToken>(-1, "plumbing"), "enable")
+    parser.setSyntax(<antlr:makeCommonToken>(-1, "0.8"))
     
     if (isPattern) {
       parser.pattern()

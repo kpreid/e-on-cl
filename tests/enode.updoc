@@ -74,12 +74,12 @@ AssignExpr
 
 DefineExpr
 
-  ? def expr := makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null, null)
+  ? def expr := makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), null, makeLiteralExpr(null, 1, null), null)
   # value: e`def a := 1`
   
   print of trinary
-  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), makeNounExpr(null, "ej", null), null)
-  # value: e`def a := (1, ej)`
+  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeNounExpr(null, "ej", null), makeLiteralExpr(null, 1, null), null)
+  # value: e`def a exit ej := 1`
   
   ? expr.getRValue()
   # value: e`1`
@@ -87,7 +87,7 @@ DefineExpr
   ? expr.getPattern()
   # value: epatt`a`
   
-  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeLiteralExpr(null, 1, null), null, null).staticScope()
+  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), null, makeLiteralExpr(null, 1, null), null).staticScope()
   # value: <[] := [] =~ ["a"] + var []>
   
   ? makeDefineExpr(null, 1, 2, 3, null)
@@ -100,16 +100,16 @@ DefineExpr
   ? def nounA := makeNounExpr(null, "a", null); null
   ? def nounB := makeNounExpr(null, "b", null); null
   
-  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounA, null, null)}.eval(safeScope)
+  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounA, null)}.eval(safeScope)
   # problem: <misleading-apparent-usage-error: a DefineExpr's rValue (e`a`) may not appear to use definitions from its pattern (epatt`a`)>
 
-  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), makeNounExpr(null, "null", null), nounA, null)}.eval(safeScope)
+  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounA, makeNounExpr(null, "null", null), null)}.eval(safeScope)
   # problem: <misleading-apparent-usage-error: a DefineExpr's optEjectorExpr (e`a`) may not appear to use definitions from its pattern (epatt`a`)>
 
-  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null, null)}.eval(safeScope)
+  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), null, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null), null)}.eval(safeScope)
   # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`via (a) _`) may not use definitions from its rValue (e`def a := b`)>
 
-  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), nounB, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null), null)}.eval(safeScope)
+  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null), nounB, null)}.eval(safeScope)
   # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`via (a) _`) may not use definitions from its optEjectorExpr (e`def a := b`)>
 
   XXX more specifically test what part of the system does this check rather than just 'somewhere in the eval process'
@@ -303,7 +303,7 @@ ObjectExpr, EScript
   # value: <[] := [] =~ ["bar"] + var []>
   
   Implements expression is not visible
-  ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounB, null, null)], emptyScript, null).staticScope()
+  ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null)], emptyScript, null).staticScope()
   # value: <[] := ["b"] =~ [] + var []>
   
   ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
@@ -790,9 +790,9 @@ evalToPair
   #             NounExpr e`a`...
   #               a
   #             null
+  #           null
   #           NounExpr e`b`...
   #             b
-  #           null
   #         
   
   ? e`escape patt { body } catch cpatt { catcher }`.welcome(makeVisitor(0))

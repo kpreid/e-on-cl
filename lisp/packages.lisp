@@ -353,7 +353,6 @@
     :|HideExpr|
     :|IfExpr|
     :|IgnorePattern|
-    :|IntoExpr|
     :|ListPattern|
     :|LiteralExpr|
     :|MetaContextExpr|

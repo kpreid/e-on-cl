@@ -1,8 +1,8 @@
 pragma.enable("easy-return")
 pragma.disable("explicit-result-guard")
 
-pragma.enable("trinary-define")
 pragma.enable("anon-lambda")
+pragma.enable("trinary-define")
 
 /** Converts an optional unget value into an optional uncall value. Currently does not check whether 'name' is a string. */
 def ungetToUncall(loader, name) {
@@ -32,7 +32,7 @@ def __suchThat {
 /** Converts an optional uncall value into an optional unget value. That is, returns 'name' if 'portrayal' matches [==loader, =="get", [name]]; otherwise null. */
 def uncallToUnget (loader, portrayal) {
   # xxx I do not understand the justification in the doc-comment of E-on-Java baseLoader#optUnget.
-  def [a ? (a==loader), b ? (b=="get"), [name]] := (portrayal, fn _ {return null})
+  def [a ? (a==loader), b ? (b=="get"), [name]] exit fn _ {return null} := portrayal
   return name
 }
 

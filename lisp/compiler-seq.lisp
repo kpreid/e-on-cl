@@ -173,14 +173,14 @@
               (%catch-expr-resignal ,condition-var))))))
     layout))
 
-(define-sequence-expr |DefineExpr| (layout result pattern value opt-ejector
+(define-sequence-expr |DefineExpr| (layout result pattern opt-ejector value
     &aux (ej (gensym "DEFEJ")) (value-var result))
   (values
-    (append ;; if there is an ejector, inlining 
-            (updating-sequence-expr value layout value-var :may-inline (not opt-ejector))
+    (append ;; if there is no ejector, inlining 
             (if opt-ejector
               (updating-sequence-expr opt-ejector layout ej :may-inline nil)
               '())
+            (updating-sequence-expr value layout value-var :may-inline (not opt-ejector))
             (unless (eql value-var result)
               `((,result ,value-var)))
             (updating-sequence-patt pattern layout result (when opt-ejector `(ejector ,ej))))
@@ -274,19 +274,6 @@
               `(when (e-is-true ,test-result)
                  (return-from ,block-name ,(leaf-sequence then layout)))))
          ,(hide-sequence else layout))))
-    layout))
-
-(define-sequence-expr |IntoExpr| (layout result value opt-ejector pattern
-    &aux (ej (gensym "INEJ")) (value-var result))
-  (values
-    (append ;; if there is an ejector, inlining 
-            (updating-sequence-expr value layout value-var :may-inline (not opt-ejector))
-            (if opt-ejector
-              (updating-sequence-expr opt-ejector layout ej :may-inline nil)
-              '())
-            (unless (eql value-var result)
-              `((,result ,value-var)))
-            (updating-sequence-patt pattern layout result (when opt-ejector `(ejector ,ej))))
     layout))
 
 (define-inline-expr |LiteralExpr| (layout value)

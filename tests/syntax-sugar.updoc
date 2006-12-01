@@ -61,8 +61,8 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #                        __validateFor.run(valid__2)
   #                        escape __continue {
   #                            escape skip__5 {
-  #                                def b := (key__3, skip__5)
-  #                                def c := (value__4, skip__5)
+  #                                def b exit skip__5 := key__3
+  #                                def c exit skip__5 := value__4
   #                                accum__1 := accum__1.e(f)
   #                            }
   #                            null
@@ -287,8 +287,8 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #                        __validateFor.run(valid__1)
   #                        escape __continue {
   #                            escape skip__4 {
-  #                                def a := (key__2, skip__4)
-  #                                def b := (value__3, skip__4)
+  #                                def a exit skip__4 := key__2
+  #                                def b exit skip__4 := value__3
   #                                d
   #                            }
   #                            null
@@ -306,9 +306,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("for a => b in b { c }")
   # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`b`) may not appear to use definitions from its valuePattern (epatt`b`)>
   ? t("for via (c) a => b in (def c := d) { e }")
-  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`via (c) a`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`via (c) a`) may not use definitions from its collection (e`$<DefrecExpr c, null, d>$`)>
   ? t("for a => via (c) b in (def c := d) { e }")
-  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`via (c) b`) may not use definitions from its collection (e`$<DefrecExpr c, d, null>$`)>
+  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`via (c) b`) may not use definitions from its collection (e`$<DefrecExpr c, null, d>$`)>
   XXX prettier errors
 
   XXX look into extracting more of the for-loop expansion into a function
@@ -415,15 +415,15 @@ Where headings are in quotes, it indicates that the names are those I invented f
 MatchBindExpr
   
   ? t("left =~ [rA, &rB, [rC]]")
-  # value: e`left into sp__1
-  #        escape fail__2 {
-  #            sp__1 into !(fail__2) [rA, &rB, [rC]]
+  # value: e`def sp__1 := left
+  #        def [ok__2, &rB, &rC, &rA] := escape fail__3 {
+  #            def [rA, &rB, [rC]] exit fail__3 := sp__1
   #            __makeList.run(true, &rB, &rC, &rA)
-  #        } catch problem__3 {
-  #            Ref.broken(problem__3) into b__4
-  #            __makeList.run(false, b__4, b__4, b__4)
-  #        } into [ok__5, &rB, &rC, &rA]
-  #        ok__5`
+  #        } catch problem__4 {
+  #            def b__5 := Ref.broken(problem__4)
+  #            __makeList.run(false, b__5, b__5, b__5)
+  #        }
+  #        ok__2`
 
   XXX rewrite the following to use <te>; they were just copied in from vm.updoc from when MatchBindExpr was kernel
 
@@ -471,19 +471,24 @@ MatchBindExpr
   ? {[null =~ var x, x, x := 1, x]}
   # value: [true, null, 1, 1]
 
+ MatchBindExpr's expansion uses DefineExpr
+ 
+  ? te("a =~ a")
+  # problem: <misleading-actual-usage-error: a MatchBindExpr's specimen (e`a`) may not use definitions from its pattern (epatt`a`)>
+  XXX error should explain this is due to the expansion
 
 'MismatchExpr'
 
   ? t("a !~ b")
-  # value: e`(a into sp__1
-  #        escape fail__2 {
-  #            sp__1 into !(fail__2) b
+  # value: e`(def sp__1 := a
+  #        def [ok__2, &b] := escape fail__3 {
+  #            def b exit fail__3 := sp__1
   #            __makeList.run(true, &b)
-  #        } catch problem__3 {
-  #            Ref.broken(problem__3) into b__4
-  #            __makeList.run(false, b__4)
-  #        } into [ok__5, &b]
-  #        ok__5).not()`
+  #        } catch problem__4 {
+  #            def b__5 := Ref.broken(problem__4)
+  #            __makeList.run(false, b__5)
+  #        }
+  #        ok__2).not()`
 
 'ModPowExpr'
   ? t("a ** b %% c")
@@ -662,11 +667,11 @@ MatchBindExpr
   # value: e`{
   #            def specimen__1 := x
   #            escape next__2 {
-  #                def [a] := (specimen__1, next__2)
+  #                def [a] exit next__2 := specimen__1
   #                b
   #            } catch _ {
   #                escape next__2 {
-  #                    def c := (specimen__1, next__2)
+  #                    def c exit next__2 := specimen__1
   #                    d
   #                } catch _ {
   #                    throw.run("no match: ".add(specimen__1))
@@ -906,11 +911,11 @@ MatchBindExpr
   ? te("def [a, a__Resolver] := Ref.promise(); def bind a := 1; a")
   # value: 1
 
-  ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); a__Resolver.resolve(0); [escape e { def bind a := (1, e) }, a]")
+  ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); a__Resolver.resolve(0); [escape e { def bind a exit e := 1 }, a]")
   # problem: this resolver's ref has already been resolved, therefore cannot be resolved to 1
   XXX should this eject instead?
 
-  ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); [escape e { def bind a :char := (1, e) }, a]")
+  ? te("pragma.enable(\"trinary-define\"); def [a, a__Resolver] := Ref.promise(); [escape e { def bind a :char exit e := 1 }, a]")
   # value: [problem: the int 1 doesn't coerce to a char, <Promise>]
 
 'CallPattern' and 'FunCallPattern'
@@ -971,10 +976,10 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   ? te("def [\"a\" => b] := [\"a\" => 1]; b")
   # value: 1
 
-  ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] := ([].asMap(), e); b}")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] exit e := [].asMap(); b}")
   # value: problem: "a" not in matched map: [].asMap()
 
-  ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] := ([\"a\" => 1, \"b\" => 2], e); b}")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] exit e := [\"a\" => 1, \"b\" => 2]; b}")
   # value: problem: unused elements in matched map: ["b" => 2]
 
 'QuasiPattern'
@@ -993,22 +998,22 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   # value: epatt`via (__matchSame.different(x)) _`
 
 
-  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (1, e) }")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 exit e := 1 }")
   # value: 1
   
-  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (2, e) }")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 exit e := 2 }")
   # value: problem: 2 is not 1
 
-  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 := (Ref.promise()[0], e) }")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def ==1 exit e := Ref.promise()[0] }")
   # value: problem: <Promise> is not yet 1
 
-  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (2, e) }")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 exit e := 2 }")
   # value: 2
   
-  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (1, e) }")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 exit e := 1 }")
   # value: problem: must not be 1
 
-  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 := (Ref.promise()[0], e) }")
+  ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 exit e := Ref.promise()[0] }")
   # value: problem: <Promise> is not yet different from 1
 
 'SuchThatPattern'
@@ -1039,7 +1044,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
     x ? tp("[] | a")
     x # syntax error: 
 
-    ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] | c := ([\"a\" => 1, \"b\" => 2], e); [b, c]}")
+    ? te("pragma.enable(\"trinary-define\"); escape e { def [\"a\" => b] | c exit e := [\"a\" => 1, \"b\" => 2]; [b, c]}")
     # value: [1, ["b" => 2]]
 
 'FunctionObject'
@@ -1082,7 +1087,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`c`]) may not appear to use definitions from its patterns ([epatt`c`])>
 
   ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :(def d := e) implements d { e }")
-  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`$<DefrecExpr d, e, null>$`)>
+  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`$<DefrecExpr d, null, e>$`)>
   XXX prettier error
 
 'OneMethodObject'

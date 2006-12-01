@@ -6,7 +6,6 @@ pragma.disable("explicit-result-guard")
 pragma.enable("dot-props")
 pragma.enable("verb-curry")
 pragma.enable("accumulator")
-pragma.enable("trinary-define")
 pragma.enable("function-implements")
 
 def defineException := <import:org.cubik.cle.fail.defineException>

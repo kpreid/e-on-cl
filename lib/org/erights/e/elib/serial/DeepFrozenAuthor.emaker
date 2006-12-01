@@ -62,8 +62,8 @@ def eDF__quasiParser {
 def exprShorten(expr) {
   return \
     escape mismatch {
-      def s :Really[SeqExpr] := (expr, mismatch)
-      def [single] := (s.getSubs(), mismatch)
+      def s :Really[SeqExpr] exit mismatch := expr
+      def [single] exit mismatch := s.getSubs()
     } catch _ {
       expr
     }
@@ -224,7 +224,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                                   slot :any,
                                   precedingNodes # :Really[List[ENode]]
                                  ) :boolean {
-        def nounExpr :NounExpr := (expr, fn _{return false})
+        def nounExpr :NounExpr exit fn _{return false} := expr
         return (audition.getSlot(def noun := nounExpr.getName()) == slot) \
                & accum true for p in precedingNodes {
                    _ & !(_maps(p.staticScope().outNames(), noun)) }
@@ -249,9 +249,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                 thunk{label + ": __optSealedDispatch result guard is not any"})
             }
             
-            def [brandPattern :Really[FinalPattern]] := \
-              (methd.getPatterns(),
-               fn _{throw(label + ": __optSealedDispatch argument pattern is not simple")})
+            def [brandPattern :Really[FinalPattern]] \
+              exit fn _{throw(label + ": __optSealedDispatch argument pattern is not simple")} \
+              := methd.getPatterns()
             requireDF(brandPattern.getOptGuardExpr() == null, 
               thunk{label + ": __optSealedDispatch argument pattern must not have a guard"})
             # XXX We haven't implemented node pattern matching yet. Once EventuallyDeepFrozen is working, test and implement pattern matching and reenable this.
@@ -259,9 +259,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
             #     eDF`if ($brandPattern == @{auditorExpr ? expressionWillHaveValue(auditorExpr, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard) {[optResultGuard]} else {[]})}.getPeekBrand()) { meta.getState() }`, 
             #   thunk{`$label: __optSealedDispatch body is not suitably formed`})
             def methodBody := exprShorten(methd.getBody())
-            def ifExpr :Really[IfExpr] := \
-              (methodBody,
-               fn _{throw(label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody))})
+            def ifExpr :Really[IfExpr] \
+              exit fn _{throw(label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody))} \
+              := methodBody
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
             requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null)) \

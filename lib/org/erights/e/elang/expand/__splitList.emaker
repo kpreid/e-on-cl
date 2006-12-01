@@ -36,7 +36,7 @@ def makeListTooShort(specimen, size, expectedSize) implements DeepFrozen {
  */
 def splitList(cut :int) :any implements DeepFrozen {
     def listSplitter(specimen, optEjector) :any implements DeepFrozen {
-        def list :EList := (specimen, optEjector)
+        def list :EList exit optEjector := specimen
         def llen := list.size()
         if (llen < cut) {
             throw.eject(optEjector, makeListTooShort(specimen, llen, cut))
@@ -52,7 +52,7 @@ def splitList(cut :int) :any implements DeepFrozen {
 
 ? def Termish {
 >     to coerce(specimen, optEjector) :any {
->         def [tag :String] + elements :List[Termish] := (specimen, optEjector)
+>         def [tag :String] + elements :List[Termish] exit ejector := specimen
 >         return [tag] + elements
 >     }
 > }

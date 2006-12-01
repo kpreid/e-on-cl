@@ -107,7 +107,7 @@ def makeBrandAuthor { # not DeepFrozen, for dependencies
               necessarily give the same contents on a second unsealing
               because it might __conformTo differently. */
           to unseal(specimen, optEjector) :any {
-            def box :BoxGuard := (specimen, optEjector)
+            def box :BoxGuard exit optEjector := specimen
             return box._offerContent(key)
           }
         }

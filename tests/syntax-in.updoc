@@ -112,19 +112,6 @@ NOTE: these tests were produced by inspection of antlr/e.g. They are not complet
 #             LiteralE. 1
 #             LiteralE. 2
 
-xxx Should we change the grammar so that pragmas don't create SeqExprs? '
-? t("pragma.enable(\"trinary-define\"); def a := (1;2,3;4)")
-# stdout: SeqE. [] DefrecE.
-#           FinalP.
-#             NounE. a
-#             null
-#           SeqE. []
-#             LiteralE. 1
-#             LiteralE. 2
-#           SeqE. []
-#             LiteralE. 3
-#             LiteralE. 4
-
 XXX ListExpr doesn't really belong here '
 ? t("[1;2 => 3]")
 # stdout: MapE. [] ListE. []
@@ -144,7 +131,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (line 1)@11: unexpected token: [":=",<162>,line=1,col=11]
+# problem: (line 1)@11: unexpected token: [":=",<159>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -344,8 +331,8 @@ XXX should we add a pragma.state() or parser state output so we can inspect the 
 
 Testing discrimination between functions and call patterns:
 
-? t("def a() {}")
-# stdout: ObjectHeadE.
+? t("pragma.disable(\"explicit-result-guard\"); def a() {}")
+# stdout: SeqE. [] ObjectHeadE.
 #           
 #           FinalP.
 #             NounE. a
@@ -357,7 +344,7 @@ Testing discrimination between functions and call patterns:
 #             NullE.
 #             false
 
-? t("pragma.enable(\"function-implements\"); def a() implements b {}")
+? t("pragma.disable(\"explicit-result-guard\"); pragma.enable(\"function-implements\"); def a() implements b {}")
 # stdout: SeqE. [] ObjectHeadE.
 #           
 #           FinalP.
@@ -457,7 +444,7 @@ Parentheses disable modPow form
 #           NounE. a
 
 ? t("a :b :c")
-# problem: (line 1)@6: unexpected token: [":",<171>,line=1,col=6]
+# problem: (line 1)@6: unexpected token: [":",<169>,line=1,col=6]
 XXX prettier error
 
 --- ForExpr ---
@@ -512,58 +499,6 @@ XXX more tests (this section was written to test guardless ParamDesc)
 #                 null
 #             null
 
---- IntoExpr ---
-
-? t("a into b")
-# stdout: IntoE.
-#           NounE. a
-#           null
-#           FinalP.
-#             NounE. b
-#             null
-
-? t("a into ! (b) c")
-# stdout: IntoE.
-#           NounE. a
-#           NounE. b
-#           FinalP.
-#             NounE. c
-#             null
-
-? t("a into ! b c")
-# problem: (line 1)@10: expecting "(", found 'b'
-
-IntoExpr has precedence immediately above sequences.
-
-? t("a; def b := c into d; e")
-# stdout: SeqE. []
-#           NounE. a
-#           IntoE.
-#             DefrecE.
-#               FinalP.
-#                 NounE. b
-#                 null
-#               NounE. c
-#               null
-#             null
-#             FinalP.
-#               NounE. d
-#               null
-#           NounE. e
-
-? t("a into b into c")
-# stdout: IntoE.
-#           IntoE.
-#             NounE. a
-#             null
-#             FinalP.
-#               NounE. b
-#               null
-#           null
-#           FinalP.
-#             NounE. c
-#             null
-
 --- ObjectExpr ---
 
 one-method-object
@@ -587,7 +522,7 @@ one-method-object
 --- URISchemeExpr ---
 
 ? t("<>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<198>,line=1,col=1]
 
 ? t("<a>")
 # stdout: URISchemeE. a
@@ -602,11 +537,11 @@ would-be-keywords
 
 erroneous
 ? t("<ab cd>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<198>,line=1,col=1]
 ? t("<+a>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<198>,line=1,col=1]
 ? t("<a!b>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<198>,line=1,col=1]
 
 --- CallPattern, FunCallPattern ---
 

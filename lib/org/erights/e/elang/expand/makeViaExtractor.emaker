@@ -1,7 +1,6 @@
 pragma.enable("easy-return")
 
 pragma.enable("function-implements")
-pragma.enable("trinary-define")
 
 {def __mapExtract implements DeepFrozen {
   to run(key) :any {

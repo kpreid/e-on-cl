@@ -2,7 +2,6 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.enable("easy-return")
-pragma.enable("trinary-define")
 pragma.enable("function-implements")
 
 # modified by kpreid:

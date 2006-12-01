@@ -177,15 +177,15 @@ Ref
   # value: [null]
   
   ? pragma.enable("trinary-define"); pragma.enable("call-pattern")
-  > escape e { def Ref.broken(p) := ('r', e); p }
+  > escape e { def Ref.broken(p) exit e := 'r'; p }
   # value: problem: 'r' is not broken
   
   ? pragma.enable("trinary-define"); pragma.enable("call-pattern")
-  > escape e { def Ref.broken(p) := (Ref.broken("expected"), e); [p] }
+  > escape e { def Ref.broken(p) exit e := Ref.broken("expected"); [p] }
   # value: [problem: expected]
   
   ? pragma.enable("trinary-define"); pragma.enable("call-pattern")
-  > escape e { def Ref.broken(p) := (Ref.promise()[0], e); p }
+  > escape e { def Ref.broken(p) exit e := Ref.promise()[0]; p }
   # value: problem: <Promise> is not broken
   
  isEventual
