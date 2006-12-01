@@ -1,2 +1,2 @@
-pragma.enable("verb-curry")
+pragma.syntax("0.9")
 __equalizer.makeTraversalKey

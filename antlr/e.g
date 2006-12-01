@@ -294,11 +294,17 @@ setSyntax![Token arg]: {
         myPocket.put("explicit-result-guard", "enable");
         myPocket.put("anon-lambda", "enable");
         myPocket.put("plumbing", "enable");
+        myPocket.put("noun-string", "disable");
+        myPocket.put("trinary-define", "disable");
+        myPocket.put("verb-curry", "disable");
     } else if ("0.9".equals(syntaxName)) {
         myPocket.put("easy-return", "enable");
         myPocket.put("explicit-result-guard", "disable");
         myPocket.put("anon-lambda", "enable");
         myPocket.put("plumbing", "enable");
+        myPocket.put("noun-string", "enable");
+        myPocket.put("trinary-define", "enable");
+        myPocket.put("verb-curry", "enable");
     } else {
         throwSemanticHere("Unknown syntax version " + quoteForMessage(syntaxName) + ".");
     }

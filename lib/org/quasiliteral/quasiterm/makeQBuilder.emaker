@@ -4,11 +4,9 @@
 
 # XXX appropriate phrasing of the above notice
 
-pragma.enable("easy-return")
-pragma.disable("explicit-result-guard")
+pragma.syntax("0.9")
 
 pragma.enable("accumulator")
-pragma.enable("trinary-define")
 pragma.enable("function-implements")
 
 #def &term__quasiParser0 := <elib:slot.makeLazySlot>(thunk {

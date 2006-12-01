@@ -1,8 +1,4 @@
-pragma.enable("easy-return")
-pragma.disable("explicit-result-guard")
-
-pragma.enable("anon-lambda")
-pragma.enable("trinary-define")
+pragma.syntax("0.9")
 
 /** Converts an optional unget value into an optional uncall value. Currently does not check whether 'name' is a string. */
 def ungetToUncall(loader, name) {

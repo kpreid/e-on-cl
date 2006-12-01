@@ -1,5 +1,4 @@
-pragma.enable("easy-return")
-pragma.disable("explicit-result-guard")
+pragma.syntax("0.9")
 
 def Throwable := <type:java.lang.Throwable> # XXX
 

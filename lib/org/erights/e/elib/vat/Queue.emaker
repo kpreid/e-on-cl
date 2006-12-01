@@ -1,8 +1,7 @@
 # Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-pragma.enable("easy-return")
-pragma.disable("explicit-result-guard")
+pragma.syntax("0.9")
 
 # XXX should we instead export the CL-implemented queue that our non-threaded vat implementation used?
 

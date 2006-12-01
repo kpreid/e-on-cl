@@ -2,8 +2,7 @@
 # Copyright 2002 Combex, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ...............
 
-pragma.enable("easy-return")
-pragma.disable("explicit-result-guard")
+pragma.syntax("0.9")
 
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 def makeTypeDesc := <import:org.erights.e.elib.base.makeTypeDesc>

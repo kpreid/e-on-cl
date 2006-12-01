@@ -3,8 +3,7 @@
 
 # NOTE: The TermLexer in E-on-Java is under Mozilla license. This file has been written purely by examining the interface as used in other files, and examples of the Term language.
 
-pragma.enable("easy-return")
-pragma.disable("explicit-result-guard")
+pragma.syntax("0.9")
 
 def makeTermLexer implements DeepFrozen {
   # from Term.y

@@ -5,8 +5,7 @@
 #   DeepFrozen
 #   Use a custom exception type to avoid invoking simple__quasiParser too early
 
-pragma.enable("easy-return")
-pragma.enable("trinary-define")
+pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 def EList := <import:org.erights.e.elib.tables.type.ConstList> # XXX variously wrong

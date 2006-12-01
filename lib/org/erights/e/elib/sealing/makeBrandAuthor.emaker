@@ -5,9 +5,8 @@
 # http://www.erights.org/elang/kernel/auditors/index.html
 # This variation allows Sealers & Unsealers to be DeepFrozen.
 
-pragma.enable("easy-return")
-# pragma.disable("explicit-result-guard")
-pragma.enable("trinary-define")
+pragma.syntax("0.9")
+pragma.enable("explicit-result-guard")
 
 def makeBrandAuthor { # not DeepFrozen, for dependencies
   to run(DeepFrozenWhichever) :any {

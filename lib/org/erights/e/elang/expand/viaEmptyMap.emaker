@@ -1,5 +1,4 @@
-pragma.enable("easy-return")
-
+pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 {def __mapEmpty(specimen, optEjector) :void implements DeepFrozen { # implements ViaFunction
