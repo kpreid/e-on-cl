@@ -569,6 +569,14 @@ erroneous
 #               NounE. b
 #               null
 
+--- IgnorePattern / GuardTestPattern ---
+
+? tp("_")
+# stdout: IgnoreP.
+
+? tp("_ :int")
+# stdout: GuardTestP. NounE. int
+
 --- Via-pattern ---
 
 ? tp("via (a) b")

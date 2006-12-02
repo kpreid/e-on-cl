@@ -938,3 +938,5 @@ XXX test perverse scoping cases:
   check that all cases of scope boxes allow redefinition, and that all kinds of defining patterns check for disallowed redefinitions
 
 XXX var slots should not double-coerce
+
+XXX remove all uses of MatchBindExpr since it's an import now

@@ -958,6 +958,26 @@ CdrPattern
 
 XXX now that CdrPattern is nonkernel, merge with TailPattern?
 
+'GuardTestPattern'
+
+  ? tp("_ :a")
+  # value: epatt`__1 :a`
+
+  ? te("pragma.enable(\"trinary-define\")
+  > def _ :(println(\"eg\"); float64) exit fn x{println(\"ok\");throw(x)} := 'a'")
+  # stdout: eg
+  #         ok
+  #         
+
+  # problem: the char 'a' doesn't coerce to a float64
+
+  ? te("pragma.enable(\"trinary-define\")
+  > def _ :(println(\"eg\"); float64) exit fn x{println(\"nok\");throw(x)} := 1")
+  # stdout: eg
+  #         
+
+  # value: 1
+
 'MapPattern'
   
   ? tp("[\"a\" => b]")

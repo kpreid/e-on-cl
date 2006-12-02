@@ -133,6 +133,7 @@ tokens {
     FunCallPattern;
     CallPattern;
     IgnorePattern;
+    GuardTestPattern;
     SamePattern;
     SuchThatPattern;
     QuasiPattern;
@@ -787,8 +788,9 @@ eqPatt:         (IDENT QUASIOPEN) =>
                                                  {##=#([CallPattern],##);}
                          |   optGuard            {##=#([FinalPattern],##);}
                          )
-            |   // "_"^ optGuard        {##.setType(IgnorePattern);} // not yet
-                "_"^                    {##.setType(IgnorePattern);}
+            |   "_"^ ( ":"! guard       {##.setType(GuardTestPattern);}
+                     |                  {##.setType(IgnorePattern);}
+                     )
             |   "=="^ prim              {##.setType(SamePattern);}
             |   "!="^ prim              {##.setType(SamePattern);}
             |   compareOp prim

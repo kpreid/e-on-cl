@@ -51,6 +51,7 @@
     :|BindPattern|
     :|CallPattern|
     :|FunCallPattern|
+    :|GuardTestPattern|
     :|MapPattern|
     :|QuasiParserExpr|
     :|QuasiPattern|
@@ -1075,6 +1076,10 @@
                                          (|args| t (e-list |Pattern|)))
                                         (:rest-slot t)
   (apply #'mn '|CallPattern| |recipient| "run" |args|))
+
+(defemacro |GuardTestPattern| (|Pattern|) ((|guard| t |EExpr|))
+                                          ()
+  (mn '|FinalPattern| (gennoun "") |guard|))
 
 ;; XXX lousy name
 (define-node-class |MapPatternKeyer| (|ENode|) ())
