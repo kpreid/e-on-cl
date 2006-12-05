@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Copyright 2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+set -e
+
+# Theoretically, this could be derived automatically from SVN's ignored file list, or something like that, but I want to be cautious with automatically deleting things.
+
+rm -rf compiled-lib/*
+rm -f e-image-main e-image-run test-parse-cache-*.sexp {lisp,e-core}/*.{fasl,dfsl,nfasl,fas,lib,cls,x86f,abcl}
+
+rm -f antlr/*.class antlr/{EParser,EALexer,QuasiLexer}.java antlr/{E,EALexer,QuasiLexer}TokenTypes.{java,txt}
