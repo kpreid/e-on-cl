@@ -881,16 +881,17 @@
                                    (|matchers| nil (e-list |EMatcher|)))
                                   (:rest-slot t)
   (let ((specimen-var (gennoun "specimen"))
-        (next-ej (gennoun "next")))
+        (next-ej (gennoun "next"))
+        (failure-vars (loop for nil in |matchers| collect (gennoun "failure"))))
     ;; NOTE: I briefly got confused. Even if |specimen| turns out to be a
     ;; NounExpr, we can't skip employing a temporary var, because the noun
     ;; might be for a special slot.
     (mn '|HideExpr|
       (mn '|SeqExpr|
         (mn '|DefineExpr| (mn '|FinalPattern| specimen-var nil) nil |specimen|)
-        (labels ((match-chain (list) 
-                  (if list
-                    (let ((matcher (first list)))
+        (labels ((match-chain (matchers-sofar fail-vars-sofar) 
+                  (if matchers-sofar
+                    (let ((matcher (first matchers-sofar)))
                       (mn '|EscapeExpr|
                         (mn '|FinalPattern| next-ej nil)
                         (mn '|SeqExpr|
@@ -898,12 +899,14 @@
                                             next-ej
                                             specimen-var)
                           (e. matcher |getBody|))
-                        (mn '|IgnorePattern|)
-                        (match-chain (rest list))))
-                    (mn '|CallExpr| (mn '|NounExpr| "throw") "run"
-                      (mn '|CallExpr| (mn '|LiteralExpr| "no match: ") "add"
-                        specimen-var)))))
-          (match-chain (coerce |matchers| 'list)))))))
+                        (mn '|FinalPattern| (first fail-vars-sofar)
+                                            nil)
+                        (match-chain (rest matchers-sofar)
+                                     (rest fail-vars-sofar))))
+                    (apply #'mn '|CallExpr| 
+                      (mn '|NounExpr| "__switchFailed") "run"
+                      specimen-var failure-vars))))
+          (match-chain (coerce |matchers| 'list) failure-vars))))))
 
 (defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil string)
                                   (|body| t |EExpr|))

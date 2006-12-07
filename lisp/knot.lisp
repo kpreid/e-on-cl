@@ -672,6 +672,7 @@
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.expand.__makeVerbFacet"))
           ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
+          ("&__switchFailed" ,(lazy-import "org.erights.e.elang.expand.__switchFailed"))
 
           ; --- utility: miscellaneous ---
           ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))

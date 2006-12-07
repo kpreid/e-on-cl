@@ -669,17 +669,20 @@ MatchBindExpr
   #            escape next__2 {
   #                def [a] exit next__2 := specimen__1
   #                b
-  #            } catch _ {
+  #            } catch failure__3 {
   #                escape next__2 {
   #                    def c exit next__2 := specimen__1
   #                    d
-  #                } catch _ {
-  #                    throw.run("no match: ".add(specimen__1))
+  #                } catch failure__4 {
+  #                    __switchFailed.run(specimen__1, failure__3, failure__4)
   #                }
   #            }
   #        }`
-   
-  XXX should be throw.run(__switchMatchError(...)) or similar, so that we're not stringifying the specimen '
+  
+  ? te("switch (1) {match ==2 {} match ==3 {}}")
+  # problem: 1 did not match any option:
+  #              problem: 1 is not 2
+  #              problem: 1 is not 3
   
 'ThunkExpr'
 
