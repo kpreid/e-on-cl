@@ -5,6 +5,9 @@ pragma.syntax("0.9")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
+def NullOkParamStamp implements DeepFrozen {to audit(_) { return true }}
+def NullOkParam implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(NullOkParamStamp, sp)) {return sp} else {throw.eject(ej, "Not a parameterized nullOk")}}}
+
 def nullOk0 implements DeepFrozen {
 
   to __printOn(out :TextWriter) :void {
@@ -20,7 +23,7 @@ def nullOk0 implements DeepFrozen {
   to getTheTrivialValue() { return null }
   
   to get(subGuard) {
-    def nullOk1 implements EventuallyDeepFrozen {
+    def nullOk1 implements EventuallyDeepFrozen, NullOkParamStamp {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -32,6 +35,8 @@ def nullOk0 implements DeepFrozen {
         out.print("nullOk")
         out.quote([subGuard])
       }
+      
+      to getSubGuard() { return subGuard } # XXX name
     
       to coerce(specimen, optEjector) {
         if (specimen == null) {
@@ -42,5 +47,10 @@ def nullOk0 implements DeepFrozen {
       }
     }
     return nullOk1
+  }
+
+  to "match__get/1"(specimen, ejector) {
+    def ofKind := NullOkParam.coerce(specimen, ejector)
+    return [ofKind.getSubGuard()]
   }
 }

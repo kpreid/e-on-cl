@@ -1,0 +1,81 @@
+  ? pragma.syntax("0.9")
+  ? pragma.enable("call-pattern")
+
+NOTE: these tests do not distinguish between pattern failures and throws.
+
+List guard
+
+  ? def List[a] := List[int]; a
+  # value: int
+
+  ? def List[a] := 1
+  # problem: not a ListGuard
+
+  ? def List[a] := List; a
+  # value: any
+
+Map guard
+
+  ? def Map[a, b] := Map[near, any]; [a, b]
+  # value: [near, any]
+
+  ? def Map[a, b] := 1
+  # problem: Not stamped by org.erights.e.elib.slot.Map$MapGuard__T
+  
+  ? def Map[a, b] := Map; [a, b]
+  # value: [any, any]
+
+nullOk guard
+
+  ? def nullOk[a] := nullOk[int]; a
+  # value: int
+
+  ? def nullOk[a] := nullOk; a
+  # problem: Not a parameterized nullOk
+  XXX this could be defined to return the 'none' guard, which doesn't exist yet
+
+Set guard
+
+  ? def Set[a] := Set[int]; a
+  # value: int
+
+  ? def Set[a] := 1
+  # problem: Not stamped by org.erights.e.elib.tables.makeConstSetAuthor$makeConstSetAuthor$ConstSetGuard__T
+
+  ? def Set[a] := Set; a
+  # value: any
+
+Tuple guard
+
+  ? def t := Tuple.of([any, int])
+  # value: Tuple[any, int]
+
+  ? def Tuple.of([a, b]) := t; [a, b]
+  # value: [any, int]
+
+  ? def Tuple.of([a]) := t
+  # problem: a 2 size list doesn't match a 1 size list pattern
+
+  ? def Tuple.of([a]) := 1
+  # problem: Not stamped by org.erights.e.elib.slot.Tuple$TupleGuard__T
+
+  ? def Tuple.of([a]) := Tuple
+  # problem: Not stamped by org.erights.e.elib.slot.Tuple$TupleGuard__T
+
+Union guard
+
+  ? def t := any.of([nullOk, int])
+  # value: any[nullOk, int]
+
+  ? def any.of([a, b]) := t; [a, b]
+  # value: [nullOk, int]
+
+  ? def any.of([a]) := t
+  # problem: a 2 size list doesn't match a 1 size list pattern
+
+  ? def any.of([a]) := 1
+  # problem: Not stamped by org.erights.e.elib.slot.makeUnionGuard$UnionGuard__T
+  
+  ? def any.of([a]) := any
+  # problem: Not stamped by org.erights.e.elib.slot.makeUnionGuard$UnionGuard__T
+

@@ -5,9 +5,11 @@ pragma.syntax("0.9")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
+interface UnionGuard guards UnionGuardStamp {}
+
 def makeUnionGuard implements DeepFrozen {
   to run(subGuards) {
-    def unionGuard implements EventuallyDeepFrozen {
+    def unionGuard implements EventuallyDeepFrozen, UnionGuardStamp {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -31,9 +33,16 @@ def makeUnionGuard implements DeepFrozen {
         # XXX this is unlike Java-E's UnionGuard, but provides a more informative message, but hides information about individual failures. fix this once we have fancy exception structure.
         throw.eject(optEjector, `doesn't match any of $subGuards`)
       }
+      
+      to getChoices() { return subGuards }
     }
     
     return unionGuard
+  }
+  
+  to "match__run/1"(specimen, ejector) {
+    def ofKind := UnionGuard.coerce(specimen, ejector)
+    return [ofKind.getChoices()]
   }
 }
 

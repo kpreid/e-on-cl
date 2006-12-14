@@ -264,11 +264,17 @@ Map
   ? Map
   # value: Map
   
+  ? [Map.getKeyGuard(), Map.getValueGuard()]
+  # value: [any, any]
+  
   ? testGuardMany([[], [].asMap(), [].asMap().diverge(), [1=>2]], Map)
   # value: [[].asMap(), [1 => 2]]
 
   ? Map[float64, int]
   # value: Map[float64, int]
+
+  ? [Map[float64, int].getKeyGuard(), Map[float64, int].getValueGuard()]
+  # value: [float64, int]
   
   ? testGuardMany([[], [].asMap(), [].asMap().diverge(), [1=>2], [3 => "four"]], Map[float64, int])
   # value: [[].asMap(), [1.0 => 2]]

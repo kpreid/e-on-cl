@@ -7,6 +7,8 @@ pragma.enable("accumulator")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
+interface TupleGuard guards TupleGuardStamp {}
+
 def Tuple0 implements EventuallyDeepFrozen {
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
@@ -18,8 +20,13 @@ def Tuple0 implements EventuallyDeepFrozen {
     out.print("Tuple")
   }
 
-  match [=="get", elementGuards] {
-    def Tuple1 implements EventuallyDeepFrozen {
+  to "match__of/1"(specimen, ejector) {
+    def ofKind := TupleGuard.coerce(specimen, ejector)
+    return [ofKind.getElementGuards()]
+  }
+
+  to of(elementGuards) {
+    return def Tuple1 implements EventuallyDeepFrozen, TupleGuardStamp {
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -30,6 +37,8 @@ def Tuple0 implements EventuallyDeepFrozen {
         out.quote(Tuple0)
         out.quote(elementGuards)
       }
+      
+      to getElementGuards() { return elementGuards }
       
       to coerce(specimen, optEjector) {
         # XXX should we do specimen.__conformTo(Tuple1)? As it is, the specimen cannot tell it's coercing to a List-of-specific-element-type.
@@ -46,4 +55,6 @@ def Tuple0 implements EventuallyDeepFrozen {
       }
     }
   }
+  
+  match [=="get", elementGuards] { Tuple0.of(elementGuards) }
 }

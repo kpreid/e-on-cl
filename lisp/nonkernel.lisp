@@ -51,6 +51,7 @@
     :|BindPattern|
     :|CallPattern|
     :|FunCallPattern|
+    :|GetPattern|
     :|GuardTestPattern|
     :|MapPattern|
     :|QuasiParserExpr|
@@ -1079,6 +1080,11 @@
                                          (|args| t (e-list |Pattern|)))
                                         (:rest-slot t)
   (apply #'mn '|CallPattern| |recipient| "run" |args|))
+
+  (defemacro |GetPattern| (|Pattern|) ((|recipient| t |EExpr|)
+                                       (|args| t (e-list |Pattern|)))
+                                      (:rest-slot t)
+    (apply #'mn '|CallPattern| |recipient| "get" |args|))
 
 (defemacro |GuardTestPattern| (|Pattern|) ((|guard| t |EExpr|))
                                           ()

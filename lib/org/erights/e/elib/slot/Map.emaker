@@ -9,7 +9,9 @@ def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 
 def ConstMap := <import:org.cubik.cle.prim.ConstMap>
 
-def Map0 {
+interface MapGuard guards MapGuardStamp {}
+
+def Map0 implements MapGuardStamp {
   to __printOn(out :TextWriter) {
     out.print("Map")
   }
@@ -19,7 +21,7 @@ def Map0 {
   }
 
   to get(keyGuard, valueGuard) {
-    def Map1 {
+    def Map1 implements MapGuardStamp {
 
       to coerce(var specimen, optEjector) {
         specimen := Map0.coerce(specimen, optEjector)
@@ -30,6 +32,10 @@ def Map0 {
                  valueGuard.coerce(subValue, optEjector))
         }
       }
+      
+      to getKeyGuard()   { return keyGuard }
+      to getValueGuard() { return valueGuard }
+      to getValGuard()   { return valueGuard } # XXX EoJ compatibility
     
       to __printOn(out :TextWriter) {
         out.print("Map[")
@@ -41,6 +47,14 @@ def Map0 {
     }
     
     return Map1
+  }
+
+  to getKeyGuard()   { return any }
+  to getValueGuard() { return any }
+  
+  to "match__get/2"(specimen, ejector) {
+    def ofKind := MapGuard.coerce(specimen, ejector)
+    return [ofKind.getKeyGuard(), ofKind.getValueGuard()]
   }
   
   to getTheTrivialValue() { return [].asMap() }

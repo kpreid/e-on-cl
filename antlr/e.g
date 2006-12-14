@@ -132,6 +132,7 @@ tokens {
     TailPattern;
     FunCallPattern;
     CallPattern;
+    GetPattern;
     IgnorePattern;
     GuardTestPattern;
     SamePattern;
@@ -784,6 +785,8 @@ eqPatt:         (IDENT QUASIOPEN) =>
                 quasiParser quasiString          {##=#([QuasiPattern],##);}
             |   nounExpr ( parenParams           pocket["call-pattern"]
                                                  {##=#([FunCallPattern],##);}
+                         | "["^ patterns "]"!    pocket["call-pattern"]
+                                                 {##.setType(GetPattern);}
                          | "."! verb parenParams pocket["call-pattern"]
                                                  {##=#([CallPattern],##);}
                          |   optGuard            {##=#([FinalPattern],##);}

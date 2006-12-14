@@ -8,7 +8,9 @@ def makeConstSetAuthor(SelflessStamp) {
     to audit(_) { return true }
   }
   
-  def ConstSet {
+  interface ConstSetGuard guards ConstSetGuardStamp extends Guard {}
+  
+  def ConstSet implements ConstSetGuardStamp {
     # XXX should reuse standard-coerce from the Lisp side
     to coerce(specimen, optEjector) {
       if (__auditedBy(ConstSetStamp, specimen)) {
@@ -22,6 +24,31 @@ def makeConstSetAuthor(SelflessStamp) {
           throw.eject(optEjector, "not a ConstSet: " + E.toQuote(specimen))
         }
       }
+    }
+    
+    to getValueGuard() { return any }
+    
+    to get(valueGuard) {
+      return def ParamConstSet implements ConstSetGuardStamp {
+        to __printOn(out :TextWriter) {
+          out.quote(ConstSet)
+          out.print("[")
+          out.quote(valueGuard)
+          out.print("]")
+        }
+        
+        # XXX To be implemented
+        # to coerce(specimen, ejector) {
+        #   def ofKind :ConstSet exit ejector := specimen
+        #   
+        # }
+        to getValueGuard() { return valueGuard }
+      }
+    }
+
+    to "match__get/1"(specimen, ejector) {
+      def ofKind := ConstSetGuard.coerce(specimen, ejector)
+      return [ofKind.getValueGuard()]
     }
   }
  

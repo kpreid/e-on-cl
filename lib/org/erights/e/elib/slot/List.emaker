@@ -11,7 +11,10 @@ def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 def ConstList := <type:org.erights.e.elib.tables.ConstList>
 
-def List0 implements EventuallyDeepFrozen {
+def ListGuardStamp implements DeepFrozen {to audit(_) { return true }}
+def ListGuard implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(ListGuardStamp, sp)) {return sp} else {throw.eject(ej, "not a ListGuard")}}}
+
+def List0 implements EventuallyDeepFrozen, ListGuardStamp {
 
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
@@ -23,19 +26,23 @@ def List0 implements EventuallyDeepFrozen {
     out.print("List")
   }
 
+  to getValueGuard() { return any }
+  
   to coerce(specimen, optEjector) {
     return ConstList.coerce(specimen, 
                             fn _ { throw.eject(optEjector, makeCoercionFailure(specimen, List0)) })
   }
 
   to get(elementGuard) {
-    def List1 implements EventuallyDeepFrozen {
+    def List1 implements EventuallyDeepFrozen, ListGuardStamp {
 
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
         }
       }
+
+      to getValueGuard() { return elementGuard }
 
       to coerce(var specimen, optEjector) {
         specimen := List0.coerce(specimen, optEjector)
@@ -106,6 +113,11 @@ def List0 implements EventuallyDeepFrozen {
     }
     
     return List1
+  }
+  
+  to "match__get/1"(specimen, ejector) {
+    def ofKind := ListGuard.coerce(specimen, ejector)
+    return [ofKind.getValueGuard()]
   }
   
   to getTheTrivialValue() { return [] }
