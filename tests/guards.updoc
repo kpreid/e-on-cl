@@ -2,7 +2,8 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
   ? pragma.enable("accumulator")
-  > def testGuardMany(things, Thing) :any {
+  
+  ? def testGuardMany(things, Thing) :any {
   >   return accum [] for thing :Thing in things { _.with(thing) }
   > }
   # value: <testGuardMany>
@@ -312,7 +313,8 @@ An intersection guard is also a (loose) intersection auditor.
   # value: <bar>
   
   ? pragma.enable("trinary-define")
-  > escape e {
+  
+  ? escape e {
   >   interface Foo {}
   >   def both := all[Foo, def failer { to audit(_,_) :any {return false} to coerce(_,pe) :any {throw.eject(pe, "no")} }]
   >   def bar implements both { }

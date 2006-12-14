@@ -206,8 +206,8 @@ XXX ejectors for kinds of failure from write()
   read may return more elements than currently available
   wants exists so that stream#whenAvailable can create suction if the stream is lazy
 
-  ? def buffer := [].diverge(int)
-  > pragma.enable("accumulator")
+  ? pragma.enable("accumulator")
+  > def buffer := [].diverge(int)
   > def stream := makeInStreamShell(int, def streamBackend, def impl {
   >   to semiObtain(n, proceed, report) :any { 
   >     def r := if (report == ELEMENTS) { buffer(0, n) }

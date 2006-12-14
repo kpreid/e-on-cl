@@ -192,11 +192,11 @@ Characters
   # value: 'a'
   
   ? pragma.enable("accumulator")
-  > accum ' ' for x in 1..32 { _.previous() }
+  
+  ? accum ' ' for x in 1..32 { _.previous() }
   # value: '\u0000'
   
-  ? pragma.enable("accumulator")
-  > accum ' ' for x in 1..32 { _.previous() }.previous()
+  ? accum ' ' for x in 1..32 { _.previous() }.previous()
   # problem: there is no character before '\u0000'
   
   XXX test last-character.next()
