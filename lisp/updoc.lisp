@@ -148,6 +148,7 @@
   (let ((new-answers nil)
         (step nil)
         (step-scope nil)
+        (props nil)
         (backtrace nil)
         (skipping nil)
         (starting-time nil))
@@ -163,7 +164,9 @@
                 backtrace nil)
           
           ;; must happen after vars are set, in case of syntax errors 
-          (let ((node (e.syntax:parse-to-kernel expr)))
+          (multiple-value-bind (node new-props)
+              (e.syntax:parse-to-kernel expr :props props)
+            (setf props new-props)
             (setf step-scope (e. node |staticScope|))
             (setf skipping (e-is-true (e. (e. (e. dead-names |and| (e. step-scope |namesUsed|)) |size|) |aboveZero|)))
             #+#:debug (print (e. dead-names |getKeys|))

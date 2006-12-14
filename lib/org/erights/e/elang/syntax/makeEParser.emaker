@@ -32,8 +32,8 @@ def makeEParser implements DeepFrozen {
           debugFlag :boolean,
           onlyOneExprFlag :boolean) {
           
-    def feeder := lexer.getFeeder() # because our 'lexer' is a stub
     var done := false
+    var props := if (optProps == null) { [].asMap() } else { optProps }
     
     def eParser {
       to isEndOfFile() {
@@ -41,17 +41,22 @@ def makeEParser implements DeepFrozen {
       }
       to parse() {
         # XXX thoroughly broken - ignores parameters, etc.
-        return primParser(feeder._readText())
         done := true
+        def [node, newProps] := primParser.parseWithProps(lexer.getFeeder()._readText(), props, null, throw)
+        props := newProps
+        return node
+      }
+      to setSource(source :Twine) {
+        lexer.setSource(source)
       }
     }
     return eParser
   }
   
-  /** Reports the problem via 'optEjector' if the parse fails.
+  /** Reports the problem via 'ejector' if the parse fails.
     * 
     * XXX To be renamed once we have a uniform and compatible naming scheme for EParser methods. */
-  to xTryParse(source :Twine, optEjector) :any {
-    return primParser(source, null, optEjector)
+  to xTryParse(source :Twine, ejector) :any {
+    return primParser(source, null, ejector)
   }
 }

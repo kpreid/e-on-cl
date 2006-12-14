@@ -3,7 +3,17 @@
 
 pragma.syntax("0.9")
 
-/** Java-E compatibility */
+def LineFeeder := <import:org.quasiliteral.syntax.LineFeeder>.asType()
+
+/** Java-E compatibility? */
 def makeTwineFeeder {
-  # XXX implement?
+  to run(twine :Twine) {
+    def twineFeeder implements LineFeeder {
+      /** Not part of the proper interface, but a trick to get rune working simply. Returns the entire contents. */
+      to _readText() {
+        return twine
+      }
+    }
+    return twineFeeder
+  }
 }

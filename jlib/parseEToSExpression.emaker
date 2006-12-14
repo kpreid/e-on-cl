@@ -8,6 +8,9 @@ pragma.enable("dot-props")
 pragma.enable("accumulator")
 
 def makeConvertENode2Term := <elang:visitors.makeConvertENode2Term>
+def makeStringReader := <import:java.io.makeStringReader>
+def makeTextWriter := <elib:oldeio.makeTextWriter>
+def makeELexer := <elang:syntax.makeELexer>
 
 def convert := makeConvertENode2Term()
 
@@ -53,11 +56,12 @@ def author(<unsafe>) {
   def makeTokenMultiBuffer := <antlr:makeTokenMultiBuffer>
   def makeTokenStreamSelector := <antlr:makeTokenStreamSelector>
   def makeDumpASTVisitor := <antlr:makeDumpASTVisitor>
+  def makeCommonToken := <antlr:makeCommonToken>
   
   def tokenSymbols := accum [] for tn in makeEParser.get_tokenNames() { _.with("e.grammar::|" + tn.replaceAll("\\", "\\\\").replaceAll("|", "\\|") + "|") }
   
-  def antlrParse(fname, text, isPattern, quasiInfo) {
-    def elexer := makeEALexer(makeCountingLexerSharedInputState(<import:java.io.StringReader>(text), 0))
+  def antlrParse(fname, text, isPattern, quasiInfo, props) {
+    def elexer := makeEALexer(makeCountingLexerSharedInputState(makeStringReader(text), 0))
     def qlexer := makeQuasiLexer(elexer.getInputState())
     def tb := makeTokenMultiBuffer(["e", "quasi"], [elexer, qlexer])
     elexer.setSelector(tb)
@@ -73,7 +77,12 @@ def author(<unsafe>) {
       match [vh, ph] { elexer.setHoles(vh, ph) }
       match ==null {}
     }
-    parser.setSyntax(<antlr:makeCommonToken>(-1, "0.8"))
+    parser.setSyntax(makeCommonToken(-1, "0.8"))
+    if (props != null) {
+      for k => v in props {
+        parser.setPocket(makeCommonToken(-1, k), v)
+      }
+    }
     
     if (isPattern) {
       parser.pattern()
@@ -82,7 +91,7 @@ def author(<unsafe>) {
     }
     def ast := parser.getAST()
     
-    def [out, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+    def [out, sb] := makeTextWriter.makeBufferingPair()
     
     def parentheses(body) {
       out.print("(")
@@ -103,9 +112,25 @@ def author(<unsafe>) {
       }
     }
     
-    out.print("(")
-    printChain(ast)
-    out.print(")")
+    parentheses(thunk{
+      parentheses(thunk{
+        printChain(ast)
+      })    
+      out.print("#.")
+      parentheses(thunk{
+        out.print("e.elib:e. e.elib:+the-make-const-map+ :|fromPairs| '#")
+        parentheses(thunk{
+          for k => v in parser.getPockets() {
+            out.print("#")
+            parentheses(thunk{
+              out.print(clQuote(k))
+              out.print(clQuote(v))
+            })
+          }
+        })
+      })
+    })
+    
     return sb.snapshot()
   }
 
@@ -124,7 +149,7 @@ def author(<unsafe>) {
         }
         match =="isIdentifier" {
           def [word] := args
-          if (<elang:syntax.ELexer>.isIdentifier(word)) {
+          if (makeELexer.isIdentifier(word)) {
             "cl:t "
           } else {
             "cl:nil "

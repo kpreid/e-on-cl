@@ -3,11 +3,21 @@
 
 pragma.syntax("0.9")
 
+def makeTwineFeeder := <import:org.quasiliteral.syntax.TwineFeeder>
+
 /** Java-E compatibility for makeParseFuncAuthor */
 def makeELexer {
-  to run(lineFeeder, partialFlag :boolean, noTabsFlag :boolean) {
+  to make(source :Twine, partialFlag, noTabsFlag) {
+    return makeELexer(makeTwineFeeder(source), partialFlag, noTabsFlag)
+  }
+  to run(var lineFeeder, partialFlag :boolean, noTabsFlag :boolean) {
     def fakeELexer {
+      /** kludge */
       to getFeeder() { return lineFeeder }
+      
+      to setSource(source :Twine) {
+        lineFeeder := makeTwineFeeder(source)
+      }
     }
     return fakeELexer
   }

@@ -656,12 +656,19 @@ XXX make precedence values available as constants"
   ;; This does two things:
   ;; 1. Only objects which print parseably in E may pass this point, since the objects are passed by sending (e-print object) over a pipe.
   ;; 2. Ensures that the arguments are printable under *print-readably*, and therefore won't hose the parse cache. In particular, strings must be general strings, not base-strings.
-  (labels ((convert (x) (e-coercef x '(or string e-boolean null vector integer float64))
+  (labels ((convert (x) (e-coercef x '(or string e-boolean null vector integer float64 e.tables:const-map))
                         (typecase x
                           (string
                             (coerce x '(vector character)))
                           (vector
                             (map 'vector #'convert x))
+                          (e.tables:const-map
+                            (e. +the-make-const-map+ |fromIteratable|
+                              (e-lambda nil () (:|iterate| (f)
+                                (e. x |iterate|
+                                  (efun (k v)
+                                    (efuncall f (convert k) (convert v))))))
+                              +e-true+))
                           (t x))))
     (setf args (mapcar #'convert args)))
   
@@ -694,22 +701,24 @@ XXX make precedence values available as constants"
       result)))
 
 (defun parse-to-kernel (source &rest options)
-  (kernelize (apply #'e-source-to-tree source options)))
+  (multiple-value-bind (node props)
+      (apply #'e-source-to-tree source options)
+    (values (kernelize node) props)))
 
-(defun e-source-to-tree (source &key syntax-ejector pattern quasi-info)
+(defun e-source-to-tree (source &key syntax-ejector pattern quasi-info props)
   (let ((location
           (let ((span (e. source |getOptSpan|)))
             (when span (e. span |getUri|)))))
-    ;; XXX should pass source-span spans into the parser
-    (antlr-root 
-      #-e.syntax::local-parser
-        (query-or-die syntax-ejector "antlrParse" location source (as-e-boolean pattern) quasi-info)
-      #+e.syntax::local-parser
-        (handler-case
-          (antlr-parse location source pattern nil)
-          (error (c)
-            (eject-or-ethrow syntax-ejector c)))
-      location)))
+    ;; XXX should pass multiple twine spans into the parser
+    (destructuring-bind (parse-tree new-props)
+        #-e.syntax::local-parser
+          (query-or-die syntax-ejector "antlrParse" location source (as-e-boolean pattern) quasi-info props)
+        #+e.syntax::local-parser
+          (handler-case
+            (antlr-parse location source pattern nil props)
+            (error (c)
+              (eject-or-ethrow syntax-ejector c)))
+      (values (antlr-root parse-tree location) new-props))))
 
 (declaim (inline e-coercer))
 (defun e-coercer (type-or-guard)
@@ -723,15 +732,19 @@ XXX make precedence values available as constants"
 
 (defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
+  ;; XXX regularize this interface
   (:|run| (source quasi-info syntax-ejector)
+    (elt (e. +prim-parser+ |parseWithProps| source (e. +the-make-const-map+ |fromPairs| #()) quasi-info syntax-ejector) 0))
+  (:|parseWithProps| (source props quasi-info syntax-ejector)
     (e-coercef source 'twine)
+    (e-coercef props 'e.tables:const-map)
     (setf quasi-info (ref-shorten quasi-info))
     (when quasi-info
       ;; vector of vectors of integers ([valueHoles, patternHoles])
       (setf quasi-info 
         (map-e-list (mapper-e-list (e-coercer 'integer)) 
                     quasi-info)))
-    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector))
+    (coerce (multiple-value-list (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :props props)) 'vector))
   (:|run| (source)
     (e-coercef source 'twine)
     (e-source-to-tree source))
@@ -772,10 +785,11 @@ XXX make precedence values available as constants"
        (e-parser-set-pocket (jmethod "EParser" "setPocket" "antlr.Token" "java.lang.String"))
        (c-common-token (jconstructor "antlr.CommonToken" "int" "java.lang.String"))
        (get-ast (jmethod "antlr.Parser" "getAST"))
-       (plumbing-token (jnew c-common-token -1 "plumbing"))
+       (get-props (jmethod "EParser" "getPocket"))
        (pattern-parse-method (jmethod "EParser" "pattern"))
        (expr-parse-method (jmethod "EParser" "start")))
-  (defun antlr-parse (fname text is-pattern is-quasi)
+  (defun antlr-parse (fname text is-pattern is-quasi props)
+    ;; XXX this code is stale
     (let* ((elexer (jnew c-ealexer (jnew c-string-reader text)))
            (qlexer (jnew c-quasi-lexer (jcall get-input-state elexer)))
            (tb (jnew c-token-multi-buffer
@@ -786,12 +800,16 @@ XXX make precedence values available as constants"
         (jcall set-filename x fname))
       (let ((parser (jnew c-e-parser tb)))
         (jcall parser-set-filename parser fname)
-        (jcall e-parser-set-pocket parser plumbing-token "enable")
+        (jcall e-parser-set-syntax parser (jnew c-common-token -1 "0.8"))
+        (when props
+          (e. props |iterate| (efun (k v)
+            (jcall e-parser-set-pocket (jnew c-common-token -1 k) v))))
         (jcall (if is-pattern
                  pattern-parse-method
                  expr-parse-method)
                parser)
-        (nodes-to-list (jcall get-ast parser))))))
+        (values (nodes-to-list (jcall get-ast parser))
+                (e. +the-make-const-map+ |fromProperties| (jcall get-props parser)))))))
 
 #-e.syntax::local-parser
 (defmacro ast-node-bind ((tag-var line-var column-var text-var children-var) node-var &body body)
@@ -822,6 +840,8 @@ XXX make precedence values available as constants"
 (defun antlr-root (ast-nodes uri)
   (let ((enodes (map 'list #'is-legitimate-toplevel-node (map 'vector (lambda (tree) (build-antlr-nodes tree :uri uri)) ast-nodes))))
     (etypecase (length enodes)
+      ((integer 0 0)
+        (mn '|NullExpr|))
       ((integer 1 1)
         (first enodes))
       ((integer 2)  

@@ -428,11 +428,15 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 (defclass const-map () ())
 
 (defmethod print-object ((map const-map) stream)
-  (print-unreadable-object (map stream :type t :identity nil)
-    (loop for sep = "" then " "
-          for key across (ref-shorten (e. map |getKeys|))
-          for value across (ref-shorten (e. map |getValues|))
-          do (format stream "~A~W => ~W" sep key value))))
+  (if (and *print-readably* *read-eval*)
+    (format stream "#.~S" 
+      `(e. +the-make-const-map+ :|fromColumns| 
+         ,@(coerce (e. map |getPair|) 'list)))
+    (print-unreadable-object (map stream :type t :identity nil)
+      (loop for sep = "" then " "
+            for key across (ref-shorten (e. map |getKeys|))
+            for value across (ref-shorten (e. map |getValues|))
+            do (format stream "~A~W => ~W" sep key value)))))
 
 (defun comparer-adapter ()
   (let ((comparer (eelt (vat-safe-scope *vat*) "__comparer")))

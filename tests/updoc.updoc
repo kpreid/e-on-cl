@@ -26,6 +26,25 @@ This should fail:
   
 ---
 
+Pragmas should persist across steps
+
+  ? accum 0 for x in 1..4 { _ + x }
+  # problem: (line 1)@31: The optional "accumulator" syntax is currently off.
+
+  ? pragma.enable("accumulator")
+  > accum 0 for x in 1..4 { _ + x }
+  # value: 10
+  
+  ? accum 0 for x in 1..4 { _ + x }
+  # value: 10
+  
+  ? pragma.disable("accumulator")
+  
+  ? accum 0 for x in 1..4 { _ + x }
+  # problem: (line 1)@31: The optional "accumulator" syntax is currently off.
+
+---
+
 waitAtTop / timing tests:
 
   ? print <- ("hello")

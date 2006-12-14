@@ -394,12 +394,32 @@ makeEParser
   ? def makeEParser := <import:org.erights.e.elang.syntax.makeEParser>
   # value: <import:org.erights.e.elang.syntax.makeEParser>
 
+xTryParse is an unofficial interface designed when I needed to add the syntax ejector.
+
   ? escape fail { makeEParser.xTryParse("hi", fail) } catch p { print(p) }
   # value: e`hi`
 
   ? escape fail { makeEParser.xTryParse("try", fail) } catch p { print(p) }
   # stdout: problem: (line 1)@4: expecting "{", found 'null'
   XXX "found 'null'" is a bizarre error; fix
+
+Pragma effect preservation
+
+  ? def p := makeEParser.make(null, <elang:syntax.makeELexer>.make("pragma.enable(\"dot-props\"); a::b", false, false), stderr, false, false)
+  > p.parse()
+  # value: e`$<PropertyExpr a, "b">$`
+  
+  ? p.setSource("c::d")
+  ? p.parse()
+  # value: e`$<PropertyExpr c, "d">$`
+
+  ? p.setSource("pragma.disable(\"dot-props\"); null")
+  ? p.parse()
+  # value: e`null`
+
+  ? p.setSource("e::f")
+  ? p.parse()
+  # problem: (line 1)@2: The optional "dot-props" syntax is currently off.
 
 Quasi-E-source issues
 
