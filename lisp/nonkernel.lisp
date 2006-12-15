@@ -16,8 +16,8 @@
     :|ExitExpr|
     :|ForExpr|
     :|ForwardExpr|
-    :|FunctionExpr|
     :|FunCallExpr|
+    :|FunctionExpr|
     :|FunSendExpr|
     :|GetExpr|
     :|If1Expr|
@@ -37,6 +37,7 @@
     :|PropertyExpr|
     :|PropertySlotExpr|
     :|QuasiExpr|
+    :|QuasiParserExpr|
     :|RangeExpr|
     :|SameExpr|
     :|SendExpr|
@@ -48,30 +49,34 @@
     :|WhenExpr|
     :|WhenFnExpr|
     :|WhileExpr|
+    
     :|BindPattern|
     :|CallPattern|
     :|FunCallPattern|
     :|GetPattern|
     :|GuardTestPattern|
     :|MapPattern|
-    :|QuasiParserExpr|
     :|QuasiPattern|
     :|SamePattern|
     :|SuchThatPattern|
     :|TailPattern|
+    
     :|FunctionObject|
     :|MethodObject|
     :|OneMethodObject|
     :|PlumbingObject|
+
     :|ETo|
+
     :|MapPatternAssoc|
     :|MapPatternImport|
-    :|MapPatternRequired|
     :|MapPatternOptional|
-    :|QuasiText|
+    :|MapPatternRequired|
+
+    :|QuasiEscape|
     :|QuasiExprHole|
     :|QuasiPatternHole|
-    :|QuasiEscape|))
+    :|QuasiText|))
 
 (cl:defpackage :e.nonkernel.impl
   (:use :cl :e.util :e.elib :e.elang :e.elang.node-impl :e.elang.vm-node :e.nonkernel))

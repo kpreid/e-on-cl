@@ -122,14 +122,14 @@
 (defvar *efasl-result*)
 
 (deftype externalizable-for-efasl ()
-  '(or null
-       number
-       string
-       bit-vector
+  '(or bit-vector
        character
+       cl-type-guard
        keyword
+       null
+       number
        pathname
-       cl-type-guard))
+       string))
 
 (defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
   "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope."

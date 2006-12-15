@@ -61,139 +61,136 @@ options {
 }
 
 tokens {
-    // XXX organize this list
-
-    // various expressions
-    NKAssignExpr;
-    UpdateExpr;
+    // expressions
+    AccumExpr;
+    BinaryExpr;
     CallExpr;
-    DefrecExpr;
-    ForwardExpr;
-    EscapeExpr;
-    HideExpr;
-    IfExpr;
-    If1Expr;
-    ForExpr;
-    WhenExpr;
+    CatchExpr;
     CoerceExpr;
     CompareExpr;
-    SameExpr;
     ConditionalExpr;
-    PrefixExpr;
-    LiteralExpr;
-    MatchBindExpr;
-    MismatchExpr;
-    NounExpr;
-    ObjectHeadExpr;
-    InterfaceExpr;
-    QuasiExpr;           // XXX unconfuse names: this is the `...` syntax, the following two are the holes-in-source-code syntax. same fix for *Pattern.
-    QuasiLiteralExpr;
-    QuasiPatternExpr;
-    QuasiParserExpr;
-    MetaStateExpr;
-    MetaContextExpr;
-    SeqExpr;
-    SlotExpr;
-    MetaExpr;
-    CatchExpr;
+    CurryExpr;
+    DefrecExpr;
+    EscapeExpr;
+    ExitExpr;
     FinallyExpr;
-
-    // non-kernel expressions
+    ForExpr;
+    ForwardExpr;
     FunCallExpr;
+    FunctionExpr;
     FunSendExpr;
     GetExpr;
-    ExitExpr;
+    HideExpr;
+    If1Expr;
+    IfExpr;
+    IndexExpr;
+    InterfaceExpr;
+    ListExpr;
+    LiteralExpr;
+    MapExpr;
+    MatchBindExpr;
+    MetaContextExpr;
+    MetaExpr;
+    MetaStateExpr;
+    MismatchExpr;
+    ModPowExpr;
+    NKAssignExpr;
+    NounExpr;
+    ObjectHeadExpr;
+    PrefixExpr;
     PropertyExpr;
     PropertySlotExpr;
-    WhileExpr;
-    SwitchExpr;
-    TryExpr;
-    MapPattern;
-    MapPatternAssoc;
-    MapPatternImport;
-    MapPatternOptional;
-    MapPatternRequired;
-    ListExpr;
-    MapExpr;
-    BindPattern;
+    QuasiExpr;           // XXX unconfuse names: this is the `...` syntax, QLiteralE an QPatternE are the holes-in-source-code syntax. same fix for *Pattern.
+    QuasiLiteralExpr;
+    QuasiParserExpr;
+    QuasiPatternExpr;
+    SameExpr;
     SendExpr;
-    CurryExpr;
-    BinaryExpr;
-    ModPowExpr;
-    AccumExpr;
-    AccumPlaceholderExpr;
-
-    // patterns
-    FinalPattern;
-    VarPattern;
-    SlotPattern;
-    ListPattern;
-    ViaPattern;
-    TailPattern;
-    FunCallPattern;
-    CallPattern;
-    GetPattern;
-    IgnorePattern;
-    GuardTestPattern;
-    SamePattern;
-    SuchThatPattern;
-    QuasiPattern;
-    QuasiLiteralPattern;
-    QuasiPatternPattern;
-
-    URI;
-    URIStart;
-    URIGetter;
-    URIExpr;
+    SeqExpr;
+    SlotExpr;
+    SwitchExpr;
     ThunkExpr;
-    FunctionExpr;
-    IndexExpr;
-
-    // object parts
-    EScript;
-    EMethod;
-    ETo;
-    EMatcher;
-    MethodObject;
-    PlumbingObject;
-    OneMethodObject;
-    FunctionObject;
-    FunctionVerb;
-
-    // quasi parts
-    QuasiExprHole;
-    QuasiPatternHole;
-
+    TryExpr;
+    UpdateExpr;
+    URIExpr;
+    WhenExpr;
+    WhileExpr;
+    
     // expression nodes that only occur as part of other syntaxes
+    AccumPlaceholderExpr;
     MessageDescExpr;
     ParamDescExpr;
     WhenFnExpr;
 
+    // patterns
+    BindPattern;
+    CallPattern;
+    FinalPattern;
+    FunCallPattern;
+    GetPattern;
+    GuardTestPattern;
+    IgnorePattern;
+    ListPattern;
+    MapPattern;
+    QuasiLiteralPattern;
+    QuasiPattern;
+    QuasiPatternPattern;
+    SamePattern;
+    SlotPattern;
+    SuchThatPattern;
+    TailPattern;
+    VarPattern;
+    ViaPattern;
+
+    // special: map pattern parts
+    MapPatternAssoc;
+    MapPatternImport;
+    MapPatternOptional;
+    MapPatternRequired;
+
+    // special: object parts
+    EMatcher;
+    EMethod;
+    EScript;
+    ETo;
+    FunctionObject;
+    FunctionVerb;
+    MethodObject;
+    OneMethodObject;
+    PlumbingObject;
+
+    // special: quasiliteral parts
+    QuasiExprHole;
+    QuasiPatternHole;
+
     // miscellaneous structure
-    List;
-    Assoc;
-    Export;
     Absent;
-    True;
-    False;
+    Assoc;
     DocComment;
+    Export;
+    False;
+    List;
+    True;
 
     //for lexer
-    HEX;
-    OCTAL;
-    WS;
-    LINESEP;
-    SL_COMMENT;
-    DOC_COMMENT;
     CHAR_LITERAL;
-    STRING;
+    DOC_COMMENT;
     ESC;
+    EXPONENT;
+    FLOAT64;
+    HEX;
     HEX_DIGIT;
     IDENT;
     INT;
+    LINESEP;
+    OCTAL;
     POSINT;
-    FLOAT64;
-    EXPONENT;
+    SL_COMMENT;
+    STRING;
+    URI;
+    URIGetter;
+    URIStart;
+    WS;
 }
 
 {

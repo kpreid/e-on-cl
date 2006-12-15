@@ -5,10 +5,12 @@ QUASICLOSE=5
 QUASIBODY=6
 QuasiContent=7
 RCURLY="}"=8
-DOLLARHOLE=9 // XXX is this used?
-ATHOLE=10 // XXX is this used?
-DOLLARCURLY=11 // XXX is this used?
-ATCURLY=12 // XXX is this used?
+DOLLARHOLE=9
+ATHOLE=10
+DOLLARCURLY=11
+ATCURLY=12
 DOLLARESC=13
 SOURCE_VALUE_HOLE=14
 SOURCE_PATTERN_HOLE=15
+
+// XXX why do these numbers start at 4?

@@ -236,44 +236,45 @@
 
 (defglobal +shared-safe-loader+
   (prefix-scope ("org.cubik.cle.prim.sharedPrimLoader" "org.cubik.cle.prim.")
+    ;; control/primitives
+    (:|equalizer|        (make-equalizer)) ;; yes, equalizers are thread safe
+    (:|E|                elib:+the-e+)
+    (:|gc|               e.extern:+gc+)
     (:|loop|             +the-looper+)
     (:|throw|            +the-thrower+)
-
-    (:|makeException|    +the-make-exception+)
-    (:|StructureException| (make-instance 'cl-type-guard :type-specifier 'e-structure-exception))
+    
+    ;; exceptions
     (:|makeCoercionFailure| e.elib::+the-make-coercion-failure+)
+    (:|makeException|    +the-make-exception+)
     (:|makeStringException| e.elib::+the-make-string-error+)
-  
-    (:|makeFinalSlot|    +the-make-simple-slot+)
-    (:|makeVarSlot|      +the-make-var-slot+)
-
+    (:|StructureException| (make-instance 'cl-type-guard :type-specifier 'e-structure-exception))
+    (:|Throwable|        elib:+the-exception-guard+)
+    
+    ;; simple makers
     (:|getCharacter|     +the-get-character+)
-    
-    (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
-    (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
-    (:|char|             (make-instance 'cl-type-guard :type-specifier 'character))
-    
-    (:|ConstList|        (make-instance 'cl-type-guard :type-specifier 'vector)) ; XXX and not string?
-    (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
+    (:|makeArray|        e.elib.tables:+the-make-array+)
+    (:|makeFinalSlot|    +the-make-simple-slot+)
+    (:|makeFlexMap|      elib:+the-make-flex-map+)
     (:|makeScope|        +the-make-scope+)
+    (:|makeSortedQueue|  elib:+the-make-sorted-queue+)
     (:|makeStaticScope|  elang:+the-make-static-scope+)
-    (:|makeSafeScope|    (wrap-function 'make-safe-scope))
     (:|makeTextWriter|   elib:+the-make-text-writer+)
+    (:|makeVarSlot|      +the-make-var-slot+)
     
     (:|makeTypeDesc|     +the-make-type-desc+)
     (:|makeMessageDesc|  +the-make-message-desc+)
     (:|makeParamDesc|    +the-make-param-desc+)
-
-    (:|makeArray|        e.elib.tables:+the-make-array+)
-    (:|makeFlexMap|      elib:+the-make-flex-map+)
-    (:|makeSortedQueue|  elib:+the-make-sorted-queue+)
     
-    (:|Throwable|        elib:+the-exception-guard+)
-
-    (:|equalizer|        (make-equalizer)) ;; yes, equalizers are thread safe
-    (:|E|                elib:+the-e+)
+    ;; data guards
+    (:|char|             (make-instance 'cl-type-guard :type-specifier 'character))
+    (:|ConstList|        (make-instance 'cl-type-guard :type-specifier 'vector)) ; XXX and not string?
+    (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
+    (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
+    (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
     
-    (:|gc|               e.extern:+gc+)))
+    ;; tools
+    (:|makeSafeScope|    (wrap-function 'make-safe-scope))    
+    ))
 
 ; xxx review which of these ought to be moved to safe-extern-scope
 (defun make-primitive-loader ()
@@ -434,6 +435,8 @@
       (car value-box))
     (:|isFinal| () elib:+e-true+)))
 
+;; XXX review the things put in safe-extern-loader vs. in shared-safe-loader; seems arbitrary
+
 (defun make-safe-extern-loader ()
   (lazy-prefix-scope ("__cle_safe_extern" "")
 
@@ -563,8 +566,8 @@
         ; XXX should boolean be an ordered space?
         ("boolean"    ,(type-specifier-to-guard 'e-boolean))
         ("String"     ,(type-specifier-to-guard 'string))
-        ("Twine"      ,(type-specifier-to-guard 'elib:twine))
         ("TextWriter" ,elib:+the-text-writer-guard+)
+        ("Twine"      ,(type-specifier-to-guard 'elib:twine))
 
         ; --- primitive: reference operations (shared) ---        
         ("__auditedBy" ,+the-audit-checker+)
@@ -600,61 +603,59 @@
           ("&require"   ,(lazy-import "org.erights.e.elang.interp.require"))
           
           ; --- data constructors (non-shared) ---
-          ("&__makeOrderedSpace" ,(lazy-import "org.erights.e.elang.coord.OrderedSpaceMaker"))
           ("&term__quasiParser"  ,(typical-lazy "<import:org.quasiliteral.quasiterm.makeQBuilder>.getTerm__quasiParser()"))
+          ("&__makeOrderedSpace" ,(lazy-import "org.erights.e.elang.coord.OrderedSpaceMaker"))
       
           ; --- data guards: atomic (non-shared) ---
-          ("&int"       ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.int>, \"int\")"))
-          ("&float64"   ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.float64>, \"float64\")"))
           ("&char"      ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.char>, \"char\")"))    
+          ("&float64"   ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.float64>, \"float64\")"))
+          ("&int"       ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.int>, \"int\")"))
           
           ; --- data guards: nonatomic, nonprimitive ---
           ("&all"         ,(lazy-import "org.erights.e.elib.slot.makeIntersectionGuard"))
-          ("&Not"         ,(lazy-import "org.erights.e.elib.slot.makeNegatedGuard"))
           ("&List"        ,(lazy-import "org.erights.e.elib.slot.List"))
           ("&Map"         ,(lazy-import "org.erights.e.elib.slot.Map"))
+          ("&Not"         ,(lazy-import "org.erights.e.elib.slot.makeNegatedGuard"))
           ("&Set"         ,(typical-lazy "<import:org.erights.e.elib.tables.ConstSet>.asType()"))
           ("&Tuple"       ,(lazy-import "org.erights.e.elib.slot.Tuple"))
           ("&__Portrayal" ,(typical-lazy "Tuple[any, String, List[any]]"))
   
           ; --- protocol/guard constructors ---
-          ("&__makeProtocolDesc" ,(lazy-import "org.erights.e.elang.interp.makeProtocolDesc"))
           ("&__makeMessageDesc"  ,(lazy-import "org.erights.e.elib.base.makeMessageDesc"))
           ("&__makeParamDesc"    ,(lazy-import "org.erights.e.elib.base.makeParamDesc"))
+          ("&__makeProtocolDesc" ,(lazy-import "org.erights.e.elang.interp.makeProtocolDesc"))
           
           ; --- utility: guard meta ---
-          ("&__makeGuard" ,(typical-lazy "def stubMakeGuard(_) :any { return def stubBaseGuard {} }"))
           ; The ValueGuard and Guard guards do not currently reject anything, but this may change (e.g. DeepFrozen)
-          ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
           ("&Guard"       ,(lazy-import "org.erights.e.elib.slot.type.Guard"))
+          ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
+          ("&__makeGuard" ,(typical-lazy "def stubMakeGuard(_) :any { return def stubBaseGuard {} }"))
       
           ; --- utility: guards ---
-          ("&nullOk"    ,(lazy-import "org.erights.e.elib.slot.nullOk"))
           ("&notNull"   ,(lazy-import "org.erights.e.elang.interp.notNull"))
+          ("&nullOk"    ,(lazy-import "org.erights.e.elib.slot.nullOk"))
           
           ; --- utility: reference conditions ---
-          ("&PassByCopy" ,(lazy-import "org.erights.e.elib.serial.PassByCopy"))
-          ("&DeepPassByCopy" 
-                         ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
-          ("&Data" 
-                         ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
+          ("&Data"       ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
+          ("&DeepPassByCopy" ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
           ("&near"       ,(lazy-import "org.erights.e.elib.slot.near"))
-          ("&vow"        ,(lazy-import "org.erights.e.elang.interp.vow"))
+          ("&PassByCopy" ,(lazy-import "org.erights.e.elib.serial.PassByCopy"))
           ("&rcvr"       ,(lazy-import "org.erights.e.elang.interp.rcvr"))
+          ("&vow"        ,(lazy-import "org.erights.e.elang.interp.vow"))
           
           ; --- E language ---
+          ("&epatt__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.epatt__quasiParser"))
+          ("&e__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.makeEParser"))
           ("EAudition" ,e.elang.compiler::+e-audition-guard+)
           ("__eval" ,e.elang.compiler::+the-evaluator+) ; XXX fix package
-          ("&e__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.makeEParser"))
-          ("&epatt__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.epatt__quasiParser"))
           
           ; --- utility: data ---
-          ("&simple__quasiParser" ,(lazy-import "org.quasiliteral.text.simple__quasiParser"))
           ("&rx__quasiParser" ,(lazy-import "org.erights.e.elang.interp.PerlMatchMakerMaker"))
+          ("&simple__quasiParser" ,(lazy-import "org.quasiliteral.text.simple__quasiParser"))
               
           ; --- utility: alias loaders ---
-          ("&elib__uriGetter"   ,(lazy-import "org.erights.e.elib.*"))
           ("&elang__uriGetter"  ,(lazy-import "org.erights.e.elang.*"))
+          ("&elib__uriGetter"   ,(lazy-import "org.erights.e.elib.*"))
           ("&type__uriGetter"   ,(lazy-import "org.erights.e.elang.interp.typeLoader"))
           
           ; --- utility: EIO ---
@@ -663,20 +664,20 @@
           ; --- utility: used by expansions ---
           ;; XXX these FQNs and scope nouns should be discussed
           ("&__bind"         ,(lazy-import "org.erights.e.elang.expand.makeViaBinder"))
-          ("&__mapEmpty"     ,(lazy-import "org.erights.e.elang.expand.viaEmptyMap"))
-          ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.expand.makeViaExtractor"))
-          ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.expand.makeViaQuasi"))
-          ("&__matchSame"    ,(lazy-import "org.erights.e.elang.expand.makeViaSame"))
-          ("&__suchThat"     ,(lazy-import "org.erights.e.elang.expand.suchThat"))
+          ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
           ("&__comparer"     ,(lazy-import "org.erights.e.elang.expand.comparer"))
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.expand.__makeVerbFacet"))
-          ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
+          ("&__mapEmpty"     ,(lazy-import "org.erights.e.elang.expand.viaEmptyMap"))
+          ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.expand.makeViaExtractor"))
+          ("&__matchSame"    ,(lazy-import "org.erights.e.elang.expand.makeViaSame"))
+          ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.expand.makeViaQuasi"))
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
+          ("&__suchThat"     ,(lazy-import "org.erights.e.elang.expand.suchThat"))
           ("&__switchFailed" ,(lazy-import "org.erights.e.elang.expand.__switchFailed"))
 
           ; --- utility: miscellaneous ---
-          ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
+          ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
           
           ; --- XXX describe this category ---
           ;; XXX remove this special and use a parameter instead
