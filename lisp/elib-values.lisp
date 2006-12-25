@@ -385,7 +385,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (dotimes (i times)
         (setf (subseq result (* step i)) vector))
       result))
-  (:|iterate| (vector func)
+  (:|iterate| (vector func) ; optimization and required for bootstrap sanity
     (loop for i from 0
           for elem across vector
           do  (efuncall func i elem))
@@ -401,8 +401,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                                         (array-element-type vector))
                               :from-end t)
         -1))
-  (:|startOf| (vector subseq)
-    (e. vector |startOf| subseq 0))
   (:|startOf| (vector subseq start)
     (e-coercef subseq 'vector)
     (e-coercef start `(integer 0 ,(length vector)))
@@ -416,25 +414,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                                         (array-element-type vector))
                               :from-end t)
         -1))
-  (:|run| (this start end)
+  (:|run| (this start end) ; optimization
     ;; subseq is not required to do range checks
     (e-coercef start `(integer 0 ,(length this)))
     (e-coercef end `(integer ,start ,(length this)))
     (subseq this start end))
-  (:|run| (this start)
-    (e. this |run| start (length this)))
   (:|with| (vector elem)
     (concatenate 'vector vector (list elem)))
-  (:|snapshot/0| 'identity)
-  (:|diverge| (this)
-    (e. this |diverge| +the-any-guard+))
-  (:|diverge| (this value-guard)
-    "Returns a FlexList with the same initial contents as this, with the specified element guard."
-    (e. (e-import "org.erights.e.elib.tables.makeFlexList")
-      |diverge|
-      this
-      value-guard))
-  (:|printOn| (this left sep right tw)
+  (:|snapshot/0| 'identity) ; optimization
+
+  (:|printOn| (this left sep right tw) ; bootstrap sanity
     "Prints 'left', the values separated by 'sep', and 'right'.
 
 'left' value0 'sep' ... 'right'"
@@ -447,12 +436,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       do (e. tw |print| prefix)
          (e. tw |quote| elem))
     (e. tw |print| right))
+  
   (:|sort| (vector)
     (stable-sort (copy-seq vector)
                  (e.elib.tables::comparer-adapter)))
   (:|sort| (vector comparer)
     (stable-sort (copy-seq vector) 
                  (lambda (a b) (e-is-true (e. (efuncall comparer a b) |belowZero|))))))
+
+(defmethod e-call-match ((rec vector) mverb &rest args)
+  (apply #'sugar-cache-call rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
 
 (defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
     (:stamped  +deep-frozen-stamp+)

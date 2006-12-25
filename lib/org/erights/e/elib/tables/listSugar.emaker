@@ -47,6 +47,9 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen {
   to size(self) { childResponsibility(self, "size/0") }
   to valueType(self) { childResponsibility(self, "valueType/0") }
 
+  # XXX nonatomic
+  to last(self) { return self.get(self.size().prev()) }
+
   to iterate(self, assocFunc) {
     var i := 0
     def size := self.size()
@@ -56,6 +59,7 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen {
     }
   }
   
+  to run(self,start) { return self.run(start, self.size()) } #XXX nonatomic
   to run(self, start :int, endd :int) {
     return __makeList.fromIteratableValues(
       def _ { to iterate(assocFunc) {
@@ -69,16 +73,22 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen {
   to snapshot(self) {
     return __makeList.fromIteratableValues(self)
   }
-  to diverge(self, valueGuard) {
-    return self.snapshot().diverge(valueGuard) # XXX unnecessarily inefficient
-  }
+  
   to diverge(self) {
     return self.diverge(any)
   }
+  /** Returns a FlexList with the same initial contents as this, with the specified element guard. */
+  to diverge(self, valueGuard) {
+    return <import:org.erights.e.elib.tables.makeFlexList>.diverge(self, valueGuard)
+  }
+  
   to readOnly(self) {
     return makeReadOnlyList(self)
   }
   
+  to startOf(self, sublist) { return self.startOf(sublist, 0) }
+  
+  # depends on snapshots implementing sort
   to sort(self)           { return self.snapshot().sort()         }
   to sort(self, compFunc) { return self.snapshot().sort(compFunc) }
   
@@ -95,4 +105,6 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen {
     }
     out.write(closeS)
   }
+
+  
 }

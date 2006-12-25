@@ -1,3 +1,4 @@
+
 ; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
@@ -574,7 +575,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       nil)))
 
 (defmethod e-call-match ((rec const-map) mverb &rest args)
-  (e-call (e-import "org.erights.e.elib.tables.mapSugar") (unmangle-verb mverb) (cons rec args)))
+  (apply #'sugar-cache-call rec mverb 'const-map "org.erights.e.elib.tables.mapSugar" args))
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
 (def-class-opaque const-map)

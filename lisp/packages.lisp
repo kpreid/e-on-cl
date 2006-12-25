@@ -111,6 +111,9 @@
     :enqueue-timed
     :vr-add-io-handler
     :vr-remove-io-handler
+    
+    :sugar-cache-get 
+    :sugar-cache-call
   
     :e-call :e-call-dispatch :e.
     :e-send :e-send-dispatch :e<-

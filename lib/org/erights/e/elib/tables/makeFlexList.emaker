@@ -112,8 +112,7 @@ def makeFlexList implements EventuallyDeepFrozen {
 
   to diverge(source, valueGuard) {
     # XXX coerce on insertion instead of building a temporary list
-    # XXX accept any kind of list, even if mutable, as input
-    def contents :List[valueGuard] := source
+    def contents :List[valueGuard] := source.snapshot()
     return makeFlexList._fromArray(makeArray.fromSequence(contents, true), valueGuard)
   }
 }

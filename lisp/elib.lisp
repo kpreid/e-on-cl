@@ -453,6 +453,10 @@ If there is no current vat at initialization time, captures the current vat at t
           :initform nil
           :type (or null string)
           :reader label)
+   (sugar-cache :initform (make-hash-table)
+                :type hash-table
+                :reader sugar-cache
+                :documentation "Tentative: For looking up objects which are sugar-parents for objects shared between vats.")
    (e.rune::incorporated-files :initform nil
                                :type list
                                :accessor e.rune::incorporated-files)))
@@ -567,6 +571,22 @@ If there is no current vat at initialization time, captures the current vat at t
 (defun reffify-args (args)
   "See *EXERCISE-REFFINESS*."
   (mapcar (lambda (x) (make-instance 'forwarding-ref :target x)) args))
+
+(declaim (inline sugar-cache-get))
+(defun sugar-cache-get (eq-key fqn)
+  (let ((cache (sugar-cache *vat*)))
+    (gethash eq-key cache
+      (setf (gethash eq-key cache)
+        (e-import fqn)))))
+
+(declaim (inline sugar-cache-call))
+(defun sugar-cache-call (rec mverb key fqn &rest args)
+  (apply #'e-call-dispatch
+    (sugar-cache-get key fqn)
+    (multiple-value-bind (verb arity) (unmangle-verb mverb)
+      (mangle-verb verb (1+ arity)))
+    rec
+    args))
 
 ; --- Type description objects ---
 
