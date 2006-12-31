@@ -82,7 +82,7 @@
 
 (cl:defpackage :e.elib
   (:nicknames :elib)
-  (:use :cl :e.util)
+  (:use :cl :e.util :trivial-garbage)
   (:export 
     :*compatible-catch-leakage*
     :*break-on-ejections*

@@ -14,8 +14,10 @@
 ;; The perform method is defined later in compiler-entry.lisp.
 
 (defsystem e-on-cl
-  :depends-on (:cl-ppcre :genhash :cl-fad)
-  ; cl-ppcre dependency could be made lazy
+  :depends-on (:cl-fad
+               :cl-ppcre
+               :genhash
+               :trivial-garbage)
   :components
   ((:module "lisp" :components
     ((:file "packages")

@@ -56,6 +56,9 @@
           (prin1-to-string symbol)))
       (e. tw |write| ">")
       nil)
+    (:|asSymbol| ()
+      "The symbol object itself."
+      symbol)
     (:|getValue| ()
       "CL:SYMBOL-VALUE"
       (symbol-value symbol))

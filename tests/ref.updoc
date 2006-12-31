@@ -235,3 +235,23 @@ Broken reference details
   
   # stdout: <ref broken by problem: biff>
 
+Checking that a chain of promises does not accumulate a chain of resolved forwarders.
+
+  ? def [p, var r] := Ref.promise()
+  # value: [<Promise>, <Resolver>]
+  
+  ? for _ in 1..20 {
+  >   def [q, s] := Ref.promise()
+  >   r.resolve(q)
+  >   r := s
+  > }
+  > r.resolve(true)
+  
+  checking our assumption
+  ? lisp["CL", "TYPE-OF"].getFunction()(p)
+  # value: FORWARDING-REF
+  
+  checking the actual desired condition
+  ? lisp["CL", "TYPE-OF"].getFunction()(
+  >   lisp["CL", "SLOT-VALUE"].getFunction()(p, lisp["E.ELIB", "TARGET"].asSymbol()))
+  # value: E-BOOLEAN

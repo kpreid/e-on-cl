@@ -268,15 +268,13 @@ If there is no current vat at initialization time, captures the current vat at t
         (*print-circle* t))      ; !!
     (ccase state
       ((eventual)
-        (print-unreadable-object (ref stream)
+        (print-unreadable-object (ref stream :type t :identity t)
           (format stream "Eventual")))
       ((broken) ; XXX multiple-value-bind the state
-        (print-unreadable-object (ref stream)
+        (print-unreadable-object (ref stream :type t)
           (format stream "broken by ~A" (ref-opt-problem ref))))
       ((near)     
-        (if *print-readably*
-          (error 'print-not-readable 'object ref)
-          (format stream "#<ref>:~W" (ref-shorten ref)))))))
+        (call-next-method)))))
 
 ; XXX declare this inline
 (defun make-unconnected-ref (problem)
@@ -288,7 +286,12 @@ If there is no current vat at initialization time, captures the current vat at t
 (defclass promise-ref (ref) 
   ((buffer :initform (make-array 0 :fill-pointer 0 :adjustable t)
            :type (array list)
-           :documentation "Messages are pushed on the end of this vector.")))
+           :documentation "Messages are pushed on the end of this vector.")
+   (weak-when-more-resolved 
+     :initform (make-weak-hash-table :weakness :key)
+     :type hash-table
+     :documentation "Stores weak when-more-resolved messages for reference shortening."
+     :reader %weak-when-more-resolved-table)))
 
 (defmethod %ref-shorten ((ref promise-ref))
   ref)
@@ -301,10 +304,25 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmethod e-send-dispatch ((ref promise-ref) mverb &rest args)
   ; XXX provide send-only
-  (with-slots (buffer target) ref
+  (with-slots (buffer) ref
     (multiple-value-bind (promise resolver) (make-promise)
       (vector-push-extend (list resolver mverb args) buffer)
       promise)))
+
+(defgeneric weak-when-more-resolved (ref weak-reactor action))
+
+(defmethod weak-when-more-resolved ((ref t) weak-reactor action)
+  (declare (ignore weak-reactor action))
+  (values))
+
+(defmethod weak-when-more-resolved ((ref ref) weak-reactor action)
+  (declare (ignore weak-reactor action))
+  (error "weak-when-more-resolved unimplemented for ~S" ref))
+
+(defmethod weak-when-more-resolved ((ref promise-ref) weak-reactor action)
+  (setf (gethash weak-reactor (%weak-when-more-resolved-table ref))
+        action)
+  (values))
 
 ; - broken-ref -
 
@@ -336,6 +354,10 @@ If there is no current vat at initialization time, captures the current vat at t
   (broken-ref-magic ref mverb args)
   ref)
 
+(defmethod weak-when-more-resolved ((ref broken-ref) weak-reactor action)
+  (declare (ignore weak-reactor action))
+  (values))
+
 ; - identified ref -
 
 (defclass identified-ref (ref) 
@@ -353,6 +375,10 @@ If there is no current vat at initialization time, captures the current vat at t
       (when (eq state 'eventual)
         (assert tag () "implementation inconsistency: identified-ref claiming to be unresolved")))
     (values-list result)))
+
+(defmethod weak-when-more-resolved ((ref broken-ref) weak-reactor action)
+  (declare (ignore weak-reactor action))
+  (values))
 
 ; - kinds of broken refs - 
 
@@ -378,27 +404,47 @@ If there is no current vat at initialization time, captures the current vat at t
 ;;;; - forwarding-ref -
 
 (defclass forwarding-ref (ref)
-  ((target :initarg :target))
-  (:documentation "Unconditionally forwards to another reference, whether a 'ref or not."))
+  ((target :accessor forwarding-ref-target))
+  (:documentation "Unconditionally forwards to another reference, whether a REF or not."))
+
+(defmethod print-object ((ref forwarding-ref) stream)
+  (if *print-readably*
+    (error 'print-not-readable :object ref)
+    (progn
+      (print-unreadable-object (ref stream :type t :identity t))
+      (format stream ":~W" (forwarding-ref-target ref)))))
+
+(defmethod shared-initialize ((ref forwarding-ref) slot-names &key (target nil target-supplied-p) &allow-other-keys)
+  (assert target-supplied-p)
+  (setf (forwarding-ref-target ref) target)
+  (call-next-method))
+
+(defmethod weak-when-more-resolved ((ref forwarding-ref) weak-reactor action)
+  (weak-when-more-resolved (slot-value ref 'target) weak-reactor action))
+
+(defmethod (setf forwarding-ref-target) :after (new-target (ref forwarding-ref))
+  (weak-when-more-resolved
+    new-target
+    ref
+    (lambda (ref)
+      #+(or) (warn "got to forwarding-ref shortener for ~S" ref)
+      (ref-shorten ref))))
 
 ; XXX we could eliminate the need for these individual forwarders by having the methods specialized on 'ref forward to the ref-shortening of this ref if it's distinct
 
 (defmethod %ref-shorten ((ref forwarding-ref))
   ; NOTE: this is also implemented in REF-SHORTEN
-  (with-slots (target) ref
-    (setf target (ref-shorten target))))
+  (setf (forwarding-ref-target ref) 
+        (ref-shorten (forwarding-ref-target ref))))
 
 (defmethod ref-state ((ref forwarding-ref))
-  (with-slots (target) ref
-    (ref-state target)))
+  (ref-state (forwarding-ref-target ref)))
 
 (defmethod e-call-dispatch ((ref forwarding-ref) mverb &rest args)
-  (with-slots (target) ref
-    (apply #'e-call-dispatch target mverb args)))
+  (apply #'e-call-dispatch (forwarding-ref-target ref) mverb args))
 
 (defmethod e-send-dispatch ((ref forwarding-ref) mverb &rest args)
-  (with-slots (target) ref
-    (apply #'e-send-dispatch target mverb args)))
+  (apply #'e-send-dispatch (forwarding-ref-target ref) mverb args))
 
 ; - vat -
 
@@ -1385,8 +1431,8 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (typecase x
     ((not ref) x)
     (forwarding-ref
-      (with-slots (target) x
-        (setf target (ref-shorten target))))
+      (setf (forwarding-ref-target x) 
+            (ref-shorten (forwarding-ref-target x))))
     (t
       (%ref-shorten x))))
 
@@ -1396,7 +1442,8 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 (declaim (inline promise-ref-resolve))
 (defun promise-ref-resolve (ref new-target
-    &aux (buffer (slot-value ref 'buffer)))
+    &aux (buffer (slot-value ref 'buffer))
+         (weak-wmrs (%weak-when-more-resolved-table ref)))
   (declare (type promise-ref ref)
            (type (vector list) buffer))
   (setf new-target (ref-shorten new-target))
@@ -1408,7 +1455,13 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   ; after change-class, the buffer has been dropped by the ref
   ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet
   (loop for (resolver mverb args) across buffer do
-    (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))))
+    (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args)))
+  
+  (maphash (lambda (reactor action)
+             (funcall action reactor))
+           weak-wmrs)
+  
+  (values))
 
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
   (defun resolve-race (this target)

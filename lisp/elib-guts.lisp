@@ -465,6 +465,12 @@
   (with-slots (handler) ref
     (e<- handler |handleSendAll| (e-util:unmangle-verb mverb) (coerce args 'vector))))
 
+(defmethod weak-when-more-resolved ((ref proxy-ref) weak-reactor action)
+  (declare (ignore weak-reactor action))
+  ;; XXX implement this to invoke the handler. until then, multivat 
+  ;; tail-recursive loops may leak forwarding-refs.
+  (values))
+
 
 (defclass far-ref (proxy-ref identified-ref)
   ())
