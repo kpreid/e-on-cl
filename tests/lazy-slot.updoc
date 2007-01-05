@@ -1,0 +1,47 @@
+# Copyright 2004 Hewlett Packard, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def makeLazySlot := <import:org.erights.e.elib.slot.makeLazySlot>
+  # value: <makeLazySlot>
+  
+  ? makeLazySlot :DeepFrozen
+  # value: <makeLazySlot>
+  
+  ? # Normal
+  > def &foo := makeLazySlot(thunk { println("foof"); "food" })
+  # value: <lazySlot>
+  
+  ? (&foo).isFinal()
+  # value: true
+  
+  ? (&foo).setValue("mood")
+  # problem: this lazy Slot may not be changed
+  
+  ? foo
+  # stdout: foof
+  #         
+  
+  # value: "food"
+
+  ? foo
+  # value: "food"
+  
+  ? # Throwing by maker
+  > def &bar := makeLazySlot(thunk { println("barn"); throw("bare") })
+  # value: <lazySlot>
+  
+  ? bar
+  # stdout: barn
+  #         
+  
+  # problem: bare
+  
+  ? bar
+  # problem: bare
+  
+  ? # Ejecting by maker
+  > def baz; escape out { bind baz := makeLazySlot(thunk { out("bass") }); baz.getValue() }
+  # value: "bass"
+  
+  ? baz.getValue()
+  # problem: nonlocal exit by lazy slot's maker

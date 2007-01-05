@@ -20,7 +20,10 @@ def makeLazySlot implements DeepFrozen {
               v__Resolver.resolveRace(getter := Ref.broken(p))
               throw(p)
             } finally {
-              v__Resolver.resolveRace(getter := Ref.broken("nonlocal exit by lazy slot's maker"))
+              if (!Ref.isResolved(v)) {
+                v__Resolver.resolveRace(getter := 
+                  Ref.broken("nonlocal exit by lazy slot's maker"))
+              }
             }
             return v
         }
@@ -34,46 +37,3 @@ def makeLazySlot implements DeepFrozen {
         return lazySlot
     }
 }
-
-  ? def makeLazySlot := <import:org.erights.e.elib.slot.makeLazySlot>
-  # value: <makeLazySlot>
-  
-  ? makeLazySlot :DeepFrozen
-  # value: <makeLazySlot>
-  
-  ? # Normal
-  > def &foo := makeLazySlot(thunk { println("foof"); "food" })
-  # value: <lazySlot>
-  
-  ? foo.isFinal()
-  # value: true
-  
-  ? foo.setValue("mood")
-  # problem: this lazy Slot may not be changed
-  
-  ? foo
-  # stdout: foof
-  
-  # value: "food"
-
-  ? foo
-  # value: "food"
-  
-  ? # Throwing by maker
-  > def &bar := makeLazySlot(thunk { println("barn"); throw("bare") })
-  # value: <lazySlot>
-  
-  ? bar
-  # stdout: barn
-  
-  # problem: bare
-  
-  ? bar
-  # problem: bare
-  
-  ? # Ejecting by maker
-  > def baz; eject out { bind baz := makeLazySlot(thunk { out("bass") }); baz.getValue() }
-  # value: "bass"
-  
-  ? baz.getValue()
-  # problem: nonlocal exit by lazy slot's maker
