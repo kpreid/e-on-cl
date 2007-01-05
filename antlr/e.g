@@ -294,6 +294,7 @@ setSyntax![Token arg]: {
         myPocket.put("anon-lambda", "enable");
         myPocket.put("plumbing", "enable");
         myPocket.put("noun-string", "disable");
+        myPocket.put("thunk", "enable");
         myPocket.put("trinary-define", "disable");
         myPocket.put("verb-curry", "disable");
     } else if ("0.9".equals(syntaxName)) {
@@ -302,6 +303,7 @@ setSyntax![Token arg]: {
         myPocket.put("anon-lambda", "enable");
         myPocket.put("plumbing", "enable");
         myPocket.put("noun-string", "enable");
+        myPocket.put("thunk", "disable");
         myPocket.put("trinary-define", "enable");
         myPocket.put("verb-curry", "enable");
     } else {
@@ -401,9 +403,9 @@ whileExpr:      "while"^ parenExpr block  {##.setType(WhileExpr);}  (catcher)? ;
 
 escapeExpr:     "escape"^ pattern block optCatchClause {##.setType(EscapeExpr);} ;
 
-thunkExpr:      "thunk"^ block    {##.setType(ThunkExpr);}  ;
+thunkExpr:      "thunk"^ pocket["thunk"] block {##.setType(ThunkExpr);} ;
 
-fnExpr:         "fn"^ patternList block pocket["anon-lambda"]
+fnExpr:         "fn"^ pocket["anon-lambda"] patternList block
                     {##.setType(FunctionExpr);}  ;
 
 switchExpr:     "switch"^ parenExpr
