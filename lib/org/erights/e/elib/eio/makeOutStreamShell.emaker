@@ -16,7 +16,7 @@ def makeOutStreamShell implements DeepFrozen {
   
     def [streamShell, &available, triggerAvailable] := \
       makeStreamShell(Element,
-                      thunk {impl.terminate(terminator)},
+                      fn {impl.terminate(terminator)},
                       if (impl.__respondsTo("wants", 1)) {impl.wants} \
                                                     else {def stubWants(_) {}})
     

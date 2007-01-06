@@ -55,8 +55,8 @@ bind mapSugar extends sugarRoot implements EventuallyDeepFrozen {
   method getKeys(self) { childResponsibility(self, "getKeys/0") }
   method getPair(self) { childResponsibility(self, "getPair/0") }
 
-  method get(self, key) { self.fetch(key, thunk{ throw(E.toQuote(key) + " not found") }) }
-  to maps(self, key) :boolean { self.fetch(key, thunk{ return false }); return true }
+  method get(self, key) { self.fetch(key, fn{ throw(E.toQuote(key) + " not found") }) }
+  to maps(self, key) :boolean { self.fetch(key, fn{ return false }); return true }
   
   to iterate(self, assocFunc) {
     for key in self.getKeys() {

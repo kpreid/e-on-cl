@@ -36,7 +36,7 @@ def require0 { # implements DeepFrozen
     }
 }
 
-    ? require(2 == 3, thunk{"foo"})
+    ? require(2 == 3, fn{"foo"})
     # problem: foo
     #
     #   <elang:interp.Thrower>("foo")
@@ -45,7 +45,7 @@ def require0 { # implements DeepFrozen
     #   /**  * Needs a docComment  */ def _ {     \
     #   to run :any {         "foo"     } })`)
 
-    ? require(2 == 2, thunk{"foo"})
+    ? require(2 == 2, fn{"foo"})
     ? require(2 == 3)
     # problem: required condition failed
     #

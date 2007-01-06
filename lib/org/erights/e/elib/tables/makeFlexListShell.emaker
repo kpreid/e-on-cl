@@ -8,9 +8,9 @@ def listSugar := <import:org.erights.e.elib.tables.listSugar>
 
 /** Check that start..!endd is a subrange of 0..!size. */
 def listRangeChecks(start, endd, size, name) implements DeepFrozen {
-  require(0 <= start,    thunk{`$name start < 0: $start`})
-  require(start <= endd, thunk{`$name range has negative length: $start..!$endd`})
-  require(endd <= size,  thunk{`$name bound > $size: $endd`})
+  require(0 <= start,    fn{`$name start < 0: $start`})
+  require(start <= endd, fn{`$name range has negative length: $start..!$endd`})
+  require(endd <= size,  fn{`$name bound > $size: $endd`})
 }
         
 def makeFlexListShell implements DeepFrozen {

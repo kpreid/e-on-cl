@@ -37,7 +37,7 @@ Asynchronous
   ? def [o, i] := EIO.pipe(["synchronous" => false, "label" => "async test"])
   # value: [->"async test" pipe, <-"async test" pipe]
 
-  ? def iap := i.whenAvailable(1, thunk { println(`${i.available()} available.`); "ia" })
+  ? def iap := i.whenAvailable(1, fn { println(`${i.available()} available.`); "ia" })
   # value: <Promise>
   
   ? o.write("xy"); "result"

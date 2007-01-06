@@ -34,7 +34,7 @@ Promptness of availability propagation
   > def bm := mapStream(any, bi, __makeList)
   > null
   
-  ? bm.whenAvailable(2, thunk{print("got")})
+  ? bm.whenAvailable(2, fn{print("got")})
   # value: <Promise>
 
   ? bo.write([1, 2, 3]); bm.available()

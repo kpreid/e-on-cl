@@ -145,7 +145,7 @@ def metaparser := makeLALR1Parser(
         def valueMaker {
           to substitute(args :List) {
             def terminalMap := accum [].asMap() for x in terminalSymbols { _.with(args[x], x) }
-            require(terminalMap.size() == terminalSymbols.size(), thunk {`duplicate terminals in $args`}) # this could be done more simply with a strict 'with'
+            require(terminalMap.size() == terminalSymbols.size(), fn {`duplicate terminals in $args`}) # this could be done more simply with a strict 'with'
             
             def quasiResultParser implements EventuallyDeepFrozen {
               # must be E.D.F. since args can be anything
@@ -165,7 +165,7 @@ def metaparser := makeLALR1Parser(
                 def intermediate := ePlainParser.parse(mapStream(any, stream,
                   def quasiParserSymbolizer(token) {
                     def [sym, val] := token
-                    return [terminalMap.fetch(sym, thunk{throw(`${E.toQuote(sym)} is not a terminal symbol in $quasiResultParser`)}), val]
+                    return [terminalMap.fetch(sym, fn{throw(`${E.toQuote(sym)} is not a terminal symbol in $quasiResultParser`)}), val]
                   }))
                 
                 return \
@@ -188,7 +188,7 @@ def metaparser := makeLALR1Parser(
         }
         return valueMaker
       }],
-   ["productions", [], thunk{[]}],
+   ["productions", [], fn{[]}],
    ["productions", ["production", "productions"],
       listAction],
    ["production", ["symbol", "derives", "seq", "end"],
@@ -199,7 +199,7 @@ def metaparser := makeLALR1Parser(
       def _(symbol,_,seq,_,actionIndex,_) {
         return [symbol, seq, actionIndex]
       }],
-   ["seq", [], thunk{[]}],
+   ["seq", [], fn{[]}],
    ["seq", ["item", "seq"], listAction],
    ["item", ["symbol"], __identityFunc],
    ["item", ["Quasi$"], __identityFunc]],

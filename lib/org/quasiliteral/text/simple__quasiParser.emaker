@@ -9,7 +9,7 @@ pragma.enable("accumulator")
 
 def getOrMake(cache, compile, templateTwine :Twine) {
   def templateString :String := templateTwine
-  return cache.fetch(templateString, thunk {
+  return cache.fetch(templateString, fn {
     cache[templateString] := compile(templateTwine)
   })
 }
@@ -39,7 +39,7 @@ def parse(var template, builder) {
 
     def tag := template[0]
     
-    require(template.size() >= 2, thunk{"template ends at special character: " + template})
+    require(template.size() >= 2, fn{"template ends at special character: " + template})
     switch (template[1]) {
     
       match ==tag {

@@ -67,10 +67,10 @@ Outer scope methods part 2, and checking that aScope has the expected contents.
   
  fetch/2
  
-  ? aScope.fetch("y", thunk {print("fail"); 11})
+  ? aScope.fetch("y", fn {print("fail"); 11})
   # value: 484
   
-  ? aScope.fetch("z", thunk {print("fail"); 11})
+  ? aScope.fetch("z", fn {print("fail"); 11})
   # stdout: fail
   
   # value: 11

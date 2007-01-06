@@ -8,7 +8,7 @@
   # value: <makeLazySlot>
   
   ? # Normal
-  > def &foo := makeLazySlot(thunk { println("foof"); "food" })
+  > def &foo := makeLazySlot(fn { println("foof"); "food" })
   # value: <lazySlot>
   
   ? (&foo).isFinal()
@@ -27,7 +27,7 @@
   # value: "food"
   
   ? # Throwing by maker
-  > def &bar := makeLazySlot(thunk { println("barn"); throw("bare") })
+  > def &bar := makeLazySlot(fn { println("barn"); throw("bare") })
   # value: <lazySlot>
   
   ? bar
@@ -40,7 +40,7 @@
   # problem: bare
   
   ? # Ejecting by maker
-  > def baz; escape out { bind baz := makeLazySlot(thunk { out("bass") }); baz.getValue() }
+  > def baz; escape out { bind baz := makeLazySlot(fn { out("bass") }); baz.getValue() }
   # value: "bass"
   
   ? baz.getValue()

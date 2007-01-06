@@ -17,7 +17,7 @@
   ? stream.available()  
   # value: 0
   
-  ? def wmatest(i) :void { stream.whenMoreAvailable(thunk{ print(`more $i`); wmatest(i + 1) }) }; wmatest(1)
+  ? def wmatest(i) :void { stream.whenMoreAvailable(fn{ print(`more $i`); wmatest(i + 1) }) }; wmatest(1)
   
   ? streamBackend.setAvailable(10)
   # stdout: more 1
@@ -149,17 +149,17 @@ whenAvailable
   > })
   # value: -><impl>
   
-  ? stream.whenAvailable(0, thunk { print("wa1"); '1' })
+  ? stream.whenAvailable(0, fn { print("wa1"); '1' })
   # stdout: wa1
   
   # value: '1'
   
-  ? def wap2 := stream.whenAvailable(4, thunk { print("wa2"); '2' })
+  ? def wap2 := stream.whenAvailable(4, fn { print("wa2"); '2' })
   # stdout: wants 4
   
   # value: <Promise>
 
-  ? stream.whenAvailable(4, thunk { print("wa3"); '3' })
+  ? stream.whenAvailable(4, fn { print("wa3"); '3' })
   # problem: whenAvailable reactor <_> already registered
   
   ? streamBackend.setAvailable(2)
@@ -172,7 +172,7 @@ whenAvailable
   ? wap2
   # value: '2'
 
-  ? def wap4 := stream.whenAvailable(7, thunk { throw("blargh") })
+  ? def wap4 := stream.whenAvailable(7, fn { throw("blargh") })
   # stdout: wants 7
   
   # value: <Promise>
@@ -235,7 +235,7 @@ Testing bad arguments to obtain:
 
 -- actual usage
 
-  ? stream.whenAvailable(1, thunk { print("first inStream whenAvailable") })
+  ? stream.whenAvailable(1, fn { print("first inStream whenAvailable") })
   # stdout: wants 1
   
   # value: <Promise>
@@ -288,7 +288,7 @@ XXX proper plurals
   
 This whenAvailable does not trigger immediately, even though there are 2 elements actually in the stream, because they have been claimed by the obtain for 3..6.
 
-  ? stream.whenAvailable(2, thunk { print("whenAvailable from 17...") })
+  ? stream.whenAvailable(2, fn { print("whenAvailable from 17...") })
   # stdout: wants 2
   
   # value: <Promise>
@@ -307,7 +307,7 @@ After enough elements are available, the promise will be resolved.
   
 Termination
 
-  ? def pwA := stream.whenAvailable(100, thunk {print(`termination test whenAvailable -- ${stream.terminates()}`); 0})
+  ? def pwA := stream.whenAvailable(100, fn {print(`termination test whenAvailable -- ${stream.terminates()}`); 0})
   # stdout: wants 100
   
   # value: <Promise>

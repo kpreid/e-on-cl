@@ -66,7 +66,7 @@ In order to preserve E semantics by default:
   # value: 0
   
   
-  ? interp.waitAtTop(outs.whenAvailable(18, thunk {}))
+  ? interp.waitAtTop(outs.whenAvailable(18, fn {}))
   
   ? outs.available() > 0
   # value: true
@@ -76,7 +76,7 @@ In order to preserve E semantics by default:
   
   ? outs.flush()
   
-  ? interp.waitAtTop(ins.whenAvailable(8, thunk { 
+  ? interp.waitAtTop(ins.whenAvailable(8, fn { 
   >   print(ins.read(0, 17))
   > }))
 
@@ -115,7 +115,7 @@ In order to preserve E semantics by default:
   >   #EIO.join(serverEnd.getIn(), serverEnd.getOut())
   >   def ins := serverEnd.getIn()
   >   def outs := serverEnd.getOut()
-  >   ins.whenAvailable(1, thunk {outs.write(ins.read(0, ALL)); outs.close()})
+  >   ins.whenAvailable(1, fn {outs.write(ins.read(0, ALL)); outs.close()})
   > })
   
   no portable way to check whether a socket is listening
@@ -138,7 +138,7 @@ In order to preserve E semantics by default:
   ? outs.write([1, 2, 3]); outs.close()
   # value: true
   
-  ? interp.waitAtTop(ins.whenAvailable(1, thunk { 
+  ? interp.waitAtTop(ins.whenAvailable(1, fn { 
   >   print(ins.read(0, ALL))
   > }))
 

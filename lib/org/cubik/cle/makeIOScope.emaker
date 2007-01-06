@@ -84,7 +84,7 @@ def makeIOScope implements DeepFrozen {
     ioAdd with= ("unsafe__uriGetter", <unsafe>)
   
     # XXX make this accept lack of std* etc.
-    addLazy("rune", thunk{
+    addLazy("rune", fn{
       def [=> stdout, => stderr] | _ := exits
       #def runeAuthor := <elang:cmd.runeAuthor>
       def runeAuthor := <import:org.cubik.cle.simpleRuneAuthor>
@@ -125,14 +125,14 @@ def makeIOScope implements DeepFrozen {
       },
       
       "&org.erights.e.elib.vat.Vat" => 
-        makeLazySlot(thunk{
+        makeLazySlot(fn{
           <import:org.erights.e.elib.vat.makeVatAuthor>() })
           
     ], "__unsafeImportScope$")
     
     if (exits =~ [=> &stdin, => &stdout, => &stderr] | _) {
       unsafeImports withSlot= ("org.erights.e.develop.exception.PrintStreamWriter", 
-        makeLazySlot(thunk{
+        makeLazySlot(fn{
           <import:org.erights.e.develop.exception.makePrintStreamWriterAuthor>(stdin, stdout, stderr) }))
       
   

@@ -649,7 +649,7 @@ SlotPattern
   ? e`meta.getState()`.staticScope()
   # value: <[] := [] =~ [] + var [], meta.getState()>
 
-  ? def mSSS := e`thunk { meta.getState() }`.staticScope()
+  ? def mSSS := e`fn { meta.getState() }`.staticScope()
   # value: <[] := [] =~ [] + var [], { meta.getState() }>
   
   ? [mSSS.hasMetaStateExpr(),

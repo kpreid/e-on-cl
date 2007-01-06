@@ -44,7 +44,7 @@ def ::"UTF-8" { # implements CharacterEncoding, DeepFrozen
           
           if (expect == null) {
             def [firstOctetMask, newExpect, secondOctetRange] :=
-              utf8DecodeTable.fetch(octett, thunk {throw("invalid UTF-8 sequence")})
+              utf8DecodeTable.fetch(octett, fn {throw("invalid UTF-8 sequence")})
             bits := octett & firstOctetMask
             expect := newExpect
             octetRange := secondOctetRange

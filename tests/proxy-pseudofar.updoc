@@ -72,7 +72,7 @@ Checking for leakage of the near ref
   ? x
   # value: true
 
-  ? interp.waitAtTop(def x := pf <- __whenBroken(thunk{print("whenBroken happened")}))
+  ? interp.waitAtTop(def x := pf <- __whenBroken(fn{print("whenBroken happened")}))
   ? [x]
   # value: [null]
 

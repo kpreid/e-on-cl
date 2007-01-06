@@ -23,7 +23,7 @@ XXX to be reviewed: makePipe should probably not be in the privilegedScope top l
 
   ? o.write([9])
   ? o.flush()
-  ? interp.waitAtTop(i.whenAvailable(1, thunk{}))
+  ? interp.waitAtTop(i.whenAvailable(1, fn{}))
   
   ? [i.available(), i.read(0, ALL)]
   # value: [1, [9]]
@@ -31,7 +31,7 @@ XXX to be reviewed: makePipe should probably not be in the privilegedScope top l
 closure propagation, write-to-read
   
   ? o.close(); null
-  ? interp.waitAtTop(i.whenAvailable(1, thunk{}))
+  ? interp.waitAtTop(i.whenAvailable(1, fn{}))
 
   ? i.terminates()
   # value: true
@@ -74,7 +74,7 @@ closing write end does not discard data
   > def r() :any {
   >  trace(`$read`)
   >  if (i.remaining() != 0) {
-  >    return i.whenAvailable(1, thunk { read += i.read(0, ALL).size(); r() })
+  >    return i.whenAvailable(1, fn { read += i.read(0, ALL).size(); r() })
   >  }
   > }
   > interp.waitAtTop(r())

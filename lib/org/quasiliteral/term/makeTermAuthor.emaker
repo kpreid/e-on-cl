@@ -166,7 +166,7 @@ def makeTermAuthor(SelflessStamp) {
           
           tw.write(tw.isQuoting().pick("term`", ""))
           
-          magicPrintTable.fetch(tag, thunk { defaultTermPrint })(tw, term)
+          magicPrintTable.fetch(tag, fn { defaultTermPrint })(tw, term)
           
           
           tw.write(tw.isQuoting().pick("`", ""))

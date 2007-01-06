@@ -65,7 +65,7 @@ whenMoreResolved
   
 whenBroken
   
-  ? [specimen.__whenBroken(thunk{print("oops")})]
+  ? [specimen.__whenBroken(fn{print("oops")})]
   # value: [null]
 
 __whenBroken on breakable refs is not a miranda method.
@@ -94,7 +94,7 @@ __respondsTo, of course, is dependent on the dispatch implementation, so it shal
   >     def normal := specimen.__respondsTo(verb, arity)
   >     def reffed := specimen.__respondsTo({(def x).resolve(verb); x},
   >                                         {(def x).resolve(arity); x})
-  >     require(normal == reffed, thunk{ `$specimen didn't respond the same to a Ref-ified $verb/$arity: $reffed instead of $normal` })
+  >     require(normal == reffed, fn{ `$specimen didn't respond the same to a Ref-ified $verb/$arity: $reffed instead of $normal` })
   >     r with= normal
   >   }
   >   return r

@@ -15,7 +15,7 @@ pragma.enable("function-implements")
   }
   to "default"(key, defaultValue) :any {
     return def defaultingExtractor(specimen, optEjector) implements DeepFrozen.optionally() { # implements ViaFunction
-      return [specimen.fetch(key, thunk { return [defaultValue, specimen] }), specimen.without(key)]
+      return [specimen.fetch(key, fn { return [defaultValue, specimen] }), specimen.without(key)]
     }
   }
 }}

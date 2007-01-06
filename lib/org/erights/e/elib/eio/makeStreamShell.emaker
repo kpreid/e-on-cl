@@ -60,7 +60,7 @@ def makeStreamShell implements DeepFrozen {
             if (available == ALL || available >= minimum || Ref.isResolved(terminator)) {
               availableHandler := noAvailableHandler
               # XXX more specific-case-informative exception 
-              bind result := trace.runAsTurn(reactor, thunk { `whenAvailable handler ${E.toQuote(reactor)} registered on stream shell` })
+              bind result := trace.runAsTurn(reactor, fn { `whenAvailable handler ${E.toQuote(reactor)} registered on stream shell` })
               return false
             } else {
               return true

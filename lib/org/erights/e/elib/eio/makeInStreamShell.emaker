@@ -45,7 +45,7 @@ def makeInStreamShell implements DeepFrozen {
     def terminator
     def [streamShell, &unclaimedAvailable, triggerAvailable] := \
       makeStreamShell(Element, 
-                      thunk { impl.terminate(terminator) }, 
+                      fn { impl.terminate(terminator) }, 
                       if (impl.__respondsTo("wants", 1)) {impl.wants} \
                                                     else {def stubWants(_) {}})
 
@@ -94,7 +94,7 @@ def makeInStreamShell implements DeepFrozen {
         }
       }
 
-      def r := trace.runAsTurn(thunk {
+      def r := trace.runAsTurn(fn {
         # xxx should call impl.wants(atLeast)
         
         def taken := if (atMost == ALL) \
@@ -129,7 +129,7 @@ def makeInStreamShell implements DeepFrozen {
         }
         
         
-      }, thunk {`semiObtain invocation by stream shell for $impl`})
+      }, fn {`semiObtain invocation by stream shell for $impl`})
       
       if (Ref.isBroken(r)) {
         # XXX this whole section is a little bit funny: I think we've got some confusion over the propagation of termination (allowing a stream to be 'closed' when it still has elements available) and that some of these cases should actually be Can't Happens
@@ -222,9 +222,9 @@ def makeInStreamShell implements DeepFrozen {
     bind backend {
       to setAvailable(new) { 
         require(remaining == ALL || new <= remaining, 
-                thunk{`available must not exeed remaining ($remaining, attempted to set to $new)`}) 
+                fn{`available must not exeed remaining ($remaining, attempted to set to $new)`}) 
         require(new == ALL || new >= implAvailable, 
-                thunk{`available must not decrease (was $implAvailable, attempted to set to $new)`})
+                fn{`available must not decrease (was $implAvailable, attempted to set to $new)`})
         implAvailable := new
         triggerWaiters()
         updateAvailable()
@@ -233,7 +233,7 @@ def makeInStreamShell implements DeepFrozen {
       
       to resolveRemaining(new :(int >= 0)) {
         require(if (implAvailable == ALL) { new == ALL } else { new >= implAvailable},
-                thunk{`remaining ($new) must not be less than available ($implAvailable)`})
+                fn{`remaining ($new) must not be less than available ($implAvailable)`})
         setRemaining(new)
         triggerWaiters()
         triggerAvailable()

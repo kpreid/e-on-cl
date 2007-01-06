@@ -100,7 +100,7 @@ def perlify(var template) :any {
 
 def PerlMatchMakerMaker {
     to matchMaker(template) :any {
-        var result := OurCache.fetch(template, thunk{})
+        var result := OurCache.fetch(template, fn{})
         if (result == null) {
 
             def compiler := Perl5CompilerMaker()

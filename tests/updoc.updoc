@@ -52,7 +52,7 @@ waitAtTop / timing tests:
   
   # stdout: hello
   
-  ? thunk { print <- ("world") } <- ()
+  ? fn { print <- ("world") } <- ()
   # value: <Promise>
     
   ? 1
@@ -60,7 +60,7 @@ waitAtTop / timing tests:
   
   # value: 1
   
-  ? interp.waitAtTop(thunk { print <- ("now") } <- ()); 2
+  ? interp.waitAtTop(fn { print <- ("now") } <- ()); 2
   # value: 2
   
   # stdout: now

@@ -44,7 +44,7 @@ Trivial streams
   
   ? outs.flush()
   
-  ? interp.waitAtTop(ins.whenAvailable(8, thunk { 
+  ? interp.waitAtTop(ins.whenAvailable(8, fn { 
   >   print(ins.read(0, 17))
   > }))
 

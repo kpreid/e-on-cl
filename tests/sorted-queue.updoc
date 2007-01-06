@@ -6,13 +6,13 @@
   
   ? q.put(10, 'a')
   
-  ? q.peek(thunk { 0 })
+  ? q.peek(fn { 0 })
   # value: [10, 'a']
 
   ? q.pop()
   # value: [10, 'a']
   
-  ? q.peek(thunk { 0 })
+  ? q.peek(fn { 0 })
   # value: 0
 
   ? q.put(10, 'a'); q.asList()

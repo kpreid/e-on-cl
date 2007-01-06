@@ -138,7 +138,7 @@ def makeUnevaler(uncallerList, unscopeLayout) :near {
              * above state.
              */
             bind generate(obj) :Node {
-                if (unscope.fetch(obj, thunk{}) =~ varID :notNull) {
+                if (unscope.fetch(obj, fn{}) =~ varID :notNull) {
                     return genVarUse(varID)
                 }
                 def promIndex := builder.buildPromise()

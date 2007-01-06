@@ -77,7 +77,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
     def mapToSymbol(input, map) {
       return map.fetch(
         input, 
-        thunk {map[input] := def sym := makeSymbol(E.toString(input) + "SYM")
+        fn {map[input] := def sym := makeSymbol(E.toString(input) + "SYM")
                set(sym, input)
                sym})
     }
@@ -129,7 +129,7 @@ def makeLALR1ParserAuthor { # implements DeepFrozen
             # XXX error path
             try {
               return yaccParseWithLexer(
-                eToLispMVFunction(thunk {
+                eToLispMVFunction(fn {
                   if (stream.remaining() != 0) {
                     def [sym, value] := tokenFunction(stream.read(1, 1)[0])
                     def ysym := convertSymbol(sym)

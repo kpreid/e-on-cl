@@ -9,7 +9,7 @@ pragma.syntax("0.9")
 pragma.enable("accumulator")
 pragma.enable("function-implements")
 
-#def &term__quasiParser0 := <elib:slot.makeLazySlot>(thunk {
+#def &term__quasiParser0 := <elib:slot.makeLazySlot>(fn {
 #  makeQBuilder(null)
 #})
 
@@ -357,7 +357,7 @@ def _make(astroBuilder) implements DeepFrozen {
             return -1;
           }
           require(1 == matches,
-                  thunk {`Functor may only match 0 or 1 specimen: $matches`})
+                  fn {`Functor may only match 0 or 1 specimen: $matches`})
           def tArgs :List := optSpecimen.getArgs()
           def num := args.matchBindSlice(sargs, tArgs, bindings, index);
           if (tArgs.size() == num) {
@@ -419,7 +419,7 @@ def _make(astroBuilder) implements DeepFrozen {
             }
           def result := list.size()
           require(-1 == shapeSoFar || shapeSoFar == result,
-            thunk {`Inconsistent shape: $shapeSoFar vs $result`})
+            fn {`Inconsistent shape: $shapeSoFar vs $result`})
           return result
         }
     
@@ -439,7 +439,7 @@ def _make(astroBuilder) implements DeepFrozen {
           def termoid := multiGet(args, key, index, true)
           def optTerm :Astro := optCoerce(termoid, myIsFunctorHole, null)
           require(null != optTerm,
-                  thunk{`Term $termoid doesn't match $quasiValueFunctorHole`})
+                  fn{`Term $termoid doesn't match $quasiValueFunctorHole`})
           if (optTerm == specimen) { # XXX EoJ uses <=>: why?
             return 1
           } else {
@@ -475,7 +475,7 @@ def _make(astroBuilder) implements DeepFrozen {
         to startShape(args, optBindings, prefix, shapeSoFar) :int {
           # XXX blindly copied, review
           require(optBindings != null, 
-            thunk {`no at-holes in a ValueMaker: $quasiPattFunctorHole`})
+            fn {`no at-holes in a ValueMaker: $quasiPattFunctorHole`})
           multiPut(optBindings, key, prefix, [].diverge())
           return shapeSoFar
         }
@@ -484,7 +484,7 @@ def _make(astroBuilder) implements DeepFrozen {
         /** Internal; pattern matching/substitution implementation. */
         to endShape(optBindings, prefix, shape) {
           require(optBindings != null, 
-            thunk{`no at-holes in a ValueMaker: $quasiPattFunctorHole`})
+            fn{`no at-holes in a ValueMaker: $quasiPattFunctorHole`})
           def list :FlexList := multiGet(optBindings.snapshot(), key, prefix, false)
           list.setSize(shape)
           multiPut(optBindings, key, prefix, list.snapshot())
@@ -592,7 +592,7 @@ def _make(astroBuilder) implements DeepFrozen {
                   break;
               }
               require(more >= 1 || maxShape != -1,
-                      thunk{`Patterns of indeterminate rank must make progress: $qSome vs $specimenList`})
+                      fn{`Patterns of indeterminate rank must make progress: $qSome vs $specimenList`})
               result += more
               specimenList run= (more)
               
@@ -600,7 +600,7 @@ def _make(astroBuilder) implements DeepFrozen {
           }
           optSubPattern.endShape(bindings, index, shapeSoFar)
           require(inBounds(result, quant),
-                  thunk{`Improper quantity: $result vs $quant`})
+                  fn{`Improper quantity: $result vs $quant`})
           return result
         }
       }

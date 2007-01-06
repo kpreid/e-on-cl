@@ -70,7 +70,7 @@ def makeBrandAuthor { # not DeepFrozen, for dependencies
               
               /** An implementation detail. */
               to _offerContent(k) :any {
-                require(key == k, thunk{"Can't unseal - wrong key"})
+                require(key == k, fn{"Can't unseal - wrong key"})
                 return content
               }
             }

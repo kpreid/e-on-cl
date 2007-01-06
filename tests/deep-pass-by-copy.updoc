@@ -7,22 +7,22 @@
   ? 1 :DeepPassByCopy
   # value: 1
   
-  ? thunk {} :DeepPassByCopy
+  ? fn {} :DeepPassByCopy
   # problem: <_> is not DeepPassByCopy because <_> is not
   
   ? [1] :DeepPassByCopy
   # value: [1]
   
-  ? [thunk {}] :DeepPassByCopy
+  ? [fn {}] :DeepPassByCopy
   # problem: [<_>] is not DeepPassByCopy because <_> is not
   
   ? {def x := [1, x, 2]} :DeepPassByCopy
   # value: [1, <***CYCLE***>, 2]
   
-  ? {def x := [1, x, thunk {}]} :DeepPassByCopy
+  ? {def x := [1, x, fn {}]} :DeepPassByCopy
   # problem: [1, <***CYCLE***>, <_>] is not DeepPassByCopy because <_> is not
 
-  ? {[def x := thunk {}, x]} :DeepPassByCopy
+  ? {[def x := fn {}, x]} :DeepPassByCopy
   # problem: [<_>, <_>] is not DeepPassByCopy because <_> is not
   
   

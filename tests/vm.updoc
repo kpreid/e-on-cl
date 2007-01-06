@@ -273,7 +273,7 @@ MetaContextExpr
   ? [meta.context().getOptSource()]
   # value: [null]
 
-  ? thunk { meta.context().getSource() } ()
+  ? fn { meta.context().getSource() } ()
   # value: e`def _ {
   #            
   #            method run() {
@@ -281,7 +281,7 @@ MetaContextExpr
   #            }
   #        }`
   
-  ? thunk { meta.context().getOptSource() } ()
+  ? fn { meta.context().getOptSource() } ()
   # value: e`def _ {
   #            
   #            method run() {
@@ -291,7 +291,7 @@ MetaContextExpr
 
 A MetaContextExpr must not produce a result which allows one to distinguish multiple evaluations of the same code; it must be always the same *or* always fresh.
 
-  ? def expr := e`thunk { meta.context() }`
+  ? def expr := e`fn { meta.context() }`
   > def [f1, f2] := [expr.eval(safeScope), expr.eval(safeScope)]
   > (f1() == f1()) == (f1() == f2())
   # value: true
@@ -404,7 +404,7 @@ Bug: incorrect scoping of the pattern of a matcher.
   
   ? def makeMatcherClosure {
   >   match msg {
-  >     thunk { msg }
+  >     fn { msg }
   >   }
   > }
   # value: <makeMatcherClosure>

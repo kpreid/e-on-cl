@@ -49,10 +49,10 @@
   ? fm
   # value: ["a" => "b3"].diverge()
   
-  ? fm.fetch("a", thunk{0})
+  ? fm.fetch("a", fn{0})
   # value: "b3"
   
-  ? fm.fetch("b", thunk{1})
+  ? fm.fetch("b", fn{1})
   # value: 1
   
   ? [escape out { fm.fetch("b", out); "oops" }]
@@ -278,10 +278,10 @@ typed map
  
  fetch coerces
  
-  ? guardedFM.fetch(4, thunk{ "failed" })
+  ? guardedFM.fetch(4, fn{ "failed" })
   # value: 3.0
   
-  ? guardedFM.fetch("b", thunk{ "failed" })
+  ? guardedFM.fetch("b", fn{ "failed" })
   # problem: the String "b" doesn't coerce to a float64
 
  what if coerce-on-diverge creates a duplicate key?

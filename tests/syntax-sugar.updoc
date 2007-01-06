@@ -686,7 +686,7 @@ MatchBindExpr
   
 'ThunkExpr'
 
-  ? t("thunk {}")
+  ? t("pragma.enable(\"thunk\"); thunk {}")
   # value: e`def _ {
   #            
   #            method run() {
@@ -694,7 +694,7 @@ MatchBindExpr
   #            }
   #        }`
   
-  ? t("thunk { a }")
+  ? t("pragma.enable(\"thunk\"); thunk { a }")
   # value: e`def _ {
   #            
   #            method run() {
@@ -702,10 +702,10 @@ MatchBindExpr
   #            }
   #        }`
   
-  x ? t("thunk implements a { b }")
+  x ? t("pragma.enable(\"thunk\"); thunk implements a { b }")
   x # syntax error: 
   
-  ? t("/** a */ thunk { b }")
+  ? t("pragma.enable(\"thunk\"); /** a */ thunk { b }")
   # value: e`def _ {
   #            
   #            /** a */

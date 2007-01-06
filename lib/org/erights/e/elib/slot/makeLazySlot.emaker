@@ -13,7 +13,7 @@ def makeLazySlot implements DeepFrozen {
     
         def firstGetter() :any {
             def v
-            getter := thunk { v }
+            getter := fn { v }
             try {
               bind v := maker()
             } catch p {

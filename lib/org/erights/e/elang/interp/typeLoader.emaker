@@ -27,7 +27,7 @@ def typeLoader { # XXX implements DeepFrozen once import__uriGetter is DeepFroze
   
     def maker := <import>.fetch(
                    insertNamePrefix(fqn, "make"),
-                   thunk { 
+                   fn { 
                      throw(`no type object found for $fqn`)
                    })
     try {                  

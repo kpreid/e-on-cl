@@ -161,10 +161,10 @@ simple__quasiParser
 
 require
   
-  ? [require(true, thunk{"biff"})]
+  ? [require(true, fn{"biff"})]
   # value: [null]
   
-  ? [require(false, thunk{"bang"})]
+  ? [require(false, fn{"bang"})]
   # problem: bang
 
 __loop

@@ -32,7 +32,7 @@ def memoizeAuthor(DeepFrozenStamp) {
         }
         
         match msg :DeepFrozen {
-          cache.fetch(msg, thunk {
+          cache.fetch(msg, fn {
             # xxx optimization: we could cache thrown errors as well.
             def result := E.callWithPair(base, msg)
             if (result =~ ok :CacheableResult) {

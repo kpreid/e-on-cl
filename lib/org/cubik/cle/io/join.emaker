@@ -36,9 +36,9 @@ def join implements DeepFrozen {
     bind again() {
       try {
         willLoop := true
-        __loop(thunk {
+        __loop(fn {
           queued := true
-          output.whenAvailable(1, thunk {
+          output.whenAvailable(1, fn {
             input.whenAvailable(1, transfer) })
           return !queued
         })

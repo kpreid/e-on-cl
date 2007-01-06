@@ -24,7 +24,7 @@ def makeFlexList implements EventuallyDeepFrozen {
 
   /** Make a FlexList from a one-dimensional array, which must have a fill pointer and be adjustable. */
   to _fromArray(array, valueGuard) {
-    require(array.getAdjustable(), thunk{`$array must be adjustable`})
+    require(array.getAdjustable(), fn{`$array must be adjustable`})
     def impl {
       method get(i) { 
         # elt is specified to provide range checking against the fill pointer

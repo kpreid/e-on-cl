@@ -102,8 +102,8 @@ def author(<unsafe>) {
     def printChain(var ast) {
       while (ast != null) {
         out.print(" ")
-        parentheses(thunk{
-          parentheses(thunk{
+        parentheses(fn{
+          parentheses(fn{
             out.print(tokenSymbols[ast.getType()], " ", ast.getLine(), " ", ast.getColumn(), " ", clQuote(ast.getText()))
           })
           printChain(ast.getFirstChild())
@@ -112,17 +112,17 @@ def author(<unsafe>) {
       }
     }
     
-    parentheses(thunk{
-      parentheses(thunk{
+    parentheses(fn{
+      parentheses(fn{
         printChain(ast)
       })    
       out.print("#.")
-      parentheses(thunk{
+      parentheses(fn{
         out.print("e.elib:e. e.elib:+the-make-const-map+ :|fromPairs| '#")
-        parentheses(thunk{
+        parentheses(fn{
           for k => v in parser.getPockets() {
             out.print("#")
-            parentheses(thunk{
+            parentheses(fn{
               out.print(clQuote(k))
               out.print(clQuote(v))
             })

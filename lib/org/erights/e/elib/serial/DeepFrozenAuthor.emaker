@@ -45,7 +45,7 @@ def primParser := <import:org.cubik.cle.prim.parser>
 /** Version of e__quasiParser that doesn't do proper substitution, so has fewer dependencies. */
 def eDF__quasiParser {
   to valueMaker(text) {
-    requireDF((text.indexOf1('$') == -1) & (text.indexOf1('@') == -1), thunk{"eDF`` doesn't support holes or escapes"})
+    requireDF((text.indexOf1('$') == -1) & (text.indexOf1('@') == -1), fn{"eDF`` doesn't support holes or escapes"})
     def parsed := primParser(text)
     def substituter {
       to substitute(_) {
@@ -76,9 +76,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
 
   # lazily load the brand, because requireDeepFrozen must be initially loadable with no import dependencies, since it is used in <import>'s cache check '
   var getPeekBrandKit := null
-  getPeekBrandKit := thunk {
+  getPeekBrandKit := fn {
     def kit := <import:org.erights.e.elib.sealing.Brand>("EventuallyDeepFrozen state peeking")
-    getPeekBrandKit := thunk { kit }
+    getPeekBrandKit := fn { kit }
     kit
   }
   
@@ -92,7 +92,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
 
   # XXX sofar should be a set instead, but those aren't implemented yet
   def requireDeepFrozen(specimen, sofar, optEjector, root) :void {
-    rtrace(thunk{ "requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root) })
+    rtrace(fn{ "requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root) })
     def specimenKey := __equalizer.makeTraversalKey(specimen)
     if (_maps(sofar, specimenKey)) {
       # recursion check
@@ -143,7 +143,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         } catch p {
           # XXX make the fallthrough else below eject a typed exception that we use in generating this message, so the client can know whether this is unsettled ('change your code to wait longer') or definitely not DeepFrozen ('sorry, hopeless')
           # xxx future extensions: make this exception contain (sealed) the full details of what chain of subobjects led to the non-DeepFrozen object.
-          rtrace(thunk{"--rDF exiting and discarding subexception for privacy: " + E.toQuote(p)})
+          rtrace(fn{"--rDF exiting and discarding subexception for privacy: " + E.toQuote(p)})
           traceln("DeepFrozen not-yet-eventually: " + E.toQuote(p))
           throw.eject(optEjector, E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " contains references that are unsettled or not DeepFrozen")
         }
@@ -243,18 +243,18 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
             def optResultGuard := methd.getOptResultGuard()
             if (optResultGuard != null) {
               requireDF(expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs()), 
-                thunk{label + ": __optSealedDispatch result guard is not any"})
+                fn{label + ": __optSealedDispatch result guard is not any"})
             }
             
             def [brandPattern :Really[FinalPattern]] \
               exit fn _{throw(label + ": __optSealedDispatch argument pattern is not simple")} \
               := methd.getPatterns()
             requireDF(brandPattern.getOptGuardExpr() == null, 
-              thunk{label + ": __optSealedDispatch argument pattern must not have a guard"})
+              fn{label + ": __optSealedDispatch argument pattern must not have a guard"})
             # XXX We haven't implemented node pattern matching yet. Once EventuallyDeepFrozen is working, test and implement pattern matching and reenable this.
             # requireDF(methd.getBody() =~ \
             #     eDF`if ($brandPattern == @{auditorExpr ? expressionWillHaveValue(auditorExpr, &EventuallyDeepFrozen, auditorExprs + [brandPattern] + if (optResultGuard) {[optResultGuard]} else {[]})}.getPeekBrand()) { meta.getState() }`, 
-            #   thunk{`$label: __optSealedDispatch body is not suitably formed`})
+            #   fn{`$label: __optSealedDispatch body is not suitably formed`})
             def methodBody := exprShorten(methd.getBody())
             def ifExpr :Really[IfExpr] \
               exit fn _{throw(label + ": __optSealedDispatch body is not an if, but the " + E.toQuote(methodBody.__getAllegedType()) + " " + E.toQuote(methodBody))} \
@@ -264,16 +264,16 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
             requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null)) \
                       & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
                       & expressionWillHaveValue(eDF`__equalizer`, &__equalizer, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
-              thunk{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
+              fn{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
               
             # overly restrictive in the same way as the previous
             requireDF((exprShorten(ifExpr.getThen()) == eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`) \
                       & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
-              thunk{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
+              fn{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
             
             break true
           } != null, 
-          thunk{label + ": no __optSealedDispatch/1 method found"})
+          fn{label + ": no __optSealedDispatch/1 method found"})
       } else {
         throw(label + ": auditing plumbing not yet supported")
       }

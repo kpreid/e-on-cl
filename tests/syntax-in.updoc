@@ -160,12 +160,12 @@ XXX produce a nice error for this?
 #               []
 #               []
 
-? t("a & thunk {}")
+? t("a & fn {}")
 # stdout: BinaryE.
 #           &
 #           NounE. a
-#           [] ThunkE.
-#             
+#           [] FunctionE.
+#             []
 #             NullE.
 
 --- Result guards / easy-return ---
