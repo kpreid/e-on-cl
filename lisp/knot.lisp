@@ -717,7 +717,7 @@
                              (e. (eelt (e-import "org.cubik.cle.charsets") e.extern:+standard-external-format-common-name+)
                                  |decode|
                                 (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
-                                   +lisp+) (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input*) 4096) (e. #() |asMap|)))))
+                                   +lisp+) (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input* :input) 4096) (e. #() |asMap|)))))
             ("stdout"     ,(make-text-writer-to-cl-stream
                             out-cl-stream
                             :autoflush t

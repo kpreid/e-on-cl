@@ -23,10 +23,12 @@
                  The modification date of an item in a jar is that of the jar itself, for our purposes."
                 (file-write-date pathname))
               (:|getText| ()
-                ;; XXX merge this with whatever our overall encoding strategy turns out to be
                 (let ((data (zipfile-entry-contents zip-entry)))
+                  ;; use sbcl's if it's available, because it's exported,
+                  ;; otherwise borrow zip's internals
+                  ;; XXX use flexi-streams directly instead
                   #+sbcl (sb-ext:octets-to-string data :external-format :ascii)
-                  #-sbcl (zip::octets-to-string data :default)))
+                  #-sbcl (zip::octets-to-string data :us-ascii)))
               (:|getTwine| ()
                 ;; XXX actual twine support
                 (e. |entry| |getText|)))))))))

@@ -288,7 +288,7 @@ If there is no current vat at initialization time, captures the current vat at t
            :type (array list)
            :documentation "Messages are pushed on the end of this vector.")
    (weak-when-more-resolved 
-     :initform (make-weak-hash-table :weakness :key)
+     :initform (make-weak-hash-table :weakness :key :test #'eq)
      :type hash-table
      :documentation "Stores weak when-more-resolved messages for reference shortening."
      :reader %weak-when-more-resolved-table)))

@@ -249,13 +249,21 @@
      (progn ,@body)
      (error (,condition) (eject-or-ethrow ,ejector ,condition))))
 
+(defconstant +converted-stream-buffer-size+ 4096 #| XXX arbitrary |#)
+
 ;; NOTE: used by e.extern:+spawn+
 (defun cl-to-eio-in-stream (stream name)
-  (fd-to-eio-in-stream (sb-sys:fd-stream-fd stream) name 4096 #| XXX arbitrary buffer size |#))
+  (fd-to-eio-in-stream (stream-to-fd-ref stream :input)
+                       name
+                       +converted-stream-buffer-size+))
+                        
 
 ;; NOTE: used by e.extern:+spawn+
 (defun cl-to-eio-out-stream (stream name)
-  (make-fd-out-stream name (make-fd-ref (sb-sys:fd-stream-fd stream)) 4096))
+  (make-fd-out-stream name
+                      (make-fd-ref (stream-to-fd-ref stream :output))
+                      +converted-stream-buffer-size+))
+                      
 
 (defun fd-to-eio-in-stream (fd name buffer)
   (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")

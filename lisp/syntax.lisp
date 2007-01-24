@@ -540,14 +540,14 @@ XXX make precedence values available as constants"
   (efuncall e.knot:+sys-trace+ "starting Java-E parsing subprocess")
   (asdf:operate 'asdf:compile-op :e-on-cl.antlr-parser)
   (setf *parser-process* (e.util:run-program
-    "/usr/bin/env" ;; XXX platform assumption - we should have a way of telling our portable-run-program to "search" with unspecified means
-    (list "rune"
-          "-J-XX:ThreadStackSize=10240"
+    "rune"
+    (list "-J-XX:ThreadStackSize=10240"
           "-cpa" (native-namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
           "-cpa" (namestring (compute-antlr-class-location))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
           "-") 
+    :search t
     :input :stream
     :output :stream
     :error t

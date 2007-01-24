@@ -77,7 +77,11 @@
 (unless (fboundp 'serve-event)
   (defun serve-event (&optional timeout)
     "Portable fake serve-event if we don't have a real one."
-    (when timeout (sleep timeout))
+    (if timeout 
+      (sleep timeout)
+      (progn
+        (warn "Sitting in fake serve-event with ~A handlers." (hash-table-count *serve-event-handlers*))
+        (sleep 20)))
     nil))
 
 ;;; --- non-reentrant serve-event handler layer ---
@@ -171,6 +175,21 @@
    #+sbcl :sb-ext
    #+cmu :extensions)
   (:run-program))
+
+#+openmcl
+(defun run-program (program arguments &rest key-args &key search &allow-other-keys)
+  "CCL:RUN-PROGRAM wrapper providing :search keyword and allowing a pathname as process name."
+  (when (pathnamep program)
+    ;; OpenMCL 1.0 does not accept a pathname as the program argument despite its documentation.
+    (setf program (native-namestring program)))
+  (apply #'ccl:run-program
+    (append
+      (if search
+        (list "/usr/bin/env" (cons program arguments))
+        (list program        arguments))
+      (let ((key-args (copy-seq key-args)))
+         (remf key-args :search)
+         key-args))))
 
 #+clisp
   (defun squote (string)

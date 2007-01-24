@@ -312,15 +312,27 @@
 
 ; --- ---
 
-(defgeneric stream-to-fd-ref (stream))
+(defgeneric stream-to-fd-ref (stream direction))
 
-(defmethod stream-to-fd-ref ((stream synonym-stream))
-  (stream-to-fd-ref (symbol-value (synonym-stream-symbol stream))))
+(defmethod stream-to-fd-ref ((stream synonym-stream) direction)
+  (stream-to-fd-ref (symbol-value (synonym-stream-symbol stream)) direction))
+
+; not needed yet
+;(defmethod stream-to-fd-ref ((stream two-way-stream) (eql :input))
+;  (stream-to-fd-ref (two-way-stream-input-stream) :input))
+;
+;(defmethod stream-to-fd-ref ((stream two-way-stream) (eql :output))
+;  (stream-to-fd-ref (two-way-stream-output-stream) :output))
 
 #+sbcl
-(defmethod stream-to-fd-ref ((stream sb-sys:fd-stream))
+(defmethod stream-to-fd-ref ((stream sb-sys:fd-stream) direction)
+  (declare (ignore direction))
   (make-fd-ref (sb-sys:fd-stream-fd stream)))
-  
+
+#+openmcl
+(defmethod stream-to-fd-ref ((stream stream) direction)
+  (make-fd-ref (ccl:stream-device stream direction)))
+
 ; XXX this should not be in sockets but in something more general
 (defun make-fd-ref (opt-fd)
   (e-lambda |FDRef| ()
@@ -338,7 +350,8 @@
     (:|shutdown| (direction ejector)
       ;; XXX embedding the assumption that this is a unidirectional, non-socket fd
       (when opt-fd
-        (sb-posix:close opt-fd))
+        #+sbcl (sb-posix:close opt-fd)
+        #-sbcl (warn "leaking fd ~A; XXX need non-SBCL shutdown implementation" opt-fd))
       (setf fd nil)
       (values))
 
