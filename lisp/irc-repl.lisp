@@ -81,12 +81,11 @@
         (cmd (strip-address (trailing-argument message) :final t)))
     (if cmd
       (let ((source
-              (handler-case
-                (e.syntax:parse-to-kernel cmd)
-                (error (condition)
-                  (declare (ignore condition))
-                  (safe-privmsg *connection* destination (format nil "syntax error"))
-                  (return-from msg-hook)))))
+              (e.elib:escape-bind (syntax-ej)
+                  (e.syntax:parse-to-kernel cmd :syntax-ejector syntax-ej)
+                (error)
+                  (safe-privmsg *connection* destination (e.elib:e-print error))
+                  (return-from msg-hook))))
         (handler-case
           (multiple-value-bind (result new-scope)
               (elang:eval-e source *scope*)
