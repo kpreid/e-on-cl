@@ -16,6 +16,35 @@ This file contains tests for the E parser's grammar; specifically excluding expa
 # value: <file:///foo#:span::1:0::1:0>
 should be 1:0::1:1 but we don't have span information yet
 
+--- String syntax ---
+
+? t("'\\u0021'")
+# stdout: LiteralE. !
+
+? t("\"\\u0021\"")
+# stdout: LiteralE. !
+
+? t("\"\\u00210000\"")
+# stdout: LiteralE. !0000
+
+? t("\"\\U00000021\"")
+# stdout: LiteralE. !
+
+? t("`$\\u0021`")
+# stdout: QuasiE.
+#           null
+#           [] QuasiText !
+
+? t("`$\\u00210000`")
+# stdout: QuasiE.
+#           null
+#           [] QuasiText !0000
+
+? t("`$\\U00000021`")
+# stdout: QuasiE.
+#           null
+#           [] QuasiText !
+
 --- Nouns ---
 
 ? t("a")

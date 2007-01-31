@@ -328,7 +328,7 @@ URI:            (  'a'..'z'|'A'..'Z'|'_'|'0'..'9'
             ;
 
 // ----------------------------------------------------------------------------
-// common suffix with elex.g
+// common suffix with quasi.g
 // XXX figure out if we can avoid this duplication
 
 protected
@@ -338,7 +338,9 @@ IDENT_S     :    (XML10Letter | '_')
             ;
 
 protected
-ESC_UNICODE:    ('u')+! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT ;
+ESC_UNICODE:    'u'! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
+            |   'U'! HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
+                     HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT ;
 
 protected
 ESC_OCTAL:  '0'..'3'
