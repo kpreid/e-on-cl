@@ -12,7 +12,8 @@
 (def-vtable null
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
@@ -57,7 +58,8 @@
     (declare (ignore this))
     ;; NOTE that this implementation overrides the one for VECTORs, and so
     ;; prevents STRINGs from claiming Selfless.
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
   (:|__optUncall/0| (constantly nil))
 
   (:|__printOn| (this tw)
@@ -237,7 +239,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (audited-by-magic-verb (this auditor)
     "Characters are atomic."
     (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
   
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -304,7 +307,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable vector
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. e.syntax:+e-printer+ |printList| tw this +e-true+))
@@ -469,7 +473,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (audited-by-magic-verb (this auditor)
     "Numbers are atomic."
     (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
 
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)

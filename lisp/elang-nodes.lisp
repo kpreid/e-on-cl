@@ -24,7 +24,7 @@
     (e-lambda 
         ,(concatenate 'string "org.erights.e.elang.evm.make"
                               (symbol-name class-sym))
-        ()
+        (:stamped +thread-sharable-stamp+)
       (:|__getAllegedType| ()
         ; XXX figure out how to write this code better; withFoo would be an improvement, to start with
         (let ((base (e-lambda-type-desc)))
@@ -396,7 +396,8 @@ List nodes will be assumed to be sequences."
 (def-vtable |ENode|
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (let ((quote (e-is-true (e. tw |isQuoting|))))
@@ -421,6 +422,7 @@ List nodes will be assumed to be sequences."
     "Return a static scope analysis of this subtree that doesn't depend on the enclosing context."
     (with-slots (static-scope) this
       (or static-scope
+          ;; XXX threading: needs a lock since ENodes must be sharable (for now)
           (setf static-scope (compute-node-static-scope this)))))
   (:|getOptSpan| (this)
     (slot-value this 'source-span))

@@ -1,0 +1,27 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Objects which can be safely shared among threads are marked with ThreadSharableStamp.
+
+The stamp applies only to the parts of the object which are not exposed via its uncall, whether or not the object is also Selfless, DeepFrozen, etc.
+
+This file tests whether objects which should be marked sharable are.
+
+  ? def TSS := lisp["E.ELIB", "+THREAD-SHARABLE-STAMP+"].getValue()
+  # value: <ThreadSharableStamp>
+  
+  ? for specimen in [
+  >   1,
+  >   1.0,
+  >   ' ',
+  >   "",
+  >   null,
+  >   [],
+  >   [1],
+  >   <elang:evm.makeLiteralExpr>,
+  >   <elang:evm.makeLiteralExpr>(null, 1, null),
+  > ] {
+  >   if (!__auditedBy(TSS, specimen)) { println("Should be TS: ", E.toQuote(specimen)) }
+  > }
+  > print("end")
+  # stdout: end

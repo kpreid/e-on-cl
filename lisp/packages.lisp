@@ -170,7 +170,8 @@
     :audited-by-magic-verb
     :+deep-frozen-stamp+
     :+selfless-stamp+
-   
+    :+thread-sharable-stamp+
+    
     :+e-false+ :+e-true+ :e-is-true :as-e-boolean :e-boolean
     
     :|NaN| :|Infinity| :float64 :float32 :e-list
@@ -265,6 +266,7 @@
 
   elib:+the-audit-checker+
   elib:+deep-frozen-stamp+
+  elib:+thread-sharable-stamp+
 
   elib:+the-make-source-span+
   elib:+the-make-twine+
@@ -304,6 +306,8 @@
     
     :+shared-safe-loader+
     :+shared-safe-scope+
+    :+sharable-importer+
+    
     :make-safe-scope
     :make-io-scope
     
@@ -315,6 +319,7 @@
     :+sys-trace+))
   
 (e.util:defglobals
+  e.knot:+sharable-importer+
   e.knot:+trace+
   e.knot:+sys-trace+)
   

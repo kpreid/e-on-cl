@@ -279,6 +279,16 @@
     (:|makeSafeScope|    (wrap-function 'make-safe-scope))    
     ))
 
+(defglobal +sharable-importer+
+  (let ((real-loader +shared-safe-loader+)) ; might become a path loader
+    (e-lambda "org.cubik.cle.prim.SharableImporter"
+        (:stamped +deep-frozen-stamp+
+         :stamped +thread-sharable-stamp+)
+      (:|__printOn| (out)
+        (e. out |write| "<shared>"))
+      (otherwise (mverb &rest args)
+        (apply #'e-call-dispatch real-loader mverb args)))))
+
 ; xxx review which of these ought to be moved to safe-extern-scope
 (defun make-primitive-loader ()
   (lazy-prefix-scope ("org.cubik.cle.prim.primLoader" "org.cubik.cle.prim.")

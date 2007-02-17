@@ -1285,6 +1285,17 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore audition))
     +e-true+)))
 
+(defglobal +thread-sharable-stamp+ (e-lambda 
+    "org.erights.e.elib.serial.ThreadSharableStamp"
+    (:doc "The primitive rubber-stamping auditor for objects whose /implementation/ (those components of its state not exposed by __optUncall) is thread-safe. It does *not* guarantee observed immutability or no-outside-effects-during-turn behaviors; see DeepFrozenStamp. This stamp is a Lisp-system-wide authority.")
+  (audited-by-magic-verb (auditor)
+    ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
+  (:|audit| (object-expr witness)
+    (declare (ignore object-expr witness))
+    +e-true+)))
+
 ; --- utilities referenced below ---
 
 (deftype e-list (element-type &aux (sym (make-symbol (format nil "generated predicate for (E-LIST ~A)" element-type))))
