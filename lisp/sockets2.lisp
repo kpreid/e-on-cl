@@ -253,23 +253,24 @@
 
 ;; NOTE: used by e.extern:+spawn+
 (defun cl-to-eio-in-stream (stream name)
-  (fd-to-eio-in-stream (stream-to-fd-ref stream :input)
-                       name
-                       +converted-stream-buffer-size+))
+  (fd-ref-to-eio-in-stream (stream-to-fd-ref stream :input)
+                           name
+                           +converted-stream-buffer-size+))
                         
 
 ;; NOTE: used by e.extern:+spawn+
 (defun cl-to-eio-out-stream (stream name)
   (make-fd-out-stream name
-                      (make-fd-ref (stream-to-fd-ref stream :output))
+                      (stream-to-fd-ref stream :output)
                       +converted-stream-buffer-size+))
                       
 
-(defun fd-to-eio-in-stream (fd name buffer)
+(defun fd-ref-to-eio-in-stream (fd-ref name buffer)
+  ;; XXX avoid reimporting the author
   (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
                       e.knot::+lisp+) 
     name
-    (make-fd-ref fd)
+    fd-ref
     buffer))
 
 ;; XXX this is not really about sockets
@@ -283,7 +284,9 @@
       ;; XXX arrange for finalization of streams to close the fds
       ;; XXX set nonblocking
       (vector
-        (fd-to-eio-in-stream read (e-lambda "system pipe" ()) 4096)
+        (fd-ref-to-eio-in-stream (make-fd-ref read) 
+                                 (e-lambda "system pipe" ())
+                                 4096)
         (make-fd-out-stream (e-lambda "system pipe" ())
                             (make-fd-ref write)
                             4096))))))

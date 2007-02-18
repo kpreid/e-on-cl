@@ -334,7 +334,9 @@
   (make-fd-ref (ccl:stream-device stream direction)))
 
 ; XXX this should not be in sockets but in something more general
+;; XXX need(?) support for automatic closure and for cancelling closure
 (defun make-fd-ref (opt-fd)
+  (check-type opt-fd (integer 0))
   (e-lambda |FDRef| ()
     (:|__printOn| (out)
       (e-coercef out +the-text-writer-guard+)
