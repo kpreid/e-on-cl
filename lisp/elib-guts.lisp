@@ -494,40 +494,52 @@
       (error "null is not allowed as the handler"))
     (unless (settledp opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
-    (e-lambda "$proxyResolver" ()
-      (:|__printOn| (tw)
-        (e-coercef tw +the-text-writer-guard+)
-        (e. tw |print| "<Proxy Resolver>"))
-      (:|getProxy| ()
-        "Return the Ref for this resolver, creating a new one if necessary."
-        (unless (and ref-slot (e. ref-slot |getValue|))
-          (setf ref-slot (make-instance 'e-simple-slot :value
-            (if opt-handler
-              (if opt-identity
-                (make-instance 'far-ref
-                    :handler opt-handler
-                    :identity opt-identity)
-                (make-instance 'remote-promise
-                    :handler opt-handler))
-              (error "this ProxyResolver is resolved and therefore its proxy is not available")))))
-        (e. ref-slot |getValue|))
-      (:|smash| (problem)
-        (unless opt-handler
-          (error "already resolved"))
-        (let ((ref (and ref-slot (e. ref-slot |getValue|))))
-          (when ref
-            (with-ref-transition-invariants (ref)
-              (change-class ref
+    (labels ((change (&rest change-class-args)
+               (let ((ref (and ref-slot (ref-shorten (e. ref-slot |getValue|)))))
+                 (when ref
+                   (check-type ref proxy-ref)
+                   (with-ref-transition-invariants (ref)
+                     (apply #'change-class ref change-class-args))
+                   ;; XXX should we catch any problems arising here?
+                   ;; XXX this is called only if the ref actually exists at the
+                   ;; moment. this seems fragile; discuss
+                   (e<- opt-handler |handleResolution| ref))
+                   (setf opt-handler nil
+                         ref-slot nil))))
+      (e-lambda "$proxyResolver" ()
+        (:|__printOn| (tw)
+          (e-coercef tw +the-text-writer-guard+)
+          (e. tw |print| "<Proxy Resolver>"))
+        (:|getProxy| ()
+          "Return the Ref for this resolver, creating a new one if necessary."
+          (unless (and ref-slot (e. ref-slot |getValue|))
+            (setf ref-slot (make-instance 'e-simple-slot :value
+              (if opt-handler
                 (if opt-identity
-                  'disconnected-ref
-                  'unconnected-ref)
-                :problem problem))))
-        (let ((handler opt-handler))
-          (setf opt-handler nil
-                ref-slot nil)
-          ; XXX should we catch any problems arising here?
-          (e. handler |handleResolution| (make-unconnected-ref problem)))
-        nil)))))
+                  (make-instance 'far-ref
+                      :handler opt-handler
+                      :identity opt-identity)
+                  (make-instance 'remote-promise
+                      :handler opt-handler))
+                (error "this ProxyResolver is resolved and therefore its proxy is not available")))))
+          (e. ref-slot |getValue|))
+
+        (:|resolve| (target)
+          (unless opt-handler
+            (error "already resolved"))
+          (when opt-identity
+            (error "can't resolve a proxy ref with identity (~A) to ~A" (e-quote opt-identity) (e-quote target)))
+          (change 'forwarding-ref :target target)
+          nil)
+        (:|smash| (problem)
+          (e-coercef problem 'condition)
+          (unless opt-handler
+            (error "already resolved"))
+          (change (if opt-identity
+                    'disconnected-ref
+                    'unconnected-ref)
+                  :problem problem)
+          nil))))))
 
 ; --- sorted queue ---
 

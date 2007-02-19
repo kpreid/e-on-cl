@@ -57,15 +57,15 @@ Notice that even though the handler is written to resolve it immediately, the re
   ? [Ref.optProblem(remote), 
   >  farResolver.smash("gone away"),
   >  Ref.optProblem(remote)]
-  # stdout: handleResolution <ref broken by gone away>
+  # value: [null, null, problem: gone away]
+
+  # stdout: handleResolution <ref broken by problem: gone away>
   #         
   
-  # value: [null, null, "gone away"]
-
 XXX should breakage be not synchronously visible instead?
   
   ? remote <- msg()
-  # value: <ref broken by gone away>
+  # value: <ref broken by problem: gone away>
 
   confirm sameness as best we can
   ? __equalizer.makeTraversalKey(remote) == remoteKey
@@ -75,7 +75,7 @@ XXX should breakage be not synchronously visible instead?
 
 --- Remote Promise
   
-  ? def promiseHandler {}
+  ? def promiseHandler { to handleResolution(_) :void {} }
   # value: <promiseHandler>
   
   ? def promiseResolver := makeProxyResolver(promiseHandler, null)
@@ -90,10 +90,21 @@ XXX should breakage be not synchronously visible instead?
   ? pragma.enable("accumulator")
   > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remotePromise])) }
   # value: [false, false, true, false, false, false, null]
+  
+  ? promiseResolver.resolve(def promiseResolution {})
+  
+  ? remotePromise
+  # value: <promiseResolution>
+  
+  ? remotePromise == promiseResolution
+  # value: true
+  
+  ? accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remotePromise])) }
+  # value: [false, true, false, false, true, true, null]
 
 --- Sameness of Far refs
 
-  ? def stubHandler {}
+  ? def stubHandler { to handleResolution(_) :void {} }
   # value: <stubHandler>
 
   different proxies, same identity
@@ -120,6 +131,48 @@ XXX should breakage be not synchronously visible instead?
   ? (def pr := makeProxyResolver(stubHandler, null)).getProxy() == pr.getProxy()
   # value: true
 
+--- Sameness of broken Far references
+
+Setup
+
+  ? def pr1 := makeProxyResolver(stubHandler, def sbfi {})
+  # value: <Proxy Resolver>
+
+  ? def pr2 := makeProxyResolver(stubHandler, sbfi)
+  # value: <Proxy Resolver>
+
+  ? def prO := makeProxyResolver(stubHandler, def sbfi2 {})
+  # value: <Proxy Resolver>
+
+  ? def [p1, p2, pO] := [pr1.getProxy(), pr2.getProxy(), prO.getProxy()]
+  # value: [<Far ref>, <Far ref>, <Far ref>]
+  
+  ? p1 == p2
+  # value: true
+  
+  ? p1 == pO
+  # value: false
+
+Resolving gives a specific identity, so it cannot be used.
+
+  ? pr1.resolve(Ref.broken("yellow"))
+  # problem: can't resolve a proxy ref with identity (<sbfi>) to <ref broken by problem: yellow>
+
+Smashing does not, so it can.
+
+XXX Is this consistent with E-on-Java? Is it correct? Is it good?
+
+  ? for x in [pr1, pr2, prO] { x.smash("yellow") }
+
+  ? p1
+  # value: <ref broken by problem: yellow>
+  
+  ? p1 == p2
+  # value: true
+
+  ? p1 == pO
+  # value: false
+
 --- Odd cases
 
   Unsettled argument
@@ -133,8 +186,10 @@ XXX should breakage be not synchronously visible instead?
   # value: <Proxy Resolver>
   
   ? resolver.smash("foo")
-  # stdout: handleResolution <ref broken by foo>
-  #         
+  
+  x # stdout: handleResolution <ref broken by foo>
+  x #         
+  XXX a previous implementation would have provided handleResolution in this case; the current one doesn't because there is no proxy. which is correct?
   
   ? resolver.smash("bar")
   # problem: already resolved
