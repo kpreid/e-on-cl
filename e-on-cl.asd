@@ -17,7 +17,8 @@
   :depends-on (:cl-fad
                :cl-ppcre
                :genhash
-               :trivial-garbage)
+               :trivial-garbage
+               #+sbcl :sb-bsd-sockets)
   :components
   ((:module "lisp" :components
     ((:file "packages")
@@ -48,6 +49,9 @@
             :depends-on ("elib"))
      (:file "extern"
             :depends-on ("elib" "sugar"))
+     (:file "sockets")
+     (:file "sockets2"
+            :depends-on ("sockets"))
      (:file "knot-base"
             :depends-on ("elib" "sugar"
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
@@ -103,14 +107,6 @@
   :depends-on (:cl-irc :e-on-cl)
   :components ((:module "lisp" :components
     ((:file "irc-repl")))))
-
-;; This is a separate system because I decided to lazily load the Lisp-side socket code, and so the relevant taming declarations cannot be loaded until the socket system is. -- kpreid 2005-04-30
-(defsystem e-on-cl.sockets
-  :depends-on (:e-on-cl #+sbcl :sb-bsd-sockets)
-  :components ((:module "lisp" :components
-    ((:file "sockets")
-     (:file "sockets2"
-            :depends-on ("sockets"))))))
 
 ;;; --- Gimmicks ---
 

@@ -35,17 +35,10 @@ def IPAuthor implements DeepFrozen {
       }
     }
     
-    { def asdfOperate := lisp["ASDF", "OPERATE"]::"function"
-      def load_op := intern("LOAD-OP", "ASDF")
-      
-      # XXX :verbose nil for asdf loads
-      asdfOperate(load_op, intern("E-ON-CL.SOCKETS", "KEYWORD"))
-    }
-    
     def clCoerce := lisp["CL", "COERCE"]::"function"
 
-    def fooConnectTcp := lisp["E.SOCKETS", "FOO-CONNECT-TCP"]::"function"
-    def _getAddrInfo := lisp["E.SOCKETS", "GET-ADDR-INFO"]::"function"
+    def fooConnectTcp := lisp["E.STREAMS", "FOO-CONNECT-TCP"]::"function"
+    def _getAddrInfo := lisp["E.STREAMS", "GET-ADDR-INFO"]::"function"
     
     def Element := int # XXX int8
     

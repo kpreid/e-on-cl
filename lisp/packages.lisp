@@ -543,6 +543,32 @@
   e.extern:make-file-getter
   e.extern:read-entire-file))
 
+(defpackage :e.streams
+  (:nicknames :e.stream)
+  (:use :cl :e.util :elib 
+        #+sbcl :sb-bsd-sockets)
+  #+openmcl (:import-from :openmcl-socket :socket-error)
+  (:documentation "EIO streams, mapping to CL streams, socket interfaces.")
+  (:export
+    :cl-to-eio-in-stream
+    :cl-to-eio-out-stream
+    :stream-to-fd-ref
+    
+    :foo-connect-tcp
+    :get-addr-info
+    
+    :+the-make-socket+
+    :+the-get-socket-peer-ref+
+    :+the-get-socket-local-ref+
+    :+the-make-pipe+))
+    
+(e.util:defglobals
+  e.streams:+the-make-socket+
+  e.streams:+the-get-socket-peer-ref+
+  e.streams:+the-make-socket+
+  e.streams:+the-make-pipe+)
+
+
 (cl:defpackage :e.rune
   (:use :cl :e.util :e.elib :e.knot)
   (:documentation "Bootstrapping: setting up the E runtime environment after clrune starts the Lisp process.")

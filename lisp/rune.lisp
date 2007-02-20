@@ -215,7 +215,6 @@
   ;; make sure we've loaded everything lispy, in order to simplify the
   ;; stuff-changing-out-from-under-our-image problem
   (asdf:operate 'asdf:load-op :e-on-cl.updoc)
-  ;(asdf:operate 'asdf:load-op :e-on-cl.sockets)
   #|XXX review what should go here|#
   
   ;; workaround for sbcl/asdf bugs as of 0.9.11.24: unset SBCL_HOME causes FIND-SYSTEM to fail

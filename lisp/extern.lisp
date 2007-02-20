@@ -304,9 +304,8 @@
 (defun convert-stream (stream which)
   (when stream
     (funcall 
-      (system-symbol (if (eql which :stdin) "CL-TO-EIO-OUT-STREAM" 
-                                            "CL-TO-EIO-IN-STREAM") 
-                     :e.sockets :e-on-cl.sockets)
+      (if (eql which :stdin) #'e.streams:cl-to-eio-out-stream 
+                             #'e.streams:cl-to-eio-in-stream)
       stream
       (format nil "process ~(~A~)" which))))
 

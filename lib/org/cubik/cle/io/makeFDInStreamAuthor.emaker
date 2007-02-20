@@ -19,12 +19,6 @@ def makeFDInStreamAuthor {
     def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
     def read := lisp["CL", "READ-FROM-STRING"]::"function"
     def intern := lisp["CL", "INTERN"]::"function"
-    { def asdfOperate := lisp["ASDF", "OPERATE"]::"function"
-      def load_op := intern("LOAD-OP", "ASDF")
-      
-      # XXX :verbose nil for asdf loads
-      asdfOperate(load_op, intern("E-ON-CL.SOCKETS", "KEYWORD"))
-    }
     def l__quasiParser {
       to valueMaker(t :String) {
         return def vm {
@@ -33,8 +27,8 @@ def makeFDInStreamAuthor {
       }
     }
 
-    def fooAddReceiveHandler := lisp["E.SOCKETS", "FOO-ADD-RECEIVE-HANDLER"]::"function"
-    def fooRemoveReceiveHandler := lisp["E.SOCKETS", "FOO-REMOVE-RECEIVE-HANDLER"]::"function"
+    def fooAddReceiveHandler := lisp["E.STREAMS", "FOO-ADD-RECEIVE-HANDLER"]::"function"
+    def fooRemoveReceiveHandler := lisp["E.STREAMS", "FOO-REMOVE-RECEIVE-HANDLER"]::"function"
 
     /** Make an InStream that reads from a non-blocking-POSIX-read()-style data source. */
     def makeFDInStream implements DeepFrozenStamp {

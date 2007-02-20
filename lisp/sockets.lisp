@@ -1,18 +1,7 @@
 ; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(defpackage :e.sockets
-  (:use :cl :e.util :elib 
-        #+sbcl :sb-bsd-sockets)
-  #+openmcl (:import-from :openmcl-socket :socket-error)
-  (:documentation "Taming the Lisp's socket interface, if it has one.")
-  (:export
-    :foo-connect-tcp
-    :get-addr-info))
-
-(in-package :e.sockets)
-
-;;; XXX there are no tests for this code beyond org.cubik.cle.IPAuthor's use of it
+(in-package :e.streams)
 
 (defun coerce-typed-vector (vector type)
   "Coerce 'vector' to a specialized vector of type 'type', obeying E reference transparency rules."

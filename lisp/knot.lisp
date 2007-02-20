@@ -471,8 +471,7 @@
       (e-lambda "org.cubik.cle.prim.simplifyFQName" 
           (:stamped +deep-frozen-stamp+)
         (:|run| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
-    ("org.cubik.cle.io.makeSocket"
-      (symbol-value (system-symbol "+THE-MAKE-SOCKET+" :e.sockets :e-on-cl.sockets)))
+    ("org.cubik.cle.io.makeSocket"             e.streams:+the-make-socket+)
     ))
 
 (defun f+ (f1 f2)
@@ -727,7 +726,7 @@
                              (e. (eelt (e-import "org.cubik.cle.charsets") e.extern:+standard-external-format-common-name+)
                                  |decode|
                                 (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
-                                   +lisp+) (e-lambda "stdin" ()) (funcall (system-symbol "STREAM-TO-FD-REF" :e.sockets :e-on-cl.sockets) *standard-input* :input) 4096) (e. #() |asMap|)))))
+                                   +lisp+) (e-lambda "stdin" ()) (e.streams:stream-to-fd-ref *standard-input* :input) 4096) (e. #() |asMap|)))))
             ("stdout"     ,(make-text-writer-to-cl-stream
                             out-cl-stream
                             :autoflush t
@@ -742,12 +741,9 @@
               `(("interp" ,interp)))
             ("&IP"        ,(make-lazy-apply-slot (lambda ()
                              (efuncall (e-import "org.cubik.cle.IPAuthor") +lisp+))))
-            ("&getSocketPeerRef"        
-             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-PEER-REF+" :e.sockets :e-on-cl.sockets)))))
-            ("&getSocketLocalRef"
-             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-GET-SOCKET-LOCAL-REF+" :e.sockets :e-on-cl.sockets)))))
-            ("&makePipe"        
-             ,(make-lazy-apply-slot (lambda () (symbol-value (system-symbol "+THE-MAKE-PIPE+" :e.sockets :e-on-cl.sockets)))))
+            ("getSocketPeerRef"  ,e.streams:+the-get-socket-peer-ref+)
+            ("getSocketLocalRef" ,e.streams:+the-get-socket-local-ref+)
+            ("makePipe"          ,e.streams:+the-make-pipe+)
             #||#)))))
 
 ;;; --- end ---
