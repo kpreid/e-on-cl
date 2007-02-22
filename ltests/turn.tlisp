@@ -100,3 +100,17 @@
         (top-loop))
       (remove-exclusive-io-handler handler))
     (values)))
+    
+;;; --- Running multiple vats ---
+
+(deftest two-vats
+  (let* ((runner (make-instance 'runner))
+         (vats (list (make-instance 'vat :runner runner :label "multivat-1")
+                     (make-instance 'vat :runner runner :label "multivat-2")))
+         (counter 0))
+    (block nil
+      (flet ((ding () (incf counter) (when (= counter 2) (return))))
+        (dolist (*vat* vats)
+          (e<- (efun () (ding)) |run|))
+        (runner-loop runner))))
+  nil)
