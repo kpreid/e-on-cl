@@ -49,6 +49,8 @@
             :depends-on ("elib"))
      (:file "extern"
             :depends-on ("elib" "sugar"))
+     (:file "random"
+            :depends-on ("elib"))
      (:file "sockets")
      (:file "sockets2"
             :depends-on ("sockets"))
@@ -58,7 +60,8 @@
      (:file "knot"
             :depends-on ("knot-base" "extern" "elib-guts" "tables2"
                          "elang-nodes" #| +the-make-static-scope+ |#
-                         "print" #| constructing global tracers |#))
+                         "print" #| constructing global tracers |#
+                         "random" #| entropy |#))
      (:file "elang-nodes"
             :depends-on ("elib" 
                          "util"

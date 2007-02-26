@@ -718,6 +718,8 @@
         vat-priv-scope
         (make-scope "__ioPowers$"
           `(("timer"           ,e.extern:+the-timer+)
+            ("&entropy"        ,(make-lazy-apply-slot (lambda ()
+              (efuncall (e-import "org.cubik.cle.wrapRandomState") (make-random-state t)))))
             ("file__uriGetter" ,(e.extern:make-file-getter '#()))
             ("makeWeakRef"     ,+the-make-weak-ref+)
             ("unsafeNearSpawn"      ,e.extern:+spawn+)

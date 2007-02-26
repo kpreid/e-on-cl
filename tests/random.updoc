@@ -1,0 +1,15 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? entropy
+# value: <pseudorandom number generator>
+
+(XXX This is a bug: privilegedScope entropy should take external sources etc. and otherwise do all the things a cryptographic-quality RNG should do. Compare E-on-Java's ESecureRandom. The print above is a warning.)
+
+0 is excluded from the allowed range on the motivation that it is far more likely that zeros will be erroneously generated than that the RNG picks it correctly.
+
+? def v := entropy.nextSwiss(); null
+
+? if ((1..!2**160)(v)) { "OK" } else { [v] }
+# value: "OK"
+

@@ -33,7 +33,7 @@ def makeIOScope implements DeepFrozen {
     # Things which are simply copied into the scope
     # (Note that names starting with & are special in ioAdd)
     for copyName ? exits.maps(copyName) in 
-        ["timer", "file__uriGetter", "stdin", "stdout", "stderr", "interp", "lisp", "IP", "getSocketPeerRef", "getSocketLocalRef", "makePipe"] {
+        ["timer", "file__uriGetter", "stdin", "stdout", "stderr", "interp", "lisp", "IP", "getSocketPeerRef", "getSocketLocalRef", "makePipe", "entropy"] {
       ioAdd with= ("&" + copyName, exits.getSlot(copyName))
     }
   
