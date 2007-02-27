@@ -112,7 +112,8 @@
   `#(,(eelt (vat-safe-scope *vat*) "import__uriGetter") "get" #(,fqn)))
 
 (defglobal +the-make-simple-slot+ (e-lambda "org.erights.e.elib.slot.makeFinalSlot"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
   (:|asType| () (type-specifier-to-guard 'e-simple-slot))
@@ -120,7 +121,8 @@
     (make-instance 'e-simple-slot :value value))))
 
 (defglobal +the-make-var-slot+ (e-lambda "org.erights.e.elib.slot.makeVarSlot"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeVarSlot"))
   (:|asType| () (type-specifier-to-guard 'e-var-slot))
@@ -260,7 +262,8 @@
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     "Booleans are atomic."
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +pass-by-construction+)))
 
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)

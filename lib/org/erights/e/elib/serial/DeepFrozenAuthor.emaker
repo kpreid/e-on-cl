@@ -105,8 +105,8 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         rtrace("--rDF atomic")
         return
 
-      } else if (Ref.isPassByCopy(specimen)) {
-        # transparent
+      } else if (__equalizer.isSelfless(specimen)) {
+        # An object which is Selfless by definition has no mutable state (because that would give it an identity) that is not exposed as a 'separate' reference via its uncall.
         
         # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
         if ((def uncall := specimen.__optUncall()) != null) {

@@ -57,7 +57,8 @@
           table))))
 
 (defglobal +the-make-scope+ (e-lambda "org.erights.e.elang.scope.makeScope"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
   (:|asType| ()
     (make-instance 'cl-type-guard :type-specifier 'scope))
   (:|_make| (state fqn-prefix local-definitions)

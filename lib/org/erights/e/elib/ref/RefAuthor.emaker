@@ -44,8 +44,10 @@ def RefAuthor {
       }
       
       to isPassByCopy(r) :any { 
-        # xxx eventually, this will need to reflect the difference between PassByCopy and Selfless.
-        __equalizer.isSelfless(r)
+        if (__equalizer.isSelfless(r)) { Ref.isPBC(r) } else { false }
+      }
+      to isPBC(r) :any { 
+        return (escape fail { pbc.coerce(r, fail) == r } catch _ { false })
       }
       to whenResolved(ref, reactor) :any {
         # XXX does this match the semantics of the standard E whenResolved?

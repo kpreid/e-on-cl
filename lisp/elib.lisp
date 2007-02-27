@@ -1285,6 +1285,25 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore audition))
     +e-true+)))
 
+(defglobal +pass-by-construction+ (e-lambda 
+    "org.erights.e.elib.serial.PassByConstruction"
+    (:stamped +deep-frozen-stamp+)
+  (:|audit| (audition)
+    (declare (ignore audition))
+    +e-true+)
+  (:|coerce| (specimen ejector)
+    (funcall
+      (standard-coerce (lambda (s) 
+                         (or (approvedp +pass-by-construction+ s)
+                             (and (approvedp +selfless-stamp+ s)
+                                  (typep (e. (e. s |__optUncall|) |get| 0)
+                                         (guard-to-type-specifier +pass-by-construction+)))))
+                       (constantly +pass-by-construction+)
+                       (lambda (s) (make-condition 'type-error
+                                     :datum specimen 
+                                     :expected-type (guard-to-type-specifier +pass-by-construction+))))
+      specimen ejector))))
+        
 (defglobal +thread-sharable-stamp+ (e-lambda 
     "org.erights.e.elib.serial.ThreadSharableStamp"
     (:doc "The primitive rubber-stamping auditor for objects whose /implementation/ (those components of its state not exposed by __optUncall) is thread-safe. It does *not* guarantee observed immutability or no-outside-effects-during-turn behaviors; see DeepFrozenStamp. This stamp is a Lisp-system-wide authority.")

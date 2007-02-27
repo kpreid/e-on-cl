@@ -13,7 +13,8 @@
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +thread-sharable-stamp+)))
+        (eql auditor +thread-sharable-stamp+)
+        (eql auditor +pass-by-construction+)))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
@@ -59,7 +60,8 @@
     ;; NOTE that this implementation overrides the one for VECTORs, and so
     ;; prevents STRINGs from claiming Selfless.
     (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +thread-sharable-stamp+)))
+        (eql auditor +thread-sharable-stamp+)
+        (eql auditor +pass-by-construction+)))
   (:|__optUncall/0| (constantly nil))
 
   (:|__printOn| (this tw)
@@ -240,7 +242,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Characters are atomic."
     (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +thread-sharable-stamp+)))
+        (eql auditor +thread-sharable-stamp+)
+        (eql auditor +pass-by-construction+)))
   
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -452,7 +455,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (apply #'sugar-cache-call rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
 
 (defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
-    (:stamped  +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
+  ; XXX shouldn't be PBC but rather marked as a common exit
   ; XXX write tests for this
   (:|fromIteratableValues| (iteratable)
     (let ((values '()))
@@ -472,10 +477,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable number
   (audited-by-magic-verb (this auditor)
     "Numbers are atomic."
-    (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +thread-sharable-stamp+)))
-
+        (eql auditor +thread-sharable-stamp+)
+        (and (eql auditor +pass-by-construction+)
+             (typep this '(or integer float64)))))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| (prin1-to-string this)))
@@ -717,7 +722,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 ; - simple-error -
 
 (defglobal +the-make-string-error+ (e-lambda "org.cubik.cle.fail.makeStringException"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
   (:|asType| () (type-specifier-to-guard 'string-error))
   (:|run| (string)
     (make-condition 'simple-error
@@ -772,7 +778,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (type-specifier-to-guard (type-error-expected-type this))))
 
 (defglobal +the-make-coercion-failure+ (e-lambda "org.cubik.cle.fail.makeCoercionFailure"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
   (:|asType| () (type-specifier-to-guard 'type-error))
   (:|run| (specimen guard)
     (make-condition

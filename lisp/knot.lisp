@@ -274,6 +274,9 @@
     (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
     (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
     (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
+
+    ;; guards
+    (:|PassByConstruction| elib:+pass-by-construction+)
     
     ;; tools
     (:|makeSafeScope|    (wrap-function 'make-safe-scope))    
@@ -530,7 +533,8 @@
                     +vm-node-type-importer+
                     +vm-node-maker-importer+))))
             (e-lambda "org.cubik.cle.prim.ImportLoaderMagic"
-                (:stamped +deep-frozen-stamp+)
+                (:stamped +deep-frozen-stamp+
+                 :stamped +pass-by-construction+)
               (:|__printOn| (tw) (e. real-loader |__printOn| tw))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
@@ -580,6 +584,9 @@
         ("String"     ,(type-specifier-to-guard 'string))
         ("TextWriter" ,elib:+the-text-writer-guard+)
         ("Twine"      ,(type-specifier-to-guard 'elib:twine))
+
+        ; --- guards ---
+        ("pbc"        ,elib:+pass-by-construction+)
 
         ; --- primitive: reference operations (shared) ---        
         ("__auditedBy" ,+the-audit-checker+)

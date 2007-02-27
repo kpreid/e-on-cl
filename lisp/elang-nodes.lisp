@@ -24,7 +24,8 @@
     (e-lambda 
         ,(concatenate 'string "org.erights.e.elang.evm.make"
                               (symbol-name class-sym))
-        (:stamped +thread-sharable-stamp+)
+        (:stamped +thread-sharable-stamp+
+         :stamped +pass-by-construction+)
       (:|__getAllegedType| ()
         ; XXX figure out how to write this code better; withFoo would be an improvement, to start with
         (let ((base (e-lambda-type-desc)))

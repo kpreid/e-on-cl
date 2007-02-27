@@ -247,7 +247,7 @@
                    character
                    integer
                    float64
-                   elib:e-boolean))))
+                   e-boolean))))
           
           (:|makeTraversalKey/1| 'make-traversal-key))))))
 

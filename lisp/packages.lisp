@@ -171,6 +171,7 @@
     :+deep-frozen-stamp+
     :+selfless-stamp+
     :+thread-sharable-stamp+
+    :+pass-by-construction+
     
     :+e-false+ :+e-true+ :e-is-true :as-e-boolean :e-boolean
     

@@ -1,0 +1,114 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+This is a copy of the pass-by-construction.updoc I wrote for E-on-Java, with the multivat parts commented out until E-on-CL supports them. It currently only tests the PBC auditor and related things.
+
+    ? pragma.syntax("0.9")
+
+    x ? def seedVat := <elang:interp.seedVatAuthor>(<unsafe>)
+    x ? def vsv := seedVat.virtualize((introducer.onTheAir(); introducer))
+    x # value: <virtualSeedVat>
+    x 
+    x ? def [otherEval, vat] :=
+    x >   vsv("fn src { e__quasiParser(src).eval(safeScope) }")
+    x # value: [<Promise>, \
+    x #         <Vat newVirtualSeedVat in <runs in newVirtualSeedVat>>]
+    x 
+    x ? def other := otherEval <- ("fn x { x }")
+
+    ? def obj implements pbc { to __optUncall() :any {
+    >   return [<elib:tables.makeFlexList>, "make", []]
+    > }}
+    # value: <obj>
+
+    ? Ref.isPBC(obj)
+    # value: true
+
+    ? Ref.isPassByCopy(obj)
+    # value: false
+
+    ? obj :pbc
+    # value: <obj>
+
+    x ? def r := interp.waitAtTop(other <- (obj))
+    x ? r
+    x # value: <Far ref>
+    x 
+    x ? r <- push(1)
+    x # value: <Remote Promise>
+    x 
+    x ? r <- push(2)
+    x # value: <Remote Promise>
+    x 
+    x ? def s := interp.waitAtTop(r <- snapshot())
+    x ? s
+    x # value: [1, 2]
+
+Odd case: maker is near only on receipt
+
+    x ? def otherMaker := interp.waitAtTop(
+    x >     otherEval <- ("fn { def oddFar {} }"))
+    x ? otherMaker
+    x # value: <Far ref>
+    x 
+    x ? def r := interp.waitAtTop(
+    x >     other <- (
+    x >         def oddNear implements pbc {
+    x >             to __optUncall() {
+    x >                 return [otherMaker, "run", []] } }))
+    x ? r
+    x # value: <Far ref>
+    x 
+    x ? def otherCall := otherEval <- ("fn r,v,a { E.call(r,v,a) }")
+    x # value: <Remote Promise>
+    x 
+    x ? def t := interp.waitAtTop(otherCall <- (E, "toString", [r])); null
+    x ? t
+    x # value: "<oddFar>"
+
+Auditing details
+
+    ? Ref.isPBC(def notHonestlyPBC implements pbc {})
+    # value: true
+
+Miscellaneous
+
+    ? def pbcs := [
+    >     0,
+    >     ' ',
+    >     false,
+    >     "" :(<type:java.lang.Throwable>),
+    >     # makeSturdyRef.temp(1),
+    >     # <import:java.lang.makeInteger>,
+    >     # <import:java.lang.makeInteger> :(<type:java.lang.Runnable>),
+    >     #<elib:base.makeValueThunk>(null),
+    >     [].asMap(),
+    >     [].asSet(),
+    >     [],
+    >     <import>
+    > ]
+    > for i => thing in pbcs {
+    >     if (!Ref.isPBC(thing)) {
+    >         println(`#$i should be PBC: `,
+    >                 thing,
+    >                 " ",
+    >                 thing.__getAllegedType().getFQName())
+    >     }
+    > }
+    > print("of ", pbcs.size())
+    # stdout: of 8
+
+    ? def notpbcs := [
+    >     def _ {},
+    >     def _ {} :(<type:java.lang.Runnable>),
+    > ]
+    > for i => thing in notpbcs {
+    >     if (Ref.isPBC(thing)) {
+    >         println(`#$i shouldn't be PBC: `,
+    >                 thing,
+    >                 " ",
+    >                 thing.__getAllegedType().getFQName())
+    >     }
+    > }
+    > print("of ", notpbcs.size())
+    # stdout: of 2

@@ -141,6 +141,9 @@ PassByCopy
   ? 1 :PassByCopy
   # value: 1
   
+  ? [1,2,3] :PassByCopy
+  # value: [1, 2, 3]
+  
   ? [1,2,any] :PassByCopy
   # value: [1, 2, any]
   
