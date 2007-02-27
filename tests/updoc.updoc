@@ -60,7 +60,7 @@ waitAtTop / timing tests:
   
   # value: 1
   
-  ? interp.waitAtTop(fn { print <- ("now") } <- ()); 2
+  ? interp.waitAtTop(fn { print <- ("now"); 0 } <- ()); 2
   # value: 2
   
   # stdout: now

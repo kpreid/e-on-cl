@@ -277,6 +277,7 @@
           (:|getProps| () props)
           ;; XXX other interp methods
           (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
+            "Unlike E-on-Java, always returns null, and not the ref it's passed."
             (e. wait-hook-slot |setValue|
               (call-when-resolved ref
                 (efun (ref)
