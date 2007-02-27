@@ -42,6 +42,9 @@ def makeFlexMapShell implements DeepFrozen {
         }
       }
       
+      to removeAll() {
+        flexMap.removeKeys(flexMap, true) }
+      
       to putAll(new) {
         flexMap.putAll(new, false, throw) }
       to putAll(new, strict) {
