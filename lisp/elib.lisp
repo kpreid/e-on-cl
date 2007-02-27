@@ -376,7 +376,7 @@ If there is no current vat at initialization time, captures the current vat at t
         (assert tag () "implementation inconsistency: identified-ref claiming to be unresolved")))
     (values-list result)))
 
-(defmethod weak-when-more-resolved ((ref broken-ref) weak-reactor action)
+(defmethod weak-when-more-resolved ((ref identified-ref) weak-reactor action)
   (declare (ignore weak-reactor action))
   (values))
 
