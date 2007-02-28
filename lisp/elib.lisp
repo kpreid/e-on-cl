@@ -89,6 +89,10 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
   (:documentation "Used only for REFs' various behaviors on sends; should not be specialized for non-REFs.")
   (declare (optimize (speed 3))))
 
+(defgeneric e-send-only-dispatch (rec mverb &rest args)
+  (:documentation "Used only for REFs' various behaviors on sends; should not be specialized for non-REFs. This is the no-return-value form, and always returns nil.")
+  (declare (optimize (speed 3))))
+
 (defgeneric same-hash-dispatch (a))
 (defgeneric samep-dispatch (left right))
 
@@ -122,6 +126,7 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 (defmacro e<- (rec-form verb-des &rest args-forms)
   `(e-send-dispatch ,rec-form ,(mangle-verb (string verb-des) (length args-forms)) ,@args-forms))
 
+;; XXX TODO: allow for optimizing e-send and e<- into send-only
 
 (defgeneric %ref-shorten (ref)
   (:documentation "Implementation of reference shortening. Usage should call REF-SHORTEN instead, which optimizes common cases."))
@@ -303,11 +308,15 @@ If there is no current vat at initialization time, captures the current vat at t
   (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
 
 (defmethod e-send-dispatch ((ref promise-ref) mverb &rest args)
-  ; XXX provide send-only
   (with-slots (buffer) ref
     (multiple-value-bind (promise resolver) (make-promise)
       (vector-push-extend (list resolver mverb args) buffer)
       promise)))
+
+(defmethod e-send-only-dispatch ((ref promise-ref) mverb &rest args)
+  (with-slots (buffer) ref
+    (vector-push-extend (list nil mverb args) buffer))
+  nil)
 
 (defgeneric weak-when-more-resolved (ref weak-reactor action))
 
@@ -446,6 +455,9 @@ If there is no current vat at initialization time, captures the current vat at t
 (defmethod e-send-dispatch ((ref forwarding-ref) mverb &rest args)
   (apply #'e-send-dispatch (forwarding-ref-target ref) mverb args))
 
+(defmethod e-send-only-dispatch ((ref forwarding-ref) mverb &rest args)
+  (apply #'e-send-only-dispatch (forwarding-ref-target ref) mverb args))
+
 ; - vat -
 
 (defun call-with-turn (body vat &key exclude-io (label t))
@@ -564,6 +576,9 @@ If there is no current vat at initialization time, captures the current vat at t
             (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
             (make-unconnected-ref (transform-condition-for-e-catch p :backtrace b)))))))
     promise))
+
+(defmethod e-send-only-dispatch (rec mverb &rest args)
+  (apply #'e-send-dispatch rec mverb args))
 
 (defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
   (destructuring-bind (&optional qtime &rest qfunc)
@@ -1485,7 +1500,9 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   ; after change-class, the buffer has been dropped by the ref
   ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet
   (loop for (resolver mverb args) across buffer do
-    (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args)))
+    (if resolver
+      (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))
+      (apply #'e-send-only-dispatch new-target mverb args)))
   
   (maphash (lambda (reactor action)
              (funcall action reactor))

@@ -1022,10 +1022,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef a 'vector)
     (e-send r v a))
   (:|sendOnly| (r v a)
-    ; xxx provide actual send-only
     (e-coercef v 'string)
     (e-coercef a 'vector)
-    (e-send r v a))
+    (apply #'e-send-only-dispatch r (mangle-verb v (length a)) (coerce a 'list)))
   (:|toQuote/1| 'e-quote)
   (:|toString/1| 'e-print)))
 

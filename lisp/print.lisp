@@ -305,32 +305,3 @@
     (if (e-is-true autoflush)
       (e. underlying |withAutoflush|)
       underlying))))
-
-; --- "E" object ---
-
-; XXX 'E' should probably be in knot.lisp
-
-(defglobal +the-e+ (e-lambda "org.erights.e.elib.prim.E"
-    (:stamped +deep-frozen-stamp+)
-  (:|__printOn| (tw) ; XXX this can be deleted, I think - try later
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "<E>"))
-  (:|call| (r v a)
-    (e-coercef v 'string)
-    (e-coercef a 'vector)
-    (e-call r v a))
-  (:|callWithPair| (rec verb-args)
-    (e-coercef verb-args '(vector * 2))
-    (e-call rec (aref verb-args 0) (aref verb-args 1)))
-  (:|send| (r v a)
-    (e-coercef v 'string)
-    (e-coercef a 'vector)
-    (e-send r v a))
-  (:|sendOnly| (r v a)
-    ; xxx provide actual send-only
-    (e-coercef v 'string)
-    (e-coercef a 'vector)
-    (e-send r v a))
-  (:|toQuote/1| 'e-quote)
-  (:|toString/1| 'e-print)))
-

@@ -13,6 +13,10 @@ EProxyResolver/EProxyHandler, or at least our version thereof
   >     println(`handleSendAll $verb $args`)
   >     return [i += 1, verb, args]
   >   }
+  >   to handleSendAllOnly(verb, args) :any {
+  >     println(`handleSendAllOnly $verb $args`)
+  >     return [i += 1, verb, args] # should not be returned from the proxy
+  >   }
   >   to handleResolution(newTarget) :any {
   >     println(`handleResolution $newTarget`)
   >   }
@@ -51,6 +55,12 @@ Notice that even though the handler is written to resolve it immediately, the re
   
   ? Ref.fulfillment(firstResponse)
   # value: [1, "first", []]
+
+-- Send-only
+
+  ? E.sendOnly(remote, "only", [])
+  # stdout: handleSendAllOnly only []
+  #         
 
 -- Breaking Far ref
 

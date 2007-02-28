@@ -468,6 +468,11 @@
   (with-slots (handler) ref
     (e<- handler |handleSendAll| (e-util:unmangle-verb mverb) (coerce args 'vector))))
 
+(defmethod e-send-only-dispatch ((ref proxy-ref) mverb &rest args)
+  (with-slots (handler) ref
+    (e-send-only-dispatch handler :|handleSendAllOnly/2| (e-util:unmangle-verb mverb) (coerce args 'vector)))
+  nil)
+
 (defmethod weak-when-more-resolved ((ref proxy-ref) weak-reactor action)
   (declare (ignore weak-reactor action))
   ;; XXX implement this to invoke the handler. until then, multivat 
