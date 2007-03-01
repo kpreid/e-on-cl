@@ -306,6 +306,8 @@
     :make-scope
     :require-node-fits-scope
     
+    :+the-make-path-loader+
+    
     :+shared-safe-loader+
     :+shared-safe-scope+
     :+sharable-importer+
@@ -323,7 +325,8 @@
 (e.util:defglobals
   e.knot:+sharable-importer+
   e.knot:+trace+
-  e.knot:+sys-trace+)
+  e.knot:+sys-trace+
+  e.knot:+the-make-path-loader+)
   
 (cl:defvar e.knot:*emaker-search-list*)
 
@@ -508,6 +511,9 @@
     :compile-e-to-file
     :load-compiled-e))
 
+(e.util:defglobals
+  e.elang.compiler::+e-audition-guard+
+  e.elang.compiler::+the-evaluator+)
 
 (cl:defpackage :e.elang.compiler.seq
   (:nicknames :e.compiler.seq)
@@ -567,7 +573,7 @@
 (e.util:defglobals
   e.streams:+the-make-socket+
   e.streams:+the-get-socket-peer-ref+
-  e.streams:+the-make-socket+
+  e.streams:+the-get-socket-local-ref+
   e.streams:+the-make-pipe+)
 
 
