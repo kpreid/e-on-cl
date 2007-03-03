@@ -534,7 +534,7 @@
                     +vm-node-maker-importer+))))
             (e-lambda "org.cubik.cle.prim.ImportLoaderMagic"
                 (:stamped +deep-frozen-stamp+
-                 :stamped +pass-by-construction+)
+                 :stamped +standard-graph-exit-stamp+)
               (:|__printOn| (tw) (e. real-loader |__printOn| tw))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
@@ -544,6 +544,16 @@
   (:|run| (flag)
     (unless (e-is-true flag)
       (error "For-loop body isn't valid after for-loop exits.")))))
+
+(defglobal +standard-graph-exit+ (e-lambda "StandardGraphExit"
+    (:stamped +deep-frozen-stamp+)
+  ;; XXX should be a guard
+  ;; XXX this name and protocol to be reviewed. used only to implement Data, so far
+  (:|coerce/2| (standard-coerce 
+                 (lambda (s) (approvedp +standard-graph-exit-stamp+ s))
+                 (lambda () +standard-graph-exit+)))
+  (:|is| (ref)
+    (as-e-boolean (approvedp +standard-graph-exit-stamp+ ref)))))
 
 (defglobal +shared-safe-scope+
   (labels ((prim (name) (e. +shared-safe-loader+ |get| name)))
@@ -585,8 +595,10 @@
         ("TextWriter" ,elib:+the-text-writer-guard+)
         ("Twine"      ,(type-specifier-to-guard 'elib:twine))
 
-        ; --- guards ---
+        ; --- primitive: reference conditions ---
         ("pbc"        ,elib:+pass-by-construction+)
+        ;; XXX safeScope["StandardGraphExit"] is a lousy name for this
+        ("StandardGraphExit" ,+standard-graph-exit+)
 
         ; --- primitive: reference operations (shared) ---        
         ("__auditedBy" ,+the-audit-checker+)
@@ -655,8 +667,8 @@
           ("&nullOk"    ,(lazy-import "org.erights.e.elib.slot.nullOk"))
           
           ; --- utility: reference conditions ---
-          ("&Data"       ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
-          ("&DeepPassByCopy" ,(lazy-import "org.erights.e.elib.serial.DeepPassByCopy"))
+          ("&Data"       ,(lazy-import "org.erights.e.elib.serial.Data"))
+          ("&DeepPassByCopy" ,(make-unconnected-ref "DeepPassByCopy is not actually possible; use Data instead."))
           ("&near"       ,(lazy-import "org.erights.e.elib.slot.near"))
           ("&PassByCopy" ,(lazy-import "org.erights.e.elib.serial.PassByCopy"))
           ("&rcvr"       ,(lazy-import "org.erights.e.elang.interp.rcvr"))

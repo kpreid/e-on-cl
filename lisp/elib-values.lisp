@@ -14,7 +14,7 @@
     (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (eql auditor +pass-by-construction+)))
+        (eql auditor +standard-graph-exit-stamp+)))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
@@ -61,7 +61,7 @@
     ;; prevents STRINGs from claiming Selfless.
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (eql auditor +pass-by-construction+)))
+        (eql auditor +standard-graph-exit-stamp+)))
   (:|__optUncall/0| (constantly nil))
 
   (:|__printOn| (this tw)
@@ -243,7 +243,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (eql auditor +pass-by-construction+)))
+        (eql auditor +standard-graph-exit-stamp+)))
   
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -456,8 +456,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
     (:stamped +deep-frozen-stamp+
-     :stamped +pass-by-construction+)
-  ; XXX shouldn't be PBC but rather marked as a common exit
+     :stamped +standard-graph-exit-stamp+)
   ; XXX write tests for this
   (:|fromIteratableValues| (iteratable)
     (let ((values '()))
@@ -479,7 +478,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Numbers are atomic."
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (and (eql auditor +pass-by-construction+)
+        (and (eql auditor +standard-graph-exit-stamp+)
              (typep this '(or integer float64)))))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -723,7 +722,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defglobal +the-make-string-error+ (e-lambda "org.cubik.cle.fail.makeStringException"
     (:stamped +deep-frozen-stamp+
-     :stamped +pass-by-construction+)
+     :stamped +standard-graph-exit-stamp+
+     :stamped +thread-sharable-stamp+)
   (:|asType| () (type-specifier-to-guard 'string-error))
   (:|run| (string)
     (make-condition 'simple-error
@@ -779,7 +779,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defglobal +the-make-coercion-failure+ (e-lambda "org.cubik.cle.fail.makeCoercionFailure"
     (:stamped +deep-frozen-stamp+
-     :stamped +pass-by-construction+)
+     :stamped +standard-graph-exit-stamp+
+     :stamped +thread-sharable-stamp+)
   (:|asType| () (type-specifier-to-guard 'type-error))
   (:|run| (specimen guard)
     (make-condition

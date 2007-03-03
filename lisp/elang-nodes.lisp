@@ -213,7 +213,7 @@
    (:|then| t |EExpr|) 
    (:|else| t |EExpr|)))
 (define-node-class |LiteralExpr|     (|EExpr|)
-  ;; XXX loosen restriction to DeepPassByCopy? different set of literals? include other CL float types?
+  ;; XXX loosen restriction to Data? different set of literals? include other CL number types?
   ((:|value| nil (or string character rational float64))))
 (define-node-class |MetaContextExpr| (|EExpr|)
   ())

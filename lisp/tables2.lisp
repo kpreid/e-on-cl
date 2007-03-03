@@ -105,7 +105,7 @@
 
 (defglobal +the-make-source-span+ (e-lambda "org.erights.e.elib.base.makeSourceSpan"
     (:stamped +deep-frozen-stamp+
-     :stamped +pass-by-construction+)
+     :stamped +standard-graph-exit-stamp+)
   (:|asType| () 
     (type-specifier-to-guard 'source-span))
   (:|run| (uri one-to-one start-line start-col end-line end-col) 
@@ -754,7 +754,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defglobal +the-make-const-map+ (e-lambda "org.erights.e.elib.tables.makeConstMap"
     (:stamped +deep-frozen-stamp+
-     :stamped +pass-by-construction+)
+     :stamped +standard-graph-exit-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "__makeMap"))

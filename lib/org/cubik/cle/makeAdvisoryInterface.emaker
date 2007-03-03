@@ -8,8 +8,8 @@ def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def makeAdvisoryInterface implements DeepFrozen {
-  to run(typeDesc) { # XXX typeDesc :DeepPassByCopy
-    def advisoryInterface implements EventuallyDeepFrozen { # XXX implements DeepPassByCopy
+  to run(typeDesc) { # XXX typeDesc :Data
+    def advisoryInterface implements EventuallyDeepFrozen { # XXX implements Data
       method __optSealedDispatch(brand) :any {
         if (brand == EventuallyDeepFrozen.getPeekBrand()) {
           EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

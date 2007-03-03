@@ -1306,19 +1306,22 @@ While this is a process-wide object, its stamps should not be taken as significa
   (:|audit| (audition)
     (declare (ignore audition))
     +e-true+)
-  (:|coerce| (specimen ejector)
-    (funcall
-      (standard-coerce (lambda (s) 
-                         (or (approvedp +pass-by-construction+ s)
-                             (and (approvedp +selfless-stamp+ s)
-                                  (typep (e. (e. s |__optUncall|) |get| 0)
-                                         (guard-to-type-specifier +pass-by-construction+)))))
-                       (constantly +pass-by-construction+)
-                       (lambda (s) (make-condition 'type-error
-                                     :datum specimen 
-                                     :expected-type (guard-to-type-specifier +pass-by-construction+))))
-      specimen ejector))))
+  (:|coerce/2| (standard-coerce 
+                 (lambda (s) 
+                   (or (approvedp +pass-by-construction+ s)
+                       (and (approvedp +selfless-stamp+ s)
+                            (typep (e. (e. s |__optUncall|) |get| 0)
+                                   `(or ,(guard-to-type-specifier +pass-by-construction+)
+                                        ,(guard-to-type-specifier +standard-graph-exit+))))))
+                 (lambda () +pass-by-construction+)))))
         
+(defglobal +standard-graph-exit-stamp+ (e-lambda 
+    "org.erights.e.elib.serial.StandardGraphExitStamp"
+    (:stamped +deep-frozen-stamp+)
+  (:|audit| (object-expr witness)
+    (declare (ignore object-expr witness))
+    +e-true+)))
+
 (defglobal +thread-sharable-stamp+ (e-lambda 
     "org.erights.e.elib.serial.ThreadSharableStamp"
     (:doc "The primitive rubber-stamping auditor for objects whose /implementation/ (those components of its state not exposed by __optUncall) is thread-safe. It does *not* guarantee observed immutability or no-outside-effects-during-turn behaviors; see DeepFrozenStamp. This stamp is a Lisp-system-wide authority.")
@@ -1399,7 +1402,15 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 (declaim (inline standard-coerce))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun standard-coerce (test conform-guard-thunk error-thunk &key (test-shortened t))
+  (defun standard-coerce (test 
+                          conform-guard-thunk 
+                          &key
+                          (error 
+                           (lambda (specimen)
+                             (make-condition 'type-error
+                               :datum specimen 
+                               :expected-type (guard-to-type-specifier (funcall conform-guard-thunk)))))
+                          (test-shortened t))
     "Typical guard coercion. Returns a function which returns the first of these which passes the test, or ejects the result of error-thunk via opt-ejector: specimen, ref-shortened specimen, ref-shortened result of specimen.__conformTo(conform-guard-thunk.run()).
 
 If returning an unshortened reference is acceptable and the test doesn't behave differently on unshortened references, specify :test-shortened nil for an optimization."
@@ -1407,7 +1418,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (lambda (long-specimen opt-ejector)
       (labels ((fail ()
                 (eject-or-ethrow opt-ejector
-                  (funcall error-thunk long-specimen))))
+                  (funcall error long-specimen))))
         (if (funcall test long-specimen)
           long-specimen
           (let ((specimen (ref-shorten long-specimen)))
@@ -1436,6 +1447,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
                               #'(lambda () (or opt-guard
                                              (make-instance 'cl-type-guard
                                                :type-specifier type)))
+                              :error 
                               #'(lambda (specimen) (make-condition 'type-error
                                                      :datum specimen 
                                                      :expected-type type)))

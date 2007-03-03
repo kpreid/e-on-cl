@@ -58,7 +58,8 @@
 
 (defglobal +the-make-scope+ (e-lambda "org.erights.e.elang.scope.makeScope"
     (:stamped +deep-frozen-stamp+
-     :stamped +pass-by-construction+)
+     :stamped +standard-graph-exit-stamp+
+     :stamped +thread-sharable-stamp+)
   (:|asType| ()
     (make-instance 'cl-type-guard :type-specifier 'scope))
   (:|_make| (state fqn-prefix local-definitions)

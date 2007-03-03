@@ -160,6 +160,7 @@
     :make-e-type-error
     :type-specifier-to-guard
     :guard-to-type-specifier
+    :standard-coerce
     
     :+the-void-guard+
     :+the-any-guard+
@@ -171,8 +172,11 @@
     :audited-by-magic-verb
     :+deep-frozen-stamp+
     :+selfless-stamp+
+    
     :+thread-sharable-stamp+
     :+pass-by-construction+
+    :+standard-graph-exit+
+    :+standard-graph-exit-stamp+
     
     :+e-false+ :+e-true+ :e-is-true :as-e-boolean :e-boolean
     
@@ -257,6 +261,8 @@
   #-sbcl elib:+e-true+
   elib:+the-exception-guard+
   elib:+the-map-guard+
+  
+  elib:+the-thrower+
 
   elib:+the-make-flex-map+
   elib:+the-make-text-writer+
@@ -268,7 +274,11 @@
 
   elib:+the-audit-checker+
   elib:+deep-frozen-stamp+
+  
   elib:+thread-sharable-stamp+
+  elib:+pass-by-construction+
+  elib:+standard-graph-exit+
+  elib:+standard-graph-exit-stamp+
 
   elib:+the-make-source-span+
   elib:+the-make-twine+

@@ -74,9 +74,9 @@ Auditing details
 Miscellaneous
 
     ? def pbcs := [
-    >     0,
-    >     ' ',
-    >     false,
+    >     #0,
+    >     #' ',
+    >     #false,
     >     "" :(<type:java.lang.Throwable>),
     >     # makeSturdyRef.temp(1),
     >     # <import:java.lang.makeInteger>,
@@ -85,7 +85,6 @@ Miscellaneous
     >     [].asMap(),
     >     [].asSet(),
     >     [],
-    >     <import>
     > ]
     > for i => thing in pbcs {
     >     if (!Ref.isPBC(thing)) {
@@ -96,11 +95,12 @@ Miscellaneous
     >     }
     > }
     > print("of ", pbcs.size())
-    # stdout: of 8
+    # stdout: of 4
 
     ? def notpbcs := [
     >     def _ {},
     >     def _ {} :(<type:java.lang.Runnable>),
+    >     <import>,
     > ]
     > for i => thing in notpbcs {
     >     if (Ref.isPBC(thing)) {
@@ -111,4 +111,4 @@ Miscellaneous
     >     }
     > }
     > print("of ", notpbcs.size())
-    # stdout: of 2
+    # stdout: of 3

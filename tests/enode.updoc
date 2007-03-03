@@ -55,7 +55,7 @@ LiteralExpr
   # value: <[] := [] =~ [] + var []>
   
   XXX other value types
-  XXX DeepPassByCopy requirement
+  XXX Data requirement
   XXX methods
 
 AssignExpr

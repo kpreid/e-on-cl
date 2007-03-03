@@ -1,35 +1,35 @@
-# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
 
-def DeepPassByCopy0 := 
-/** DeepPassByCopy: The object is PassByCopy and all of its components are DeepPassByCopy.
+def Data0 := 
+/** Data: The object is either PassByCopy or a standard graph exit and all of its components (per standard uncalls) are Data.
 
 This guard's result is always == to the specimen. */
-def DeepPassByCopy implements DeepFrozen {
+def Data implements DeepFrozen {
   to coerce(specimen, optEjector) {
     # XXX should be a FlexSet but they aren't implemented yet
     def seen := [].asMap().diverge()
     
-    def requireDPBC(x) {
+    def recur(x) {
       if (!seen.maps(x)) {
         seen.put(x, null)
         switch (x) {
           match list :List ? (x == list)  {
-            for sub in list { requireDPBC(sub) }
+            for sub in list { recur(sub) }
           }
           match _ {
-            if (!Ref.isPassByCopy(x)) {
-              throw.eject(optEjector, `$specimen is not DeepPassByCopy because $x is not`)
+            if (!(Ref.isPassByCopy(x) || StandardGraphExit."is"(x))) {
+              throw.eject(optEjector, `$specimen is not Data because $x is not`)
             }
-            requireDPBC(x.__optUncall())
+            recur(x.__optUncall())
           }
         }
       }
     }
     
-    requireDPBC(specimen)
+    recur(specimen)
     return specimen
   }
 }

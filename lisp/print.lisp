@@ -24,10 +24,11 @@
 (defglobal +the-text-writer-guard+ (e-lambda
     "org.erights.e.elib.print.TextWriterGuard"
     (:stamped +deep-frozen-stamp+)
-  (:|coerce/2| (standard-coerce (lambda (specimen) (approvedp +text-writer-stamp+ specimen))
-                              (lambda () +the-text-writer-guard+)
-                              (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
-                              :test-shortened nil))))
+  (:|coerce/2| (standard-coerce 
+    (lambda (specimen) (approvedp +text-writer-stamp+ specimen))
+    (lambda () +the-text-writer-guard+)
+    :error (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
+    :test-shortened nil))))
 
 (defun hide-text-writer (tw thing)
   (with-result-promise (wrapped-tw)
@@ -109,7 +110,7 @@
                   (e-catchable-condition (condition)
                     (e. syntax |problem| (funcall nest :in-error-printing t)
                                          (cl-type-fq-name (observable-type-of thing))
-                                         ; XXX passing the problem to the syntax unrestrictedly will be an arguable authority leak once we generalize TextWriter to non-string output. Probably should restrict to DeepPassByCopy, if we can do that at this layer.
+                                         ; XXX passing the problem to the syntax unrestrictedly will be an arguable authority leak once we generalize TextWriter to non-string output. Probably should restrict to Data, if we can do that at this layer.
                                          (transform-condition-for-e-catch condition))))))))
 
 (defun make-text-writer (&key syntax delegate is-quoting autoflush (indent-step "    ")

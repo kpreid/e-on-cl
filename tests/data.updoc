@@ -1,0 +1,32 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? Data
+  # value: <Data>
+  
+  ? 1 :Data
+  # value: 1
+  
+  ? fn {} :Data
+  # problem: <_> is not Data because <_> is not
+  
+  ? [1] :Data
+  # value: [1]
+  
+  ? [fn {}] :Data
+  # problem: [<_>] is not Data because <_> is not
+  
+  ? {def x := [1, x, 2]} :Data
+  # value: [1, <***CYCLE***>, 2]
+  
+  ? {def x := [1, x, fn {}]} :Data
+  # problem: [1, <***CYCLE***>, <_>] is not Data because <_> is not
+
+  ? {[def x := fn {}, x]} :Data
+  # problem: [<_>, <_>] is not Data because <_> is not
+  
+  ? <import> :Data
+  # value: <import:*>
+  
+  x ? e`1 + 1` :Data
+  x # value: e`1 + 1`

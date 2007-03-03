@@ -47,7 +47,7 @@
 
   # value: 2
 
---- By default, (DeepFrozen &! DeepPassByCopy) are not cached, because that would cause multiple calls which would have returned different (fresh) results to return the same.
+--- By default, (DeepFrozen &! Data) are not cached, because that would cause multiple calls which would have returned different (fresh) results to return the same.
 
   ? { def h implements DeepFrozen { to run() :any { return [def x {}] }}
   >   [h(), h() == h()] }

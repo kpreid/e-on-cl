@@ -534,10 +534,10 @@
 (defglobal +e-audition-guard+ (e-lambda 
     "$EAudition"
     (:stamped +deep-frozen-stamp+)
-  (:|coerce/2| (e.elib::standard-coerce
+  (:|coerce/2| (standard-coerce
                  (lambda (specimen) (approvedp +e-audition-stamp+ specimen))
                  (lambda () +e-audition-guard+)
-                 (lambda (specimen) (format nil "~A is not an E Audition" (e-quote specimen)))
+                 :error (lambda (specimen) (format nil "~A is not an E Audition" (e-quote specimen)))
                  :test-shortened nil))))
 
 (defun make-audition (fqn this-expr meta-state)

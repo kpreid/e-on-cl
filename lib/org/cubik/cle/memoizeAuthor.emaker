@@ -17,8 +17,8 @@ def memoizeAuthor(DeepFrozenStamp) {
     
       # XXX add support for limited cache size (must be rejected if interning)
     
-      # XXX for DeepPassByCopy do we actually mean DeepSelfless, if that makes sense?
-      def CacheableResult := interning.pick(DeepFrozen, DeepPassByCopy)
+      # XXX for Data do we actually mean DeepSelfless, if that makes sense?
+      def CacheableResult := interning.pick(DeepFrozen, Data)
     
       def cache := [].asMap().diverge()
     
