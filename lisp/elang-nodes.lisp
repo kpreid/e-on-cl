@@ -18,20 +18,23 @@
 (defmacro %def-node-maker (class-sym subnode-flags param-names param-types rest-p
     &aux (span-sym (gensym "SPAN"))
          (jlayout-sym (gensym "SCOPE-JLAYOUT"))
-         (param-syms (mapcar (lambda (x) (make-symbol (string x))) param-names)))
+         (param-syms (mapcar (lambda (x) (make-symbol (string x))) param-names))
+         (fqn (concatenate 'string "org.erights.e.elang.evm.make"
+                                   (symbol-name class-sym))))
   `(setf 
     (get ',class-sym 'static-maker)
     (e-lambda 
-        ,(concatenate 'string "org.erights.e.elang.evm.make"
-                              (symbol-name class-sym))
+        ,fqn
         (:stamped +thread-sharable-stamp+
-         :stamped +pass-by-construction+)
+         :stamped +selfless-stamp+)
+      (:|__optUncall| ()
+        (elib::import-uncall ',fqn))
       (:|__getAllegedType| ()
         ; XXX figure out how to write this code better; withFoo would be an improvement, to start with
         (let ((base (e-lambda-type-desc)))
           (e. +the-make-type-desc+ |run|
-            (e. base |getOptFQName|)
             (e. base |getDocComment|)
+            (e. base |getOptFQName|)
             (e. base |getSupers|)
             (e. base |getAuditors|)
             (map 'vector (lambda (md)
