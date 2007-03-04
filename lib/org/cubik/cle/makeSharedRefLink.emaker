@@ -15,9 +15,17 @@ def makeSharedRefLink { # implements DeepFrozen
     
     def passesFlex := [].asMap().diverge()
     var lastPassId := -1
+
+    def builderTemps := [].diverge()
+    var nextTemp := 0
+    var outgoingTag := -1
+
     def flushPasses() {
       passesFlex.removeAll()
       lastPassId := -1
+      builderTemps.replace(0, builderTemps.size(), [], 0, 0)
+      nextTemp := 0
+      outgoingTag := -1
     }
     
     def sharer {} # just a marker
@@ -53,36 +61,32 @@ def makeSharedRefLink { # implements DeepFrozen
       [shareNotCopyUncaller, pbcUncaller, proxyUncaller],
       makeCycleBreaker.byInverting([=> sharer]))
     
-    def builderForRecognizer := {
-      var nextTemp := 0
-      def temps := [].diverge()
-      def builderForRecognizer {
-        to getNodeType() { return any }
-        to getRootType() { return any }
-        to buildRoot(x) { return x }
-        to buildLiteral(x) { return ["share", x] }
-        to buildIbid(tempIndex) { return temps[tempIndex] }
-        to buildImport(=="sharer") { return sharer }
-        to buildPromise() {
-          def promIndex := nextTemp
-          nextTemp += 2
-          def [prom,res] := Ref.promise()
-          temps[promIndex] := prom
-          temps[promIndex+1] := res
-          return promIndex
-        }
-        to buildDefrec(resIndex, rValue) {
-            temps[resIndex].resolve(rValue)
-            return rValue
-        }
+    def builderForRecognizer {
+      to getNodeType() { return any }
+      to getRootType() { return any }
+      to buildRoot(x) { return x }
+      to buildLiteral(x) { return ["share", x] }
+      to buildIbid(tempIndex) { return builderTemps[tempIndex] }
+      to buildImport(=="sharer") { return sharer }
+      to buildPromise() {
+        def promIndex := nextTemp
+        nextTemp += 2
+        def [prom,res] := Ref.promise()
+        builderTemps[promIndex] := prom
+        builderTemps[promIndex+1] := res
+        return promIndex
+      }
+      to buildDefrec(resIndex, rValue) {
+          builderTemps[resIndex].resolve(rValue)
+          return rValue
+      }
 
-        to buildCall(rec, verb, args) {
-          if (__equalizer.sameYet(sharer, rec)) {
-            def [[=="share", id]] := args
-            return passesFlex[id]
-          } else {
-            return ["call", rec, verb, args]
-          }
+      to buildCall(rec, verb, args) {
+        if (__equalizer.sameYet(sharer, rec)) {
+          def [[=="share", id]] := args
+          return passesFlex[id]
+        } else {
+          return ["call", outgoingTag += 1, rec, verb, args]
         }
       }
     }
@@ -101,7 +105,9 @@ def makeSharedRefLink { # implements DeepFrozen
           match [=="share", r] { r }
           match [=="proxy", bootRef] { sharedRefLink.proxy(bootRef, false) }
           match [=="promise", bootRef] { sharedRefLink.proxy(bootRef, true) }
-          match [=="call", r, v :String, a :List] { E.call(subbuild(r), v, mapL(subbuild, a)) }
+          match [=="call", tag, r, v :String, a :List] { 
+            # tag exists only for uniqueness in structure
+            E.call(subbuild(r), v, mapL(subbuild, a)) }
         }
         return result
       }

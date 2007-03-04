@@ -133,7 +133,7 @@ A description is one of:
   ["share", _ :Sharable], which carries a sharable object.
   ["proxy", _ :BootRef], which is a boot-ref whose target is resolved.
   ["promise", _ :BootRef], which is a boot-ref whose target might be unresolved.
-  ["call", _, _, _], which is a recipe for E.call, and is used for pass-by-construction.
+  ["call", tag, _, _, _], which is a recipe for E.call, and is used for pass-by-construction. The tag is used to ensure that distinct pass-by-construction objects remain distinct even if their uncalls are the same.
 
 ? interp.waitAtTop(def r := testRef <- hello("simple value"))
 # stdout: message for foo: ["hello", [["share", "simple value"]], ["proxy", <local bootRef <Resolver>>]]
@@ -156,7 +156,7 @@ Outgoing pass-by-construction:
 ? interp.waitAtTop(def r := testRef <- expectPBC(def pbcThing implements pbc {
 >   to __optUncall() { return [1, "add", [1]] } 
 > })); null
-# stdout: message for foo: ["expectPBC", [["call", ["share", 1], "add", [["share", 1]]]], ["proxy", <local bootRef <Resolver>>]]
+# stdout: message for foo: ["expectPBC", [["call", 0, ["share", 1], "add", [["share", 1]]]], ["proxy", <local bootRef <Resolver>>]]
 #
 
 ? r
@@ -199,7 +199,7 @@ An object which is both sharable and DeepPassByCopy should be shared.
 
 Incoming pass-by-construction:
 
-? testLink.receive(def pbcIncoming, ["resolve", [["call", ["share", 1], "add", [["share", 1]]]], ["proxy", asRemote("responseResolver")]])
+? testLink.receive(def pbcIncoming, ["resolve", [["call", 0, ["share", 1], "add", [["share", 1]]]], ["proxy", asRemote("responseResolver")]])
 > interp.waitAtTop(afterRemoteMessage())
 # stdout: message for responseResolver: ["resolve", [["share", null]]]
 #         
@@ -214,16 +214,29 @@ Incoming pass-by-construction:
 #         
 
 ? interp.waitAtTop(testRef <- outgoingCycle(def x := [def y {},x]))
-# stdout: message for foo: ["outgoingCycle", [["call", ["share", <makeConstList>], "run", [["proxy", <local bootRef <y>>], <***CYCLE***>]]], ["proxy", <local bootRef <Resolver>>]]
+# stdout: message for foo: ["outgoingCycle", [["call", 0, ["share", <makeConstList>], "run", [["proxy", <local bootRef <y>>], <***CYCLE***>]]], ["proxy", <local bootRef <Resolver>>]]
 #         
 
 ? testLink.receive(println, ["run", [["share", def x := [1, x]]]])
 # stdout: [1, <***CYCLE***>]
 #         
 
-? testLink.receive(println, ["run", [def x := ["call", ["share", __makeList], "run", [["share", 1], x]]]])
+? testLink.receive(println, ["run", [def x := ["call", 0, ["share", __makeList], "run", [["share", 1], x]]]])
 # stdout: [1, <***CYCLE***>]
 #         
+
+--- Non-coalescing ---
+
+? testLink.receive(def twoDifferent, ["resolve", [["call", 0, ["share", __makeList], "run", [
+>   ["call", 1, ["share", __makeVarSlot], "run", [["share", 1]]],
+>   ["call", 2, ["share", __makeVarSlot], "run", [["share", 1]]]
+> ]]]])
+
+? twoDifferent
+# value: [<var 1>, <var 1>]
+
+? twoDifferent[0] == twoDifferent[1]
+# value: false
 
 ---------
 
