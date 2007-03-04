@@ -28,7 +28,7 @@
         (:stamped +thread-sharable-stamp+
          :stamped +selfless-stamp+)
       (:|__optUncall| ()
-        (elib::import-uncall ',fqn))
+        `#(,e.knot:+sharable-importer+ "get" #(,,fqn)))
       (:|__getAllegedType| ()
         ; XXX figure out how to write this code better; withFoo would be an improvement, to start with
         (let ((base (e-lambda-type-desc)))

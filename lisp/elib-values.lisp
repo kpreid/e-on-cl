@@ -456,7 +456,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
     (:stamped +deep-frozen-stamp+
-     :stamped +standard-graph-exit-stamp+)
+     :stamped +standard-graph-exit-stamp+
+     :stamped +thread-sharable-stamp+)
   ; XXX write tests for this
   (:|fromIteratableValues| (iteratable)
     (let ((values '()))

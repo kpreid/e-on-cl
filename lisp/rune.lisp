@@ -68,6 +68,7 @@
     (funcall starter)
     (efun (result)
       (global-exit (if (ref-opt-problem result) 255 0))))
+  (setf *vat* nil) ;; allow potential other-vats created by user code -- XXX this seems like The Wrong Solution but I don't know what isn't
   (top-loop))
 
 (define-toplevel repl-toplevel (args)

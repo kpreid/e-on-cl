@@ -119,14 +119,13 @@ def makeIOScope implements DeepFrozen {
                 "stdout" => altout,
                 "stderr" => alterr,
                 "interp" => interpVow,
+                "makeVat" => exits["makeVat"],
                 => props], "_"))
           }
         }
       },
       
-      "&org.erights.e.elib.vat.Vat" => 
-        makeLazySlot(fn{
-          <import:org.erights.e.elib.vat.makeVatAuthor>() })
+      "org.erights.e.elib.vat.Vat" => exits["makeVat"]
           
     ], "__unsafeImportScope$")
     

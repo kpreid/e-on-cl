@@ -25,8 +25,8 @@
   ? {[def x := fn {}, x]} :Data
   # problem: [<_>, <_>] is not Data because <_> is not
   
-  ? <import> :Data
-  # value: <import:*>
+  ? <shared> :Data
+  # value: <shared:*>
   
   x ? e`1 + 1` :Data
   x # value: e`1 + 1`

@@ -97,8 +97,9 @@
   (assert (null *vat*))
   ; xxx eventually we will need a shutdown operation on the vat to break inter-vat refs, do some sort of shutdown on registered input streams, etc.
   (let* ((*runner* (make-instance 'runner))
-         (*vat* (apply #'make-instance 'vat :runner *runner* initargs)))
-    (funcall function)
+         (vat (apply #'make-instance 'vat :runner *runner* initargs)))
+    (let ((*vat* vat))
+      (funcall function))
     (top-loop)))
 
 (defmacro with-vat ((&rest initargs) &body start-forms)

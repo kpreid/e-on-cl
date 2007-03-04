@@ -517,7 +517,14 @@ If there is no current vat at initialization time, captures the current vat at t
                 :documentation "Tentative: For looking up objects which are sugar-parents for objects shared between vats.")
    (e.rune::incorporated-files :initform nil
                                :type list
-                               :accessor e.rune::incorporated-files)))
+                               :accessor e.rune::incorporated-files)
+   (vat-comm-handler :accessor vat-comm-handler)))
+
+(defmethod initialize-instance :after ((vat vat) &rest initargs)
+  (declare (ignore initargs))
+  ;; XXX threading: consider interaction with runner
+  (setf (vat-comm-handler vat)
+    (make-comm-handler-promise vat)))
 
 (defmethod print-object ((vat vat) stream)
   (print-unreadable-object (vat stream :type t :identity t)

@@ -1,0 +1,33 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+? def makeVat := <unsafe:org.erights.e.elib.vat.Vat>
+# value: <makeVat>
+
+? def vat := makeVat(null, "testvat")
+# value: <Far ref>
+
+? def remote := vat <- seedEval(e`def remote(o) :void { o <- run("ping") }`)
+# value: <Promise>
+
+? interp.waitAtTop(remote)
+
+? remote
+# value: <Far ref>
+
+? interp.waitAtTop(def res := remote <- run(println)); res
+# value: <Promise>
+
+# stdout: ping
+#         
+
+x ? vat <- shutdown("bye")
+x 
+x ? interp.waitAtTop(def res := remote <- run(println)); res
+x # value: <Promise>
+x 
+x ? res
+x # value: <ref broken by problem: bye>
+x 
+x ? null
+x # value: null

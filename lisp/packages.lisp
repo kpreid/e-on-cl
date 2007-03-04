@@ -232,6 +232,7 @@
     :twine :+the-make-twine+
     
     :+the-make-weak-ref+
+    :+the-make-vat+
     :+the-make-proxy-resolver+
     
     :e-slot-value :place-slot
@@ -240,7 +241,10 @@
     :ejerror
     :with-vat :call-when-resolved :when-resolved
     :mapping-bind
+
     :e-import
+    :import-uncall
+
     :eelt :efuncall))
 
 (e.util:defglobals
@@ -285,6 +289,7 @@
 
   elib:+the-make-weak-ref+
   elib:+the-make-traversal-key+
+  elib:+the-make-vat+
   elib:+the-make-proxy-resolver+)
 
 (declaim (ftype function

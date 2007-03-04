@@ -1,0 +1,157 @@
+pragma.syntax("0.9")
+
+def deSubgraphKit := <elib:serial.deSubgraphKit>
+def makeCycleBreaker := <elib:tables.makeCycleBreaker>
+
+def mapL(f, l) {
+  def out := [].diverge()
+  for x in l { out.push(f(x)) }
+  return out.snapshot()
+}
+
+def makeSharedRefLink { # implements DeepFrozen
+  to run(makeProxyResolver, Passable, MyPassByConstruction, asBootRef) {
+    def sharedRefLink
+    
+    def passesFlex := [].asMap().diverge()
+    var lastPassId := -1
+    def flushPasses() {
+      passesFlex.removeAll()
+      lastPassId := -1
+    }
+    
+    def sharer {} # just a marker
+    
+    def pbcUncaller {
+      to optUncall(r) {
+        if (r =~ p :MyPassByConstruction && r == p) {
+          return p.__optUncall()
+        }
+      }
+    }
+    
+    def shareNotCopyUncaller {
+      to optUncall(r) {
+        if (r =~ p :Passable && p =~ q :Data && r == q) {
+          def passId := (lastPassId += 1)
+          passesFlex.put(passId, ["share", p], true)
+          return [sharer, "run", [passId]]
+        }
+      }
+    }
+    
+    def proxyUncaller {
+      to optUncall(r) {
+        def passId := (lastPassId += 1)
+        def kind := Ref.isResolved(r).pick("proxy", "promise")
+        passesFlex.put(passId, [kind, asBootRef(r)], true)
+        return [sharer, "run", [passId]]
+      }
+    }
+    
+    def recognizer := deSubgraphKit.makeRecognizer(
+      [shareNotCopyUncaller, pbcUncaller, proxyUncaller],
+      makeCycleBreaker.byInverting([=> sharer]))
+    
+    def builderForRecognizer := {
+      var nextTemp := 0
+      def temps := [].diverge()
+      def builderForRecognizer {
+        to getNodeType() { return any }
+        to getRootType() { return any }
+        to buildRoot(x) { return x }
+        to buildLiteral(x) { return ["share", x] }
+        to buildIbid(tempIndex) { return temps[tempIndex] }
+        to buildImport(=="sharer") { return sharer }
+        to buildPromise() {
+          def promIndex := nextTemp
+          nextTemp += 2
+          def [prom,res] := Ref.promise()
+          temps[promIndex] := prom
+          temps[promIndex+1] := res
+          return promIndex
+        }
+        to buildDefrec(resIndex, rValue) {
+            temps[resIndex].resolve(rValue)
+            return rValue
+        }
+
+        to buildCall(rec, verb, args) {
+          if (__equalizer.sameYet(sharer, rec)) {
+            def [[=="share", id]] := args
+            return passesFlex[id]
+          } else {
+            return ["call", rec, verb, args]
+          }
+        }
+      }
+    }
+    
+    def recog(localRef) { 
+      return recognizer.recognize(localRef, builderForRecognizer)
+    }
+    
+    def build(desc) {
+      def seen := [].asMap().diverge()
+      def subbuild(desc) {
+        escape e { return seen.fetch(desc, e) }
+        def result
+        seen[desc] := result
+        bind result := switch (desc) {
+          match [=="share", r] { r }
+          match [=="proxy", bootRef] { sharedRefLink.proxy(bootRef, false) }
+          match [=="promise", bootRef] { sharedRefLink.proxy(bootRef, true) }
+          match [=="call", r, v :String, a :List] { E.call(subbuild(r), v, mapL(subbuild, a)) }
+        }
+        return result
+      }
+      return subbuild(desc)
+    }
+    
+    return bind sharedRefLink := {def sharedRefLink {
+
+      to proxy(bootRef :Passable, isPromise :boolean) {
+        def handler {
+
+          to handleResolution(_) {}
+          to reactToGC() {}
+
+          to handleSendAll(verb :String, args :List) {
+            bootRef <- ([verb,
+                         mapL(recog, args),
+                         recog(def result)])
+            flushPasses()
+            return result
+          }
+          to handleSendAllOnly(verb :String, args :List) {
+            bootRef <- ([verb,
+                         mapL(recog, args)])
+            flushPasses()
+          }
+        }
+        
+        def resolver := makeProxyResolver(handler, if (!isPromise) {bootRef.asProxyIdentity()})
+        
+        if (isPromise) {
+          handler.handleSendAllOnly("__whenMoreResolved", [def resolvedReactor(resolution) {
+            resolver.resolve(resolution)
+          }])
+        }
+        
+        return resolver.getProxy()
+      }
+      
+      to receive(recipient, message) {
+        switch (message) {
+          match [verb, argDescs, resolverDesc] {
+            E.sendOnly(build(resolverDesc), "resolve", [E.send(recipient, verb, mapL(build, argDescs))])
+          }
+          match [verb, argDescs] {
+            E.sendOnly(recipient, verb, mapL(build, argDescs))
+          }
+        }
+      }
+      
+    }}
+  }
+}

@@ -286,9 +286,11 @@
   (let ((real-loader +shared-safe-loader+)) ; might become a path loader
     (e-lambda "org.cubik.cle.prim.SharableImporter"
         (:stamped +deep-frozen-stamp+
-         :stamped +thread-sharable-stamp+)
+         :stamped +thread-sharable-stamp+ 
+         :stamped +standard-graph-exit-stamp+)
       (:|__printOn| (out)
-        (e. out |write| "<shared>"))
+        (e-coercef out +the-text-writer-guard+)
+        (e. out |write| "<shared:*>"))
       (otherwise (mverb &rest args)
         (apply #'e-call-dispatch real-loader mverb args)))))
 
@@ -526,6 +528,7 @@
           (let ((real-loader 
                   (efuncall +the-make-path-loader+ "import" (vector 
                     +shared-safe-loader+
+                    +sharable-importer+ ;; first so that anything the sharable importer contains is agreed upon by this
                     (make-primitive-loader)
                     (make-safe-extern-loader)
                     (make-selfless-loader)
@@ -533,8 +536,7 @@
                     +vm-node-type-importer+
                     +vm-node-maker-importer+))))
             (e-lambda "org.cubik.cle.prim.ImportLoaderMagic"
-                (:stamped +deep-frozen-stamp+
-                 :stamped +standard-graph-exit-stamp+)
+                (:stamped +deep-frozen-stamp+)
               (:|__printOn| (tw) (e. real-loader |__printOn| tw))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
@@ -558,7 +560,9 @@
 (defglobal +shared-safe-scope+
   (labels ((prim (name) (e. +shared-safe-loader+ |get| name)))
     (make-scope "__shared"
-      `(; --- primitive: values not available as literals ---
+      `(("shared__uriGetter"  ,+sharable-importer+)
+      
+        ; --- primitive: values not available as literals ---
         ; XXX true can be defined as (0 =~ _), and false as (!true) or (0 =~ []). Do we want to do so?
         ("null"       ,nil)
         ("false"      ,elib:+e-false+)
@@ -757,6 +761,7 @@
                             :autoflush t
                             :should-close-underlying nil))
             ("lisp"       ,+lisp+)
+            ("makeVat"    ,+the-make-vat+)
             ("props"      ,+eprops+)
             ,@(when interp-supplied
               `(("interp" ,interp)))

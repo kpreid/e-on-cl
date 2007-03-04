@@ -54,11 +54,13 @@
      (:file "sockets")
      (:file "sockets2"
             :depends-on ("sockets"))
+     (:file "comm"
+            :depends-on ("elib" "sugar"))
      (:file "knot-base"
             :depends-on ("elib" "sugar"
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
      (:file "knot"
-            :depends-on ("knot-base" "extern" "elib-guts" "tables2"
+            :depends-on ("knot-base" "extern" "elib-guts" "tables2" "comm"
                          "elang-nodes" #| +the-make-static-scope+ |#
                          "print" #| constructing global tracers |#
                          "random" #| entropy |#))

@@ -1020,7 +1020,7 @@ evalToPair
   
   XXX should be an uncall by <import>, not miranda message
   ? makeNounExpr.__optUncall()
-  # value: [<import:*>, "get", ["org.erights.e.elang.evm.makeNounExpr"]]
+  # value: [<shared:*>, "get", ["org.erights.e.elang.evm.makeNounExpr"]]
 
   ? st :Data
   # value: e`foo`

@@ -1,0 +1,244 @@
+? pragma.syntax("0.9")
+? pragma.enable("one-method-object")
+
+There is one 'link' per vat.
+
+? def makeSharedRefLink := <import:org.cubik.cle.makeSharedRefLink>
+# value: <makeSharedRefLink>
+
+Test infrastructure.
+
+? def Really {
+>   to get(guard) {
+>     return def reallyGuard {
+>       to coerce(specimen, optEjector) {
+>         def coerced := guard.coerce(specimen, optEjector)
+>         if (coerced != specimen) {
+>           throw.eject(optEjector, E.toQuote(coerced) + " must be same as original specimen " + E.toQuote(specimen))
+>         }
+>         return coerced
+>       }
+>     }
+>   }
+> }
+# value: <Really>
+
+? def testLink
+> def BootRef
+> null
+
+A link is built on top of primitive boot-refs. A boot-ref in E-on-CL is an object which can be shared between vats, and holds: its target, its target's vat, and its message handler, which also lives in that vat.
+
+You can do two things with a boot-ref: you can send it a message, which the handler interprets, and you can ask it for an object suitable for a proxy identity, if it is not for a promise. [XXX identity protocol to be reviewed]
+
+For testing, we define boot-refs to local objects, and boot-refs to faked remote objects.
+
+? interface LocalBootRef {}
+> def asBootRef(o) {
+>   return def bootRef implements LocalBootRef {
+>     to __printOn(out :TextWriter) {
+>       out.print("<local bootRef ")
+>       out.quote(o)
+>       out.print(">")
+>     }
+>     to run(msg) { testLink.receive(o, msg) }
+>   }
+> }
+> interface RemoteBootRef {}
+> var messageWaitResolvers := []
+> def asRemote(id) {
+>   return def remoteBootRef implements RemoteBootRef {
+>     to __printOn(out :TextWriter) {
+>       out.print("<remote bootRef ")
+>       out.quote(id)
+>       out.print(">")
+>     }
+>     to asProxyIdentity() { return entropy.nextSwiss() }
+>     to run(msg) {
+>       println(`message for $id: $msg`)
+>       for r in messageWaitResolvers { r.resolve(null) }
+>       messageWaitResolvers := []
+>       if (msg =~ [_, _, [=="proxy", bootResolver :BootRef]]) {
+>         bootResolver(["resolve", [["share", `return value for $id`]]])
+>       }
+>       if (msg =~ [=="__whenMoreResolved", [[=="proxy", reactorLR]]]) {
+>         reactorLR <- (["run", [["share", `resolution for $id`]]])
+>       }
+>     }
+>   }
+> }
+> def afterRemoteMessage() { messageWaitResolvers with= def p; return p }
+> null
+
+? bind BootRef := any[LocalBootRef, RemoteBootRef]; null
+
+The 'Sharable' guard specifies what our mock primitive communication system considers passable (sharable between threads).
+
+The 'oddball' is a test case for that the comm system should not share an object which *can* be shared, but would otherwise be passed by proxy.
+
+? interface Oddball {}; def oddball implements Oddball {}; null
+
+
+? def Same.get(unique) {
+>   return def SameTest.coerce(specimen, ejector) {
+>     if (specimen == unique) { return specimen } else { throw.eject(ejector, `$specimen is not $unique`) }
+>   }
+> }
+> def SharableLeaf := Really[any[String, int, BootRef, nullOk, Oddball, <type:org.erights.e.elang.evm.ENode>, Same[__makeList]]]
+> def Sharable {
+>   to coerce(specimen, ejector) {
+>     def seen := [].asMap().diverge()
+>     def recur(x) {
+>       if (!Ref.isNear(x)) { throw.eject(ejector, "not near") }
+>       if (seen.maps(x)) { return }
+>       seen[x] := null
+>       escape l {
+>         def leaf :SharableLeaf exit l := x
+>         if (leaf != x) { l() }
+>       } catch _ {
+>         def list :Really[List] exit ejector := x
+>         for x in list { recur(x) }
+>       }
+>     }(specimen)
+>     return specimen
+>   }
+> }
+> null
+
+One boot-link for testing, with faked communication. 
+
+? # def makeProxyResolver := <unsafe:org.erights.e.elib.ref.makeEProxyResolver>
+
+? bind testLink := makeSharedRefLink(makeProxyResolver, Sharable, pbc, asBootRef)
+# value: <sharedRefLink>
+
+--- Local-to-remote
+
+A link can be asked to create a local proxy given a BootRef.
+
+? def testRef := testLink.proxy(asRemote("foo"), false)
+# value: <Far ref>
+
+? interp.waitAtTop(def r := testRef <- hello()); null
+# stdout: message for foo: ["hello", [], ["proxy", <local bootRef <Resolver>>]]
+#
+
+? r
+# value: "return value for foo"
+
+
+The message format is (for now) the verb, a list of argument descriptions, and optionally a resolver description.
+
+A description is one of:
+  ["share", _ :Sharable], which carries a sharable object.
+  ["proxy", _ :BootRef], which is a boot-ref whose target is resolved.
+  ["promise", _ :BootRef], which is a boot-ref whose target might be unresolved.
+  ["call", _, _, _], which is a recipe for E.call, and is used for pass-by-construction.
+
+? interp.waitAtTop(def r := testRef <- hello("simple value"))
+# stdout: message for foo: ["hello", [["share", "simple value"]], ["proxy", <local bootRef <Resolver>>]]
+#
+
+? r
+# value: "return value for foo"
+
+["share", _ :Sharable] is a description which carries a sharable object.
+
+? interp.waitAtTop(def r := testRef <- hello(def bar {})); null
+# stdout: message for foo: ["hello", [["proxy", <local bootRef <bar>>]], ["proxy", <local bootRef <Resolver>>]]
+#
+
+? r
+# value: "return value for foo"
+
+Outgoing pass-by-construction:
+
+? interp.waitAtTop(def r := testRef <- expectPBC(def pbcThing implements pbc {
+>   to __optUncall() { return [1, "add", [1]] } 
+> })); null
+# stdout: message for foo: ["expectPBC", [["call", ["share", 1], "add", [["share", 1]]]], ["proxy", <local bootRef <Resolver>>]]
+#
+
+? r
+# value: "return value for foo"
+
+An object which is sharable but not DeepPassByCopy should not be shared.
+
+? interp.waitAtTop(def r := testRef <- notShared(oddball))
+# stdout: message for foo: ["notShared", [["proxy", <local bootRef <oddball>>]], ["proxy", <local bootRef <Resolver>>]]
+#
+
+? r
+# value: "return value for foo"
+
+An object which is both sharable and DeepPassByCopy should be shared.
+
+? interp.waitAtTop(def r := testRef <- pbcopyShare(e`1`))
+# stdout: message for foo: ["pbcopyShare", [["share", e`1`]], ["proxy", <local bootRef <Resolver>>]]
+#
+
+? r
+# value: "return value for foo"
+
+
+--- Remote-to-local
+
+? testLink.receive(println, ["run", [["share", "hello world"]], ["proxy", asRemote("responseResolver")]])
+> interp.waitAtTop(afterRemoteMessage())
+# stdout: hello world
+#         message for responseResolver: ["resolve", [["share", null]]]
+#         
+
+? testLink.receive(def promiseTest, ["resolve", [["promise", asRemote("expectWMR")]]])
+> interp.waitAtTop(afterRemoteMessage())
+# stdout: message for expectWMR: ["__whenMoreResolved", [["proxy", <local bootRef <resolvedReactor>>]]]
+#         
+
+? promiseTest
+# value: "resolution for expectWMR"
+
+Incoming pass-by-construction:
+
+? testLink.receive(def pbcIncoming, ["resolve", [["call", ["share", 1], "add", [["share", 1]]]], ["proxy", asRemote("responseResolver")]])
+> interp.waitAtTop(afterRemoteMessage())
+# stdout: message for responseResolver: ["resolve", [["share", null]]]
+#         
+
+? pbcIncoming
+# value: 2
+
+--- Cycles ---
+
+? interp.waitAtTop(testRef <- outgoingCycle(def x := [1,x]))
+# stdout: message for foo: ["outgoingCycle", [["share", [1, <***CYCLE***>]]], ["proxy", <local bootRef <Resolver>>]]
+#         
+
+? interp.waitAtTop(testRef <- outgoingCycle(def x := [def y {},x]))
+# stdout: message for foo: ["outgoingCycle", [["call", ["share", <makeConstList>], "run", [["proxy", <local bootRef <y>>], <***CYCLE***>]]], ["proxy", <local bootRef <Resolver>>]]
+#         
+
+? testLink.receive(println, ["run", [["share", def x := [1, x]]]])
+# stdout: [1, <***CYCLE***>]
+#         
+
+? testLink.receive(println, ["run", [def x := ["call", ["share", __makeList], "run", [["share", 1], x]]]])
+# stdout: [1, <***CYCLE***>]
+#         
+
+---------
+
+? print("after")
+# stdout: after
+
+? print("after")
+# stdout: after
+
+? print("after")
+# stdout: after
+
+? print("after")
+# stdout: after
+
+? print("after")
+# stdout: after
+
