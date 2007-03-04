@@ -41,6 +41,9 @@
   ? def CoercionFailure := <type:org.cubik.cle.prim.CoercionFailure>
   # value: CoercionFailure
   
+  ? def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
+  # value: <makeCoercionFailure>
+  
   ? Ref.optProblem(Ref.broken("X")) :CoercionFailure
   # problem: the StringException problem: X doesn't coerce to a CoercionFailure
   
@@ -57,10 +60,14 @@
   # value: true
   ? typeError.__optUncall()
   # value: [<makeCoercionFailure>, "run", [0, String]]
-  ? typeError.__optUncall()[0] == <import:org.cubik.cle.fail.makeCoercionFailure>
+  ? typeError.__optUncall()[0] == makeCoercionFailure
   # value: true
   ? typeError == E.call(E, "call", typeError.__optUncall())
   # value: true
+  
+  check for near-assumptions
+  ? makeCoercionFailure({def p; p}, String)
+  # value: problem: <Promise> doesn't coerce to a String
 
   XXX correct?
   

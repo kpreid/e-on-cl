@@ -653,13 +653,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defun print-object-with-type (tw specimen)
   "Print an object with information about its alleged type. Originally written for type-errors."
   ;; XXX this should be exported
-  (let* ((observed-type (observable-type-of specimen))) 
-    (e. tw |write| "the ")
-    (if (eql observed-type 't)
-      (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
-      (e. tw |print| (cl-type-simple-expr observed-type)))
-    (e. tw |write| " ")
-    (e. tw |quote| specimen)))
+  (when (eql (ref-state specimen) 'near)
+    (let* ((observed-type (observable-type-of specimen))) 
+      (e. tw |write| "the ")
+      (if (eql observed-type 't)
+        (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
+        (e. tw |print| (cl-type-simple-expr observed-type)))
+      (e. tw |write| " ")))
+  (e. tw |quote| specimen))
 
 (defgeneric guard-to-type-specifier (guard))
 
