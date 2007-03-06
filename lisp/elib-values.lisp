@@ -183,9 +183,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; to have methods and a public maker eventually
 
-(defglobal +the-make-cons+ (e-lambda "$makeCons"
+(defobject +the-make-cons+ "$makeCons"
     (:stamped +deep-frozen-stamp+)
-  (:|run/2| 'cons)))
+  (:|run/2| 'cons))
 
 (def-vtable cons
   (audited-by-magic-verb (this auditor)
@@ -454,10 +454,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defmethod e-call-match ((rec vector) mverb &rest args)
   (apply #'sugar-cache-call rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
 
-(defglobal +the-make-list+ (e-lambda "org.erights.e.elib.tables.makeConstList"
+(defobject +the-make-list+ "org.erights.e.elib.tables.makeConstList"
     (:stamped +deep-frozen-stamp+
-     :stamped +standard-graph-exit-stamp+
-     :stamped +thread-sharable-stamp+)
+     :stamped +standard-graph-exit-stamp+)
   ; XXX write tests for this
   (:|fromIteratableValues| (iteratable)
     (let ((values '()))
@@ -470,7 +469,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     ;; XXX __respondsTo, etc.
     (if (mverb-verb= mverb "run")
       (apply #'vector args)
-      (no-such-method +the-make-list+ mverb args)))))
+      (no-such-method +the-make-list+ mverb args))))
 
 ; --- Number ---
 
@@ -637,7 +636,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (declare (ignore this))
     +e-false+))
 
-(defglobal +the-make-int+ (e-lambda "org.cubik.cle.prim.makeInt" 
+(defobject +the-make-int+ "org.cubik.cle.prim.makeInt" 
     (:stamped +deep-frozen-stamp+
      :doc "Operations for producing integers from other data such as strings.")
   (:|run| (value)
@@ -647,7 +646,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (parse-integer value)
       (error (e)
         (declare (ignore e))
-        (error "not recognized as an integer: ~A" (e-quote value)))))))
+        (error "not recognized as an integer: ~A" (e-quote value))))))
 
 ; --- Type error pieces - to be moved ---
 
@@ -722,15 +721,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; - simple-error -
 
-(defglobal +the-make-string-error+ (e-lambda "org.cubik.cle.fail.makeStringException"
+(defobject +the-make-string-error+ "org.cubik.cle.fail.makeStringException"
     (:stamped +deep-frozen-stamp+
-     :stamped +standard-graph-exit-stamp+
-     :stamped +thread-sharable-stamp+)
+     :stamped +standard-graph-exit-stamp+)
   (:|asType| () (type-specifier-to-guard 'string-error))
   (:|run| (string)
     (make-condition 'simple-error
       :format-control (format-control-quote string)
-      :format-arguments '()))))
+      :format-arguments '())))
 
 (defun simple-condition-string-only-p (condition)
   (let ((fc (simple-condition-format-control condition)))
@@ -779,7 +777,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|getGuard| (this)
     (type-specifier-to-guard (type-error-expected-type this))))
 
-(defglobal +the-make-coercion-failure+ (e-lambda "org.cubik.cle.fail.makeCoercionFailure"
+(defobject +the-make-coercion-failure+ "org.cubik.cle.fail.makeCoercionFailure"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+
      :stamped +thread-sharable-stamp+)
@@ -788,7 +786,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (make-condition
       'type-error
       :datum specimen
-      :expected-type (guard-to-type-specifier guard)))))
+      :expected-type (guard-to-type-specifier guard))))
 
 ; - -
 
@@ -839,7 +837,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (e-util:mangle-verb (message-desc-verb md) (length (message-desc-params md))))
 
 
-(defglobal +the-make-type-desc+ (e-lambda
+(defobject +the-make-type-desc+
     "org.erights.e.elib.base.makeTypeDesc"
     (:stamped +deep-frozen-stamp+)
   (:|run| (doc-comment fq-name supers auditors mtypes)
@@ -858,9 +856,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :fq-name fq-name 
       :supers supers 
       :auditors auditors 
-      :message-types-v mtypes))))
+      :message-types-v mtypes)))
 
-(defglobal +the-make-message-desc+ (e-lambda
+(defobject +the-make-message-desc+
     "org.erights.e.elib.base.makeMessageDesc"
     (:stamped +deep-frozen-stamp+)
   (:|run| (doc-comment verb params opt-result-guard)
@@ -876,15 +874,15 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       :doc-comment doc-comment
       :verb verb
       :params params
-      :opt-result-guard opt-result-guard))))
+      :opt-result-guard opt-result-guard)))
 
-(defglobal +the-make-param-desc+ (e-lambda
+(defobject +the-make-param-desc+
     "org.erights.e.elib.base.makeParamDesc"
     (:stamped +deep-frozen-stamp+)
   (:|run| (opt-name opt-guard)
     (e-coercef opt-name '(or null string))
     (e-coercef opt-guard 't)
-    (make-instance 'param-desc :opt-name opt-name :opt-guard opt-guard))))
+    (make-instance 'param-desc :opt-name opt-name :opt-guard opt-guard)))
 
 
 ; Hmm. Could we write something like DEF-STRUCTOID-VTABLE to implement the common features of these?
@@ -955,7 +953,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
    #+clisp (weak-pointer :initarg :weak-pointer)
    #+allegro (vector :initarg :vector)))
 
-(defglobal +the-make-weak-ref+ (e-lambda "org.erights.e.elib.vat.makeWeakRef" ()
+(defobject +the-make-weak-ref+ "org.erights.e.elib.vat.makeWeakRef" ()
   ; XXX run/4
   (:|run| (referent reactor)
     "Make a weak reference to the given ref. If 'reactor' is not null, invoke its run/0 method when the referent is GCed."
@@ -983,7 +981,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (setf (aref vector 0) referent)
         (make-instance 'weak-ref-impl :vector vector))
     
-    #-(or sbcl cmu ccl clisp allegro) (error "sorry, no weak reference implementation for this Lisp yet"))))
+    #-(or sbcl cmu ccl clisp allegro) (error "sorry, no weak reference implementation for this Lisp yet")))
 
 #+(or sbcl cmu ccl clisp) (def-vtable 
     #+sbcl sb-ext:weak-pointer
@@ -1011,7 +1009,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; XXX 'E' should probably be in knot.lisp
 
-(defglobal +the-e+ (e-lambda "org.erights.e.elib.prim.E"
+(defobject +the-e+ "org.erights.e.elib.prim.E"
     (:stamped +deep-frozen-stamp+)
   (:|call| (r v a)
     (e-coercef v 'string)
@@ -1029,5 +1027,5 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e-coercef a 'vector)
     (apply #'e-send-only-dispatch r (mangle-verb v (length a)) (coerce a 'list)))
   (:|toQuote/1| 'e-quote)
-  (:|toString/1| 'e-print)))
+  (:|toString/1| 'e-print))
 

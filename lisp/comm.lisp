@@ -81,7 +81,7 @@
       (e-coercef problem 'condition)
       (error "unimplemented"))))
 
-(defglobal +the-make-vat+ (e-lambda "org.cubik.cle.prim.makeVat" ()
+(defobject +the-make-vat+ "org.cubik.cle.prim.makeVat" ()
   (:|run| (opt-runner name)
     "Passing null for opt-runner means to use the current runner."
     (e-coercef opt-runner '(or null runner))
@@ -95,4 +95,4 @@
                             (efun () (vat-comm-handler new-vat))
                             "run" #())
                           new-vat)))
-      (e. (vat-comm-handler *vat*) |proxy| boot-controller +e-false+)))))
+      (e. (vat-comm-handler *vat*) |proxy| boot-controller +e-false+))))

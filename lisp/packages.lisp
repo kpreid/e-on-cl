@@ -132,6 +132,7 @@
     
     :def-vtable
     :e-lambda :efun :e-lambda-type-desc
+    :defobject
     :miranda
     :message-pairs-to-map-including-miranda-messages
     :or-miranda-message-descs

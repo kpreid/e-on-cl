@@ -3,6 +3,13 @@
 
 (in-package :e.elib)
 
+(defmacro defobject (symbol qualified-name (&rest options) &body methods)
+  "The common pattern of a single-instance object, marked thread-sharable, stored in some global variable (or constant). Does not specify deep-frozen, as e.g. e.knot:+lisp+ is not."
+  `(defglobal ,symbol 
+    (e-lambda ,qualified-name
+              (:stamped +thread-sharable-stamp+ ,@options)
+              ,@methods)))
+
 (declaim (inline eelt efuncall))
 (defun eelt (container &rest indexes)
   "Like CL:ELT, but for E containers. Equivalent to the idiom (e. container |get| index...)"

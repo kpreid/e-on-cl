@@ -675,7 +675,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         (make-static-scope kind
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
-  (defglobal +the-make-static-scope+ (e-lambda "org.erights.e.evm.makeStaticScope" ()
+  (defobject +the-make-static-scope+ "org.erights.e.evm.makeStaticScope" ()
     (:|run| (sn rn dn vn hms)
       "General StaticScope constructor. Currently provided only to make StaticScopes selfless."
       (let ((map-guard (e. (e-import "org.erights.e.elib.slot.Map")
@@ -713,7 +713,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       (e-coercef node '|ENode|)
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
-    (:|getEmptyScope| () +empty-static-scope+))))
+    (:|getEmptyScope| () +empty-static-scope+)))
 
 ; --- static scope computation ---
 

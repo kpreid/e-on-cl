@@ -5,17 +5,17 @@
 
 ;;; Socket interface: second try.
 
-(defglobal +local-ref-guard+ (e-lambda "org.cubik.cle.socket.SocketLocalRef" ()
+(defobject +local-ref-guard+ "org.cubik.cle.socket.SocketLocalRef" ()
   (:|coerce| (specimen opt-ejector)
     (if (e-is-true (efuncall +the-audit-checker+ +local-ref-guard+ specimen))
       specimen
-      (eject-or-ethrow opt-ejector (make-e-type-error specimen +local-ref-guard+))))))
+      (eject-or-ethrow opt-ejector (make-e-type-error specimen +local-ref-guard+)))))
 
-(defglobal +peer-ref-guard+ (e-lambda "org.cubik.cle.socket.SocketPeerRef" ()
+(defobject +peer-ref-guard+ "org.cubik.cle.socket.SocketPeerRef" ()
   (:|coerce| (specimen opt-ejector)
     (if (e-is-true (efuncall +the-audit-checker+ +peer-ref-guard+ specimen))
       specimen
-      (eject-or-ethrow opt-ejector (make-e-type-error specimen +peer-ref-guard+))))))
+      (eject-or-ethrow opt-ejector (make-e-type-error specimen +peer-ref-guard+)))))
 
 (defun make-socket-out-stream (our-socket impl-socket)
   (make-fd-out-stream our-socket
@@ -211,13 +211,13 @@
         (:|getSockoptReceiveBuffer/0| ()
           (foo-sockopt-receive-buffer impl-socket))))))
 
-(defglobal +the-make-socket+ (e-lambda "org.cubik.cle.socket.makeSocket" (:stamped +deep-frozen-stamp+)
+(defobject +the-make-socket+ "org.cubik.cle.socket.makeSocket" (:stamped +deep-frozen-stamp+)
   (:|getInternet/0| (constantly ':internet))
   (:|getStream/0|   (constantly ':stream))
   (:|run| (domain type)
     (e-coercef domain '(member :internet))
     (e-coercef type '(member :stream))
-    (make-socket-wrapper (foo-make-socket domain type) domain type))))
+    (make-socket-wrapper (foo-make-socket domain type) domain type)))
 
 (defun socket-address-ref-maker (stamp label)
   (e-lambda "org.cubik.cle.socket.getSocketAddressRef" ()
@@ -274,7 +274,7 @@
     buffer))
 
 ;; XXX this is not really about sockets
-(defglobal +the-make-pipe+ (e-lambda "$makePipe" ()
+(defobject +the-make-pipe+ "$makePipe" ()
   (:|run| (ejector)
     #-sbcl (error "makePipe not yet implemented for ~A" (lisp-implementation-type))
     (multiple-value-bind (read write)
@@ -289,4 +289,4 @@
                                  4096)
         (make-fd-out-stream (e-lambda "system pipe" ())
                             (make-fd-ref write)
-                            4096))))))
+                            4096)))))

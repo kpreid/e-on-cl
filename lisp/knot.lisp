@@ -71,7 +71,7 @@
       (setf (symbol-value symbol) new)
       nil)))
 
-(defglobal +lisp+ (e-lambda "org.cubik.cle.prim.lisp"
+(defobject +lisp+ "org.cubik.cle.prim.lisp"
     (:doc "This object is the maximum possible authority that an E program may hold, offering near-complete access to the underlying Lisp system. Handle with care.")
   (:|get| (package-name symbol-name)
     ; xxx should allow ejectors/absent-thunks for missing package and symbol
@@ -93,7 +93,7 @@
           (if (typep c class-name)
             c
             (eject-or-ethrow opt-ejector
-              (format nil "~A is not a ~S, even unsealed" (e-quote specimen) class-name)))))))))
+              (format nil "~A is not a ~S, even unsealed" (e-quote specimen) class-name))))))))
 
 ;;; --- miscellaneous ---
 
@@ -356,7 +356,7 @@
           nil)))))
 
 ;; XXX support optUnget
-(defglobal +vm-node-type-importer+ (e-lambda "vm-node-type-importer"
+(defobject +vm-node-type-importer+ "vm-node-type-importer"
     (:stamped +deep-frozen-stamp+)
   (:|fetch| (fqn absent-thunk)
     (e-coercef fqn 'string)
@@ -366,7 +366,7 @@
           (if sym
             (make-instance 'cl-type-guard :type-specifier sym)
             (efuncall absent-thunk)))
-        (efuncall absent-thunk))))))
+        (efuncall absent-thunk)))))
 
 (defun make-tracer (&key (label "UNDEFINED TRACE LABEL") (stream *trace-output*))
   (let* ((first-prefix (format nil "; ~A " (e-print label)))
@@ -541,13 +541,13 @@
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
 
-(defglobal +validate-for+ (e-lambda "$__validateFor"
+(defobject +validate-for+ "$__validateFor"
     (:stamped +deep-frozen-stamp+)
   (:|run| (flag)
     (unless (e-is-true flag)
-      (error "For-loop body isn't valid after for-loop exits.")))))
+      (error "For-loop body isn't valid after for-loop exits."))))
 
-(defglobal +standard-graph-exit+ (e-lambda "StandardGraphExit"
+(defobject +standard-graph-exit+ "StandardGraphExit"
     (:stamped +deep-frozen-stamp+)
   ;; XXX should be a guard
   ;; XXX this name and protocol to be reviewed. used only to implement Data, so far
@@ -555,7 +555,7 @@
                  (lambda (s) (approvedp +standard-graph-exit-stamp+ s))
                  (lambda () +standard-graph-exit+)))
   (:|is| (ref)
-    (as-e-boolean (approvedp +standard-graph-exit-stamp+ ref)))))
+    (as-e-boolean (approvedp +standard-graph-exit-stamp+ ref))))
 
 (defglobal +shared-safe-scope+
   (labels ((prim (name) (e. +shared-safe-loader+ |get| name)))

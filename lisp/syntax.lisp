@@ -80,7 +80,7 @@
 
 
 ; xxx stomping on erights.org namespace
-(defglobal +e-printer+ (e-lambda "org.erights.e.elang.syntax.ePrinter"
+(defobject +e-printer+ "org.erights.e.elang.syntax.ePrinter"
     (:doc "Centralized object for generating E source and E-like text."
      :stamped +deep-frozen-stamp+)
   
@@ -509,7 +509,7 @@ XXX make precedence values available as constants"
                        (e. tw |quote| sub)))
             (e. tw |write| ">$"))))))
   
-  ))
+  )
 
 ; --- Parsing ---
 
@@ -730,7 +730,7 @@ XXX make precedence values available as constants"
 (defun mapper-e-list (function)
   (lambda (x) (map-e-list function x)))
 
-(defglobal +prim-parser+ (e-lambda "org.cubik.cle.prim.parser"
+(defobject +prim-parser+ "org.cubik.cle.prim.parser"
     (:stamped +deep-frozen-stamp+)
   ;; XXX regularize this interface
   (:|run| (source quasi-info syntax-ejector)
@@ -750,7 +750,7 @@ XXX make precedence values available as constants"
     (e-source-to-tree source))
   (:|pattern| (source quasi-info syntax-ejector)
     (e-coercef source 'twine)
-    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t))))
+    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t)))
 
 ;;; --- Antlr parser support ---
 

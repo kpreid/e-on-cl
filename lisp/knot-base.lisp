@@ -56,10 +56,9 @@
               (setf (gethash varspec table) t)))
           table))))
 
-(defglobal +the-make-scope+ (e-lambda "org.erights.e.elang.scope.makeScope"
+(defobject +the-make-scope+ "org.erights.e.elang.scope.makeScope"
     (:stamped +deep-frozen-stamp+
-     :stamped +standard-graph-exit-stamp+
-     :stamped +thread-sharable-stamp+)
+     :stamped +standard-graph-exit-stamp+)
   (:|asType| ()
     (make-instance 'cl-type-guard :type-specifier 'scope))
   (:|_make| (state fqn-prefix local-definitions)
@@ -82,7 +81,7 @@
                 (loop with (keys values) = (coerce (e. state |getPair|) 'list)
                       for key across keys
                       for value across values
-                      collect (list (e-coerce key 'string) value))))))
+                      collect (list (e-coerce key 'string) value)))))
 
 ; XXX reduce code duplication among get/fetch methods
 
@@ -300,7 +299,7 @@
         (e. (se-properties rec) |fetch| pname (efun () (return-from e-call-match (call-next-method)))))
       (call-next-method))))
 
-(defglobal +the-make-exception+ (e-lambda "org.cubik.cle.prim.makeException" 
+(defobject +the-make-exception+ "org.cubik.cle.prim.makeException" 
     (:stamped +deep-frozen-stamp+)
   (:|run| (types properties printer)
     (setf types (map 'vector (lambda (x) (e-coercef x 'string)) (e-coerce types 'vector)))
@@ -310,12 +309,12 @@
       'e-structure-exception
       :types types
       :properties properties
-      :printer printer))))
+      :printer printer)))
 
 
 ; --- standard scope definitions ---
 
-(defglobal +the-looper+ (e-lambda "org.erights.e.elang.interp.loop" 
+(defobject +the-looper+ "org.erights.e.elang.interp.loop" 
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
@@ -323,7 +322,7 @@
     nil)
   (:|run| (body)
     "Call body.run(), which must return a boolean, until it returns false."
-    (loop while (e-is-true (efuncall body))))))
+    (loop while (e-is-true (efuncall body)))))
 
 (defun split-fqn-prefix (fqn)
   ; xxx consider replacing with SPLIT-SEQUENCE
@@ -336,7 +335,7 @@
         (assert (string= fqn ""))
         nil))))
 
-(defglobal +make-first-char-splitter+ (e-lambda
+(defobject +make-first-char-splitter+
     "org.quasiliteral.text.makeFirstCharSplitter"
     (:stamped +deep-frozen-stamp+)
   ;; In the future, this might become part of something for working with character sets in general, and Unicode character categories. Consider Cocoa's NSCharacterSet and NSScanner.
@@ -360,14 +359,14 @@
           (e-coercef str 'string)
           (e-coercef start `(integer 0 ,(length str)))
           (or (position-if #'match str :start start)
-              -1)))))))
+              -1))))))
 
-(defglobal +the-get-character+ (e-lambda "org.cubik.cle.prim.getCharacter" ()
+(defobject +the-get-character+ "org.cubik.cle.prim.getCharacter" ()
   (:|run| (codepoint)
     ;; XXX Unicode assumption
     (or (code-char codepoint)
         (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-          (error "character U+~16,4,'0R not supported"))))))
+          (error "character U+~16,4,'0R not supported")))))
 
 ;;; --- Additional E/Lisp bridging ---
 

@@ -278,14 +278,6 @@
       :fringe fringe
       :snap-hash (same-yet-hash wrapped fringe))))
 
-#+(or) ;; Unused now that the Equalizer supplies TraversalKeys.
-(defglobal +the-make-traversal-key+ 
-  (let ((traversal-key-guard (make-instance 'cl-type-guard 
-                               :type-specifier 'traversal-key)))
-    (e-lambda "org.cubik.cle.prim.makeTraversalKey" ()
-      (:|asType| () traversal-key-guard)
-      (:|run/1| 'make-traversal-key))))
-
 (def-atomic-sameness traversal-key
   (lambda (a b)
     (and (eql (tk-snap-hash a)

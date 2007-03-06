@@ -61,8 +61,8 @@
     :name (first name-and-type)
     :type (second name-and-type))))
 
-(defglobal +file-pathname-brand+ (e-lambda "filePathnameBrand" 
-  (:stamped +deep-frozen-stamp+)))
+(defobject +file-pathname-brand+ "filePathnameBrand" 
+  (:stamped +deep-frozen-stamp+))
 
 (defclass cheap-sealed-box () 
   ((value :initarg :value)))
@@ -182,7 +182,7 @@
 
 ; --- GC ---
 
-(defglobal +gc+ (e-lambda "org.cubik.cle.prim.gc" ()
+(defobject +gc+ "org.cubik.cle.prim.gc" ()
   ; xxx extension: reliability/0 => "NONE", "FULL", "PARTIAL", "UNKNOWN"
   ; appropriately exposed, this would allow our test suite to test weak pointers if the GC is sufficiently reliable to not cause false failures
   (:|run| ()
@@ -193,7 +193,7 @@
     #+clisp (ext:gc)
     #+allegro (excl:gc t nil)
     #+abcl  (ext:gc)
-    (values))))
+    (values)))
 
 ; --- Timer ---
 
@@ -209,7 +209,7 @@
 (defun java-to-cl-time (jt)
   (+ (/ jt 1000) +java-epoch-delta+))
 
-(defglobal +the-timer+ (e-lambda "Timer" ()
+(defobject +the-timer+ "$timer" ()
   (:|__printOn| (tw)
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<a Timer>")
@@ -225,7 +225,7 @@
             (e. (eelt (vat-safe-scope *vat*) "trace") |runAsTurn|
               thunk
               (efun () (format nil "timer whenPast at ~A" time))))))
-        p)))))
+        p))))
 
 ; --- CL-PPCRE interface ---
 
@@ -239,15 +239,15 @@
 ; XXX instead replace this with the new +lisp+ facilities?
 
 ; compatibility with Java-E's use of org.apache.oro.text.regex.*
-(defglobal +rx-perl5-compiler+ (e-lambda "org.apache.oro.text.regex.makePerl5Compiler" ()
+(defobject +rx-perl5-compiler+ "org.apache.oro.text.regex.makePerl5Compiler" ()
   (:|run| ()
     (e-lambda "org.apache.oro.text.regex.perl5Compiler" ()
       (:|compile(String)| (s)
         (e-coercef s 'string)
         ;(print (list 'oro-compiling s))
-        (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s)))))))
+        (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s))))))
   
-(defglobal +rx-perl5-matcher+ (e-lambda "org.apache.oro.text.regex.makePerl5Matcher" ()
+(defobject +rx-perl5-matcher+ "org.apache.oro.text.regex.makePerl5Matcher" ()
   (:|run| (&aux result-obj)
     (e-lambda "org.apache.oro.text.regex.perl5Matcher" ()
       (:|matches(PatternMatcherInput, Pattern)| (input pattern)
@@ -282,7 +282,7 @@
               nil))
           (as-e-boolean result-obj)))
       (:|getMatch| ()
-        result-obj)))))
+        result-obj))))
 
 ;;; --- External processes ---
 
@@ -309,7 +309,7 @@
       stream
       (format nil "process ~(~A~)" which))))
 
-(defglobal +spawn+ (e-lambda "org.cubik.cle.prim.spawn" ()
+(defobject +spawn+ "org.cubik.cle.prim.spawn" ()
   (:|run| (file args)
     (efuncall +spawn+ file args (e. #() |asMap|)))
   (:|run| (file args options)
@@ -339,4 +339,4 @@
               (:|getExitValue| () exit-promise)
               (:|getOptStdin| () e-stdin)
               (:|getOptStdout| () e-stdout)
-              (:|getOptStderr| () e-stderr)))))))))
+              (:|getOptStderr| () e-stderr))))))))

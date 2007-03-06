@@ -1,4 +1,3 @@
-
 ; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
@@ -103,7 +102,7 @@
                                   :end-line end-line
                                   :end-col end-col))))
 
-(defglobal +the-make-source-span+ (e-lambda "org.erights.e.elib.base.makeSourceSpan"
+(defobject +the-make-source-span+ "org.erights.e.elib.base.makeSourceSpan"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
   (:|asType| () 
@@ -123,7 +122,7 @@
                                 :start-line start-line
                                 :end-line end-line
                                 :start-col start-col
-                                :end-col end-col))))
+                                :end-col end-col)))
 
 (defun ~span (stream arg colon at)
   "Print a SourceSpan, if present, preceded by \" @\". For use in format strings."
@@ -301,7 +300,7 @@
                 run-end-line (1- run-end-col)))))))))
 
 
-(defglobal +the-make-twine+ (e-lambda "org.erights.e.elib.tables.makeTwine"
+(defobject +the-make-twine+ "org.erights.e.elib.tables.makeTwine"
     (:stamped +deep-frozen-stamp+)
   (:|fromSequence| (iteratable) 
     "Return a Twine composed of the characters in the given sequence (object that implements iterate/1).
@@ -327,11 +326,11 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                                           (span-start-col span))))
           (error "the source span, ~A, must match the size of the string, ~S, or be not one-to-one" (e-quote span) (length string)))
         (make-instance 'leaf-twine :string string :span span))
-      string))))
+      string)))
 
 ; --- Primitive safe mutable array access ---
 
-(defglobal +the-flex-array-array-brand+ (e-lambda "org.cubik.cle.prim.flexArrayArrayBrand" ()))
+(defobject +the-flex-array-array-brand+ "org.cubik.cle.prim.flexArrayArrayBrand" ())
 (defclass flex-array-array-sealed-box ()
   ((array :initarg :array
          :accessor unseal-flex-array-array-sealed-box)))
@@ -415,7 +414,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           new-dimensions
           :initial-element initial-element)))))
 
-(defglobal +the-make-array+ (e-lambda "org.cubik.cle.prim.makeArray" 
+(defobject +the-make-array+ "org.cubik.cle.prim.makeArray" 
     (:stamped +deep-frozen-stamp+)
   (:|fromSequence| (seq adjustable)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
@@ -423,7 +422,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (make-flex-array (make-array (length seq) 
                                  :initial-contents seq
                                  :adjustable (e-is-true adjustable)
-                                 :fill-pointer t)))))
+                                 :fill-pointer t))))
 
 ; --- ConstMap ---
 
@@ -752,7 +751,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 ; --- ConstMap maker ---
 
-(defglobal +the-make-const-map+ (e-lambda "org.erights.e.elib.tables.makeConstMap"
+(defobject +the-make-const-map+ "org.erights.e.elib.tables.makeConstMap"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
   (:|__printOn| (tw)
@@ -809,7 +808,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                 (setf (aref values (hashref key table)) value)))
             nil)))
       (setf closed t)
-      (make-instance 'genhash-const-map-impl :keys keys :values values :table table)))))
+      (make-instance 'genhash-const-map-impl :keys keys :values values :table table))))
 
 ; --- FlexMap maker ---
 
@@ -817,7 +816,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (make-instance 'genhash-flex-map-impl))
 
 ; XXX support fromTypes/3 then make and/1 use the capacity arg
-(defglobal +the-make-flex-map+ (e-lambda "org.erights.e.elib.tables.makeFlexMap"
+(defobject +the-make-flex-map+ "org.erights.e.elib.tables.makeFlexMap"
     (:stamped +deep-frozen-stamp+)
   (:|fromTypes| (key-guard value-guard)
     ; XXX try coerce to primitive and make use of that
@@ -851,5 +850,5 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                       values nil))
               snapshot))
           (otherwise (&rest spread-msg)
-            (apply #'e-call-dispatch map-shell spread-msg))))))))
+            (apply #'e-call-dispatch map-shell spread-msg)))))))
 

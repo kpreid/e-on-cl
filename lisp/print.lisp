@@ -14,21 +14,21 @@
                    |getFQName|)
                (e-quote (unguarded-text-writer-error-message error))))))
 
-(defglobal +text-writer-stamp+ (e-lambda
+(defobject +text-writer-stamp+
     "org.erights.e.elib.print.TextWriterStamp"
     (:stamped +deep-frozen-stamp+)
   (:|audit| (audition)
     (declare (ignore audition))
-    +e-true+)))
+    +e-true+))
 
-(defglobal +the-text-writer-guard+ (e-lambda
+(defobject +the-text-writer-guard+
     "org.erights.e.elib.print.TextWriterGuard"
     (:stamped +deep-frozen-stamp+)
   (:|coerce/2| (standard-coerce 
     (lambda (specimen) (approvedp +text-writer-stamp+ specimen))
     (lambda () +the-text-writer-guard+)
     :error (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
-    :test-shortened nil))))
+    :test-shortened nil)))
 
 (defun hide-text-writer (tw thing)
   (with-result-promise (wrapped-tw)
@@ -274,7 +274,7 @@
     (copy-seq (slot-value this 'buffer))))
 
 
-(defglobal +the-make-text-writer+ (e-lambda "org.erights.e.elib.oldeio.makeTextWriter"
+(defobject +the-make-text-writer+ "org.erights.e.elib.oldeio.makeTextWriter"
     (:stamped +deep-frozen-stamp+)
   (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
   (:|makeBufferingPair| (options)
@@ -305,4 +305,4 @@
     "For Java-E compatibility. Returns the original stream, or its withAutoflush/0. E-on-CL provides TextWriters where Java-E provides Java streams, and in Java-E this would wrap a Java stream in a TextWriter."
     (if (e-is-true autoflush)
       (e. underlying |withAutoflush|)
-      underlying))))
+      underlying)))

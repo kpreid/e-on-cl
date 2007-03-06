@@ -36,7 +36,7 @@
             :depends-on ("elib"))
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
-            :depends-on ("elib"))
+            :depends-on ("elib" "sugar"))
      (:file "same"
             ; Equalizer, hashing, etc
             :depends-on ("elib" "sugar"))
@@ -46,7 +46,7 @@
             :depends-on ("sugar" "same")) ; genhash's register-hash-function needs the values #'same-hash #'samep
      (:file "print"
             ; TextWriter
-            :depends-on ("elib"))
+            :depends-on ("elib" "sugar"))
      (:file "extern"
             :depends-on ("elib" "sugar"))
      (:file "random"
@@ -60,7 +60,7 @@
             :depends-on ("elib" "sugar"
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
      (:file "knot"
-            :depends-on ("knot-base" "extern" "elib-guts" "tables2" "comm"
+            :depends-on ("knot-base" "extern" "elib-guts" "tables2" "comm" "sugar"
                          "elang-nodes" #| +the-make-static-scope+ |#
                          "print" #| constructing global tracers |#
                          "random" #| entropy |#))
@@ -73,15 +73,17 @@
      (:file "nonkernel"
             :depends-on ("elang-nodes"))
      (:file "syntax"
-            :depends-on ("packages" "elang-nodes" "nonkernel"))
+            :depends-on ("packages" "elang-nodes" "nonkernel" "sugar"))
      (:file "compiler-base"
-            :depends-on ("packages" 
-                         "elang-nodes" 
+            :depends-on ("packages"
+                         "elang-nodes"
+                         "sugar"
                          "elib-guts" #| needs e-simple-slot class definition - XXX violates elib-guts's description |#))
      (:file "compiler-seq"
             :depends-on ("compiler-base"))
      (:file "compiler-entry"
-            :depends-on ("compiler-base" 
+            :depends-on ("compiler-base"
+                         "sugar" 
                          "knot-base" #| for scopes |#
                          "knot" #| for +lisp+ |#))
      (:file "rune"

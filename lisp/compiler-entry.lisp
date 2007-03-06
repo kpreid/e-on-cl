@@ -103,7 +103,7 @@
     (e.elang.compiler.seq::sequence-expr expr '* 'return-value)
     'return-value))
 
-(defglobal +the-evaluator+ (e-lambda "$evaluator" (:stamped +deep-frozen-stamp+)
+(defobject +the-evaluator+ "$evaluator" (:stamped +deep-frozen-stamp+)
   ; XXX eval, evalToSingleton, matchBind...
   (:|getKernelNodes| ()
     (let ((map (e. +the-make-const-map+ |fromIteratable|
@@ -114,7 +114,7 @@
                                                          (return)))))
                    nil))
                  +e-true+)))
-      (e. map |sortKeys|)))))
+      (e. map |sortKeys|))))
 
 ;;; --- Cached compilation ---
 

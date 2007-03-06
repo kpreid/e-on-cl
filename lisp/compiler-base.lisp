@@ -374,7 +374,7 @@
 (defmethod make-load-form ((a static-context) &optional environment)
   (make-load-form-saving-slots a :environment environment))
 
-(defglobal +the-make-static-context+ (e-lambda
+(defobject +the-make-static-context+
     "org.erights.e.elang.scope.makeStaticContext"
     (:stamped +deep-frozen-stamp+)
   (:|asType| () (type-specifier-to-guard 'static-context))
@@ -386,7 +386,7 @@
     (make-instance 'static-context
       :source-span source-span
       :fqn-prefix fqn-prefix
-      :opt-object-source opt-object-source))))
+      :opt-object-source opt-object-source)))
 
 (def-fqn static-context "org.erights.e.elang.scope.StaticContext")
 
@@ -524,21 +524,21 @@
       (t
         (join-fq-name ,prefix-var ,qn-var)))))
 
-(defglobal +e-audition-stamp+ (e-lambda 
+(defobject +e-audition-stamp+ 
     "$eAuditionStamp" 
     (:stamped +deep-frozen-stamp+)
   (:|audit| (audition)
     (declare (ignore audition))
-    +e-true+)))
+    +e-true+))
 
-(defglobal +e-audition-guard+ (e-lambda 
+(defobject +e-audition-guard+ 
     "$EAudition"
     (:stamped +deep-frozen-stamp+)
   (:|coerce/2| (standard-coerce
                  (lambda (specimen) (approvedp +e-audition-stamp+ specimen))
                  (lambda () +e-audition-guard+)
                  :error (lambda (specimen) (format nil "~A is not an E Audition" (e-quote specimen)))
-                 :test-shortened nil))))
+                 :test-shortened nil)))
 
 (defun make-audition (fqn this-expr meta-state)
   (let (audition 

@@ -1268,6 +1268,17 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
 
 ; These must? be defined early, since any (defglobal +the-whatever+ (e-lambda :stamped +deep-frozen-stamp+ ...)) will cause evaluation of +deep-frozen-stamp+ at the time of execution of the defglobal.
 
+(defglobal +thread-sharable-stamp+ (e-lambda 
+    "org.erights.e.elib.serial.ThreadSharableStamp"
+    (:doc "The primitive rubber-stamping auditor for objects whose /implementation/ (those components of its state not exposed by __optUncall) is thread-safe. It does *not* guarantee observed immutability or no-outside-effects-during-turn behaviors; see DeepFrozenStamp. This stamp is a Lisp-system-wide authority.")
+  (audited-by-magic-verb (auditor)
+    ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
+  (:|audit| (object-expr witness)
+    (declare (ignore object-expr witness))
+    +e-true+)))
+
 (defglobal +deep-frozen-stamp+ (e-lambda 
     "org.erights.e.elib.serial.DeepFrozenStamp"
     (:doc "The primitive rubber-stamping auditor for DeepFrozen-by-fiat objects.
@@ -1276,7 +1287,8 @@ While this is a process-wide object, its stamps should not be taken as significa
   ; NOTE: Eventually, deep-frozen-stamp & thread-and-process-wide-semantics-safe-stamp => directly sharable across threads, like Java-E does with all Java-PassByCopy.
   (audited-by-magic-verb (auditor)
     ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
   (:|audit| (audition)
     (declare (ignore audition))
     +e-true+)))
@@ -1287,8 +1299,9 @@ While this is a process-wide object, its stamps should not be taken as significa
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   (audited-by-magic-verb (auditor)
+    (setf auditor (ref-shorten auditor))
     (cond 
-      ((eql (ref-shorten auditor) +selfless-stamp+)
+      ((eql auditor +selfless-stamp+)
         ;; Prevents an infinite recursion:
         ;;       (transparent-selfless-p some-obj)
         ;;    -> (approvedp +selfless-stamp+ some-obj)
@@ -1300,8 +1313,11 @@ While this is a process-wide object, its stamps should not be taken as significa
         ;;      
         ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
         nil)
-      ((eql (ref-shorten auditor) +deep-frozen-stamp+)
+      ((eql auditor +deep-frozen-stamp+)
         ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
+        t)
+      ((eql auditor +thread-sharable-stamp+)
+        ;; Just an ordinary stamp.
         t)))
   (:|audit| (audition)
     (declare (ignore audition))
@@ -1309,7 +1325,8 @@ While this is a process-wide object, its stamps should not be taken as significa
 
 (defglobal +pass-by-construction+ (e-lambda 
     "org.erights.e.elib.serial.PassByConstruction"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +thread-sharable-stamp+)
   (:|audit| (audition)
     (declare (ignore audition))
     +e-true+)
@@ -1324,18 +1341,8 @@ While this is a process-wide object, its stamps should not be taken as significa
         
 (defglobal +standard-graph-exit-stamp+ (e-lambda 
     "org.erights.e.elib.serial.StandardGraphExitStamp"
-    (:stamped +deep-frozen-stamp+)
-  (:|audit| (object-expr witness)
-    (declare (ignore object-expr witness))
-    +e-true+)))
-
-(defglobal +thread-sharable-stamp+ (e-lambda 
-    "org.erights.e.elib.serial.ThreadSharableStamp"
-    (:doc "The primitive rubber-stamping auditor for objects whose /implementation/ (those components of its state not exposed by __optUncall) is thread-safe. It does *not* guarantee observed immutability or no-outside-effects-during-turn behaviors; see DeepFrozenStamp. This stamp is a Lisp-system-wide authority.")
-  (audited-by-magic-verb (auditor)
-    ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
-    (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +thread-sharable-stamp+)))
+    (:stamped +deep-frozen-stamp+
+     :stamped +thread-sharable-stamp+)
   (:|audit| (object-expr witness)
     (declare (ignore object-expr witness))
     +e-true+)))
@@ -1393,7 +1400,8 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 (locally
   (declare (optimize (speed 3) (space 3)))
   (defglobal +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
-      (:stamped +deep-frozen-stamp+)
+      (:stamped +deep-frozen-stamp+
+       :stamped +thread-sharable-stamp+)
     (:|__printOn| (tw) ; XXX move to e.syntax?
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "void"))
