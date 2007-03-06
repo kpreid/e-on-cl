@@ -662,34 +662,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (e. tw |write| " ")))
   (e. tw |quote| specimen))
 
-(defgeneric guard-to-type-specifier (guard))
-
-(def-shorten-methods guard-to-type-specifier 1)
-
-(defmethod guard-to-type-specifier ((guard cl-type-guard))
-  (cl-type-specifier guard))
-
-(defmethod guard-to-type-specifier (guard)
-  (let ((sym (make-symbol (e-quote guard)))) 
-    (setf (symbol-function sym) 
-      (lambda (specimen) 
-        (block nil
-          (eql specimen 
-               (e. guard |coerce| specimen
-                                  (efun (c) 
-                                    (declare (ignore c)) 
-                                    (return nil)))))))
-    (setf (get sym 'satisfies-type-specifier-guard) guard)
-    `(satisfies ,sym)))
-
-(defun type-specifier-to-guard (ts)
-  (or
-    (and (consp ts)
-         (= (length ts) 2)
-         (eq (first ts) 'satisfies)
-         (get (second ts) 'satisfies-type-specifier-guard))
-    (make-instance 'cl-type-guard :type-specifier ts)))
-
 (defun make-e-type-error (specimen guard)
   ;; XXX this is duplicated with +the-make-coercion-failure+
   (make-instance 'type-error

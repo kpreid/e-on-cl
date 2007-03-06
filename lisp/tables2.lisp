@@ -581,7 +581,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 (def-class-opaque const-map)
 
 
-(defglobal +the-map-guard+ (make-instance 'cl-type-guard :type-specifier 'const-map))
+(defglobal +the-map-guard+ (type-specifier-to-guard 'const-map))
 
 (defglobal +the-any-map-guard+ +the-map-guard+) ; XXX what this *should* be is a stamp-checking guard to allow standard FlexMaps and ROMaps (which are currently implemented in E)
 

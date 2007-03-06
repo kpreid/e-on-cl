@@ -250,7 +250,7 @@
     (:|makeCoercionFailure| e.elib::+the-make-coercion-failure+)
     (:|makeException|    +the-make-exception+)
     (:|makeStringException| e.elib::+the-make-string-error+)
-    (:|StructureException| (make-instance 'cl-type-guard :type-specifier 'e-structure-exception))
+    (:|StructureException| (type-specifier-to-guard 'e-structure-exception))
     (:|Throwable|        elib:+the-exception-guard+)
     
     ;; simple makers
@@ -269,11 +269,11 @@
     (:|makeParamDesc|    +the-make-param-desc+)
     
     ;; data guards
-    (:|char|             (make-instance 'cl-type-guard :type-specifier 'character))
-    (:|ConstList|        (make-instance 'cl-type-guard :type-specifier 'vector)) ; XXX and not string?
+    (:|char|             (type-specifier-to-guard 'character))
+    (:|ConstList|        (type-specifier-to-guard 'vector)) ; XXX and not string?
     (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
-    (:|float64|          (make-instance 'cl-type-guard :type-specifier 'float64))
-    (:|int|              (make-instance 'cl-type-guard :type-specifier 'integer))
+    (:|float64|          (type-specifier-to-guard 'float64))
+    (:|int|              (type-specifier-to-guard 'integer))
 
     ;; guards
     (:|PassByConstruction| elib:+pass-by-construction+)
@@ -364,7 +364,7 @@
       (if local-name
         (let* ((sym (find-symbol local-name :e.elang.vm-node)))
           (if sym
-            (make-instance 'cl-type-guard :type-specifier sym)
+            (type-specifier-to-guard sym)
             (efuncall absent-thunk)))
         (efuncall absent-thunk)))))
 

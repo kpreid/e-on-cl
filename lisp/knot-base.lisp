@@ -60,7 +60,7 @@
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
   (:|asType| ()
-    (make-instance 'cl-type-guard :type-specifier 'scope))
+    (type-specifier-to-guard 'scope))
   (:|_make| (state fqn-prefix local-definitions)
     "XXX this is the uncall constructor, in need of a better interface"
     (e-coercef state +the-any-map-guard+)

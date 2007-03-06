@@ -1,4 +1,4 @@
-; This Common Lisp code is Copyright 2005-2006 Kevin Reid, under the terms of the
+; This Common Lisp code is Copyright 2005-2007 Kevin Reid, under the terms of the
 ; MIT X license, and partially derived from Java code which is
 ; Copyright 2002 Combex, Inc. under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
@@ -6,91 +6,6 @@
 (in-package :e.elib)
 
 ;;; Currently, this file is just defined as 'stuff moved from elib.lisp that doesn't actually need to be loaded before other files, so as to reduce dependencies requiring recompiling'.
-
-; --- native-type guards ---
-
-(defglobal +trivial-value-lists+
-  (mapcar #'list
-          (list nil 
-                +e-false+ 
-                0 0d0 0.0 
-                (code-char 0))))
-
-(def-vtable cl-type-guard
-  (audited-by-magic-verb (this auditor)
-    (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
-
-  (:|coerce| (guard specimen opt-ejector)
-    (e-coerce-native specimen (cl-type-specifier guard) opt-ejector guard))
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| (cl-type-simple-expr (cl-type-specifier this))))
-  
-  (:|getFQName| (this)
-    (cl-type-fq-name (cl-type-specifier this)))
-  (:|getTheTrivialValue| (this)
-    (with-slots (ts trivial-box) this
-      (first (or trivial-box
-                 (setf trivial-box
-                   (find-if (lambda (v) (typep (first v) ts))
-                            +trivial-value-lists+))
-                 ;; xxx should there be an ejector?
-                 (error "No trivial value available")))))
-  (:|getDocComment| (this)
-    (with-slots (ts) this
-      (let ((documentation (documentation ts 'type)))
-        ; The CONS case is a workaround for an apparent bug in OpenMCL 0.14.2-p1.
-        ; If not for that, this would be (or documentation "").
-        (typecase documentation
-          (string documentation)
-          (cons   (first documentation))
-          (null   "")))))
-  (:|getSupers| (this) 
-    "Supertype information is not currently available for primitive types."
-    (declare (ignore this))
-    #())
-  (:|getAuditors| (this)
-    (declare (ignore this))
-    #())
-  (:|getMessageTypes| (this)
-    ; xxx this is a bit inefficient
-    (with-slots (ts) this
-      (message-pairs-to-map-including-miranda-messages (vtable-message-types ts)))))
-
-(def-atomic-sameness cl-type-guard
-  (lambda (a b) (equal (cl-type-specifier a)
-                       (cl-type-specifier b)))
-  (lambda (a)   (sxhash (cl-type-specifier a))))
-
-(defmethod e-call-match ((rec cl-type-guard) mverb &rest args)
-  (with-slots (ts) rec
-    (if (eql ts 't) ; XXX bad OO
-      (cond
-        ((and (not (eql mverb :|get/0|))
-              (eql mverb (e-util:mangle-verb "get" (length args))))
-          (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (coerce args 'vector)))
-          ((eql mverb :|of/1|)
-            (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (first args)))
-          ((eql mverb :|match__of/1/2|)
-            (e. (e-import "org.erights.e.elib.slot.makeUnionGuard")
-                |match__run/1|
-                (first args)
-                (second args)))
-        ((and (eql mverb :|__respondsTo/2|) 
-              (or (string= (elt args 0) "get")
-                  (samep args '#("of" 1))
-                  (samep args '#("match__of/1" 1))))
-          +e-true+)
-        (t (no-such-method rec mverb args)))
-      (no-such-method rec mverb args))))
-
-(defmethod make-load-form ((object cl-type-guard) &optional environment)
-  (declare (ignore environment))
-  ;; must be custom in order to ignore allow super and trivial-box being restored as nil
-  `(locally (declare (notinline make-instance))
-     (make-instance ',(class-name (class-of object))
-                    :type-specifier ',(cl-type-specifier object))))
 
 ; --- Auditing ---
 

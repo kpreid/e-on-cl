@@ -1043,7 +1043,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       ; FUNCTION-based E-objects must always implement their own __getAllegedType/1.
       (assert (not (typep self 'function)))
       (scan-example-for-vtable-message-types self)
-      (make-instance 'cl-type-guard :type-specifier (observable-type-of self)))
+      (type-specifier-to-guard (observable-type-of self)))
 
     (:|__respondsTo| (verb arity)
       ;; The object itself must handle returning true for those verbs which it implements.
@@ -1460,8 +1460,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (declare (optimize (speed 3) (space 3)))
     (funcall (standard-coerce #'(lambda (specimen) (typep specimen type))
                               #'(lambda () (or opt-guard
-                                             (make-instance 'cl-type-guard
-                                               :type-specifier type)))
+                                             (type-specifier-to-guard type)))
                               :error 
                               #'(lambda (specimen) (make-condition 'type-error
                                                      :datum specimen 
@@ -1469,11 +1468,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
              long-specimen
              ejector)))
 
-
-; XXX thread-safety: make these all vat-local or remove super arg
-(defglobal +the-any-guard+    (make-instance 'cl-type-guard :type-specifier 't))
-(defglobal +the-nullok-guard+ (make-instance 'cl-type-guard :type-specifier 'null))
-(defglobal +the-exception-guard+ (make-instance 'cl-type-guard :type-specifier 'condition))
 
 ;;; --- Additional reference pieces ---
 
