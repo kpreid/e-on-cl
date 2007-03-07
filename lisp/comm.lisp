@@ -46,34 +46,43 @@
   (:|asProxyIdentity/0| 'identity)
   (:|run| (this message)
     (assert (deep-sharable-p message))
-    (%send-in-vat (vat this)
-      (efun () (e<- (%boot-ref-handler this) 
-                    |receive|
-                    (unwrap-boot-ref this) 
-                    message)) 
-      "run" #())))
+    ;; relies on enqueue-turn being safe to call from the wrong thread
+    (enqueue-turn (vat this)
+      (lambda () (e<- (%boot-ref-handler this) 
+                      |receive|
+                      (unwrap-boot-ref this) 
+                      message)))))
 
-(defun %send-in-vat (vat recipient verb args)
-  "unsafe: yields a promise belonging to the other vat"
-  (let ((*vat* vat))
-    ;; XXX threading: will need locks
-    (e-send recipient verb args)))
+(defun %enqueue-with-unsafe-response (vat function)
+  "Eventually execute FUNCTION in VAT, returning a promise belonging to that vat for the result."
+  ;; XXX this is a copy and modification of the default e-send-dispatch method
+  (multiple-value-bind (promise resolver)
+      ;; relies on make-promise being safe to call from the wrong thread
+      (let ((*vat* vat)) (make-promise))
+    ;; relies on enqueue-turn being safe to call from the wrong thread
+    (enqueue-turn vat (lambda ()
+      (e. resolver |resolve| 
+        (handler-case-with-backtrace
+          (funcall function)
+          (error (p b)
+            (efuncall e.knot:+sys-trace+ (format nil "in %enqueue-with-response thunk: ~A" p)
+            (make-unconnected-ref (transform-condition-for-e-catch p :backtrace b))))))))
+    promise))
 
 (defun make-comm-handler-promise (vat)
-  (%send-in-vat vat
-    (efun ()
+  (%enqueue-with-unsafe-response vat
+    (lambda ()
       (efuncall (e-import "org.cubik.cle.makeSharedRefLink")
         +the-make-proxy-resolver+
         (type-specifier-to-guard '(satisfies deep-sharable-p))
         +pass-by-construction+
         (efun (ref)
-          (make-boot-ref ref (vat-comm-handler vat)))))
-    "run" #()))
+          (make-boot-ref ref (vat-comm-handler vat)))))))
 
 (defun make-vat-controller (vat)
   (e-lambda "org.cubik.cle.prim.vatController" ()
     (:|seedEval| (program)
-      ;; XXX should be in vat-privileged scope
+      ;; XXX should be in vat-privileged scope?
       (assert (eq *vat* vat))
       (e. program |eval| (vat-safe-scope vat)))
     (:|shutdown| (problem)
@@ -91,8 +100,7 @@
                       :runner (or opt-runner *runner*)))
            (controller (make-vat-controller new-vat))
            (boot-controller (make-boot-ref controller
-                          (%send-in-vat new-vat
-                            (efun () (vat-comm-handler new-vat))
-                            "run" #())
+                          (%enqueue-with-unsafe-response new-vat
+                            (lambda () (vat-comm-handler new-vat)))
                           new-vat)))
       (e. (vat-comm-handler *vat*) |proxy| boot-controller +e-false+))))

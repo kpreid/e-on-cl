@@ -82,7 +82,7 @@
 
 (cl:defpackage :e.elib
   (:nicknames :elib)
-  (:use :cl :e.util :trivial-garbage)
+  (:use :cl :e.util :trivial-garbage :bordeaux-threads)
   (:export 
     :*compatible-catch-leakage*
     :*break-on-ejections*
@@ -415,7 +415,7 @@
 
 (cl:defpackage :e.elang
   (:nicknames :elang)
-  (:use :cl :e.util :elib :e.elang.vm-node :e.elang.node-impl)
+  (:use :cl :e.util :elib :e.elang.vm-node :e.elang.node-impl :bordeaux-threads)
   (:export
     :eval-e
     :get-translation

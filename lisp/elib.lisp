@@ -405,6 +405,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (declaim (ftype (function () (values ref local-resolver)) make-promise))
 (defun make-promise ()
+  ;; NOTE: %enqueue-in-vat depends on this being thread-safe.
   (let ((promise (make-instance 'promise-ref)))
     (values promise (make-instance 'local-resolver :ref promise))))
 
@@ -522,7 +523,6 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmethod initialize-instance :after ((vat vat) &rest initargs)
   (declare (ignore initargs))
-  ;; XXX threading: consider interaction with runner
   (setf (vat-comm-handler vat)
     (make-comm-handler-promise vat)))
 
@@ -532,10 +532,11 @@ If there is no current vat at initialization time, captures the current vat at t
       (label vat)
       (vat-in-turn vat))))
 
-(defgeneric enqueue-turn (context function))
+(defgeneric enqueue-turn (context function)
+  (:documentation "Must be safe for being called from the wrong thread."))
 
 (defmethod enqueue-turn ((runner runner) function)
-  ; xxx threading: either this acquires a lock or the queue is rewritten thread-safe
+  ;; relies on the send queue being thread-safe
   (enqueue (slot-value runner 'sends) function))
 
 (defmethod enqueue-turn ((vat vat) function)
@@ -604,6 +605,7 @@ If there is no current vat at initialization time, captures the current vat at t
         (e-util:serve-event)))))
 
 (defun runner-loop (runner)
+  (assert (eql runner *runner*))
   (with-slots (sends time-queue) runner
     (loop
       (if (queue-null sends)
@@ -1284,7 +1286,6 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (:doc "The primitive rubber-stamping auditor for DeepFrozen-by-fiat objects.
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
-  ; NOTE: Eventually, deep-frozen-stamp & thread-and-process-wide-semantics-safe-stamp => directly sharable across threads, like Java-E does with all Java-PassByCopy.
   (audited-by-magic-verb (auditor)
     ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
     (or (eql auditor +deep-frozen-stamp+)
@@ -1412,8 +1413,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 ; Simple native-type Guards
 (defclass cl-type-guard () 
   ((ts :initarg :type-specifier
-       :reader cl-type-specifier)
-   (trivial-box :initform nil)))
+       :reader cl-type-specifier)))
 
 (declaim (inline standard-coerce))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))

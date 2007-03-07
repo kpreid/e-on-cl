@@ -77,6 +77,8 @@
 (unless (fboundp 'serve-event)
   (defun serve-event (&optional timeout)
     "Portable fake serve-event if we don't have a real one."
+    (bordeaux-threads:thread-yield)
+    ;; XXX need to set up threads to make IO work if we have thread support
     (if timeout 
       (sleep timeout)
       (progn

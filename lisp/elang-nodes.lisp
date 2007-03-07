@@ -178,6 +178,7 @@
               :type list)
    (static-scope :initform nil
                  :type (or null function))
+   (static-scope-lock :initform (make-lock))
    (source-span :initform nil
                 :type (or null source-span)
                 :initarg :source-span)))
@@ -424,10 +425,13 @@ List nodes will be assumed to be sequences."
     "e??")
   (:|staticScope| (this)
     "Return a static scope analysis of this subtree that doesn't depend on the enclosing context."
-    (with-slots (static-scope) this
-      (or static-scope
-          ;; XXX threading: needs a lock since ENodes must be sharable (for now)
-          (setf static-scope (compute-node-static-scope this)))))
+    (with-slots (static-scope static-scope-lock) this
+      (or (with-lock-held (static-scope-lock) static-scope)
+          ;; by releasing the lock here, we avoid blocking other threads. the
+          ;; computation might harmlessly happen twice, though.
+          (let ((new (compute-node-static-scope this)))
+            (with-lock-held (static-scope-lock) 
+              (setf static-scope new))))))
   (:|getOptSpan| (this)
     (slot-value this 'source-span))
   (:|substitute| (this args)

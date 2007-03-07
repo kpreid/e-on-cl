@@ -51,7 +51,6 @@
 ; --- plain queue implementation ---
 
 ; used for vat queues
-; once we have thread dependencies, think about whether this can be optimized for locking purposes
 
 ; xxx since this is using mutable conses anyway, should we use a mutate-the-tail approach instead of the current mostly-functional queue?
 ;     is there a queue library available?
@@ -61,20 +60,24 @@
 (defgeneric queue-null (queue))
 
 (defclass queue ()
-  ((in  :initform () :accessor queue-in)
+  ((lock :initform (make-lock) :reader %queue-lock)
+   (in  :initform () :accessor queue-in)
    (out :initform () :accessor queue-out)))
    
 (defmethod enqueue ((queue queue) value)
-  (push value (queue-in queue)))
+  (with-lock-held ((%queue-lock queue))
+    (push value (queue-in queue))))
 
 (defmethod dequeue ((queue queue))
-  (unless (queue-out queue)
-    (setf (queue-out queue) (reverse (queue-in queue))
-          (queue-in queue)  '()))
-  (pop (queue-out queue)))
+  (with-lock-held ((%queue-lock queue))
+    (unless (queue-out queue)
+      (setf (queue-out queue) (reverse (queue-in queue))
+            (queue-in queue)  '()))
+    (pop (queue-out queue))))
 
 (defmethod queue-null ((queue queue))
-  (not (or (queue-out queue) (queue-in queue))))
+  (with-lock-held ((%queue-lock queue))
+    (not (or (queue-out queue) (queue-in queue)))))
 
 ; --- sorted queue ---
 

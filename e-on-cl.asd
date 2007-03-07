@@ -14,7 +14,8 @@
 ;; The perform method is defined later in compiler-entry.lisp.
 
 (defsystem e-on-cl
-  :depends-on (:cl-fad
+  :depends-on (:bordeaux-threads
+               :cl-fad
                :cl-ppcre
                :genhash
                :trivial-garbage

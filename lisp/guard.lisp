@@ -31,7 +31,6 @@
          (get (second ts) 'satisfies-type-specifier-guard))
     (make-instance 'cl-type-guard :type-specifier ts)))
 
-; XXX thread-safety: make these all vat-local or remove super arg
 (defglobal +the-any-guard+    (type-specifier-to-guard 't))
 (defglobal +the-nullok-guard+ (type-specifier-to-guard 'null))
 (defglobal +the-exception-guard+ (type-specifier-to-guard 'condition))
@@ -57,11 +56,9 @@
   (:|getFQName| (this)
     (cl-type-fq-name (cl-type-specifier this)))
   (:|getTheTrivialValue| (this)
-    (with-slots (ts trivial-box) this
-      (first (or trivial-box
-                 (setf trivial-box
-                   (find-if (lambda (v) (typep (first v) ts))
-                            +trivial-value-lists+))
+    (let ((ts (cl-type-specifier this)))
+      (first (or (find-if (lambda (v) (typep (first v) ts))
+                          +trivial-value-lists+)
                  ;; xxx should there be an ejector?
                  (error "No trivial value available")))))
   (:|getDocComment| (this)
@@ -114,7 +111,6 @@
 
 (defmethod make-load-form ((object cl-type-guard) &optional environment)
   (declare (ignore environment))
-  ;; must be custom in order to ignore allow super and trivial-box being restored as nil
   `(locally (declare (notinline make-instance))
      (make-instance ',(class-name (class-of object))
                     :type-specifier ',(cl-type-specifier object))))

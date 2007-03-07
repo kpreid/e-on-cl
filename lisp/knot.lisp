@@ -196,7 +196,6 @@
   (destructuring-bind (emaker-root compiled-root) desc
     (make-emaker-loader emaker-root compiled-root (lambda () (vat-safe-scope *vat*)))))
 
-;; XXX threading: review for state
 (defglobal +builtin-emaker-loader+
   (make-emaker-loader-from-desc +builtin-emaker-loader-desc+))
 
@@ -413,7 +412,7 @@
                 (transform-condition-for-e-catch condition
                                                  :backtrace backtrace)))))))))
 
-;; XXX threading: if tracers have state they need to become nonglobal
+;; NOTE on threading: if CL streams (in particular *trace-output* which make-tracer defaults to) are not thread-safe in the implementation, then we'd need to make these non-global
 (defglobal +trace+ (make-tracer :label "misc"))
 (defglobal +sys-trace+ (make-tracer :label ""))
 
@@ -730,6 +729,7 @@
 (defun make-io-scope (&key (interp nil interp-supplied) ((:stdout out-cl-stream)) ((:stderr error-cl-stream)))
   (let ((vat-priv-scope
           (e. (make-scope "__localPrivileged$"
+                ;; XXX the comment on the next line is stale, because thread-sharability now exists. We need to review whether these authorities should be where they are.
                 ; NOTE: these stamps are process-wide, but their effect is local unless amplified with some authority allowing sharing objects between vats (e.g. a hypothetical thread-safe stamp)
                 ; XXX makeProxyResolver will eventually convey GC-notification authority and so is arguably not a *local* privilege.
                 `(("DeepFrozenStamp"   ,elib:+deep-frozen-stamp+)
