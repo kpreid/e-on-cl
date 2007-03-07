@@ -417,18 +417,19 @@
       (error "null is not allowed as the handler"))
     (unless (settledp opt-identity)
       (error 'not-settled-error :name "optIdentity" :value opt-identity))
-    (labels ((change (&rest change-class-args)
+    (labels ((change (&rest class-and-initargs)
                (let ((ref (and ref-slot (ref-shorten (e. ref-slot |getValue|)))))
-                 (when ref
-                   (check-type ref proxy-ref)
-                   (with-ref-transition-invariants (ref)
-                     (apply #'change-class ref change-class-args))
-                   ;; XXX should we catch any problems arising here?
-                   ;; XXX this is called only if the ref actually exists at the
-                   ;; moment. this seems fragile; discuss
-                   (e<- opt-handler |handleResolution| ref))
-                   (setf opt-handler nil
-                         ref-slot nil))))
+                 (e<- opt-handler |handleResolution|
+                    (if ref
+                      (with-ref-transition-invariants (ref)
+                        (check-type ref proxy-ref)
+                        (apply #'change-class ref class-and-initargs))
+                      (apply #'make-instance (first class-and-initargs)
+                                             :identity opt-identity
+                                             :allow-other-keys t
+                                             (rest class-and-initargs))))
+                 (setf opt-handler nil
+                       ref-slot    nil))))
       (e-lambda "$proxyResolver" ()
         (:|__printOn| (tw)
           (e-coercef tw +the-text-writer-guard+)

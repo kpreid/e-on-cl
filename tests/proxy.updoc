@@ -3,6 +3,8 @@
 
 EProxyResolver/EProxyHandler, or at least our version thereof
 
+  ? pragma.syntax("0.9")
+
 --- Far Ref
 
   ? var i := 0
@@ -82,6 +84,57 @@ XXX should breakage be not synchronously visible instead?
   # value: true
 
 (The synchronous visibility of <- on a broken reference is a separate issue, and works the same way for Ref.broken/1)
+
+--- handleResolution cases
+
+handleResolution/1 is called in the event of a resolve or smash. The handler will no longer be invoked to handle sends.
+
+The following tests are for that handleResolution is called in all cases, as this is nontrivial if the proxy doesn't currently exist.
+
+  ? var expectResolution := null
+  > def resolveTestHandler {
+  >   to handleResolution(resolution) {
+  >     println(`handleResolution($resolution), ${(resolution == expectResolution).pick("", "not ")}same`)
+  >   }
+  > }
+  # value: <resolveTestHandler>
+
+Promise resolution, no proxy
+
+  ? def pr := makeProxyResolver(resolveTestHandler, null)
+  # value: <Proxy Resolver>
+  
+  ? pr.resolve(expectResolution := 1)
+  # stdout: handleResolution(1), same
+  #         
+
+Promise smash, no proxy
+
+  ? def pr := makeProxyResolver(resolveTestHandler, null)
+  # value: <Proxy Resolver>
+
+  ? expectResolution := null
+  > pr.smash("x")
+  # stdout: handleResolution(<ref broken by problem: x>), not same
+  #         
+
+Identified smash, no proxy
+
+  ? def pr := makeProxyResolver(resolveTestHandler, resolveTestHandler)
+  # value: <Proxy Resolver>
+
+  ? expectResolution := null; pr.smash("x")
+  # stdout: handleResolution(<ref broken by problem: x>), not same
+  #         
+
+Identified smash, with proxy (so we can check)
+
+  ? def pr := makeProxyResolver(resolveTestHandler, resolveTestHandler)
+  # value: <Proxy Resolver>
+
+  ? expectResolution := pr.getProxy(); pr.smash("x")
+  # stdout: handleResolution(<ref broken by problem: x>), same
+  #         
 
 --- Remote Promise
   
@@ -196,10 +249,8 @@ XXX Is this consistent with E-on-Java? Is it correct? Is it good?
   # value: <Proxy Resolver>
   
   ? resolver.smash("foo")
-  
-  x # stdout: handleResolution <ref broken by foo>
-  x #         
-  XXX a previous implementation would have provided handleResolution in this case; the current one doesn't because there is no proxy. which is correct?
+  # stdout: handleResolution <ref broken by problem: foo>
+  #         
   
   ? resolver.smash("bar")
   # problem: already resolved
