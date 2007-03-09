@@ -234,7 +234,7 @@
     
     :+the-make-weak-ref+
     :+the-make-vat+
-    :+the-make-proxy-resolver+
+    :+the-make-proxy+
     
     :e-slot-value :place-slot
     :def-shorten-methods
@@ -291,7 +291,7 @@
   elib:+the-make-weak-ref+
   elib:+the-make-traversal-key+
   elib:+the-make-vat+
-  elib:+the-make-proxy-resolver+)
+  elib:+the-make-proxy+)
 
 (declaim (ftype function
   e.elib:ejector

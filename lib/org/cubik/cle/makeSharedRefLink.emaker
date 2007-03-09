@@ -10,7 +10,7 @@ def mapL(f, l) {
 }
 
 def makeSharedRefLink { # implements DeepFrozen
-  to run(makeProxyResolver, Passable, MyPassByConstruction, asBootRef) {
+  to run(makeProxy, Passable, MyPassByConstruction, asBootRef) {
     def sharedRefLink
     
     def passesFlex := [].asMap().diverge()
@@ -136,15 +136,16 @@ def makeSharedRefLink { # implements DeepFrozen
           }
         }
         
-        def resolver := makeProxyResolver(handler, if (!isPromise) {bootRef.asProxyIdentity()})
+        def resolutionBox
+        def proxy := makeProxy(handler, resolutionBox, !isPromise)
         
         if (isPromise) {
-          handler.handleSendAllOnly("__whenMoreResolved", [def resolvedReactor(resolution) {
-            resolver.resolve(resolution)
+          handler.handleSendAllOnly("__whenMoreResolved", [def moreResolvedReactor(resolution) {
+            bind resolutionBox := &resolution
           }])
         }
         
-        return resolver.getProxy()
+        return proxy
       }
       
       to receive(recipient, message) {

@@ -16,25 +16,25 @@ def nonPassedMiranda := \
   }
 
 def makePseudoFarRefAuthor implements DeepFrozen {
-  to run(makeProxyResolver) {
+  to run(makeProxy) {
     
     def makePseudoFarRef implements DeepFrozen {
       /** Make a Far reference out of a Near reference from the same vat. It does not modify arguments and return values, so is not a membrane. XXX document miranda method choices */
       to run(nearRef) {
 
-        def resolver
+        def proxy
 
         def farHandler {
           method handleSendAll(verb, args) :any {
             switch ([verb, args]) {
               match [=="__order", [nv, na]] { 
-                [farHandler.handleSendAll(nv, na), resolver.getProxy()]
+                [farHandler.handleSendAll(nv, na), proxy]
               }
               match [=="__optUncall", []] { null }
-              match [=="__conformTo", [_]] { resolver.getProxy() }
+              match [=="__conformTo", [_]] { proxy }
               match [=="__whenBroken", [_]] { null }
               match [=="__whenMoreResolved", [reactor]] { 
-                E.send(reactor, "run", [resolver.getProxy()])
+                E.send(reactor, "run", [proxy])
                 null
               }
               match _ ? nonPassedMiranda.contains(def pairName := [verb, args.size()]) {
@@ -43,13 +43,9 @@ def makePseudoFarRefAuthor implements DeepFrozen {
               match _ { E.send(nearRef, verb, args) }
             }
           }
-          to handleResolution(newTarget) :any {
-            throw("shouldn't happen: handleResolution on pseudo-far")
-          }
         }
 
-        bind resolver := makeProxyResolver(farHandler, farHandler)
-        return resolver.getProxy()
+        return bind proxy := makeProxy(farHandler, (def p; p), true)
       }
     }
     

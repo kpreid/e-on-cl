@@ -333,11 +333,12 @@ If there is no current vat at initialization time, captures the current vat at t
         action)
   (values))
 
-; - broken-ref -
+;;; --- broken-ref ---
 
 (defclass broken-ref (ref)
   ((problem :initarg :problem
-            :type t)))
+            :type t))
+  (:documentation "Abstract. Make a DISCONNECTED-REF or an UNCONNECTED-REF instead of this."))
  
 (defmethod shared-initialize :after ((this broken-ref) slot-names &key &allow-other-keys)
   (declare (ignore slot-names))
@@ -367,34 +368,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (declare (ignore weak-reactor action))
   (values))
 
-; - identified ref -
-
-(defclass identified-ref (ref) 
-  ((identity :initarg :identity
-             :reader identified-ref-identity)))
-
-(def-atomic-sameness identified-ref
-  (lambda (a b) (samep (identified-ref-identity a)
-                       (identified-ref-identity b)))
-  (lambda (a) (same-hash (identified-ref-identity a))))
-
-(defmethod ref-state :around ((ref identified-ref))
-  (let ((result (multiple-value-list (call-next-method))))
-    (destructuring-bind (state &optional tag) result
-      (when (eq state 'eventual)
-        (assert tag () "implementation inconsistency: identified-ref claiming to be unresolved")))
-    (values-list result)))
-
-(defmethod weak-when-more-resolved ((ref identified-ref) weak-reactor action)
-  (declare (ignore weak-reactor action))
-  (values))
-
-; - kinds of broken refs - 
-
 (defclass unconnected-ref (broken-ref)
-  ())
-
-(defclass disconnected-ref (broken-ref identified-ref)
   ())
 
 ;;; - promises - 

@@ -366,18 +366,86 @@
   
 ; --- far refs/proxies ---
 
-(defclass proxy-ref (ref)
-  ((handler :initarg :handler))
+(defclass handler-ref (ref)
+  ((handler        :initarg :handler
+                   :reader %proxy-ref-handler)
+   (resolution-box :initarg :resolution-box
+                   :reader %proxy-ref-resolution-box))
+  (:documentation "A reference which has a handler and resolution promise, but doesn't necessarily use them for anything."))
+
+(defclass handler-identity-ref (handler-ref) 
+  ()
+  (:documentation "A reference which gets its identity from a handler and resolution promise. Instances will be either PROXY-REF or DISCONNECTED-REF."))
+
+(def-atomic-sameness handler-identity-ref
+  (lambda (a b) (and (eql (class-of a)
+                          (class-of b))
+                     (samep (%proxy-ref-handler a)
+                            (%proxy-ref-handler b))
+                     (same-yet-p (%proxy-ref-resolution-box a)
+                                 (%proxy-ref-resolution-box b))))
+  (lambda (a) (same-hash (%proxy-ref-handler a))))
+
+(defclass disconnected-ref (broken-ref handler-identity-ref)
+  ())
+
+(defclass proxy-ref (handler-ref)
+  ()
   (:documentation "A Ref backed by a ProxyHandler."))
 
+(defun bogus-resolution (&rest spec)
+  (let ((condition (apply #'to-condition 'simple-error spec)))
+    (e. e.knot:+sys-trace+ |run| condition)
+    (make-unconnected-ref (transform-condition-for-e-catch condition))))
+
+(defun verify-resolution-box (ref box)
+  (handler-case 
+    (progn
+      (setf box (ref-shorten box))
+      (check-type box e-simple-slot)
+      (e. box |getValue|))
+    (error ()
+      (bogus-resolution "Resolution promise of a Far ref handled by ~A didn't resolve to a simple slot, but ~A."
+        (e-quote (%proxy-ref-handler ref))
+        (e-quote box)))))
+
+(defun verify-broken-resolution (ref resolution-ref)
+  (if (eql (ref-state resolution-ref) 'broken)
+    resolution-ref
+    (bogus-resolution "Attempt to resolve this Far ref handled by ~A to another identity (~A)." 
+      (e-quote (%proxy-ref-handler ref)) 
+      (e-quote resolution-ref))))
+
+(defgeneric %resolve-proxy (proxy resolution))
+
+(defun %maybe-resolve-proxy (ref)
+  "Convert this proxy-ref into its resolution, if it has resolved further. Returns whether it did anything."
+  (with-ref-transition-invariants (ref)
+    (check-type ref proxy-ref)
+    (let ((resolution-box (%proxy-ref-resolution-box ref)))
+      (when (ref-is-resolved resolution-box)
+        ;; If the resolution-box is resolved, it contains the resolution of this reference.
+        (%resolve-proxy ref (verify-resolution-box ref resolution-box))
+        ;; Inform the caller of the need to re-dispatch.
+        t))))
+
 (defmethod %ref-shorten ((ref proxy-ref))
-  ref)
+  (if (%maybe-resolve-proxy ref)
+    (ref-shorten ref)
+    ref))
+
+(defmethod ref-state :around ((ref proxy-ref))
+  (if (%maybe-resolve-proxy ref)
+    (ref-state ref)
+    (call-next-method)))
 
 (defmethod ref-state ((ref proxy-ref))
   (error "ref-state not overridden for a proxy-ref"))
 
 (defmethod e-call-dispatch ((ref proxy-ref) mverb &rest args)
-  (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
+  (if (%maybe-resolve-proxy ref)
+    (apply #'e-call-dispatch ref mverb args)
+    (error 'synchronous-call-error :recipient ref :mverb mverb :args args)))
 
 (defmethod e-send-dispatch ((ref proxy-ref) mverb &rest args)
   (with-slots (handler) ref
@@ -395,75 +463,37 @@
   (values))
 
 
-(defclass far-ref (proxy-ref identified-ref)
+(defclass far-ref (proxy-ref handler-identity-ref)
   ())
+
+(defmethod %resolve-proxy ((proxy far-ref) resolution)
+  "When resolving a far-ref, its identity must be preserved, and it can only become disconnected (broken); attempting to do otherwise is an error."
+  (change-class proxy 'disconnected-ref
+    :problem (ref-opt-problem (verify-broken-resolution proxy resolution))))
 
 (defmethod ref-state ((ref far-ref))
   (values 'eventual t))
 
-
-(defclass remote-promise (proxy-ref) 
+;; XXX remote promises *should* be handler-identity-refs, but the equalizer can't handle that yet. Not doing so merely results in remote promises not being same when they should be.
+(defclass remote-promise (proxy-ref)
   ())
 
 (defmethod ref-state ((ref remote-promise))
   (values 'eventual nil))
 
+(defmethod %resolve-proxy ((proxy remote-promise) resolution)
+  "If we're a remote promise, then we can just become a forwarder."
+  (change-class proxy 'forwarding-ref :target resolution))
 
-(defobject +the-make-proxy-resolver+ "org.erights.e.elib.ref.makeProxyResolver" 
+
+(defobject +the-make-proxy+ "org.erights.e.elib.ref.makeProxy"
     (:stamped +deep-frozen-stamp+)
-  (:|run| (opt-handler opt-identity &aux ref-slot)
-    ; XXX ref-slot will eventually be a weak reference
-    (unless opt-handler
-      (error "null is not allowed as the handler"))
-    (unless (settledp opt-identity)
-      (error 'not-settled-error :name "optIdentity" :value opt-identity))
-    (labels ((change (&rest class-and-initargs)
-               (let ((ref (and ref-slot (ref-shorten (e. ref-slot |getValue|)))))
-                 (e<- opt-handler |handleResolution|
-                    (if ref
-                      (with-ref-transition-invariants (ref)
-                        (check-type ref proxy-ref)
-                        (apply #'change-class ref class-and-initargs))
-                      (apply #'make-instance (first class-and-initargs)
-                                             :identity opt-identity
-                                             :allow-other-keys t
-                                             (rest class-and-initargs))))
-                 (setf opt-handler nil
-                       ref-slot    nil))))
-      (e-lambda "$proxyResolver" ()
-        (:|__printOn| (tw)
-          (e-coercef tw +the-text-writer-guard+)
-          (e. tw |print| "<Proxy Resolver>"))
-        (:|getProxy| ()
-          "Return the Ref for this resolver, creating a new one if necessary."
-          (unless (and ref-slot (e. ref-slot |getValue|))
-            (setf ref-slot (make-instance 'e-simple-slot :value
-              (if opt-handler
-                (if opt-identity
-                  (make-instance 'far-ref
-                      :handler opt-handler
-                      :identity opt-identity)
-                  (make-instance 'remote-promise
-                      :handler opt-handler))
-                (error "this ProxyResolver is resolved and therefore its proxy is not available")))))
-          (e. ref-slot |getValue|))
-
-        (:|resolve| (target)
-          (unless opt-handler
-            (error "already resolved"))
-          (when opt-identity
-            (error "can't resolve a proxy ref with identity (~A) to ~A" (e-quote opt-identity) (e-quote target)))
-          (change 'forwarding-ref :target target)
-          nil)
-        (:|smash| (problem)
-          (e-coercef problem 'condition)
-          (unless opt-handler
-            (error "already resolved"))
-          (change (if opt-identity
-                    'disconnected-ref
-                    'unconnected-ref)
-                  :problem problem)
-          nil)))))
+  (:|run| (handler resolution-box resolved)
+    (unless (settledp handler)
+      (error 'not-settled-error :name "proxy handler" :value handler))
+    (make-instance (if (e-is-true resolved) 'far-ref 'remote-promise)
+        :handler handler
+        :resolution-box resolution-box)))
 
 ; --- sorted queue ---
 

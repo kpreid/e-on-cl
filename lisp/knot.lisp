@@ -731,10 +731,9 @@
           (e. (make-scope "__localPrivileged$"
                 ;; XXX the comment on the next line is stale, because thread-sharability now exists. We need to review whether these authorities should be where they are.
                 ; NOTE: these stamps are process-wide, but their effect is local unless amplified with some authority allowing sharing objects between vats (e.g. a hypothetical thread-safe stamp)
-                ; XXX makeProxyResolver will eventually convey GC-notification authority and so is arguably not a *local* privilege.
-                `(("DeepFrozenStamp"   ,elib:+deep-frozen-stamp+)
-                  ("SelflessStamp"     ,elib:+selfless-stamp+)
-                  ("makeProxyResolver" ,elib:+the-make-proxy-resolver+)))
+                `(("DeepFrozenStamp" ,elib:+deep-frozen-stamp+)
+                  ("SelflessStamp"   ,elib:+selfless-stamp+)
+                  ("makeProxy"       ,elib:+the-make-proxy+)))
             |or| (vat-safe-scope *vat*))))
     (efuncall (e-import "org.cubik.cle.makeIOScope")
         "__privileged$"

@@ -65,15 +65,15 @@
         (handler-case-with-backtrace
           (funcall function)
           (error (p b)
-            (efuncall e.knot:+sys-trace+ (format nil "in %enqueue-with-response thunk: ~A" p)
-            (make-unconnected-ref (transform-condition-for-e-catch p :backtrace b))))))))
+            (efuncall e.knot:+sys-trace+ (format nil "in %enqueue-with-response thunk: ~A" p))
+            (make-unconnected-ref (transform-condition-for-e-catch p :backtrace b)))))))
     promise))
 
 (defun make-comm-handler-promise (vat)
   (%enqueue-with-unsafe-response vat
     (lambda ()
       (efuncall (e-import "org.cubik.cle.makeSharedRefLink")
-        +the-make-proxy-resolver+
+        +the-make-proxy+
         (type-specifier-to-guard '(satisfies deep-sharable-p))
         +pass-by-construction+
         (efun (ref)

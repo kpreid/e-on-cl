@@ -107,9 +107,9 @@ The 'oddball' is a test case for that the comm system should not share an object
 
 One boot-link for testing, with faked communication. 
 
-? # def makeProxyResolver := <unsafe:org.erights.e.elib.ref.makeEProxyResolver>
+? # def makeProxy := <unsafe:org.erights.e.elib.ref.makeEProxy>
 
-? bind testLink := makeSharedRefLink(makeProxyResolver, Sharable, pbc, asBootRef)
+? bind testLink := makeSharedRefLink(makeProxy, Sharable, pbc, asBootRef)
 # value: <sharedRefLink>
 
 --- Local-to-remote
@@ -191,7 +191,7 @@ An object which is both sharable and DeepPassByCopy should be shared.
 
 ? testLink.receive(def promiseTest, ["resolve", [["promise", asRemote("expectWMR")]]])
 > interp.waitAtTop(afterRemoteMessage())
-# stdout: message for expectWMR: ["__whenMoreResolved", [["proxy", <local bootRef <resolvedReactor>>]]]
+# stdout: message for expectWMR: ["__whenMoreResolved", [["proxy", <local bootRef <moreResolvedReactor>>]]]
 #         
 
 ? promiseTest

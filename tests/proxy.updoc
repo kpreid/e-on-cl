@@ -1,7 +1,7 @@
 # Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-EProxyResolver/EProxyHandler, or at least our version thereof
+User-defined Far refs and remote promises
 
   ? pragma.syntax("0.9")
 
@@ -19,18 +19,12 @@ EProxyResolver/EProxyHandler, or at least our version thereof
   >     println(`handleSendAllOnly $verb $args`)
   >     return [i += 1, verb, args] # should not be returned from the proxy
   >   }
-  >   to handleResolution(newTarget) :any {
-  >     println(`handleResolution $newTarget`)
-  >   }
   > }
   # value: <farHandler>
 
-The second argument to makeProxyResolver is the identity of the far reference, for which we use the farHandler itself for this test.
+The second argument to makeProxy is the resolution of a remote promise, or the failure of a Far reference; the third is whether the proxy is resolved. These components together completely define the identity of a proxy.
 
-  ? def farResolver := makeProxyResolver(farHandler, farHandler)
-  # value: <Proxy Resolver>
-  
-  ? def remote := farResolver.getProxy()
+  ? def remote := makeProxy(farHandler, (def resolution; resolution), true)
   # value: <Far ref>
   
   ? remote.hi()
@@ -67,14 +61,9 @@ Notice that even though the handler is written to resolve it immediately, the re
 -- Breaking Far ref
 
   ? [Ref.optProblem(remote), 
-  >  farResolver.smash("gone away"),
+  >  resolution__Resolver.resolve(def x := Ref.broken("gone away"); &x),
   >  Ref.optProblem(remote)]
   # value: [null, null, problem: gone away]
-
-  # stdout: handleResolution <ref broken by problem: gone away>
-  #         
-  
-XXX should breakage be not synchronously visible instead?
   
   ? remote <- msg()
   # value: <ref broken by problem: gone away>
@@ -85,66 +74,12 @@ XXX should breakage be not synchronously visible instead?
 
 (The synchronous visibility of <- on a broken reference is a separate issue, and works the same way for Ref.broken/1)
 
---- handleResolution cases
-
-handleResolution/1 is called in the event of a resolve or smash. The handler will no longer be invoked to handle sends.
-
-The following tests are for that handleResolution is called in all cases, as this is nontrivial if the proxy doesn't currently exist.
-
-  ? var expectResolution := null
-  > def resolveTestHandler {
-  >   to handleResolution(resolution) {
-  >     println(`handleResolution($resolution), ${(resolution == expectResolution).pick("", "not ")}same`)
-  >   }
-  > }
-  # value: <resolveTestHandler>
-
-Promise resolution, no proxy
-
-  ? def pr := makeProxyResolver(resolveTestHandler, null)
-  # value: <Proxy Resolver>
-  
-  ? pr.resolve(expectResolution := 1)
-  # stdout: handleResolution(1), same
-  #         
-
-Promise smash, no proxy
-
-  ? def pr := makeProxyResolver(resolveTestHandler, null)
-  # value: <Proxy Resolver>
-
-  ? expectResolution := null
-  > pr.smash("x")
-  # stdout: handleResolution(<ref broken by problem: x>), not same
-  #         
-
-Identified smash, no proxy
-
-  ? def pr := makeProxyResolver(resolveTestHandler, resolveTestHandler)
-  # value: <Proxy Resolver>
-
-  ? expectResolution := null; pr.smash("x")
-  # stdout: handleResolution(<ref broken by problem: x>), not same
-  #         
-
-Identified smash, with proxy (so we can check)
-
-  ? def pr := makeProxyResolver(resolveTestHandler, resolveTestHandler)
-  # value: <Proxy Resolver>
-
-  ? expectResolution := pr.getProxy(); pr.smash("x")
-  # stdout: handleResolution(<ref broken by problem: x>), same
-  #         
-
 --- Remote Promise
   
-  ? def promiseHandler { to handleResolution(_) :void {} }
+  ? def promiseHandler {}
   # value: <promiseHandler>
   
-  ? def promiseResolver := makeProxyResolver(promiseHandler, null)
-  # value: <Proxy Resolver>
-  
-  ? def remotePromise := promiseResolver.getProxy()
+  ? def remotePromise := makeProxy(promiseHandler, (def resolution; resolution), false)
   # value: <Promise>
   
   ? remotePromise.hi()
@@ -154,7 +89,7 @@ Identified smash, with proxy (so we can check)
   > accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remotePromise])) }
   # value: [false, false, true, false, false, false, null]
   
-  ? promiseResolver.resolve(def promiseResolution {})
+  ? resolution__Resolver.resolve(def promiseResolution {}; &promiseResolution)
   
   ? remotePromise
   # value: <promiseResolution>
@@ -167,48 +102,46 @@ Identified smash, with proxy (so we can check)
 
 --- Sameness of Far refs
 
-  ? def stubHandler { to handleResolution(_) :void {} }
+  ? def stubHandler {}
   # value: <stubHandler>
+  
+  ? def stubResolution := Ref.promise()[0]
+  # value: <Promise>
 
   different proxies, same identity
-  ? makeProxyResolver(stubHandler, def fi1 {}).getProxy() == makeProxyResolver(stubHandler, fi1).getProxy()
+  ? makeProxy(def fi1 {}, stubResolution, true) == makeProxy(fi1, stubResolution, true)
   # value: true
 
   different proxies, different identity
-  ? makeProxyResolver(stubHandler, fi1).getProxy() == makeProxyResolver(stubHandler, def fi2 {}).getProxy()
+  ? makeProxy(fi1, stubResolution, true) == makeProxy(def fi2 {}, stubResolution, true)
   # value: false
 
   different proxies, different instantiation of same Selfless identity
-  ? makeProxyResolver(stubHandler, [fi1]).getProxy() == makeProxyResolver(stubHandler, [fi1]).getProxy()
+  ? makeProxy([fi1], stubResolution, true) == makeProxy([fi1], stubResolution, true)
   # value: true
   
   unresolved one
-  ? makeProxyResolver(stubHandler, null).getProxy() == makeProxyResolver(stubHandler, [fi1]).getProxy()
+  ? makeProxy(stubHandler, stubResolution, false) == makeProxy(stubHandler, stubResolution, true)
   # problem: <InsufficientlySettledException: not sufficiently settled: <Promise> == <Far ref>>
 
   unresolved both
-  ? makeProxyResolver(stubHandler, null).getProxy() == makeProxyResolver(stubHandler, null).getProxy()
+  ? makeProxy(stubHandler, stubResolution, false) == makeProxy(stubHandler, stubResolution, false)
   # problem: <InsufficientlySettledException: not sufficiently settled: <Promise> == <Promise>>
 
   unresolved-but-same
-  ? (def pr := makeProxyResolver(stubHandler, null)).getProxy() == pr.getProxy()
+  ? (def pr := makeProxy(stubHandler, stubResolution, false)) == pr
   # value: true
 
 --- Sameness of broken Far references
 
-Setup
+  ? def p1 := makeProxy(def sbfh {}, (def sbfr;sbfr), true)
+  # value: <Far ref>
 
-  ? def pr1 := makeProxyResolver(stubHandler, def sbfi {})
-  # value: <Proxy Resolver>
+  ? def p2 := makeProxy(sbfh, sbfr, true)
+  # value: <Far ref>
 
-  ? def pr2 := makeProxyResolver(stubHandler, sbfi)
-  # value: <Proxy Resolver>
-
-  ? def prO := makeProxyResolver(stubHandler, def sbfi2 {})
-  # value: <Proxy Resolver>
-
-  ? def [p1, p2, pO] := [pr1.getProxy(), pr2.getProxy(), prO.getProxy()]
-  # value: [<Far ref>, <Far ref>, <Far ref>]
+  ? def pO := makeProxy(def sbfh2 {}, (def sbfr2;sbfr2), true)
+  # value: <Far ref>
   
   ? p1 == p2
   # value: true
@@ -216,16 +149,8 @@ Setup
   ? p1 == pO
   # value: false
 
-Resolving gives a specific identity, so it cannot be used.
-
-  ? pr1.resolve(Ref.broken("yellow"))
-  # problem: can't resolve a proxy ref with identity (<sbfi>) to <ref broken by problem: yellow>
-
-Smashing does not, so it can.
-
-XXX Is this consistent with E-on-Java? Is it correct? Is it good?
-
-  ? for x in [pr1, pr2, prO] { x.smash("yellow") }
+  ? def p := Ref.broken("yellow")
+  > for x in [sbfr__Resolver, sbfr2__Resolver] { x.resolve(&p) }
 
   ? p1
   # value: <ref broken by problem: yellow>
@@ -238,23 +163,11 @@ XXX Is this consistent with E-on-Java? Is it correct? Is it good?
 
 --- Odd cases
 
-  Unsettled argument
+  Unsettled handler
 
-  ? makeProxyResolver(stubHandler, Ref.promise())
-  # problem: <NotSettledException: not settled: optIdentity [<Promise>, <Resolver>]>
-  
-  Duplicate smash
-  
-  ? def resolver := makeProxyResolver(farHandler, farHandler)
-  # value: <Proxy Resolver>
-  
-  ? resolver.smash("foo")
-  # stdout: handleResolution <ref broken by problem: foo>
-  #         
-  
-  ? resolver.smash("bar")
-  # problem: already resolved
-  
+  ? makeProxy(Ref.promise(), Ref.promise()[0], null)
+  # problem: <NotSettledException: not settled: proxy handler [<Promise>, <Resolver>]>
+
 
 XXX explicitly test hash code is preserved across breakage, so hash tables/TraversalKey etc. work
 XXX sends

@@ -145,7 +145,7 @@ def makeIOScope implements DeepFrozen {
     if (exits =~ [=> spawn] | _) {
       unsafeImports with= ("org.cubik.cle.spawn", spawn)
     } else if (exits =~ [=> unsafeNearSpawn] | _) {
-      def makePseudoFarRef := <import:org.cubik.cle.makePseudoFarRefAuthor>(vatPrivScope["makeProxyResolver"])
+      def makePseudoFarRef := <import:org.cubik.cle.makePseudoFarRefAuthor>(vatPrivScope["makeProxy"])
       unsafeImports with= ("org.cubik.cle.spawn", 
         makePseudoFarRef(unsafeNearSpawn))
     }
