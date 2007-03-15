@@ -28,7 +28,7 @@
 ;;   Brian Mastenbrook, bmastenb@indiana.edu
 
 (defpackage :e.irc-repl
-  (:use :common-lisp :irc)
+  (:use :common-lisp :irc :e.util :e.elib)
   (:export
     :start-ceel
     :shut-up
@@ -37,6 +37,7 @@
 
 (defvar *connection*)
 (defvar *nickname* "")
+(defvar *irc-repl-vat*)
 (defvar *scope*)
 
 (defun shut-up ()
@@ -79,27 +80,28 @@
                          (source message)
                          (first (arguments message))))
         (cmd (strip-address (trailing-argument message) :final t)))
-    (if cmd
-      (let ((source
-              (e.elib:escape-bind (syntax-ej)
-                  (e.syntax:parse-to-kernel cmd :syntax-ejector syntax-ej)
-                (error)
-                  (safe-privmsg *connection* destination (e.elib:e-print error))
-                  (return-from msg-hook))))
-        (handler-case
-          (multiple-value-bind (result new-scope)
-              (elang:eval-e source *scope*)
-            (safe-privmsg *connection* destination (format nil "# value: ~A" (elib:e-quote result)))
-            (setf *scope* new-scope))
-          (error (condition)
-            (safe-privmsg *connection* destination (format nil "# ~A" (elib:e-quote condition))))))
-    
-    
-      )))
+    (when cmd
+      (enqueue-turn *irc-repl-vat* (lambda ()
+        (let ((source
+                (escape-bind (syntax-ej)
+                    (e.syntax:parse-to-kernel cmd :syntax-ejector syntax-ej)
+                  (error)
+                    (safe-privmsg *connection* destination (e-print error))
+                    (return-from msg-hook))))
+          (handler-case-with-backtrace
+            (multiple-value-bind (result new-scope)
+                (elang:eval-e source *scope*)
+              (safe-privmsg *connection* destination (format nil "# value: ~A" (e-quote result)))
+              (setf *scope* new-scope))
+            (error (condition backtrace)
+              (safe-privmsg *connection* destination (format nil "# ~A" (e-quote condition)))
+              (let ((*print-pretty* t))
+                (format *trace-output* "~&Problem: ~A~%~S" condition backtrace))))))))))
 
 (defun start-irc-repl (nick server &rest channels)
   ; xxx have a better definition of our initial scope; some description of what things are safely included
-  (setf *scope* (elib:e. (elib:vat-safe-scope elib:*vat*) |with| "timer" e.extern:+the-timer+))
+  (setf *scope* (e. (vat-safe-scope *vat*) |with| "timer" e.extern:+the-timer+))
+  (setf *irc-repl-vat* *vat*)
   (setf *nickname* nick)
   (setf *connection* (connect :nickname *nickname* :server server))
   (loop for channel in channels do (join *connection* channel))
