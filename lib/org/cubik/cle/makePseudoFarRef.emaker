@@ -1,0 +1,49 @@
+# Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+pragma.enable("exporter")
+pragma.enable("importer")
+pragma.enable("accumulator")
+
+def nonPassedMiranda := \
+  accum [].asSet() for messageDesc in \
+      null.__getAllegedType().getMessageTypes().without("__getAllegedType/0") \
+        .without("__respondsTo/2").without("__reactToLostClient/1") \
+        .without("__optSealedDispatch/1").without("__printOn/1") {
+    _.with([messageDesc.getVerb(), messageDesc.getParams().size()])
+  }
+
+def makeProxy := <elib:ref.makeProxy>
+
+def makePseudoFarRef implements DeepFrozen {
+  /** Make a Far reference out of a Near reference from the same vat. It does not modify arguments and return values, so is not a membrane. XXX document miranda method choices */
+  to run(nearRef) {
+
+    def proxy
+
+    def farHandler {
+      method handleSend(verb, args) :any {
+        switch ([verb, args]) {
+          match [=="__order", [nv, na]] { 
+            [farHandler.handleSend(nv, na), proxy]
+          }
+          match [=="__optUncall", []] { null }
+          match [=="__conformTo", [_]] { proxy }
+          match [=="__whenBroken", [_]] { null }
+          match [=="__whenMoreResolved", [reactor]] { 
+            E.send(reactor, "run", [proxy])
+            null
+          }
+          match _ ? nonPassedMiranda.contains(def pairName := [verb, args.size()]) {
+            throw(`unhandled unpassed miranda method: $pairName`)
+          }
+          match _ { E.send(nearRef, verb, args) }
+        }
+      }
+    }
+
+    return bind proxy := makeProxy(farHandler, (def p; p), true)
+  }
+}

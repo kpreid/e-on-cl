@@ -244,6 +244,7 @@
     (:|gc|               e.extern:+gc+)
     (:|loop|             +the-looper+)
     (:|throw|            +the-thrower+)
+    (:|makeProxy|        +the-make-proxy+)
     
     ;; exceptions
     (:|makeCoercionFailure| e.elib::+the-make-coercion-failure+)
@@ -732,8 +733,7 @@
                 ;; XXX the comment on the next line is stale, because thread-sharability now exists. We need to review whether these authorities should be where they are.
                 ; NOTE: these stamps are process-wide, but their effect is local unless amplified with some authority allowing sharing objects between vats (e.g. a hypothetical thread-safe stamp)
                 `(("DeepFrozenStamp" ,elib:+deep-frozen-stamp+)
-                  ("SelflessStamp"   ,elib:+selfless-stamp+)
-                  ("makeProxy"       ,elib:+the-make-proxy+)))
+                  ("SelflessStamp"   ,elib:+selfless-stamp+)))
             |or| (vat-safe-scope *vat*))))
     (efuncall (e-import "org.cubik.cle.makeIOScope")
         "__privileged$"

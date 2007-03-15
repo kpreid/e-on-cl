@@ -2,6 +2,7 @@ pragma.syntax("0.9")
 
 def deSubgraphKit := <elib:serial.deSubgraphKit>
 def makeCycleBreaker := <elib:tables.makeCycleBreaker>
+def makeProxy := <elib:ref.makeProxy>
 
 def mapL(f, l) {
   def out := [].diverge()
@@ -10,7 +11,7 @@ def mapL(f, l) {
 }
 
 def makeSharedRefLink { # implements DeepFrozen
-  to run(makeProxy, Passable, MyPassByConstruction, asBootRef) {
+  to run(Passable, MyPassByConstruction, asBootRef) {
     def sharedRefLink
     
     def passesFlex := [].asMap().diverge()
@@ -122,14 +123,14 @@ def makeSharedRefLink { # implements DeepFrozen
           to handleResolution(_) {}
           to reactToGC() {}
 
-          to handleSendAll(verb :String, args :List) {
+          to handleSend(verb :String, args :List) {
             bootRef <- ([verb,
                          mapL(recog, args),
                          recog(def result)])
             flushPasses()
             return result
           }
-          to handleSendAllOnly(verb :String, args :List) {
+          to handleSendOnly(verb :String, args :List) {
             bootRef <- ([verb,
                          mapL(recog, args)])
             flushPasses()
@@ -140,7 +141,7 @@ def makeSharedRefLink { # implements DeepFrozen
         def proxy := makeProxy(handler, resolutionBox, !isPromise)
         
         if (isPromise) {
-          handler.handleSendAllOnly("__whenMoreResolved", [def moreResolvedReactor(resolution) {
+          handler.handleSendOnly("__whenMoreResolved", [def moreResolvedReactor(resolution) {
             bind resolutionBox := &resolution
           }])
         }

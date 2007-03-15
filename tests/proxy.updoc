@@ -5,18 +5,21 @@ User-defined Far refs and remote promises
 
   ? pragma.syntax("0.9")
 
+  ? def makeProxy := <elib:ref.makeProxy>
+  # value: <makeProxy>
+ 
 --- Far Ref
 
   ? var i := 0
   # value: 0
 
   ? def farHandler {
-  >   to handleSendAll(verb, args) :any {
-  >     println(`handleSendAll $verb $args`)
+  >   to handleSend(verb, args) :any {
+  >     println(`handleSend $verb $args`)
   >     return [i += 1, verb, args]
   >   }
-  >   to handleSendAllOnly(verb, args) :any {
-  >     println(`handleSendAllOnly $verb $args`)
+  >   to handleSendOnly(verb, args) :any {
+  >     println(`handleSendOnly $verb $args`)
   >     return [i += 1, verb, args] # should not be returned from the proxy
   >   }
   > }
@@ -42,7 +45,7 @@ The second argument to makeProxy is the resolution of a remote promise, or the f
   ? def firstResponse := remote <- first()
   # value: <Promise>
   
-  # stdout: handleSendAll first []
+  # stdout: handleSend first []
   #         
   
 Notice that even though the handler is written to resolve it immediately, the response remains a promise during the first turn. This is done deliberately so that E-implemented proxies cannot have synchronous effects during an E.send.
@@ -55,7 +58,7 @@ Notice that even though the handler is written to resolve it immediately, the re
 -- Send-only
 
   ? E.sendOnly(remote, "only", [])
-  # stdout: handleSendAllOnly only []
+  # stdout: handleSendOnly only []
   #         
 
 -- Breaking Far ref

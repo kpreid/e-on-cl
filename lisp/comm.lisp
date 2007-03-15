@@ -73,7 +73,6 @@
   (%enqueue-with-unsafe-response vat
     (lambda ()
       (efuncall (e-import "org.cubik.cle.makeSharedRefLink")
-        +the-make-proxy+
         (type-specifier-to-guard '(satisfies deep-sharable-p))
         +pass-by-construction+
         (efun (ref)

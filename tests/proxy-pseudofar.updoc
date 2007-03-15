@@ -3,7 +3,7 @@
 
 
   XXX FQN, concept name to be considered
-  ? def makePseudoFarRef := <import:org.cubik.cle.makePseudoFarRefAuthor>(makeProxy)
+  ? def makePseudoFarRef := <import:org.cubik.cle.makePseudoFarRef>
   # value: <makePseudoFarRef>
   
   ? def nearThing {

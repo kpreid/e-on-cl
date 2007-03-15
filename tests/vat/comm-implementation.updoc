@@ -107,9 +107,7 @@ The 'oddball' is a test case for that the comm system should not share an object
 
 One boot-link for testing, with faked communication. 
 
-? # def makeProxy := <unsafe:org.erights.e.elib.ref.makeEProxy>
-
-? bind testLink := makeSharedRefLink(makeProxy, Sharable, pbc, asBootRef)
+? bind testLink := makeSharedRefLink(Sharable, pbc, asBootRef)
 # value: <sharedRefLink>
 
 --- Local-to-remote

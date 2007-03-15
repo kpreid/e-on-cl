@@ -289,8 +289,8 @@
 ;; XXX remove SBCLisms
 
 (defun make-pseudo-far (near)
-  ;; XXX avoid using the author every time
-  (efuncall (efuncall (e-import "org.cubik.cle.makePseudoFarRefAuthor") e.elib:+the-make-proxy+) near))
+  ;; XXX avoid importing every time
+  (efuncall (e-import "org.cubik.cle.makePseudoFarRef") near))
 
 (defun convert-stream-option (option which)
   (cond
