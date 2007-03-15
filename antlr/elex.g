@@ -308,10 +308,10 @@ protected
 POSINT:         ('0'..'9') ('0'..'9'|'_'!)* ;
 
 protected
-FLOAT64     :   POSINT ('.' POSINT | ('e' | 'E') EXPONENT)  ;
+FLOAT64     :   POSINT ('.' POSINT (EXPONENT)? | EXPONENT)  ;
 
 protected
-EXPONENT:       ('+'|'-')? POSINT  ;
+EXPONENT:       ('e' | 'E') ('+'|'-')? POSINT  ;
 
 protected
 BR:      (   {_saveIndex=text.length();}:)

@@ -45,6 +45,50 @@ should be 1:0::1:1 but we don't have span information yet
 #           null
 #           [] QuasiText !
 
+--- Float syntax ---
+
+A float may be marked by decimal places,
+
+? t("3.2")
+# stdout: LiteralE. 3.2
+
+an exponent with optional sign,
+
+? t("3e2")
+# stdout: LiteralE. 300.0
+? t("3E2")
+# stdout: LiteralE. 300.0
+? t("3e+2")
+# stdout: LiteralE. 300.0
+? t("3e-2")
+# stdout: LiteralE. 0.03
+
+or both.
+
+? t("3.2e+2")
+# stdout: LiteralE. 320.0
+? t("3.2e-2")
+# stdout: LiteralE. 0.032
+
+A decimal point must have at least one following digit, because otherwise it is ambiguous with call syntax.
+
+? t("3.")
+# problem: (line 1)@3: unexpected token: ["null",<1>,line=1,col=3]
+? t("3.e2")
+# problem: (line 1)@3: The optional "verb-curry" syntax is currently off.
+
+An additional dot always indicates call syntax.
+
+? t("3.2.a")
+# problem: (line 1)@5: The optional "verb-curry" syntax is currently off.
+? t("3e2.a")
+# problem: (line 1)@5: The optional "verb-curry" syntax is currently off.
+
+There must also be at least one preceding digit.
+
+? t(".2")
+# problem: (line 1)@1: unexpected token: [".",<132>,line=1,col=1]
+
 --- Nouns ---
 
 ? t("a")
