@@ -184,7 +184,7 @@ tokens {
     INT;
     LINESEP;
     OCTAL;
-    POSINT;
+    DEC_NATURAL;
     SL_COMMENT;
     STRING;
     URI;

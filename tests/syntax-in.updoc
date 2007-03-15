@@ -45,6 +45,29 @@ should be 1:0::1:1 but we don't have span information yet
 #           null
 #           [] QuasiText !
 
+--- Number commas ---
+
+This behavior copied from E-on-Java.
+
+? t("1_234")
+# stdout: LiteralE. 1234
+
+? t("12_34")
+# stdout: LiteralE. 1234
+
+? t("1_2_3_4")
+# stdout: LiteralE. 1234
+
+? t("1234_")
+# problem: <TokenStreamRecognitionException: unexpected char: 0xFFFF>
+    XXX improve this error message
+
+? t("12__34")
+# problem: <TokenStreamRecognitionException: unexpected char: '_'>
+
+? t("_1234")
+# stdout: NounE. _1234
+
 --- Float syntax ---
 
 A float may be marked by decimal places,

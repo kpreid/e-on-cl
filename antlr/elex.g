@@ -297,21 +297,22 @@ URISCHEME   options {testLiterals=false;}
             ;
 
 // a numeric literal
+// NOTE: INT is actually just the token type for the last case.
 INT:            ("0x") => "0x"! (HEX_DIGIT)+ { $setType(HEX); }
             |   ('0' ('0'..'9')) => '0'! ('0'..'7')+  { $setType(OCTAL); }
             |   (FLOAT64) => FLOAT64  { $setType(FLOAT64); }
-            |   POSINT
+            |   DEC_NATURAL
             ;
 
-// an integer
+// a decimal natural number (nonnegative integer)
 protected
-POSINT:         ('0'..'9') ('0'..'9'|'_'!)* ;
+DEC_NATURAL:    ('0'..'9')+ ('_'! DEC_NATURAL)? ;
 
 protected
-FLOAT64     :   POSINT ('.' POSINT (EXPONENT)? | EXPONENT)  ;
+FLOAT64:        DEC_NATURAL ('.' DEC_NATURAL (EXPONENT)? | EXPONENT) ;
 
 protected
-EXPONENT:       ('e' | 'E') ('+'|'-')? POSINT  ;
+EXPONENT:       ('e' | 'E') ('+'|'-')? DEC_NATURAL  ;
 
 protected
 BR:      (   {_saveIndex=text.length();}:)
