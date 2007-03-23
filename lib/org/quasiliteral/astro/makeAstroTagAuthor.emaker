@@ -16,8 +16,7 @@ def makeAstroTagAuthor(SelflessStamp) {
       /** An AstroTag, which in this E implementation serves only as the label on a Term. See E-on-Java for further information. */
       def astroTag implements SelflessStamp, AstroTagStamp { # , PassByCopyStamp
         to __optUncall() {
-          # indirect self-reference is to simplify DeepFrozen checking
-          return [<import:org.quasiliteral.astro.makeAstroTag>, "run", [optTagCode, tagName, dataGuard]]
+          return [makeAstroTag, "run", [optTagCode, tagName, dataGuard]]
         }
         
         to __printOn(tw :TextWriter) {

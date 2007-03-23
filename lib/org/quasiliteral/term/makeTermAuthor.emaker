@@ -143,8 +143,7 @@ def makeTermAuthor(SelflessStamp) {
            args :List) { # NOTE: unrestricted - XXX must offer default-compatible restrictive guard
       def term implements SelflessStamp, TermStamp { # , PassByCopyStamp
         to __optUncall() {
-          # indirect self-reference is to simplify DeepFrozen checking
-          return [<import:org.quasiliteral.term.makeTerm>, "run", [tag, data, optSpan, args]]
+          return [makeTerm, "run", [tag, data, optSpan, args]]
         }
         
         to getTag()     { return tag }
