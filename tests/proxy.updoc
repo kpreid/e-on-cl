@@ -134,7 +134,19 @@ Notice that even though the handler is written to resolve it immediately, the re
   unresolved-but-same
   ? (def pr := makeProxy(stubHandler, stubResolution, false)) == pr
   # value: true
+  
+Becoming-same resolutions: A Far ref must not change its identity, as it is resolved. Therefore, a Far ref's identity is not based on the resolution promise but rather the traversal-key of the promise at the time of proxy creation.
+  ? def p1 := makeProxy(stubHandler, (def r1;r1), true)
+  > def p2 := makeProxy(stubHandler, (def r2;r2), true)
+  > p1 == p2
+  # value: false
+  
+  ? bind r2 := r1; null
 
+  ? p1 == p2
+  # value: false
+  -- this is what we're checking for
+  
 --- Sameness of broken Far references
 
   ? def p1 := makeProxy(def sbfh {}, (def sbfr;sbfr), true)
@@ -168,7 +180,7 @@ Notice that even though the handler is written to resolve it immediately, the re
 
   Unsettled handler
 
-  ? makeProxy(Ref.promise(), Ref.promise()[0], null)
+  ? makeProxy(Ref.promise(), Ref.promise()[0], false)
   # problem: <NotSettledException: not settled: proxy handler [<Promise>, <Resolver>]>
 
 

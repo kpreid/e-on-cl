@@ -373,20 +373,28 @@
                    :reader %proxy-ref-resolution-box))
   (:documentation "A reference which has a handler and resolution promise, but doesn't necessarily use them for anything."))
 
-(defclass handler-identity-ref (handler-ref) 
-  ()
-  (:documentation "A reference which gets its identity from a handler and resolution promise. Instances will be either PROXY-REF or DISCONNECTED-REF."))
+(defclass resolved-handler-ref (handler-ref) 
+  ((resolution-identity :reader %resolution-identity
+                        :writer set-resolution-identity
+                        :type traversal-key))
+  (:documentation "A reference which gets its identity from a handler and resolution promise's key; i.e. a far ref or disconnected ref."))
 
-(def-atomic-sameness handler-identity-ref
+(defmethod initialize-instance :after ((ref resolved-handler-ref) &rest initargs)
+  (declare (ignore initargs))
+  (set-resolution-identity
+     (make-traversal-key (%proxy-ref-resolution-box ref))
+     ref))
+
+(def-atomic-sameness resolved-handler-ref
   (lambda (a b) (and (eql (class-of a)
                           (class-of b))
                      (samep (%proxy-ref-handler a)
                             (%proxy-ref-handler b))
-                     (same-yet-p (%proxy-ref-resolution-box a)
-                                 (%proxy-ref-resolution-box b))))
+                     (samep (%resolution-identity a)
+                            (%resolution-identity b))))
   (lambda (a) (same-hash (%proxy-ref-handler a))))
 
-(defclass disconnected-ref (broken-ref handler-identity-ref)
+(defclass disconnected-ref (broken-ref resolved-handler-ref)
   ())
 
 (defclass proxy-ref (handler-ref)
@@ -463,7 +471,7 @@
   (values))
 
 
-(defclass far-ref (proxy-ref handler-identity-ref)
+(defclass far-ref (proxy-ref resolved-handler-ref)
   ())
 
 (defmethod %resolve-proxy ((proxy far-ref) resolution)
@@ -474,7 +482,7 @@
 (defmethod ref-state ((ref far-ref))
   (values 'eventual t))
 
-;; XXX remote promises *should* be handler-identity-refs, but the equalizer can't handle that yet. Not doing so merely results in remote promises not being same when they should be.
+;; XXX remote promises *should* have atomic sameness based on their handler and resolution, but the equalizer can't handle that yet. Not doing so merely results in remote promises not being same when they should be.
 (defclass remote-promise (proxy-ref)
   ())
 
@@ -484,7 +492,6 @@
 (defmethod %resolve-proxy ((proxy remote-promise) resolution)
   "If we're a remote promise, then we can just become a forwarder."
   (change-class proxy 'forwarding-ref :target resolution))
-
 
 (defobject +the-make-proxy+ "org.erights.e.elib.ref.makeProxy"
     (:stamped +deep-frozen-stamp+)
