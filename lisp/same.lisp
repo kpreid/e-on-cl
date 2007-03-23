@@ -1,5 +1,5 @@
 ; This Common Lisp code, insofar as it is original work, is
-; Copyright 2005-2006 Kevin Reid, under the terms of the MIT X license.
+; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license.
 ; It is partially derived from Java code which is
 ; Copyright 2002 Combex, Inc. under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................

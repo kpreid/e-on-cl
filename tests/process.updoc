@@ -1,4 +1,4 @@
-# Copyright 2005 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 I haven't thought through what E-on-CL's general external process interface should be. For now, I'm arranging for the 'makeCommand' interface and some programs of mine to work. '

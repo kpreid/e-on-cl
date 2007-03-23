@@ -1,4 +1,4 @@
-// Copyright 2006 Kevin Reid, under the terms of the MIT X license
+// Copyright 2006-2007 Kevin Reid, under the terms of the MIT X license
 // found at http://www.opensource.org/licenses/mit-license.html ...............
 
 import java.io.InputStream;
