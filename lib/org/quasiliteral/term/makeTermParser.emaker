@@ -4,6 +4,7 @@
 pragma.syntax("0.9")
 
 def mapStream := <import:org.cubik.cle.io.mapStream>
+def makeTermLexer := <import:org.quasiliteral.term.makeTermLexer>
 
 def makeTermParser implements DeepFrozen {
   to run(builder) {
@@ -13,6 +14,8 @@ def makeTermParser implements DeepFrozen {
   
     def b := builder
     def leafDataAction(data) { return b.leafData(data, null) } # XXX SourceSpan
+    
+    def termLexer := makeTermLexer(builder.doesQuasis())
     
     def lparser := lalr1`
       "TermL" := start.
@@ -68,7 +71,7 @@ def makeTermParser implements DeepFrozen {
     def termParser {
       /** Parse the given stream of term-language text to a quasi-term tree. */
       to parseText(textStream) {
-        return termParser.parse(<import:org.quasiliteral.term.makeTermLexer>(builder.doesQuasis())(textStream))
+        return termParser.parse(termLexer(textStream))
       }
       
       /** Parse the given stream of term-language tokens to a quasi-term tree. */
