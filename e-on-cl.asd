@@ -40,6 +40,8 @@
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
             :depends-on ("elib" "sugar"))
+     (:file "proxy"
+            :depends-on ("elib" "sugar"))
      (:file "same"
             ; Equalizer, hashing, etc
             :depends-on ("elib" "sugar"))
@@ -65,10 +67,12 @@
             :depends-on ("elib" "sugar"
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
      (:file "knot"
-            :depends-on ("knot-base" "extern" "elib-guts" "tables2" "comm" "sugar"
+            :depends-on ("knot-base" "extern" "tables2" "comm" "sugar"
+                         "elib-guts" #| XXX determine the necessity of this - violates elib-guts's description |#
                          "elang-nodes" #| +the-make-static-scope+ |#
                          "print" #| constructing global tracers |#
-                         "random" #| entropy |#))
+                         "random" #| entropy |#
+                         "proxy" #| +the-make-proxy+ |#))
      (:file "elang-nodes"
             :depends-on ("elib" 
                          "util"
