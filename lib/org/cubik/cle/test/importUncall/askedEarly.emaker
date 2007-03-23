@@ -1,0 +1,7 @@
+def askedEarly implements DeepFrozen, ExitViaHere {}
+
+if (<import>.optUnget(askedEarly) != null) {
+  throw("shouldn't happen")
+}
+
+askedEarly

@@ -1,0 +1,1 @@
+def ok implements DeepFrozen, ExitViaHere {}

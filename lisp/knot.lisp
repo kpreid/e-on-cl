@@ -179,25 +179,27 @@
     "emaker-"
     (pathname-type (compile-file-pathname #p"foo.lisp" #|eww|#))))
 
-(defun make-emaker-loader (source-file-root opt-compiled-file-root scope-fn)
-  (e-lambda "$emakerLoader" ()
-    (:|fetch| (fqn absent-thunk)
-      (e-coercef fqn 'string)
-      (let* ((file (e. source-file-root |getOpt| (fqn-to-slash-path fqn "emaker"))))
-        (if file
-          (load-emaker-from-file file fqn 
-                                 (funcall scope-fn)
-                                 (when opt-compiled-file-root
-                                   (eelt opt-compiled-file-root
-                                     (fqn-to-slash-path fqn +emaker-fasl-type+))))
-          (efuncall absent-thunk))))))
+(defun load-function-for-root (source-file-root opt-compiled-file-root)
+  (lambda (fqn absent-thunk scope)
+    (e-coercef fqn 'string)
+    (let* ((file (e. source-file-root |getOpt| (fqn-to-slash-path fqn "emaker"))))
+      (if file
+        (load-emaker-from-file file fqn 
+                               scope
+                               (when opt-compiled-file-root
+                                 (eelt opt-compiled-file-root
+                                   (fqn-to-slash-path fqn +emaker-fasl-type+))))
+        (efuncall absent-thunk)))))
 
-(defun make-emaker-loader-from-desc (desc)
-  (destructuring-bind (emaker-root compiled-root) desc
-    (make-emaker-loader emaker-root compiled-root (lambda () (vat-safe-scope *vat*)))))
+(defun make-load-function-from-desc (desc)
+  (apply #'load-function-for-root desc))
 
 (defglobal +builtin-emaker-loader+
-  (make-emaker-loader-from-desc +builtin-emaker-loader-desc+))
+  (destructuring-bind (source-file-root opt-compiled-file-root) +builtin-emaker-loader-desc+
+    (let ((load-function (load-function-for-root source-file-root opt-compiled-file-root)))
+      (e-lambda "$emakerLoader" ()
+        (:|fetch| (fqn absent-thunk)
+          (funcall load-function fqn absent-thunk (vat-safe-scope *vat*)))))))
 
 ;;; this is here because it's closely related to emaker loading
 (defun make-resource-loader (search-list) 
@@ -503,25 +505,46 @@
     'elib:eventual
     +deep-frozen-stamp+))))
 
+(defun sameness-is-eq-p (specimen)
+  ;; XXX unify this with fast-sameness-test
+  (and (typep specimen 'function)
+       (not (approvedp +selfless-stamp+ specimen))))
+
+(defun make-caching-emaker-loader (&optional (source *emaker-search-list*))
+  (let* ((load-functions
+           (mapcar #'make-load-function-from-desc *emaker-search-list*))
+         (deep-frozen-cache (make-hash-table :test #'equal))
+         (unget-table (tg:make-weak-hash-table :weakness :key :test #'eq)))
+    (e-lambda "org.cubik.cle.internal.emakerImporter"
+        (:stamped +deep-frozen-stamp+)
+      (:|optUnget| (specimen)
+        (setf specimen (ref-shorten specimen))
+        (or (gethash specimen unget-table)
+            (setf (gethash specimen unget-table) nil)))
+      (:|fetch| (fqn absent-thunk)
+        (e-coercef fqn 'string)
+        (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
+          (if cache-present
+            cache-value
+            (let* ((exit-stamp (e-lambda "org.cubik.cle.prim.ExitViaHereStamp"
+                                   (:stamped +deep-frozen-stamp+)
+                                 (:|audit/1| (constantly +e-true+))))
+                   (scope (e. (vat-safe-scope *vat*) |with| "ExitViaHere" exit-stamp))
+                   (result (loop for f in load-functions
+                                 do (block continue
+                                       (return (funcall f fqn (efun () (return-from continue)) scope)))
+                                 finally (efuncall absent-thunk))))
+              (when (e-is-true (e. (eelt (vat-safe-scope *vat*) "DeepFrozen") |isDeepFrozen| result))
+                (setf (gethash fqn deep-frozen-cache) result)
+                (when (and (approvedp exit-stamp result)
+                           (sameness-is-eq-p result))
+                  (if (nth-value 1 (gethash result unget-table))
+                    (warn "Ruined unget-table entry for ~S (would have been ~S)" fqn result)
+                    (setf (gethash result unget-table) fqn))))
+              result)))))))
+
 (defun default-safe-scope-roots ()
-  (let* ((bare-emaker-loader
-           (efuncall +the-make-path-loader+ "__importUncachedEmaker" 
-             (map 'vector 
-                  #'make-emaker-loader-from-desc
-                  *emaker-search-list*)))
-         (emaker-importer
-           (let ((deep-frozen-cache (make-hash-table :test #'equal)))
-             (e-lambda "org.cubik.cle.internal.emakerImporter"
-                 (:stamped +deep-frozen-stamp+)
-               (:|fetch| (fqn absent-thunk)
-                 (e-coercef fqn 'string)
-                 (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
-                   (if cache-present
-                     cache-value
-                     (let ((result (e. bare-emaker-loader |fetch| fqn absent-thunk)))
-                       (when (e-is-true (e. (eelt (vat-safe-scope *vat*) "DeepFrozen") |isDeepFrozen| result))
-                         (setf (gethash fqn deep-frozen-cache) result))
-                       result))))))))
+  (let* ((emaker-importer (make-caching-emaker-loader)))
     (make-scope "__defaultSafeScopeRoots.thisShouldNotBeVisible$"
       `(("&import__uriGetter"  ,(make-lazy-apply-slot (lambda ()
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles

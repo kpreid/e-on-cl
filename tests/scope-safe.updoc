@@ -46,9 +46,31 @@ import
   
   ? [<import>.optUnget(<elang:evm.NounExpr>)]
   # value: ["org.erights.e.elang.evm.makeNounExpr"]
-  
-  XXX uncall/unget on package loaders
+
+  XXX uncall/unget by and of package loaders
   XXX uncall of all varieties of subloaders (vm-node is a bad general example)
+
+ Uncall/unget on emakers
+ 
+  ? [<import:org.cubik.cle.test.importUncall.ok> == <import:org.cubik.cle.test.importUncall.ok>,
+  >  <import>.optUnget(<import:org.cubik.cle.test.importUncall.ok>)]
+  # value: [true, "org.cubik.cle.test.importUncall.ok"]
+
+  ? [<import:org.cubik.cle.test.importUncall.notUnique> == <import:org.cubik.cle.test.importUncall.notUnique>,
+  >  <import>.optUnget(<import:org.cubik.cle.test.importUncall.notUnique>)]
+  # value: [false, null]
+
+  ? [<import:org.cubik.cle.test.importUncall.notRequested> == <import:org.cubik.cle.test.importUncall.notRequested>,
+  >  <import>.optUnget(<import:org.cubik.cle.test.importUncall.notRequested>)]
+  # value: [true, null]
+
+  ? [<import:org.cubik.cle.test.importUncall.selfless> == <import:org.cubik.cle.test.importUncall.selfless>,
+  >  <import>.optUnget(<import:org.cubik.cle.test.importUncall.selfless>)]
+  # value: [true, null]
+
+  ? [<import:org.cubik.cle.test.importUncall.askedEarly> == <import:org.cubik.cle.test.importUncall.askedEarly>,
+  >  <import>.optUnget(<import:org.cubik.cle.test.importUncall.askedEarly>)]
+  # value: [true, null]
 
 <elib>, <elang>
 
