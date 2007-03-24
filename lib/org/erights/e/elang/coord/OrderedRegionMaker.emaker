@@ -66,7 +66,7 @@ def get(list, index) :any implements DeepFrozen {
  *                positions.
  * @author Mark S. Miller
  */
-def OrderedRegionMaker implements EventuallyDeepFrozen {
+def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
     method __optSealedDispatch(brand) :any {
       if (brand == EventuallyDeepFrozen.getPeekBrand()) {
         EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

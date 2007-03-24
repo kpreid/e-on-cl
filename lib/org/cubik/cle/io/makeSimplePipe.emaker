@@ -7,7 +7,7 @@ pragma.enable("dot-props")
 def makeOutStreamShell := <elib:eio.makeOutStreamShell>
 def makeInStreamShell := <elib:eio.makeInStreamShell>
 
-def makeSimplePipe implements DeepFrozen {
+def makeSimplePipe implements DeepFrozen, ExitViaHere {
   to run([=> Element :Guard := any, 
           => bufferLimit :(EIO::Range) := EIO::ALL, 
           => synchronous :boolean := false, 

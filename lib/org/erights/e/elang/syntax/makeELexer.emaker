@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 def makeTwineFeeder := <import:org.quasiliteral.syntax.makeTwineFeeder>
 
 /** Java-E compatibility for makeParseFuncAuthor */
-def makeELexer {
+def makeELexer implements ExitViaHere {
   to make(source :Twine, partialFlag, noTabsFlag) {
     return makeELexer(makeTwineFeeder(source), partialFlag, noTabsFlag)
   }

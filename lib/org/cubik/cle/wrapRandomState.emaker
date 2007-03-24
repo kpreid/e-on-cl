@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 /** Wrap a CL:RANDOM-STATE object so as to hide its state. */
-def wrapRandomState(randomState) implements DeepFrozen {
+def wrapRandomState(randomState) implements DeepFrozen, ExitViaHere {
   trace("WARNING: privilegedScope entropy is not yet high-quality")
   return def wrappedRandomState {
     to __printOn(out :TextWriter) {

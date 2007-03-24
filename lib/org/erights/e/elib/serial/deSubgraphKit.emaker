@@ -176,7 +176,7 @@ def defaultRecognizer := makeUnevaler(defaultUncallers, defaultUnscope)
  *
  * @author Mark S. Miller
  */
-def deSubgraphKit {
+def deSubgraphKit implements ExitViaHere {
 
     /**
      * This is the default scope used for recognizing/serializing/unevaling and

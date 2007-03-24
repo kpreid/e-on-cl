@@ -11,6 +11,7 @@
 #   => <elib>
 #
 # XXX better would be to not use prim.E.require at all.
+# XXX new state: for-loop expansion does not depend on require
 
 def EE := <import:org.erights.e.elib.prim.E>
 
@@ -18,7 +19,7 @@ def EE := <import:org.erights.e.elib.prim.E>
  * Used to ensure a condition is true before proceeding. If the
  * condition isn't true, the complaint is thrown
  */
-def require0 { # implements DeepFrozen
+def require0 implements ExitViaHere { # implements DeepFrozen
     to (cond) :void {
         EE.require(cond)
     }

@@ -17,7 +17,7 @@ def makeOutStreamShell := <elib:eio.makeOutStreamShell>
 def Range := EIO::Range
 def ALL := EIO::ALL
 
-def IPAuthor implements DeepFrozen {
+def IPAuthor implements DeepFrozen, ExitViaHere {
   # This is somewhat an experiment in writing close-to-the-implementation code in E
   # XXX can we give a smaller authority than all-of-lisp practically? 
   to run(lisp) {

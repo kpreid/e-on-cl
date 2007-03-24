@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 # XXX should we instead export the CL-implemented queue that our non-threaded vat implementation used?
 
 /** Java-E rune compatibility. */
-def makeQueue {
+def makeQueue implements ExitViaHere {
   to run() { return makeQueue(any) }
   
   to run(Element) {

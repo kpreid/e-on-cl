@@ -17,7 +17,7 @@ def nonPassedMiranda := \
 
 def makeProxy := <elib:ref.makeProxy>
 
-def makePseudoFarRef implements DeepFrozen {
+def makePseudoFarRef implements DeepFrozen, ExitViaHere {
   /** Make a Far reference out of a Near reference from the same vat. It does not modify arguments and return values, so is not a membrane. XXX document miranda method choices */
   to run(nearRef) {
 

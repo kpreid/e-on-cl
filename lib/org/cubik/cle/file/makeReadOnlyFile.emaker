@@ -7,7 +7,7 @@ pragma.syntax("0.9")
 #def File := <import:org.cubik.cle.file.File>
 
 /** Return a read-only facet on a standard file-protocol object. */
-def makeReadOnlyFile { # implements DeepFrozen (fails because DeepFrozen uses this!)
+def makeReadOnlyFile implements ExitViaHere { # implements DeepFrozen (fails because DeepFrozen uses this!)
   to run(rwFile) {
     def readOnlyFile { # implements File
       # XXX all appropriate methods

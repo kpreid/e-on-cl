@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def root implements DeepFrozen {
+def root implements DeepFrozen, ExitViaHere {
  /** Produces an object to serve as the root of 'extends' chains. It responds 'no such method' to everything, but refers to 'self' in the error instead of the  parent-most object. */
  to get(self) {
   return def root1 implements EventuallyDeepFrozen {

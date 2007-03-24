@@ -15,7 +15,7 @@ def insertNamePrefix(fqn, insertion) {
 }
 
 /** Compatibility. <type:a.b.C> => <import:a.b.type.C> OR <import:a.b.makeC>.asType(), whichever exists */
-def typeLoader { # XXX implements DeepFrozen once import__uriGetter is DeepFrozen
+def typeLoader implements ExitViaHere { # XXX implements DeepFrozen once import__uriGetter is DeepFrozen
   to __printOn(out :TextWriter) {
     out.print("<type:*>")
   }

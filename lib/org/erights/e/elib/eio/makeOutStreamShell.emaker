@@ -9,7 +9,7 @@ def ALL := EIO::ALL
 
 def makeStreamShell := <elib:eio.makeStreamShell>
 
-def makeOutStreamShell implements DeepFrozen {
+def makeOutStreamShell implements DeepFrozen, ExitViaHere {
   to run(Element, backend__Resolver, impl) {
 
     def terminator

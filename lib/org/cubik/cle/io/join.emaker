@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := def eiop { to fetch(key, _) { return E.call(EIO, "get" + key, []) } to without(key) { return eiop } }
 
-def join implements DeepFrozen {
+def join implements DeepFrozen, ExitViaHere {
   /** Transfers the elements of an InStream to an OutStream. Acts immediately if possible; for non-immediate effects, use join <- (...). The return value will be resolved, to the terminator of the input stream, as soon as no more elements will be delivered to the OutStream; at this time, the output stream will also be terminated. */
   to run(input, output) {
     # XXX incomplete implementation - see stream-misc.updoc

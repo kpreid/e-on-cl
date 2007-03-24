@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 /** near-stub for now. To offer encoding objects corresponding to the IANA charset registry.
 
 http://www.iana.org/assignments/character-sets */
-def charsets extends <import:org.cubik.cle.charenc.*> {
+def charsets extends <import:org.cubik.cle.charenc.*> implements ExitViaHere {
   to __printOn(tw :TextWriter) {
     tw.write("<IANA 'charsets'>")
   }

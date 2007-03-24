@@ -7,7 +7,7 @@ pragma.enable("accumulator")
 #def vmMakers := <elang:evm.*>
 def root := <import:org.cubik.cle.root>
 
-def makeKernelECopyVisitor implements DeepFrozen { # XXX write tests and documentation for this
+def makeKernelECopyVisitor implements DeepFrozen, ExitViaHere { # XXX write tests and documentation for this
   to __printOn(out :TextWriter) {
     out.print("<import:org.erights.e.elang.visitors.makeKernelECopyVisitor>")
   }

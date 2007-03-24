@@ -22,7 +22,7 @@ interface BufferedInStreamBackend {
 
 # XXX write tests for this
 
-def makeBufferedInStreamShell implements DeepFrozen {
+def makeBufferedInStreamShell implements DeepFrozen, ExitViaHere {
   to run(Element, backend__Resolver, impl) {
 
     def buffer := [].diverge(Element)

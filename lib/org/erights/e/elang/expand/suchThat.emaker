@@ -31,7 +31,7 @@ def makeSuchThatFailure := defineException(
 *
 * @author Mark S. Miller
 */
-def suchThat0 implements DeepFrozen {
+def suchThat0 implements DeepFrozen, ExitViaHere {
 
   # to getFailureGuard() :any { return SuchThatFailure }
   

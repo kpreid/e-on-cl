@@ -27,7 +27,7 @@ def utf8DecodeTable := {
   t.snapshot()
 }
 
-def ::"UTF-8" { # implements CharacterEncoding, DeepFrozen
+def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFrozen
   to decode(octetStream, ==([].asMap())) {
     var bits :nullOk[int] := null
     var expect :nullOk[int] := null

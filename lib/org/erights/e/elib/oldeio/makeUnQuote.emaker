@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 # XXX EventuallyDeepFrozen needs to be made prettier
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def makeUnQuote implements EventuallyDeepFrozen {
+def makeUnQuote implements EventuallyDeepFrozen, ExitViaHere {
 
   /** For DeepFrozen#eventually */
   method __optSealedDispatch(brand) :any {

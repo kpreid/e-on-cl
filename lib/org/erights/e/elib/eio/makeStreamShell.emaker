@@ -7,7 +7,7 @@ pragma.enable("dot-props")
 def Range := EIO::Range
 def ALL := EIO::ALL
 
-def makeStreamShell implements DeepFrozen {
+def makeStreamShell implements DeepFrozen, ExitViaHere {
   # XXX revise interface to have a single object for terminationHook and wants
   to run(Element, terminationHook, wants) {
   

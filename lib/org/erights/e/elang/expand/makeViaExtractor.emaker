@@ -2,7 +2,7 @@ pragma.syntax("0.9")
 
 pragma.enable("function-implements")
 
-{def __mapExtract implements DeepFrozen {
+{def __mapExtract implements DeepFrozen, ExitViaHere {
   to run(key) :any {
     return def extractor(specimen, optEjector) implements DeepFrozen.optionally() { # implements ViaFunction
       return escape e {

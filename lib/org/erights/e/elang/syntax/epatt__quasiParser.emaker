@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 def primParser := <import:org.cubik.cle.prim.parser>
 def convertQuasiInput := <import:org.cubik.cle.convertQuasiInput>
 
-def epatt__quasiParser implements DeepFrozen {
+def epatt__quasiParser implements DeepFrozen, ExitViaHere {
   to valueMaker(quasi1Source) {
     def [quasi2Source, valueHoles, patternHoles] := convertQuasiInput.inlineHoles_to_holeCharacterIndexes(quasi1Source)
     return primParser.pattern(quasi2Source, [valueHoles, patternHoles], null)

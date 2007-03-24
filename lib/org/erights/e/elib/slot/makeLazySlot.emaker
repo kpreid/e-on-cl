@@ -7,7 +7,7 @@
 
 def Slot := <type:org.erights.e.elib.slot.Slot>
 
-def makeLazySlot implements DeepFrozen {
+def makeLazySlot implements DeepFrozen, ExitViaHere {
     to run(maker) :Slot {
         var getter := null
     

@@ -9,7 +9,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 interface TupleGuard guards TupleGuardStamp {}
 
-def Tuple0 implements EventuallyDeepFrozen {
+def Tuple0 implements EventuallyDeepFrozen, ExitViaHere {
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

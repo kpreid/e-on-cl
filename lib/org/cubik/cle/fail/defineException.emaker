@@ -6,7 +6,7 @@ pragma.enable("function-implements")
 
 def makeException := <import:org.cubik.cle.prim.makeException>
 
-def defineException implements DeepFrozen {
+def defineException implements DeepFrozen, ExitViaHere {
   to run(typeIDs :List[String],
          printer :DeepFrozen) {
 

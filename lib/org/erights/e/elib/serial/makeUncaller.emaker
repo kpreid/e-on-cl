@@ -34,7 +34,7 @@ def defaultUncallers := [<type>] + minimalUncallers
  *
  * @author Mark S. Miller
  */
-def makeUncaller {
+def makeUncaller implements ExitViaHere {
 
     /**
      * [minimalUncaller, <import>]

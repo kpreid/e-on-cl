@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 def mapStream := <import:org.cubik.cle.io.mapStream>
 def makeTermLexer := <import:org.quasiliteral.term.makeTermLexer>
 
-def makeTermParser implements DeepFrozen {
+def makeTermParser implements DeepFrozen, ExitViaHere {
   to run(builder) {
 
     # XXX move outside once it is DeepFrozen

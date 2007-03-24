@@ -56,7 +56,7 @@ def chunkedMapStream implements DeepFrozen {
   }
 }
 
-def mapStream implements DeepFrozen {
+def mapStream implements DeepFrozen, ExitViaHere {
   /** Return an InStream which takes elements from the given InStream and provides the results of the given function applied to each element. */
   to run(outType, sourceStream, func) :any {
     def buffer := [].diverge(outType)

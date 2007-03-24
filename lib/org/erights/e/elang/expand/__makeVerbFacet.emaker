@@ -7,16 +7,19 @@
 # 2006-05-07:
 #   made DeepFrozen
 #   removed unnecessary use of simple__quasiParser
+# 2007-03-24:
+#   added ExitViaHere
 #
 # I would like to see these changes merged back to E-on-Java.
 #
 # XXX possible further changes: 'fix' documentation markup; don't include not-relevant-to-client runtime documentation on facet; better print representation
 
+pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def makeVerbFacet(kind :String, recipient, verb, caller) :near implements DeepFrozen {
+def makeVerbFacet(kind :String, recipient, verb, caller) :near implements DeepFrozen, ExitViaHere {
 
     /**
      * A facet-function on some underlying object for sending only messages

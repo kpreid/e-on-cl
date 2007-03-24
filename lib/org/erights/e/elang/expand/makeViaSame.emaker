@@ -2,7 +2,7 @@ pragma.syntax("0.9")
 
 pragma.enable("function-implements")
 
-{def __matchSame implements DeepFrozen {
+{def __matchSame implements DeepFrozen, ExitViaHere {
   to run(expected) :any {
     return def sameMatcher(specimen, optEjector) :any implements DeepFrozen.optionally() {
       def comparison := __equalizer.optSame(specimen, expected)

@@ -2,7 +2,7 @@ pragma.syntax("0.9")
 
 pragma.enable("function-implements")
 
-{def __quasiMatcher implements DeepFrozen {
+{def __quasiMatcher implements DeepFrozen, ExitViaHere {
   to run(matchMaker, values) :any {
     return def quasiMatcher(specimen, optEjector) :any implements DeepFrozen.optionally() {
       return matchMaker.matchBind(values, specimen, optEjector)

@@ -2,8 +2,9 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
+pragma.enable("function-implements")
 
-def makeVatAuthor() {
+def makeVatAuthor() implements ExitViaHere {
   def makeVat {
     to getCurrentVat() {
       # Utterly Wrong but we're only pretending to support multiple vats at this time

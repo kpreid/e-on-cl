@@ -102,7 +102,7 @@ def perlify(var template) :any {
     [perlPattern, indexMap.snapshot()]
 }
 
-def makePerlMatchMaker {
+def makePerlMatchMaker implements ExitViaHere {
     to matchMaker(template) :any {
         var result := OurCache.fetch(template, fn{})
         if (result == null) {

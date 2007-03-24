@@ -15,7 +15,7 @@ def makeSwitchFailure := defineException(
   })
 # def SwitchFailure := defineExceptionGuard([failureFQN])
 
-{def __switchFailed implements DeepFrozen {
+{def __switchFailed implements DeepFrozen, ExitViaHere {
   match [=="run", [specimen] + failures] {
     # XXX avoid printing
     throw(makeSwitchFailure([=> specimen, => failures]))

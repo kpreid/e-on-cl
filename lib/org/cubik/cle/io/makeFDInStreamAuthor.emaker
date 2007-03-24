@@ -12,7 +12,7 @@ def ALL := EIO::ALL
 
 def Element := int # XXX should be int8 (0..255)
 
-def makeFDInStreamAuthor {
+def makeFDInStreamAuthor implements ExitViaHere {
   to run(lisp) {
     # XXX reduce the amount of lisp stuff this emaker uses
 

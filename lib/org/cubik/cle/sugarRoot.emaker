@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def sugarRoot implements EventuallyDeepFrozen {
+def sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
 
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {

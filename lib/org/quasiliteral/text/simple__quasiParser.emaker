@@ -206,7 +206,7 @@ def compileMatch(template) {
 def valueMakerCache := [].asMap().diverge(String, any)
 def matchMakerCache := [].asMap().diverge(String, any)
 
-def simple__quasiParser0 {
+def simple__quasiParser0 implements ExitViaHere {
   to valueMaker(s) {
     return getOrMake(valueMakerCache, compileValue, s)
   }

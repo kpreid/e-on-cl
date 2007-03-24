@@ -8,7 +8,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
 def NullOkParamStamp implements DeepFrozen {to audit(_) { return true }}
 def NullOkParam implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(NullOkParamStamp, sp)) {return sp} else {throw.eject(ej, "Not a parameterized nullOk")}}}
 
-def nullOk0 implements DeepFrozen {
+def nullOk0 implements DeepFrozen, ExitViaHere {
 
   to __printOn(out :TextWriter) :void {
     out.print("nullOk")

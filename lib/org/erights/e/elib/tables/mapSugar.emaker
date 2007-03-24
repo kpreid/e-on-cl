@@ -40,7 +40,7 @@ def childResponsibility(self, mverb) implements DeepFrozen {
   throw(E.toQuote(self) + " failed to implement " + mverb)
 }
 
-bind mapSugar extends sugarRoot implements EventuallyDeepFrozen {
+bind mapSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

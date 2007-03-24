@@ -13,7 +13,7 @@ def listRangeChecks(start, endd, size, name) implements DeepFrozen {
   require(endd <= size,  fn{`$name bound > $size: $endd`})
 }
         
-def makeFlexListShell implements DeepFrozen {
+def makeFlexListShell implements DeepFrozen, ExitViaHere {
   to run(self, impl, valueGuard) {
     def flexList {
       # XXX programmatically provide FlexList interface doc

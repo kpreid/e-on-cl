@@ -7,7 +7,7 @@ def makeFirstCharSplitter := <import:org.quasiliteral.text.makeFirstCharSplitter
 
 def quasiSpecialSplitter := makeFirstCharSplitter("$@")
 
-def convertQuasiInput implements DeepFrozen {
+def convertQuasiInput implements DeepFrozen, ExitViaHere {
   to inlineHoles_to_holeCharacterIndexes(quasi1Source :Twine) {
     var outSource := ""
     def outVH := [].diverge()

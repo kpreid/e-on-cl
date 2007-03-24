@@ -28,7 +28,7 @@ def GSymbol := any
 def GProduction := any[Tuple[any, List[any]],
                        Tuple[any, List[any], any]]
 
-def makeLALR1ParserAuthor { # implements DeepFrozen
+def makeLALR1ParserAuthor implements ExitViaHere { # implements DeepFrozen
   to run(lisp) {
 
     # XXX duplicated code from IPAuthor.emaker

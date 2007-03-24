@@ -13,7 +13,7 @@ def mapL(f, l) {
   return out.snapshot()
 }
 
-def makeSharedRefLink { # implements DeepFrozen
+def makeSharedRefLink implements ExitViaHere { # implements DeepFrozen
   to run(Passable, MyPassByConstruction, asBootRef) {
     def sharedRefLink
     

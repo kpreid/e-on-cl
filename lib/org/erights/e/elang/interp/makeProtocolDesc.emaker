@@ -17,7 +17,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
  * and as a Guard to check that the value provided is an instance of an audited
  * type.
  */
-def makeProtocolDesc implements DeepFrozen {
+def makeProtocolDesc implements DeepFrozen, ExitViaHere {
   /**
    * Makes a single type description object that can be used both as a
    * rubber-stamping auditor and as a guard.

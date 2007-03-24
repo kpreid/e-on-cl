@@ -10,7 +10,7 @@ def enums {
 
 def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := enums
 
-def EIO implements DeepFrozen {
+def EIO implements DeepFrozen, ExitViaHere {
   to getRange() { return nullOk[int >= 0] }
 
   /** The value denoting all remaining elements in an EIO stream. */

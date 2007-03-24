@@ -667,7 +667,7 @@ def _make(astroBuilder) implements DeepFrozen {
   return qBuilder
 }
 
-def makeQBuilder implements DeepFrozen {
+def makeQBuilder implements DeepFrozen, ExitViaHere {
   to getTerm__quasiParser() {
     def parser := makeTermParser(_make(<import:org.quasiliteral.term.makeTermBuilder>()))
     def qparse := # memoize({

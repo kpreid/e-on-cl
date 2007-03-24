@@ -5,7 +5,7 @@
 
 pragma.syntax("0.9")
 
-def makeTermLexer implements DeepFrozen {
+def makeTermLexer implements DeepFrozen, ExitViaHere {
   # from Term.y
   # = new TermLexer(lineFeeder,          # input
   #               false,                 # what?

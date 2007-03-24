@@ -15,7 +15,7 @@ def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
 def makeTerm := <import:org.quasiliteral.term.makeTerm>
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 
-def makeTermBuilder implements DeepFrozen {
+def makeTermBuilder implements DeepFrozen, ExitViaHere {
   to run() { # XXX schema parameter
 
     # XXX should be from schema

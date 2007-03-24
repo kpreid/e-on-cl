@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 #def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
-def makePackageLoader implements DeepFrozen {
+def makePackageLoader implements DeepFrozen, ExitViaHere {
   to run(loader, scheme, packageFQN) {
     def fqnPrefix := packageFQN(0, packageFQN.size() - 1)
     

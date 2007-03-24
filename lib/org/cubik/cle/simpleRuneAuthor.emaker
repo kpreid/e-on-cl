@@ -8,7 +8,7 @@ pragma.enable("exporter")
 
 def makeEParser := <import:org.erights.e.elang.syntax.makeEParser>
 
-def simpleRuneAuthor {
+def simpleRuneAuthor implements DeepFrozen, ExitViaHere {
   to defaultAuths(<unsafe>) {
     def privilegedScope := <unsafe:org.cubik.cle.boot.privilegedScope>
     return [

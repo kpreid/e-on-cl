@@ -18,7 +18,7 @@ pragma.enable("function-implements")
  * >Unserialization as Expression Evaluation</a>.
  * @author Mark S. Miller
  */
-def DEBuilderOf(Node :Guard, Root :Guard) :Guard implements DeepFrozen {
+def DEBuilderOf(Node :Guard, Root :Guard) :Guard implements DeepFrozen, ExitViaHere {
 
     interface DEBuilder {
 

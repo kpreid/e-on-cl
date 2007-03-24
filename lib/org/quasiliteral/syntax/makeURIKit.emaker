@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def makeURIKit {
+def makeURIKit implements ExitViaHere {
   to __printOn(out :TextWriter) {
     out.print("<import:org.quasiliteral.syntax.makeURIKit>")
   }

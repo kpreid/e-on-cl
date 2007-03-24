@@ -12,7 +12,7 @@ def makePathLoader := <import:org.cubik.cle.prim.makePathLoader>
 def Scope := makeScope.asType()
 
 # XXX document what keys in vatPrivScope and exits are used
-def makeIOScope implements DeepFrozen {
+def makeIOScope implements DeepFrozen, ExitViaHere {
   to run(fqnPrefix :String, 
          vatPrivScope :Scope,
          exits) :Scope {

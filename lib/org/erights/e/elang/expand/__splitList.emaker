@@ -4,6 +4,7 @@
 # 2006-07-06 Modified by Kevin Reid:
 #   DeepFrozen
 #   Use a custom exception type to avoid invoking simple__quasiParser too early
+# 2007-03: ExitViaHere
 
 pragma.syntax("0.9")
 pragma.enable("function-implements")
@@ -33,7 +34,7 @@ def makeListTooShort(specimen, size, expectedSize) implements DeepFrozen {
  *
  * @author Mark S. Miller
  */
-def splitList(cut :int) :any implements DeepFrozen {
+def splitList(cut :int) :any implements DeepFrozen, ExitViaHere {
     def listSplitter(specimen, optEjector) :any implements DeepFrozen {
         def list :EList exit optEjector := specimen
         def llen := list.size()

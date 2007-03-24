@@ -7,7 +7,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 interface UnionGuard guards UnionGuardStamp {}
 
-def makeUnionGuard implements DeepFrozen {
+def makeUnionGuard implements DeepFrozen, ExitViaHere {
   to run(subGuards) {
     def unionGuard implements EventuallyDeepFrozen, UnionGuardStamp {
       method __optSealedDispatch(brand) :any {

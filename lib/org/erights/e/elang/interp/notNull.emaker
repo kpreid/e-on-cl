@@ -8,7 +8,7 @@
  *
  * @author Mark Miller
  */
-def notNull0 implements DeepFrozen {
+def notNull0 implements DeepFrozen, ExitViaHere {
     /**
      * 'notNull' is a non-transforming guard -- when it succeeds, the result
      * is the same as the specimen.

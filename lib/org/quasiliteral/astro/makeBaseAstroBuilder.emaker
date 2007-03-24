@@ -14,7 +14,7 @@ def Pass := any # marker that the guarding is to be handled by another method
 
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
-def makeBaseAstroBuilder implements DeepFrozen { 
+def makeBaseAstroBuilder implements DeepFrozen, ExitViaHere { 
   to run(self, 
          schema, # :AstroSchema
          [=> BAstroArg := any,

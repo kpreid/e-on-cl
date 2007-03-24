@@ -7,7 +7,7 @@ def Data0 :=
 /** Data: The object is either PassByCopy or a standard graph exit and all of its components (per standard uncalls) are Data.
 
 This guard's result is always == to the specimen. */
-def Data implements DeepFrozen {
+def Data implements DeepFrozen, ExitViaHere {
   to coerce(specimen, optEjector) {
     # XXX should be a FlexSet but they aren't implemented yet
     def seen := [].asMap().diverge()

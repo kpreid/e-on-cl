@@ -36,7 +36,7 @@ def _make(subGuards) implements DeepFrozen {
   return intersectionGuard
 }
 
-def makeIntersectionGuard implements DeepFrozen {
+def makeIntersectionGuard implements DeepFrozen, ExitViaHere {
   to run(subGuards) { return _make(subGuards) }
   match [=="get", subGuards] { _make(subGuards) }
 }

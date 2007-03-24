@@ -13,6 +13,6 @@ interface "org.quasiliteral.syntax.LineFeeder" {
 # XXX why did we ever have a maker? does some Java code import statics?
 
 /** Java-E compatibility */
-def makeLineFeeder {
+def makeLineFeeder implements ExitViaHere {
   to asType() { return LineFeeder }
 }

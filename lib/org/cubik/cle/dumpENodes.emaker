@@ -22,7 +22,7 @@ def makeVisitor(writer, depth) :any {
   }
 }
 
-def dumpENodes {
+def dumpENodes implements ExitViaHere {
   to run(node, out) {
     node.welcome(makeVisitor(out, 0))
   }

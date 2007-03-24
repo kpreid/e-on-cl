@@ -43,7 +43,7 @@ def _make(subGuard) implements DeepFrozen {
   return negatedGuard
 }
 
-def makeNegatedGuard implements DeepFrozen {
+def makeNegatedGuard implements DeepFrozen, ExitViaHere {
   # maker usage
   to run(subGuard) { return _make(subGuard) }
   # parameterized-guard usage

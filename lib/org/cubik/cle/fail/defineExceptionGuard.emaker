@@ -7,7 +7,7 @@ pragma.enable("accumulator")
 def StructureException := <import:org.cubik.cle.prim.StructureException>
 def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
 
-def defineExceptionGuard implements DeepFrozen {
+def defineExceptionGuard implements DeepFrozen, ExitViaHere {
   to run(matchTypeIDs :List[String]) {
     
     def idSet := matchTypeIDs.asSet()

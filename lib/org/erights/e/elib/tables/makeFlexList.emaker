@@ -11,7 +11,7 @@ interface FlexList guards FlexListStamp {} # XXX methods?
 
 def resizeFactor := 2
 
-def makeFlexList implements EventuallyDeepFrozen {
+def makeFlexList implements EventuallyDeepFrozen, ExitViaHere {
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {
       EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def PassByCopy0 {
+def PassByCopy0 implements ExitViaHere {
   to __printOn(out :TextWriter) :void {
     out.print("PassByCopy")
   }

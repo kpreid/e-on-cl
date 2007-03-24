@@ -210,7 +210,7 @@ def memoValueMaker :=
     def valueMaker implements DeepFrozen { to run(template) {
       return metaparser.parse(lex(template.asStream())) }})
 
-def lalr1__quasiParser implements DeepFrozen {
+def lalr1__quasiParser implements DeepFrozen, ExitViaHere {
   to valueMaker(template :String) {
     return memoValueMaker(template)
   }

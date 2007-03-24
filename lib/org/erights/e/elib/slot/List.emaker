@@ -14,7 +14,7 @@ def ConstList := <type:org.erights.e.elib.tables.ConstList>
 def ListGuardStamp implements DeepFrozen {to audit(_) { return true }}
 def ListGuard implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(ListGuardStamp, sp)) {return sp} else {throw.eject(ej, "not a ListGuard")}}}
 
-def List0 implements EventuallyDeepFrozen, ListGuardStamp {
+def List0 implements EventuallyDeepFrozen, ListGuardStamp, ExitViaHere {
 
   method __optSealedDispatch(brand) :any {
     if (brand == EventuallyDeepFrozen.getPeekBrand()) {

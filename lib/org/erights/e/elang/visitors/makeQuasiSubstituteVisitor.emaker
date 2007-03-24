@@ -7,7 +7,7 @@ def EventuallyDeepFrozen := DeepFrozen."eventually"()
 
 def makeENodeCopyVisitor := <elang:visitors.makeENodeCopyVisitor>
 
-def makeQuasiSubstituteVisitor implements DeepFrozen {
+def makeQuasiSubstituteVisitor implements DeepFrozen, ExitViaHere {
   to run(args) {
     def substituteVisitor extends makeENodeCopyVisitor(substituteVisitor) \
                           implements EventuallyDeepFrozen {
