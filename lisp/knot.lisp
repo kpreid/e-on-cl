@@ -333,8 +333,7 @@
 
 ;; XXX consider rewriting this in terms of Evaluator#getKernelNodes?
 (defglobal +vm-node-maker-importer+
-  (let* ((prefixes '("org.erights.e.elang.evm.make"
-                     "org.erights.e.elang.evm.")))
+  (let* ((prefixes '("org.erights.e.elang.evm.make")))
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
       (:|fetch| (fqn absent-thunk)
@@ -462,8 +461,8 @@
 
     ("org.erights.e.elib.base.makeSourceSpan" e.elib:+the-make-source-span+)
 
-    ("org.apache.oro.text.regex.Perl5Compiler" e.extern:+rx-perl5-compiler+)
-    ("org.apache.oro.text.regex.Perl5Matcher"  e.extern:+rx-perl5-matcher+)
+    ("org.apache.oro.text.regex.makePerl5Compiler" e.extern:+rx-perl5-compiler+)
+    ("org.apache.oro.text.regex.makePerl5Matcher"  e.extern:+rx-perl5-matcher+)
     
     ("org.cubik.cle.parser.makeLALR1Parser"
      (efuncall (e-import "org.cubik.cle.parser.makeLALR1ParserAuthor") 
@@ -674,7 +673,7 @@
           ("&List"        ,(lazy-import "org.erights.e.elib.slot.List"))
           ("&Map"         ,(lazy-import "org.erights.e.elib.slot.Map"))
           ("&Not"         ,(lazy-import "org.erights.e.elib.slot.makeNegatedGuard"))
-          ("&Set"         ,(typical-lazy "<import:org.erights.e.elib.tables.ConstSet>.asType()"))
+          ("&Set"         ,(typical-lazy "<import:org.erights.e.elib.tables.makeConstSet>.asType()"))
           ("&Tuple"       ,(lazy-import "org.erights.e.elib.slot.Tuple"))
           ("&__Portrayal" ,(typical-lazy "Tuple[any, String, List[any]]"))
   
@@ -708,7 +707,7 @@
           ("__eval" ,e.elang.compiler::+the-evaluator+) ; XXX fix package
           
           ; --- utility: data ---
-          ("&rx__quasiParser" ,(lazy-import "org.erights.e.elang.interp.PerlMatchMakerMaker"))
+          ("&rx__quasiParser" ,(lazy-import "org.erights.e.elang.interp.makePerlMatchMaker"))
           ("&simple__quasiParser" ,(lazy-import "org.quasiliteral.text.simple__quasiParser"))
               
           ; --- utility: alias loaders ---

@@ -77,7 +77,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
   # lazily load the brand, because requireDeepFrozen must be initially loadable with no import dependencies, since it is used in <import>'s cache check '
   var getPeekBrandKit := null
   getPeekBrandKit := fn {
-    def kit := <import:org.erights.e.elib.sealing.Brand>("EventuallyDeepFrozen state peeking")
+    def kit := <import:org.erights.e.elib.sealing.makeBrand>("EventuallyDeepFrozen state peeking")
     getPeekBrandKit := fn { kit }
     kit
   }

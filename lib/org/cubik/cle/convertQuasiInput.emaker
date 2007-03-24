@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def makeFirstCharSplitter := <import:org.quasiliteral.text.FirstCharSplitter>
+def makeFirstCharSplitter := <import:org.quasiliteral.text.makeFirstCharSplitter>
 
 def quasiSpecialSplitter := makeFirstCharSplitter("$@")
 

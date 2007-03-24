@@ -5,7 +5,7 @@
 
 # modified by kpreid to not use deprecated Guard#get/0 (copied from E 0.8.35f)
 
-def makeRemoteCall := <elib:serial.RemoteCall>
+def makeRemoteCall := <elib:serial.makeRemoteCall>
 def Uncaller := <type:org.erights.e.elib.serial.Uncaller>
 
 def minimalUncaller implements Uncaller {

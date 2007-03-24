@@ -16,7 +16,7 @@ def getOrMake(cache, compile, templateTwine :Twine) {
 
 # --- ---
 
-def makeFirstCharSplitter := <import:org.quasiliteral.text.FirstCharSplitter>
+def makeFirstCharSplitter := <import:org.quasiliteral.text.makeFirstCharSplitter>
 
 def templateSpecialSplitter := makeFirstCharSplitter("$@")
 def closeBraceSplitter := makeFirstCharSplitter(# {
@@ -78,8 +78,8 @@ def parse(var template, builder) {
 
 # --- ---
 
-def makeSeqExpr := <elang:evm.SeqExpr>
-def makeLiteralExpr := <elang:evm.LiteralExpr>
+def makeSeqExpr := <elang:evm.makeSeqExpr>
+def makeLiteralExpr := <elang:evm.makeLiteralExpr>
 
 def compileValue(template) {
   
@@ -103,7 +103,7 @@ def compileValue(template) {
     pragma.enable("easy-return")
     pragma.disable("explicit-result-guard")
 
-    def makeTextWriter := <elib:oldeio.TextWriter>
+    def makeTextWriter := <elib:oldeio.makeTextWriter>
     def simpleValueMaker {
       to substitute(holeValues) {
         def [tw, sb] := makeTextWriter.makeBufferingPair()
@@ -111,7 +111,7 @@ def compileValue(template) {
         return sb.snapshot()
       }
       
-      /** Return the number of $$-holes in the pattern. Present only to support PerlMatchMakerMaker. */
+      /** Return the number of $$-holes in the pattern. Present only to support makePerlMatchMaker. */
       to numArgs() {
         return ${makeLiteralExpr(null, maxIndex + 1, null)}
       }

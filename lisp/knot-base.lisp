@@ -342,7 +342,7 @@
   (:|run| (specials)
     (e-coercef specials 'string)
     (flet ((match (ch) (position ch specials)))
-      (e-lambda "org.quasiliteral.text.FirstCharSplitter" 
+      (e-lambda "org.quasiliteral.text.makeFirstCharSplitter$firstCharSplitter" 
           (:stamped +deep-frozen-stamp+)
         (:|__printOn| (out)
           (e-coercef out +the-text-writer-guard+)

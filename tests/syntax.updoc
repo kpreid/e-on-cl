@@ -316,7 +316,7 @@ Universal precedence-proper print-parenthesization tester:
 
   ? def vm__uriGetter := <elang:evm.*>
   >
-  > def SeqExpr := <vm:SeqExpr>.asType()
+  > def SeqExpr := <vm:makeSeqExpr>.asType()
   >
   > def innerNodes := [
   >   e`a := b`,
@@ -354,7 +354,7 @@ Universal precedence-proper print-parenthesization tester:
   >     # XXX make this test more precise
   >     if ([whole, inner] =~ x :List[SeqExpr]) { continue }
   >
-  >     def [tw, sb] := <elib:oldeio.TextWriter>.makeBufferingPair()
+  >     def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
   >     whole.welcome(ePrinter.makePrintENodeVisitor(tw))
   >     tw.close()
   >     escape fail {

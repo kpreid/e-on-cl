@@ -1,2 +1,0 @@
-def fpc := meta.context().getFQNPrefix().split(".")
-<import>[".".rjoin(fpc(0, fpc.size() - 1).with("makeURIKit"))]

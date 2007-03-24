@@ -88,7 +88,7 @@ For purposes of this test, prevent infinite loops if the TextWriter doesn't do s
 
 TextWriter maker
 
-  ? def makeTextWriter := <elib:oldeio.TextWriter>
+  ? def makeTextWriter := <elib:oldeio.makeTextWriter>
   # value: <makeTextWriter>
   
   ? makeTextWriter :DeepFrozen

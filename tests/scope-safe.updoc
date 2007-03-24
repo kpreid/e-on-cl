@@ -41,10 +41,10 @@ import
   ? [<import>.optUncall(53)]
   # value: [null]
 
-  ? [<import>.optUncall(<elang:evm.NounExpr>)]
+  ? [<import>.optUncall(<elang:evm.makeNounExpr>)]
   # value: [[<import:*>, "get", ["org.erights.e.elang.evm.makeNounExpr"]]]
   
-  ? [<import>.optUnget(<elang:evm.NounExpr>)]
+  ? [<import>.optUnget(<elang:evm.makeNounExpr>)]
   # value: ["org.erights.e.elang.evm.makeNounExpr"]
 
   XXX uncall/unget by and of package loaders

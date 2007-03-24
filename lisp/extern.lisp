@@ -261,7 +261,7 @@
             ;; the rx__quasiParser (as documented:
             ;; http://www.erights.org/javadoc/org/apache/oro/text/regex/Perl5Matcher.html#matches(org.apache.oro.text.regex.PatternMatcherInput,org.apache.oro.text.regex.Pattern)
             ;; ). Now that we've copied-and-modified
-            ;; the PerlMatchMakerMaker, do we "improve" this
+            ;; makePerlMatchMaker, do we "improve" this
             ;; and/or move to a more natural interface to cl-ppcre?
             (if (and match-start
                      (= match-start 0) 

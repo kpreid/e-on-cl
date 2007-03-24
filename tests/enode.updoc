@@ -7,44 +7,41 @@
 ? <type:org.erights.e.elang.evm.EExpr>
 # value: EExpr
 
-? def makeCallExpr := <import:org.erights.e.elang.evm.CallExpr>
+? def makeCallExpr := <import:org.erights.e.elang.evm.makeCallExpr>
 # value: <makeCallExpr>
 
-? makeCallExpr == <import:org.erights.e.elang.evm.makeCallExpr>
-# value: true
-
-? def makeDefineExpr := <import:org.erights.e.elang.evm.DefineExpr>
+? def makeDefineExpr := <import:org.erights.e.elang.evm.makeDefineExpr>
 # value: <makeDefineExpr>
 
-? def makeLiteralExpr := <import:org.erights.e.elang.evm.LiteralExpr>
+? def makeLiteralExpr := <import:org.erights.e.elang.evm.makeLiteralExpr>
 # value: <makeLiteralExpr>
 
-? def makeNounExpr := <import:org.erights.e.elang.evm.NounExpr>
+? def makeNounExpr := <import:org.erights.e.elang.evm.makeNounExpr>
 # value: <makeNounExpr>
 
-? def makeViaPattern := <import:org.erights.e.elang.evm.ViaPattern>
+? def makeViaPattern := <import:org.erights.e.elang.evm.makeViaPattern>
 # value: <makeViaPattern>
 
-? def makeFinalPattern := <import:org.erights.e.elang.evm.FinalPattern>
+? def makeFinalPattern := <import:org.erights.e.elang.evm.makeFinalPattern>
 # value: <makeFinalPattern>
 
-? def makeIgnorePattern := <import:org.erights.e.elang.evm.IgnorePattern>
+? def makeIgnorePattern := <import:org.erights.e.elang.evm.makeIgnorePattern>
 # value: <makeIgnorePattern>
 
-? <elang:visitors.KernelECopyVisitor>
+? <elang:visitors.makeKernelECopyVisitor>
 # value: <import:org.erights.e.elang.visitors.makeKernelECopyVisitor>
 
-? <type:org.erights.e.elang.evm.DefineExpr> == <import:org.erights.e.elang.evm.DefineExpr>.asType()
+? <type:org.erights.e.elang.evm.DefineExpr> == <import:org.erights.e.elang.evm.makeDefineExpr>.asType()
 # value: true
 
 
 Check that the special loaders handle the nonexistent cases:
 
-  ? <elang:evm.NoSuchNode>
-  # problem: <import:*> can't find "org.erights.e.elang.evm.NoSuchNode"
+  ? <elang:evm.makeNoSuchNode>
+  # problem: <import:*> can't find "org.erights.e.elang.evm.makeNoSuchNode"
   
-  ? <elang:evm.ENode> # no maker
-  # problem: <import:*> can't find "org.erights.e.elang.evm.ENode"
+  ? <elang:evm.makeENode> # no maker
+  # problem: <import:*> can't find "org.erights.e.elang.evm.makeENode"
   
 LiteralExpr
 
@@ -60,7 +57,7 @@ LiteralExpr
 
 AssignExpr
 
-  ? def makeAssignExpr := <import:org.erights.e.elang.evm.AssignExpr>
+  ? def makeAssignExpr := <import:org.erights.e.elang.evm.makeAssignExpr>
   # value: <makeAssignExpr>
 
   ? def expr := makeAssignExpr(null, makeNounExpr(null, "pi", null), makeLiteralExpr(null, 3.14159, null), null)
@@ -157,7 +154,7 @@ CallExpr
 
 CatchExpr
 
-  ? def expr := <elang:evm.CatchExpr>(null, oneExpr, makeIgnorePattern(null, null), makeNounExpr(null, "fail", null), null)
+  ? def expr := <elang:evm.makeCatchExpr>(null, oneExpr, makeIgnorePattern(null, null), makeNounExpr(null, "fail", null), null)
   # value: e`try {
   #            1
   #        } catch _ {
@@ -177,10 +174,10 @@ CatchExpr
 
 HideExpr
 
-  ? <vm:HideExpr>
+  ? <vm:makeHideExpr>
   # value: <makeHideExpr>
   
-  ? def expr := <vm:HideExpr>(null, <vm:NounExpr>(null, "a", null), null)
+  ? def expr := <vm:makeHideExpr>(null, <vm:makeNounExpr>(null, "a", null), null)
   # value: e`{
   #            a
   #        }`
@@ -190,7 +187,7 @@ HideExpr
 
 IfExpr
 
-  ? def expr := <elang:evm.IfExpr>(null, makeNounExpr(null, "a", null), makeNounExpr(null, "b", null), makeNounExpr(null, "c", null), null)
+  ? def expr := <elang:evm.makeIfExpr>(null, makeNounExpr(null, "a", null), makeNounExpr(null, "b", null), makeNounExpr(null, "c", null), null)
   # value: e`if (a) {
   #            b
   #        } else {
@@ -223,7 +220,7 @@ NounExpr
 
 EMethod
 
-  ? def makeEMethod := <import:org.erights.e.elang.evm.EMethod>
+  ? def makeEMethod := <import:org.erights.e.elang.evm.makeEMethod>
   # value: <makeEMethod>
   
   ? makeEMethod(null, "egf", "rhg", [], null, makeLiteralExpr(null, 1, null), null)
@@ -269,13 +266,13 @@ EMethod
 
 ObjectExpr, EScript
 
-  ? def makeObjectExpr := <import:org.erights.e.elang.evm.ObjectExpr>
+  ? def makeObjectExpr := <import:org.erights.e.elang.evm.makeObjectExpr>
   # value: <makeObjectExpr>
 
-  ? def makeEScript := <import:org.erights.e.elang.evm.EScript>
+  ? def makeEScript := <import:org.erights.e.elang.evm.makeEScript>
   # value: <makeEScript>
 
-  ? def makeEMatcher := <import:org.erights.e.elang.evm.EMatcher>
+  ? def makeEMatcher := <import:org.erights.e.elang.evm.makeEMatcher>
   # value: <makeEMatcher>
 
   ? def emptyObject := makeObjectExpr(null, "foo", makeFinalPattern(null, makeNounExpr(null, "bar", null), null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
@@ -383,7 +380,7 @@ ObjectExpr, EScript
 
 SeqExpr
 
-  ? def makeSeqExpr := <import:org.erights.e.elang.evm.SeqExpr>
+  ? def makeSeqExpr := <import:org.erights.e.elang.evm.makeSeqExpr>
   # value: <makeSeqExpr>
   
   ? makeSeqExpr(null, [], null)
@@ -401,7 +398,7 @@ SeqExpr
 
 EscapeExpr
 
-  ? def makeEscapeExpr := <elang:evm.EscapeExpr>
+  ? def makeEscapeExpr := <elang:evm.makeEscapeExpr>
   # value: <makeEscapeExpr>
   
   ? makeEscapeExpr(null, makeFinalPattern(null, makeNounExpr(null, "foo", null), null, null), makeLiteralExpr(null, 1, null), null, null, null)
@@ -414,7 +411,7 @@ EscapeExpr
 
 VarPattern
 
-  ? def makeVarPattern := <elang:evm.VarPattern>
+  ? def makeVarPattern := <elang:evm.makeVarPattern>
   # value: <makeVarPattern>
 
   ? makeVarPattern(null, makeNounExpr(null, "foo", null), null, null)
@@ -429,7 +426,7 @@ VarPattern
 
 SlotPattern
 
-  ? def makeSlotPattern := <elang:evm.SlotPattern>
+  ? def makeSlotPattern := <elang:evm.makeSlotPattern>
   # value: <makeSlotPattern>
 
   ? makeSlotPattern(null, makeNounExpr(null, "foo", null), null, null)
@@ -973,13 +970,13 @@ evalToPair
 
 --- Quasi-substitution ---
 
-  ? <vm:HideExpr>(null, <vm:QuasiLiteralExpr>(null, 0, null), null).welcome(makeVisitor(0))
+  ? <vm:makeHideExpr>(null, <vm:makeQuasiLiteralExpr>(null, 0, null), null).welcome(makeVisitor(0))
   # stdout: HideExpr e`{...
   #           QuasiLiteralExpr e`${0}`...
   #             0
   #         
 
-  ? <vm:HideExpr>(null, <vm:QuasiLiteralExpr>(null, 0, null), null).substitute([<vm:LiteralExpr>(null, "foo", null)]).welcome(makeVisitor(0))
+  ? <vm:makeHideExpr>(null, <vm:makeQuasiLiteralExpr>(null, 0, null), null).substitute([<vm:makeLiteralExpr>(null, "foo", null)]).welcome(makeVisitor(0))
   # stdout: HideExpr e`{...
   #           LiteralExpr e`"foo"`...
   #             foo
@@ -987,19 +984,19 @@ evalToPair
 
 --- getOptPrincipalNoun ---
 
-  ? (def simplest := <vm:FinalPattern>(null, <vm:NounExpr>(null, "foo", null), null, null)).getOptPrincipalNoun()
+  ? (def simplest := <vm:makeFinalPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null)).getOptPrincipalNoun()
   # value: "foo"
 
-  ? <vm:VarPattern>(null, <vm:NounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  ? <vm:makeVarPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
   # value: "foo"
 
-  ? <vm:SlotPattern>(null, <vm:NounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  ? <vm:makeSlotPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
   # value: "foo"
   XXX should be &foo?
   
-  ? (def listPatt := <vm:ListPattern>(null, [simplest], null)).getOptPrincipalNoun()
+  ? (def listPatt := <vm:makeListPattern>(null, [simplest], null)).getOptPrincipalNoun()
 
-  ? <vm:IgnorePattern>(null, null).getOptPrincipalNoun()
+  ? <vm:makeIgnorePattern>(null, null).getOptPrincipalNoun()
 
 --- Serialization ---
 

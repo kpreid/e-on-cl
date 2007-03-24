@@ -18,7 +18,7 @@ XXX move simple__quasiParser testing elsewhere
 
 XXX this is a rather implementation-specific test result (but the implementation is E code from Java-E)
 ? rx__quasiParser
-# value: <PerlMatchMakerMaker>
+# value: <makePerlMatchMaker>
 
 ? def rx`abc` := "abc"
 # value: "abc"

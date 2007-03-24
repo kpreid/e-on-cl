@@ -3,9 +3,9 @@
 
 pragma.syntax("0.9")
 
-def URIKit {
+def makeURIKit {
   to __printOn(out :TextWriter) {
-    out.print("<import:org.quasiliteral.syntax.URIKit>")
+    out.print("<import:org.quasiliteral.syntax.makeURIKit>")
   }
 
   # XXX other methods

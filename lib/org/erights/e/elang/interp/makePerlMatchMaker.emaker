@@ -1,3 +1,7 @@
+#!/usr/bin/env rune
+
+pragma.syntax("0.8")
+
 # Copyright 2002 Combex, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
@@ -5,9 +9,9 @@
 #   - bug fix: the pattern passed to simple__quasiParser must not be unescaped
 
 def <regex> := <import:org.apache.oro.text.regex.*>
-def Perl5CompilerMaker := <regex:Perl5Compiler>
-def Perl5MatcherMaker := <regex:Perl5Matcher>
-def PatternMatcherInputMaker := <regex:PatternMatcherInput>
+def Perl5CompilerMaker := <regex:makePerl5Compiler>
+def Perl5MatcherMaker := <regex:makePerl5Matcher>
+def PatternMatcherInputMaker := <regex:makePatternMatcherInput>
 
 def <erights> := <import:org.erights.*>
 
@@ -98,7 +102,7 @@ def perlify(var template) :any {
     [perlPattern, indexMap.snapshot()]
 }
 
-def PerlMatchMakerMaker {
+def makePerlMatchMaker {
     to matchMaker(template) :any {
         var result := OurCache.fetch(template, fn{})
         if (result == null) {
@@ -120,8 +124,7 @@ def PerlMatchMakerMaker {
                     def qmarg := quotemeta(E.toString(arg))
                     qmargs.push(`(?:${qmarg})`)
                 }
-                def noDollars :=
-                    ""+(interpolator.substitute(qmargs.snapshot()))
+                def noDollars := interpolator.substitute(qmargs.snapshot())
                 E.call(compiler, "compile(String)", [noDollars])
             }
 

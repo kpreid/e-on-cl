@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def makeTwineFeeder := <import:org.quasiliteral.syntax.TwineFeeder>
+def makeTwineFeeder := <import:org.quasiliteral.syntax.makeTwineFeeder>
 
 /** Java-E compatibility for makeParseFuncAuthor */
 def makeELexer {
