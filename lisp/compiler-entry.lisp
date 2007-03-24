@@ -65,7 +65,7 @@
   (e-coercef outer-scope 'e.knot:scope)
   (e-coercef expr 'e.elang.vm-node::|ENode|)
   (require-kernel-e expr nil)
-  (e.knot:require-node-fits-scope expr outer-scope nil)
+  (e.knot:require-node-fits-scope expr outer-scope +the-thrower+)
   (during ("e-to-cl")
     (funcall (if *trace-loading* #'print #'identity)
       `(locally
@@ -136,7 +136,7 @@
   (require-kernel-e expr nil)
   (when opt-scope
     ;; XXX this is wrongish: we should execute the check *always*
-    (e.knot:require-node-fits-scope expr opt-scope nil))
+    (e.knot:require-node-fits-scope expr opt-scope +the-thrower+))
   (let* ((all-nouns (map 'list #'ref-shorten (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector)))
          (needed-nouns '())
          (needed-syms '())
