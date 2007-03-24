@@ -1,38 +1,34 @@
 # Copyright 2002 Combex, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-# E-on-CL note: This file has been modified to not depend on elib__uriGetter, to avoid the cyclic dependency:
-#   <elib>
-#   => <import:org.erights.e.elang.interp.makePackageLoader>
-#   => DeepFrozen check by <import>
-#   => DeepFrozenAuthor.emaker
-#   => for-loop expansion using require()
-#   => this file
-#   => <elib>
-#
-# XXX better would be to not use prim.E.require at all.
-# XXX new state: for-loop expansion does not depend on require
-
-def EE := <import:org.erights.e.elib.prim.E>
+# XXX merge this back to E-on-Java
 
 /**
  * Used to ensure a condition is true before proceeding. If the
  * condition isn't true, the complaint is thrown
  */
-def require0 implements ExitViaHere { # implements DeepFrozen
+def require implements DeepFrozen, ExitViaHere {
     to (cond) :void {
-        EE.require(cond)
+        require(cond, "required condition failed")
     }
     to (cond, problem) :void {
-        EE.require(cond, problem)
-    }
+        if (!cond) {
+            # XXX This should be improved - it will fail if strings or exceptions get run/0 methods.
+            if (problem.__respondsTo("run", 0)) {
+                throw(problem())
+            } else {
+                throw(problem)
+            }
+        }
+      }
     match [=="run", [cond, prob0] + probRest] {
+        # XXX is this actually used anywhere? If so, will it succeed under the new string#add rules?
         if (! cond) {
             var problem := prob0
             for prob in probRest {
                 problem := problem + prob
             }
-            EE.require(false, problem)
+            require(false, problem)
         }
     }
 }
@@ -41,7 +37,7 @@ def require0 implements ExitViaHere { # implements DeepFrozen
     # problem: foo
     #
     #   <elang:interp.Thrower>("foo")
-    #   <require0>(false, <e object>)
+    #   <require>(false, <e object>)
     #   <interp> evalPrint(e`require run(Ref same(2, 3), \
     #   /**  * Needs a docComment  */ def _ {     \
     #   to run :any {         "foo"     } })`)
@@ -51,8 +47,8 @@ def require0 implements ExitViaHere { # implements DeepFrozen
     # problem: required condition failed
     #
     #   <elang:interp.Thrower>("required condition failed")
-    #   <require0>(false, <e object>)
-    #   <require0>(false)
+    #   <require>(false, <e object>)
+    #   <require>(false)
     #   <interp> evalPrint(e`require run(Ref same(2, 3))`)
 
     ? require(2 == 2)
@@ -60,7 +56,7 @@ def require0 implements ExitViaHere { # implements DeepFrozen
     # problem: foobar
     #
     #   <elib:prim.E> require(false, "foobar")
-    #   <require0>(false, "foobar")
+    #   <require>(false, "foobar")
     #   <interactive interp> evalPrint(e`require run(__equalizer isSame(2, 3),\
     #   "foobar")`)
 
