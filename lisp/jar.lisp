@@ -30,5 +30,7 @@
                   #+sbcl (sb-ext:octets-to-string data :external-format :ascii)
                   #-sbcl (zip::octets-to-string data :us-ascii)))
               (:|getTwine| ()
-                ;; XXX actual twine support
-                (e. |entry| |getText|)))))))))
+                ;; XXX imitating EoJ jar uris; review
+                (e. (e. |entry| |getText|)
+                    |asFrom|
+                    (format nil "jar:~A!~A" pathname subpath))))))))))
