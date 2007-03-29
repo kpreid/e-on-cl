@@ -20,6 +20,8 @@ This file tests whether objects which should be marked sharable are.
   >   [1],
   >   <elang:evm.makeLiteralExpr>,
   >   <elang:evm.makeLiteralExpr>(null, 1, null),
+  >   false,
+  >   true,
   > ] {
   >   if (!__auditedBy(TSS, specimen)) { println("Should be TS: ", E.toQuote(specimen)) }
   > }

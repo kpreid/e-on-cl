@@ -178,7 +178,8 @@
     (declare (ignore this))
     "Booleans are atomic."
     (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +standard-graph-exit-stamp+)))
+        (eql auditor +standard-graph-exit-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
 
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
