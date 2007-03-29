@@ -290,3 +290,25 @@ Custom syntax (experimental)
   ? print(sb.snapshot())
   # stdout: <span><em class="error">(<span>org.cubik.cle.prim.any</span>) <span><span>&lt;sealed problem&gt;</span></span></em></span>
 
+Remote TextWriters
+
+  ? stdout.__optUncall()
+  # value: [<makeTextWriter>, "makePresence", [<forwarder>]]
+
+  ? def vat := <unsafe:org.erights.e.elib.vat.Vat>(null, "TextWriter passing test")
+  # value: <Far ref>
+
+  ? def remote := vat <- seedEval(e`def remote(o, _) :any { (o :TextWriter) <- println("hi"); "done" }`)
+  # value: <Promise>
+
+  ? interp.waitAtTop(def res := remote <- run(stdout, 1)); res
+  # value: <Promise>
+
+  # stdout: hi
+  #         
+
+  ? res
+  # value: "done"
+
+  ? vat <- orderlyShutdown("bye")
+  # value: <Promise>

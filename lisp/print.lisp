@@ -135,7 +135,13 @@
                        (assert-open ()
                          (assert (every #'(lambda (s) (e. s |getValue|)) open-flags) () "closed TextWriter")))
                 (e-lambda "org.erights.e.elib.print.TextWriter"
-                    (:stamped +text-writer-stamp+)
+                    (:stamped +text-writer-stamp+
+                     :stamped +pass-by-construction+)
+                  (:|__optUncall| ()
+                    `#(,+the-make-text-writer+ "makePresence" 
+                       #(,(e-lambda "forwarder" ()
+                            (otherwise (mverb &rest args)
+                              (apply #'e-call-dispatch tw mverb args))))))
                   (:|__printOn| (ptw)
                     (e-coercef ptw +the-text-writer-guard+)
                     (e. ptw |print| "<textWriter>"))
@@ -275,7 +281,8 @@
 
 
 (defobject +the-make-text-writer+ "org.erights.e.elib.oldeio.makeTextWriter"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +standard-graph-exit-stamp+)
   (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
   (:|makeBufferingPair| (options)
     "Return a tuple of a TextWriter and a StringBuffer from which the output of the TextWriter is readable."
@@ -301,6 +308,15 @@
                   (:|flush| () nil)
                   (:|close| () nil)))
               (make-instance 'string-buffer :buffer buffer))))
+  (:|makePresence| (remote)
+    (make-text-writer
+      ;; XXX do something about custom syntaxes
+      :syntax +standard-syntax+
+      :delegate (e-lambda "org.cubik.cle.internal.RemoteTWDelegate" ()
+        (:|write| (piece)
+          (e<- remote |write| piece))
+        (:|flush| () (e<- remote |flush|))
+        (:|close| () (e<- remote |close|)))))
   (:|run| (underlying autoflush)
     "For Java-E compatibility. Returns the original stream, or its withAutoflush/0. E-on-CL provides TextWriters where Java-E provides Java streams, and in Java-E this would wrap a Java stream in a TextWriter."
     (if (e-is-true autoflush)
