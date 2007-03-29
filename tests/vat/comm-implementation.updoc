@@ -204,7 +204,22 @@ Incoming pass-by-construction:
 
 ? pbcIncoming
 # value: 2
-
+
+Incoming pass-by-construction, broken call:
+
+? testLink.receive(def pbcIncomingBroken, ["resolve", [["call", 0, ["proxy", asRemote("brokenCallTest")], "add", [["share", 1]]]], ["proxy", asRemote("responseResolver")]])
+> interp.waitAtTop(afterRemoteMessage())
+# stdout: message for responseResolver: ["resolve", [["share", null]]]
+#         
+
+? pbcIncomingBroken
+# value: <ref broken by <sealed problem>>
+
+? throw(Ref.optProblem(pbcIncomingBroken))
+# problem: not synchronously callable: <Far ref>.add(1)
+XXX fix Updoc so it can report errors in sealed problems
+
+
 --- Cycles ---
 
 ? interp.waitAtTop(testRef <- outgoingCycle(def x := [1,x]))

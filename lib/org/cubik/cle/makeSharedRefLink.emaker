@@ -111,7 +111,15 @@ def makeSharedRefLink implements ExitViaHere { # implements DeepFrozen
           match [=="promise", bootRef] { sharedRefLink.proxy(bootRef, true) }
           match [=="call", tag, r, v :String, a :List] { 
             # tag exists only for uniqueness in structure
-            E.call(subbuild(r), v, mapL(subbuild, a)) }
+            try {
+              E.call(subbuild(r), v, mapL(subbuild, a))
+            } catch p {
+              # XXX review: is PBC arriving as broken the right thing? or
+              # should we fail the entire received message instead, and
+              # resolve its response to broken?
+              Ref.broken(p)
+            }
+          }
         }
         return result
       }
