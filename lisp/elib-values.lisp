@@ -451,7 +451,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (stable-sort (copy-seq vector) 
                  (lambda (a b) (e-is-true (e. (efuncall comparer a b) |belowZero|))))))
 
-(defmethod e-call-match ((rec vector) mverb &rest args)
+(defmethod e-call-match (fail (rec vector) mverb &rest args)
+  (declare (ignore fail))
   (apply #'sugar-cache-call rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
 
 (defobject +the-make-list+ "org.erights.e.elib.tables.makeConstList"

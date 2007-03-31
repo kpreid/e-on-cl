@@ -389,7 +389,7 @@ Matcher
   ? maybes.regular()
   # value: "yep"
 
-Bug?: matcher catching non-overridden miranda methods.
+Bug: matcher catching non-overridden miranda methods.
 
   ? def matcherMirandaCheck {
   >   match msg { throw(E.toQuote(msg)) }
@@ -400,7 +400,7 @@ Bug?: matcher catching non-overridden miranda methods.
   ? [matcherMirandaCheck.__optSealedDispatch(42)]
   # value: [null]
 
-Bug: incorrect scoping of the pattern of a matcher.
+Bug: incorrect scoping of the pattern of a matcher. (This can't happen any more in the new compiler design - xxx worth deleting? ')
   
   ? def makeMatcherClosure {
   >   match msg {

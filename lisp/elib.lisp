@@ -81,7 +81,7 @@ Shortens REC if needed. MVERB must be either a mangled verb as in E.UTIL:MANGLE-
 Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and not expose non-keyword mverbs to untrusted code. XXX This list of requirements is probably not complete.")
   (declare (optimize (speed 3))))
 
-(defgeneric e-call-match (rec mverb &rest args)
+(defgeneric e-call-match (fail rec mverb &rest args)
   (:documentation "The last method of E-CALL-DISPATCH calls this method with the same arguments, if MVERB is not a Miranda method. This is used for implementing 'matchers'/inheritance.")
   (declare (optimize (speed 3))))
 
@@ -896,7 +896,8 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
            (self-expr `#',self-func)
            (stamps-sym (gensym "STAMPS"))
            (mverb-sym  (gensym "MVERB"))
-           (args-sym   (gensym "ARGS")))
+           (args-sym   (gensym "ARGS"))
+           (miranda-return-sym (gensym "FAIL")))
     (declare (string fqn documentation))
     `(let ((,stamps-sym (vector ,@stamp-forms)))
       (declare (ignorable ,stamps-sym)) ;; will be ignored if there is an explicit audited-by-magic-verb method
@@ -928,16 +929,15 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                   (member (e-util:mangle-verb verb arity) 
                           ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
                                     smethods))
-                  (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym nil))))))
+                  (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym #'funcall)))))) ;; XXX should invoke matcher
               ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
                 (not (not (find auditor ,stamps-sym :test #'samep)))))
               (otherwise 
-                (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda ()
-                  ,(let ((fallthrough
-                          `(no-such-method ,self-expr ,mverb-sym ,args-sym)))
-                    (if opt-otherwise-body
-                      (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
-                      fallthrough)))))))))
+                (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda (,miranda-return-sym)
+                  (declare (ignorable ,miranda-return-sym))
+                  ,(if opt-otherwise-body
+                     (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)
+                     `(funcall ,miranda-return-sym)))))))))
           ,self-expr))))
           
   ) ; end eval-when
@@ -985,14 +985,14 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
   
 ; --- Miranda methods ---
 
-(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem verb-list-sym) &body smethods)
+(defmacro def-miranda (func-name descs-name fqn (self-var mverb-litem args-litem  matcher-sym verb-list-sym) &body smethods)
   "The reason for this macro's existence is to allow compiling the miranda-methods into a single function and simultaneously capturing the method names and comments for alleged-type purposes. I realize this is ugly, and I'd be glad to hear of better solutions."
   (multiple-value-bind (otherwises specifics) 
       (partition (lambda (x) (eq (first x) 'otherwise)) smethods)
     `(symbol-macrolet ((,verb-list-sym ',(mapcar #'(lambda (smethod) (smethod-mverb smethod 0)) specifics)))
       (defglobal ,descs-name 
         ',(mapcan (lambda (e) (smethod-maybe-describe-fresh #'smethod-message-desc e)) specifics))
-      (defun ,func-name (,self-var ,mverb-litem ,args-litem else-func)
+      (defun ,func-name (,self-var ,mverb-litem ,args-litem ,matcher-sym)
         (case ,mverb-litem
           ,@(loop for smethod in specifics collect
               (smethod-case-entry smethod args-litem '() :type-name fqn))
@@ -1003,7 +1003,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
                    ,@(cdr desc))))))))
  
 ;(declaim (inline miranda))
-(def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args miranda-mverbs)
+(def-miranda miranda +miranda-message-descs+ "org.erights.e.elib.prim.MirandaMethods" (self mverb args matcher-func miranda-mverbs)
   
     (audited-by-magic-verb (auditor)
       (declare (ignore auditor))
@@ -1025,7 +1025,9 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       ;; The object itself must handle returning true for those verbs which it implements.
       (e-coercef verb 'string)
       (e-coercef arity '(integer 0))
-      (as-e-boolean (member (e-util:mangle-verb verb arity) miranda-mverbs)))
+      (if (member (e-util:mangle-verb verb arity) miranda-mverbs)
+        +e-true+
+        (funcall matcher-func (constantly +e-false+))))
 
     (:|__conformTo| (guard)
       (declare (ignore guard))
@@ -1078,7 +1080,8 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
         (:|isFinal| () +e-false+))))
 
     (otherwise
-      (funcall else-func)))
+      (funcall matcher-func (lambda ()
+        (no-such-method self mverb args)))))
 
 ; --- Native object cross-calling support ---
 
@@ -1452,12 +1455,13 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 (defmethod e-call-dispatch ((rec t) mverb &rest args)
   "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
-  (elib:miranda rec mverb args (lambda ()
-    (apply #'e-call-match rec mverb args))))
+  (elib:miranda rec mverb args (lambda (fail)
+    (apply #'e-call-match fail rec mverb args))))
 
-(defmethod e-call-match ((rec t) mverb &rest args)
+(defmethod e-call-match (fail (rec t) mverb &rest args)
   "Final case of E call dispatch - always fails."
-  (no-such-method rec mverb args))
+  (declare (ignore rec mverb args))
+  (funcall fail))
 
 
 #+e.instrument.ref-shorten-uses 

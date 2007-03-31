@@ -121,5 +121,17 @@ __respondsTo, of course, is dependent on the dispatch implementation, so it shal
 
   XXX e-impls with matchers (or eg, stdout.print)
 
+__respondsTo should be passed to a matcher
+
+  ? {def a extends (def b { to c(_) :any {} }) {}}.__respondsTo("c", 1)
+  # value: true
+
+  ? def nonmatches { match ==null { "oops" } }.__respondsTo("foo", 0)
+  # value: false
+
+  XXX __getAllegedType
+  
+
+
 Detailed testing of __getAllegedType/0 is in help.updoc.
 

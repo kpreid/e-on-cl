@@ -439,6 +439,8 @@
                  remaining-code)))
       (m-b-list (coerce matchers 'list)))))
 
+;; XXX TODO: map out the twisty path of build-matcher-call, build-method-case, matcher-function, and fail, and see if some simplification can be done
+
 (defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym type-desc
     &aux (simple-name (simplify-fq-name qualified-name))
          (method-body (getf generators :method-body)))
@@ -466,17 +468,20 @@
                       #',self-fsym args 
                       ',(loop for method across methods
                               for (nil verb patterns nil nil) = (node-elements method)
-                              collect (e-util:mangle-verb verb (length patterns))))))
+                              collect (e-util:mangle-verb verb (length patterns)))
+                      (lambda (v a fail)
+                        (declare (ignorable v a))
+                        ,(funcall build-matcher-call 'v 'a '(funcall fail))))))
               ,@(when checker-sym
                   `(((elib:audited-by-magic-verb) 
                      (funcall ,checker-sym (first args)))))
               (otherwise 
-                (elib:miranda #',self-fsym mverb args (lambda ()
+                (elib:miranda #',self-fsym mverb args (lambda (fail)
                   ,(funcall build-matcher-call
                      'mverb 'args 
-                     `(no-such-method #',self-fsym mverb args))))))))
+                     `(funcall fail))))))))
     (if (plusp (length matchers))
-      (let ((matcher-entry-fname (gensym "MATCHER-ENTRY"))
+      (let ((matcher-entry-fname (gensym (format nil "~A-MATCHER" qualified-name)))
             (fail-fun (gensym "FAIL-FUN")))
         `(flet ((,matcher-entry-fname (mmverb margs ,fail-fun)
                 (declare (ignorable mmverb margs))
@@ -492,13 +497,15 @@
   (destructuring-bind (tw) args
     (e. (e-coerce tw +the-text-writer-guard+) |write| (concatenate 'string "<" simple-name ">"))))
 
-(defun default-responds-to (self args mangled-verbs)
+(defun default-responds-to (self args mangled-verbs matcher-function)
   (destructuring-bind (verb arity) args
     (e-coercef verb 'string)
     (e-coercef arity '(integer 0))
     (as-e-boolean
       (or (member (e-util:mangle-verb verb arity) mangled-verbs)
-          (e-is-true (elib:miranda self :|__respondsTo/2| args nil))))))
+          (e-is-true (elib:miranda self :|__respondsTo/2| args 
+                        (lambda (fail)
+                          (funcall matcher-function :|__respondsTo/2| args fail))))))))
 
 (defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym type-desc)
   (declare (ignore self-fsym methods type-desc))

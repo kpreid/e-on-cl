@@ -24,16 +24,14 @@ Internal bugs:
 Little features:
   - FlexSet
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
-  - Have our own E source expander, so that we can replace sugars (property access, for-loop, nonprimitive patterns, etc.
   - Investigate what SourceSpan#isOneToOne really means (as it is it seems to be ambiguous between "mixed-up" and "multiline")
+  - __getAllegedType merging at the miranda-and-matcher interface
 
 Big features:
   - Parse E code without requiring E-on-Java.
   - more complete socket IO
   - more complete file IO
   - finish term-tree system (matching, etc.)
-  - true vats
-  - boot-comm system
   - threaded vats
   - Audited Selfless for E-objects
   - Pluribus

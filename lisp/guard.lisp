@@ -87,7 +87,7 @@
                        (cl-type-specifier b)))
   (lambda (a)   (sxhash (cl-type-specifier a))))
 
-(defmethod e-call-match ((rec cl-type-guard) mverb &rest args)
+(defmethod e-call-match (fail (rec cl-type-guard) mverb &rest args)
   (with-slots (ts) rec
     (if (eql ts 't) ; XXX bad OO
       (cond
@@ -106,8 +106,8 @@
                   (samep args '#("of" 1))
                   (samep args '#("match__of/1" 1))))
           +e-true+)
-        (t (no-such-method rec mverb args)))
-      (no-such-method rec mverb args))))
+        (t (call-next-method)))
+      (call-next-method))))
 
 (defmethod make-load-form ((object cl-type-guard) &optional environment)
   (declare (ignore environment))

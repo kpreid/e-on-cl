@@ -290,7 +290,8 @@
            (e. (se-properties condition) |getKeys|))))
   (:|_getProperties/0| 'se-properties))
 
-(defmethod e-call-match ((rec e-structure-exception) mverb &rest args)
+(defmethod e-call-match (fail (rec e-structure-exception) mverb &rest args)
+  (declare (ignore fail))
   (let ((name (without-prefix (unmangle-verb mverb) "get")))
     (if (and name (null args))
       (let ((pname (concatenate 'string

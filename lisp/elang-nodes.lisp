@@ -476,8 +476,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
           (string (char-downcase (char name 3)))
           (subseq name 4 (- length 2)))))))
     
-(defmethod e-call-match ((rec |ENode|) mverb &rest args)
-  (declare (ignore args))
+(defmethod e-call-match (fail (rec |ENode|) mverb &rest args)
+  (declare (ignore fail args))
   (let* ((property (mverb-get-to-property-name mverb))
          (opt-getter (when property
                        (opt-node-property-getter rec 

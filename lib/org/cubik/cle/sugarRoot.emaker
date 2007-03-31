@@ -26,7 +26,10 @@ def sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
     null.__getAllegedType()
   }
   
-  # match [=="__respondsTo", [verb, arity]] { # XXX not proven necessary yet
+  match [=="__respondsTo", [self, verb, arity]] {
+    [verb, arity] == ["__getAllegedType", 0] ||
+      [verb, arity] == ["__respondsTo", 2]
+  }
   
   match [verb, [self] + args] {
     # XXX typed exception
@@ -44,7 +47,7 @@ def sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
       out.print(verb)
       out.write("/")
       out.print(args.size())
-      args.printOn(" (", ", ", ")", out) # XXX enable this sometime
+      args.printOn(" (", ", ", ")", out)
     }}))
   }
 } 

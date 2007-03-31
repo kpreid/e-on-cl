@@ -37,12 +37,11 @@
                 (or (and (or (string= verb "run") 
                              (string= verb "tuple"))
                          (e-util:function-responds-to f arity))
-                    (e-is-true (elib:miranda #'wrapper mverb args nil))))))
+                    (e-is-true (elib:miranda #'wrapper mverb args #'funcall))))))
             ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
               (not (not (find auditor stamps :test #'samep)))))
             (otherwise
-              (elib:miranda #'wrapper mverb args (lambda ()
-                (error "no such method on wrapped function: ~A" mverb)))))))))
+              (elib:miranda #'wrapper mverb args #'funcall)))))))
     #'wrapper))
 
 (defun make-symbol-accessor (symbol)

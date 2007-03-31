@@ -171,7 +171,8 @@
     "Return a list of subtwines of this twine which are separated by the string 'sep'. Will return empty elements at the end. The empty twine results in a one-element result list."
     (e.elib::split-by-runs (twine-string this) sep this)))
 
-(defmethod e-call-match ((rec %twine) mverb &rest args)
+(defmethod e-call-match (fail (rec %twine) mverb &rest args)
+  (declare (ignore fail))
   (apply #'e-call-dispatch (twine-string rec) mverb args))
 
 (deftype twine ()
@@ -574,7 +575,8 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             do (efuncall func key value))
       nil)))
 
-(defmethod e-call-match ((rec const-map) mverb &rest args)
+(defmethod e-call-match (fail (rec const-map) mverb &rest args)
+  (declare (ignore fail))
   (apply #'sugar-cache-call rec mverb 'const-map "org.erights.e.elib.tables.mapSugar" args))
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
