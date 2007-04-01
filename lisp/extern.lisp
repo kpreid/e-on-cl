@@ -319,7 +319,8 @@
                    (out-o "stdout" t)
                    (err-o "stderr" t))
       (multiple-value-bind (exit-promise exit-resolver) (make-promise)
-        (let* ((u-process (run-program (file-ref-pathname file)
+        (let* ((vat *vat*)
+               (u-process (run-program (file-ref-pathname file)
                             (map 'list #'ref-shorten args) ; XXX coerce
                             :wait nil
                             :input (convert-stream-option in-o :stdin)
@@ -330,7 +331,8 @@
                                 ;; XXX this is a signal handler in sbcl - make safe 
                                 (when (member (external-process-status u-process) 
                                               '(:exited :signaled))
-                                  (e<- exit-resolver |resolve| (external-process-exit-code u-process))))))
+                                  (enqueue-turn vat (lambda ()
+                                    (e. exit-resolver |resolve| (external-process-exit-code u-process))))))))
                (e-stdin (convert-stream (external-process-input-stream u-process) :stdin))
                (e-stdout (convert-stream (external-process-output-stream u-process) :stdout))
                (e-stderr (convert-stream (external-process-error-stream u-process) :stderr)))
