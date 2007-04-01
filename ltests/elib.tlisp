@@ -20,20 +20,29 @@
                :hi))))))
   "Method \"run\" has 0 parameters, which is not enough to accept 1 prefix argument.")
 
-(defun same-or-objects (test a b)
-  (if (funcall test a b)
-    t
-    (values a b)))
-
 (deftest guard->type-specifier->guard
-  (let ((guard (e-lambda "$typeSpecifierTest" ())))
-    (same-or-objects #'samep guard (type-specifier-to-guard (guard-to-type-specifier guard))))
-  t)
-  
+  (collect-mismatches 
+    #'samep
+    #'identity
+    (lambda (guard)
+      (type-specifier-to-guard (guard-to-type-specifier guard)))
+    (list (e-lambda "$typeSpecifierTest" ())))
+  nil)
+
 (deftest type-specifier->guard->type-specifier
-  (let ((ts '(integer -10 10)))
-    (same-or-objects #'equal ts (guard-to-type-specifier (type-specifier-to-guard ts))))
-  t)
+  (collect-mismatches 
+    #'equal
+    #'identity
+    (lambda (ts)
+      (guard-to-type-specifier (type-specifier-to-guard ts)))
+    '((integer -10 10)))
+  nil)
+
+(deftest shorten-guard
+  (guard-to-type-specifier
+    (make-instance 'e.elib::forwarding-ref :target
+      (type-specifier-to-guard 'integer)))
+  integer)
   
 (deftest e-print-class-guard
   (e-print (type-specifier-to-guard (find-class 'integer)))

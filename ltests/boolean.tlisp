@@ -1,0 +1,21 @@
+; Copyright 2007 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.lisp-test.boolean
+  (:use :cl :e.lisp-test :elib))
+(in-package :e.lisp-test.boolean)
+
+(deftest boolean.same-coercion
+  ;; test that e-is-true coerces in the usual way
+  (collect-mismatches 
+    #'samep
+    #'e-is-true
+    (lambda (x) (e-is-true (e-coerce x 'e-boolean)))
+    (list +e-true+
+          +e-false+
+          (make-instance 'e-boolean #| a bogus boolean |#)
+          (e-lambda "$becomesBoolean" ()
+            (:|__conformTo| (guard)
+              (declare (ignore guard))
+              +e-true+))))
+  ())

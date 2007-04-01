@@ -108,3 +108,19 @@
                       (|NounExpr| "p"))))
   "<sealed problem>")
 
+(deftest pattern-has-no-side-effects.no
+  (remove-if-not #'e.elang.compiler.seq::pattern-has-no-side-effects
+    (mapcar #'n '((|FinalPattern| (|NounExpr| "a") (|NounExpr| "b"))
+                  (|SlotPattern|  (|NounExpr| "a") (|NounExpr| "b"))
+                  (|VarPattern|   (|NounExpr| "a") (|NounExpr| "b"))
+                  (|ListPattern|)
+                  (|ViaPattern| (|NounExpr| "a") (|IgnorePattern|)))))
+  ())
+
+(deftest pattern-has-no-side-effects.yes
+  (remove-if #'e.elang.compiler.seq::pattern-has-no-side-effects
+    (mapcar #'n '((|FinalPattern| (|NounExpr| "a") nil)
+                  (|SlotPattern|  (|NounExpr| "a") nil)
+                  (|VarPattern|   (|NounExpr| "a") nil)
+                  (|IgnorePattern|))))
+  ())

@@ -5,7 +5,9 @@
   (:use :cl 
         #+e.sb-rt :sb-rt #-e.sb-rt :rt
         :e.elib)
-  (:export :system-test))
+  (:export :system-test
+           
+           :collect-mismatches))
 (cl:in-package :e.lisp-test)
 (export 'deftest)
 
@@ -33,3 +35,14 @@
           (error "Some tests failed.")))))
   (fresh-line)
   (rem-all-tests))
+
+;;; --- Utilities for tests ---
+
+(defun collect-mismatches (test key-1 key-2 inputs)
+  "For each element of INPUTS, apply KEY-1 and KEY-2 to the element. Return a list of triples of element from INPUTS, result of KEY-1, and result of KEY-2, for each element where TEST yields false given the results of KEY-1 and KEY-2."
+  (loop for input #-sbcl #-sbcl in (coerce inputs 'list)
+                  #+sbcl #+sbcl #+sbcl #+sbcl #+sbcl being the elements of inputs
+        for a = (funcall key-1 input)
+        for b = (funcall key-2 input)
+        unless (funcall test a b)
+        collect (list input a b)))

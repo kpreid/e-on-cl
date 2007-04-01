@@ -3,9 +3,61 @@
 
 (cl:in-package :e.lisp-test)
 
-(deftest node-arity.1
+(deftest node-arity.low
+  (handler-case
+    (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '())
+    (e.elang:node-arity-error (c)
+      (write-to-string c :readably nil :escape nil :pretty nil)))
+  "Attempted to create a |LiteralExpr| with 0 children, COMMON-LISP:NIL, instead of 1-1.")
+;; XXX print as () instead of NIL
+
+(deftest node-arity.high
   (handler-case
     (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(1 2))
     (e.elang:node-arity-error (c)
-      (write-to-string c :readably nil :escape nil :pretty t :right-margin 80 :miser-width 70)))
+      (write-to-string c :readably nil :escape nil :pretty nil)))
   "Attempted to create a |LiteralExpr| with 2 children, (1 2), instead of 1-1.")
+
+(deftest node-printing.readably
+  (with-standard-io-syntax
+     ;; package cl-user has unknown use list, so we use this one instead
+    (let ((*package* #.*package*))
+      (write-to-string (make-instance 'e.kernel:|LiteralExpr| :elements '(1)))))
+  "#.(MAKE-INSTANCE (QUOTE E.KERNEL:|LiteralExpr|) :ELEMENTS (QUOTE (1)))")
+
+(deftest node-printing.unreadably
+  (with-standard-io-syntax
+    (let ((*package* #.*package*))
+      (write-to-string (make-instance 'e.kernel:|LiteralExpr| :elements (QUOTE (1)))
+        :readably nil)))
+  "#<LiteralExpr (1)>")
+
+(deftest node-printing.no-eval
+  (handler-case
+    (with-standard-io-syntax
+      (let ((*package* #.*package*)
+            (*read-eval* nil))
+        (write-to-string (make-instance 'e.kernel:|LiteralExpr| :elements '(1)))))
+    (print-not-readable () :expected))
+  :expected)
+
+(deftest node-printing.readably.broken
+  (with-standard-io-syntax
+     ;; package cl-user has unknown use list, so we use this one instead
+    (let ((*package* #.*package*))
+      (write-to-string (allocate-instance (find-class 'e.kernel:|LiteralExpr|)))))
+  "#.(MAKE-INSTANCE (QUOTE E.KERNEL:|LiteralExpr|))")
+
+(deftest node-printing.unreadably.broken
+  (with-standard-io-syntax
+    (let ((*package* #.*package*))
+      (write-to-string (allocate-instance (find-class 'e.kernel:|LiteralExpr|))
+        :readably nil)))
+  "#<LiteralExpr :.UNDEFINED-ELEMENTS.>")
+
+(deftest change-node-class
+  (handler-case
+    (change-class (make-instance 'e.kernel:|LiteralExpr| :elements '("a"))
+                  'e.kernel:|NounExpr|)
+    (error () :expected))
+  :expected)

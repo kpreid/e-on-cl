@@ -310,13 +310,13 @@
       (format stream "~A ~W" (type-of node) 
                              (if (slot-boundp node 'elements)
                                (node-elements node)
-                               '.undefined-elements.)))
+                               ':.undefined-elements.)))
     (with-standard-io-syntax
           (format stream
                   "#.~W"
                   `(make-instance ',(class-name (class-of node))
-                                  ,(if (slot-boundp node 'elements)
-                                     `(:elements ',(node-elements node))))))))
+                                  ,@(if (slot-boundp node 'elements)
+                                      `(:elements ',(node-elements node))))))))
 
 (defmethod make-load-form ((node |ENode|) &optional environment)
   (declare (ignore environment))
