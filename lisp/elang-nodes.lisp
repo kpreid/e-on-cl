@@ -360,7 +360,7 @@
     initargs))
 
 (defun to-scope (nodoid)
-  (typecase nodoid
+  (etypecase nodoid
     (|ENode|
      (e. nodoid |staticScope|))
     ((and vector (not string))
@@ -477,14 +477,21 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
           (subseq name 4 (- length 2)))))))
     
 (defmethod e-call-match (fail (rec |ENode|) mverb &rest args)
-  (declare (ignore fail args))
+  (declare (ignore fail))
   (let* ((property (mverb-get-to-property-name mverb))
          (opt-getter (when property
                        (opt-node-property-getter rec 
                                                  (intern property :keyword)))))
-    (if opt-getter
-      (funcall opt-getter)
-      (call-next-method))))
+    (cond 
+      (opt-getter
+        (funcall opt-getter))
+      ((eql mverb :|__respondsTo/2|)
+        (destructuring-bind (verb arity) args
+          (as-e-boolean
+            (let ((property (mverb-get-to-property-name (mangle-verb verb arity))))
+              (when property (opt-node-property-getter rec (intern property :keyword)))))))
+      (t
+        (call-next-method)))))
 
 (def-vtable |EExpr|
   (:|quasiTypeTag| (this)
@@ -697,7 +704,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         (e-coercef rn map-guard)
         (e-coercef dn map-guard)
         (e-coercef vn map-guard))
-      (e-coercef sn 'boolean)
+      (e-coercef hms 'e-boolean)
       (make-static-scope :set-names sn
                          :read-names rn
                          :def-names dn
@@ -934,9 +941,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defun %check-property-types (node ejector rules)
   (loop for (property ptype) in rules collect
     (let ((value (funcall (opt-node-property-getter node property))))
-      (unless (unmagical-typep value ptype)
-        (ejerror ejector "~S must have ~S of type ~S, but had ~S" 
-                         node property ptype value)))))
+      (unless (unmagical-typep (ref-shorten value) ptype)
+        (ejerror ejector "~A must have ~A of type ~A, but had ~A" 
+                         (e-quote node) (e-quote property) (e-print ptype) (e-print value))))))
 
 (defmacro define-kernel-e-check-method (node-class &body body)
   `(defmethod require-kernel-e-recursive progn ((node ,node-class) ejector)

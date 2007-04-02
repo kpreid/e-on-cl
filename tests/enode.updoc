@@ -1,39 +1,49 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+Note: In the early days, ENodes were not as generic as they are now. Therefore, this file has some remnants of per-node tests for importing and making.
+
+--- Importing ---
+
+There is a special component loader supplying the ENode makers.
+
   ? def vm__uriGetter := <elang:evm.*>
   # value: <import:org.erights.e.elang.evm.*>
+  
+(However, this is just a regular package loader, and should be equivalent to the unabbreviated <import:...> form.)
 
-? <type:org.erights.e.elang.evm.EExpr>
-# value: EExpr
+  ? <type:org.erights.e.elang.evm.EExpr>
+  # value: EExpr
 
-? def makeCallExpr := <import:org.erights.e.elang.evm.makeCallExpr>
-# value: <makeCallExpr>
+  ? def makeCallExpr := <vm:makeCallExpr>
+  # value: <makeCallExpr>
 
-? def makeDefineExpr := <import:org.erights.e.elang.evm.makeDefineExpr>
-# value: <makeDefineExpr>
+  ? def makeDefineExpr := <vm:makeDefineExpr>
+  # value: <makeDefineExpr>
 
-? def makeLiteralExpr := <import:org.erights.e.elang.evm.makeLiteralExpr>
-# value: <makeLiteralExpr>
+  ? def makeLiteralExpr := <vm:makeLiteralExpr>
+  # value: <makeLiteralExpr>
 
-? def makeNounExpr := <import:org.erights.e.elang.evm.makeNounExpr>
-# value: <makeNounExpr>
+  ? def makeNounExpr := <vm:makeNounExpr>
+  # value: <makeNounExpr>
 
-? def makeViaPattern := <import:org.erights.e.elang.evm.makeViaPattern>
-# value: <makeViaPattern>
+  ? def makeViaPattern := <vm:makeViaPattern>
+  # value: <makeViaPattern>
 
-? def makeFinalPattern := <import:org.erights.e.elang.evm.makeFinalPattern>
-# value: <makeFinalPattern>
+  ? def makeFinalPattern := <vm:makeFinalPattern>
+  # value: <makeFinalPattern>
 
-? def makeIgnorePattern := <import:org.erights.e.elang.evm.makeIgnorePattern>
-# value: <makeIgnorePattern>
+  ? def makeIgnorePattern := <vm:makeIgnorePattern>
+  # value: <makeIgnorePattern>
 
-? <elang:visitors.makeKernelECopyVisitor>
-# value: <import:org.erights.e.elang.visitors.makeKernelECopyVisitor>
+  ? <elang:visitors.makeKernelECopyVisitor>
+  # value: <import:org.erights.e.elang.visitors.makeKernelECopyVisitor>
+  XXX this is misplaced...?
 
-? <type:org.erights.e.elang.evm.DefineExpr> == <import:org.erights.e.elang.evm.makeDefineExpr>.asType()
-# value: true
+Type object accessibility:
 
+  ? <type:org.erights.e.elang.evm.DefineExpr> == <import:org.erights.e.elang.evm.makeDefineExpr>.asType()
+  # value: true
 
 Check that the special loaders handle the nonexistent cases:
 
@@ -42,6 +52,8 @@ Check that the special loaders handle the nonexistent cases:
   
   ? <elang:evm.makeENode> # no maker
   # problem: <import:*> can't find "org.erights.e.elang.evm.makeENode"
+
+--- Node-specific tests ---
   
 LiteralExpr
 
@@ -50,6 +62,10 @@ LiteralExpr
   
   ? oneExpr.staticScope()
   # value: <[] := [] =~ [] + var []>
+
+  Bug test: print of char
+  ? makeLiteralExpr(null, 'a', null)
+  # value: e`'a'`
   
   XXX other value types
   XXX Data requirement
@@ -68,6 +84,11 @@ AssignExpr
   
   ? expr.getNoun()
   # value: e`pi`
+
+  Kernel-E check
+  x ? e`a[] := b`.eval(safeScope)
+  x # problem: e`$<GetExpr [e`a`]>$ := b` must have "noun" of type NounExpr, but had GetExpr
+  XXX this test can't work until e`` is made to generate nonkernel expressions
 
 DefineExpr
 
@@ -435,6 +456,56 @@ SlotPattern
   ? makeSlotPattern(null, makeNounExpr(null, "state", null), makeNounExpr(null, "Lamport", null), null)
   # value: epatt`&state :Lamport`
 
+--- Properties, unrecognized methods, and type information ---
+
+  ? makeNounExpr(null, "foo", null).getName()
+  # value: "foo"
+  
+  ? makeNounExpr(null, "foo", null).getNonexistentProperty()
+  # problem: no such method: org.erights.e.elang.evm.NounExpr#getNonexistentProperty/0
+  
+  ? makeNounExpr(null, "foo", null).getName("extraArg")
+  # problem: no such method: org.erights.e.elang.evm.NounExpr#getName/1
+  
+  ? makeNounExpr(null, "foo", null).unrecognizedMethod()
+  # problem: no such method: org.erights.e.elang.evm.NounExpr#unrecognizedMethod/0
+
+  ? makeNounExpr(null, "foo", null).__respondsTo("getName", 0)
+  # value: true
+
+  ? makeNounExpr(null, "foo", null).__respondsTo("getName", 1)
+  # value: false
+
+  ? makeNounExpr(null, "foo", null).__respondsTo("getNonexistentProperty", 0)
+  # value: false
+
+  ? makeNounExpr(null, "foo", null).__respondsTo("unrecognizedMethod", 0)
+  # value: false
+
+  XXX this is just testing what currently happens; it *should* contain message descs for the properties (and better doc comments, too)
+  ? help(makeNounExpr(null, "foo", null))
+  # value: interface "org.erights.e.elang.evm.NounExpr" {
+  #            to asText(_)
+  #            /** e */
+  #            to quasiTypeTag()
+  #            /** Return a static scope analysis of this subtree that doesn't depend on the enclosing context. */
+  #            to staticScope()
+  #            to getOptSpan()
+  #            /** Quasiliteral ValueMaker interface.
+  #            
+  #            NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced. */
+  #            to substitute(args)
+  #            to asKernelE()
+  #            to welcome(visitor)
+  #            /** Java-E compatibility */
+  #            to lnPrintOn(tw, precedence)
+  #            /** Java-E compatibility */
+  #            to subPrintOn(tw, precedence)
+  #            to eval(_)
+  #            /** Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings. */
+  #            to evalToPair(scope)
+  #        }
+
 --- SourceSpans ---
 
   ? def makeSourceSpan := <elib:base.makeSourceSpan>
@@ -595,6 +666,13 @@ SlotPattern
   ? varI."uses"("i")
   # value: false
   
+ constructor for selflessness
+ 
+  ? def complexScope := (readAny + setPi + sdef1 + varI)
+  # value: <["pi"] := ["any"] =~ ["x"] + var ["i"]>
+  
+  ? complexScope == E.call(E, "call", complexScope.__optUncall())
+  # value: true
 
 --- node scope computation ---
 
@@ -709,6 +787,8 @@ SlotPattern
   ? epatt`var a :b`.staticScope()
   # value: <[] := ["b"] =~ [] + var ["a"]>
 
+--- Evaluation ---
+
 eval
 
   ? e`1 + 1`.eval(safeScope)
@@ -734,6 +814,8 @@ evalToPair
   # value: "leftward"
 
 --- Visitors ---
+
+These tests check the arguments which nodes give to visitors.
 
   ? def makeVisitor(depth) :any {
   >   return def spamVisitor {
@@ -968,6 +1050,24 @@ evalToPair
   #            y
   #        }`
 
+Special printing methods
+
+  ? e`a := b`.subPrintOn(stdout, 0)
+  # stdout: (a := b)
+
+  ? e`a := b`.subPrintOn(stdout, 100)
+  # stdout: a := b
+
+  ? e`a := b`.lnPrintOn(stdout, 0)
+  # stdout: 
+  #         (a := b)
+
+  ? e`a := b`.lnPrintOn(stdout, 100)
+  # stdout: 
+  #         a := b
+
+XXX these are compatibility methods; decide whether to keep them.
+
 --- Quasi-substitution ---
 
   ? <vm:makeHideExpr>(null, <vm:makeQuasiLiteralExpr>(null, 0, null), null).welcome(makeVisitor(0))
@@ -1024,8 +1124,6 @@ evalToPair
 
 XXX maker tests for nodes that don't have them yet '
     -- many makers have been indirectly tested by the current implementation of KernelECopyVisitor, but we should have proper tests including coercion checks
-XXX methods of individual nodes
-    -- and now that we are using e-call-match for simple properties: check __respondsTo/getAllegedType correctness
 XXX well-formedness constraints tested before eval, but not at construction so we can build conveniently
       no shadowing without an intervening HideExpr
       no recursive definitions in DefineExpr (evaluator constraint?)

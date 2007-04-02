@@ -153,7 +153,6 @@
     "The print representation of a character."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef this 'character)
-    ; XXX escape when appropriate
     (e. tw |write| "'")
     (print-escaped tw (vector this) "\'")
     (e. tw |write| "'"))
@@ -336,9 +335,8 @@ XXX make precedence values available as constants"
             (subprint cond +precedence-outer+)
             (e. tw |print| #|(|# ") ")
             (subprint-block true-block)
-            (when (ref-shorten false-block)
-              (e. tw |print| " else ")
-              (subprint-block false-block)))
+            (e. tw |print| " else ")
+            (subprint-block false-block))
           
           (:|visitLiteralExpr| (opt-original value)
             (declare (ignore opt-original))
@@ -351,7 +349,7 @@ XXX make precedence values available as constants"
               (float64
                 (e. tw |print| value)) ; XXX E-syntax hiding?
               (character
-                (e. +e-printer+ |printString| tw value))))
+                (e. +e-printer+ |printCharacter| tw value))))
           
           (:|visitMetaContextExpr| (opt-original)
             (declare (ignore opt-original))
