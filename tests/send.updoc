@@ -90,4 +90,22 @@ Ref#whenResolved/2
  ? report()
  # stdout:  4. <doubleRedirector> -> <doubleRedirector>
   
+--- sendOnly ---
+
+sendOnly on near ref
+
+  ? def r := E.sendOnly(stdout, "println", ["ding"])
+  # stdout: ding
+  #         
   
+  ? r == null
+  # value: true
+
+sendOnly on promise (testing send-only entries in message queue)
+
+  ? def [p, r] := Ref.promise()
+  > E.sendOnly(p, "println", ["dong"])
+  
+  ? r.resolve(stdout)
+  # stdout: dong
+  #         

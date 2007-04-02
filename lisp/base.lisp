@@ -66,7 +66,8 @@
    
 (defmethod enqueue ((queue queue) value)
   (with-lock-held ((%queue-lock queue))
-    (push value (queue-in queue))))
+    (push value (queue-in queue)))
+  (values))
 
 (defmethod dequeue ((queue queue))
   (with-lock-held ((%queue-lock queue))

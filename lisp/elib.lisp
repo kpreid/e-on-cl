@@ -511,13 +511,15 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmethod enqueue-turn ((runner runner) function)
   ;; relies on the send queue being thread-safe
-  (enqueue (slot-value runner 'sends) function))
+  (enqueue (slot-value runner 'sends) function)
+  (values))
 
 (defmethod enqueue-turn ((vat vat) function)
   (enqueue-turn (vat-runner vat)
                 (lambda ()
                   (call-with-turn function vat :label "basic turn"
-                                               :exclude-io t))))
+                                               :exclude-io t)))
+  (values))
 
 (defgeneric vr-add-io-handler (context target direction function))
 
@@ -543,6 +545,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (remove-exclusive-io-handler (ref-shorten handler)))
 
 (defmethod e-send-dispatch (rec mverb &rest args)
+;; NOTE: edit this in parallel with e-send-only-dispatch above
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
   (multiple-value-bind (promise resolver) (make-promise)
     (enqueue-turn *vat* (lambda ()
@@ -560,7 +563,14 @@ If there is no current vat at initialization time, captures the current vat at t
     promise))
 
 (defmethod e-send-only-dispatch (rec mverb &rest args)
-  (apply #'e-send-dispatch rec mverb args))
+  ;; NOTE: edit this in parallel with e-send-dispatch above
+  (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-only-dispatch default case was called with a non-NEAR receiver")
+  (enqueue-turn *vat* (lambda ()
+    (handler-case-with-backtrace
+      (apply #'e-call-dispatch rec mverb args)
+      (error (p b)
+        (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))))))
+  (values))
 
 (defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
   (destructuring-bind (&optional qtime &rest qfunc)
