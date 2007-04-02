@@ -62,14 +62,7 @@
                  ;; xxx should there be an ejector?
                  (error "No trivial value available")))))
   (:|getDocComment| (this)
-    (with-slots (ts) this
-      (let ((documentation (documentation ts 'type)))
-        ; The CONS case is a workaround for an apparent bug in OpenMCL 0.14.2-p1.
-        ; If not for that, this would be (or documentation "").
-        (typecase documentation
-          (string documentation)
-          (cons   (first documentation))
-          (null   "")))))
+    (or (documentation (cl-type-specifier this) 'type) ""))
   (:|getSupers| (this) 
     "Supertype information is not currently available for primitive types."
     (declare (ignore this))
@@ -94,17 +87,17 @@
         ((and (not (eql mverb :|get/0|))
               (eql mverb (e-util:mangle-verb "get" (length args))))
           (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (coerce args 'vector)))
-          ((eql mverb :|of/1|)
-            (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (first args)))
-          ((eql mverb :|match__of/1/2|)
-            (e. (e-import "org.erights.e.elib.slot.makeUnionGuard")
-                |match__run/1|
-                (first args)
-                (second args)))
+        ((eql mverb :|of/1|)
+          (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (first args)))
+        ((eql mverb :|match__of/1/2|)
+          (e. (e-import "org.erights.e.elib.slot.makeUnionGuard")
+              |match__run/1|
+              (first args)
+              (second args)))
         ((and (eql mverb :|__respondsTo/2|) 
               (or (string= (elt args 0) "get")
-                  (samep args '#("of" 1))
-                  (samep args '#("match__of/1" 1))))
+                  (samep args '("of" 1))
+                  (samep args '("match__of/1" 1))))
           +e-true+)
         (t (call-next-method)))
       (call-next-method))))

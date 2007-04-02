@@ -28,7 +28,16 @@ any
   
   ? any[int, float64] :DeepFrozen
   # value: any[int, float64]
-  
+
+  ? any.__respondsTo("get", 1)
+  # value: true
+
+  ? any.__respondsTo("get", 10)
+  # value: true
+
+  ? any.__respondsTo("of", 1)
+  # value: true
+
 void
 
   ? void
@@ -121,11 +130,6 @@ boolean
   
   XXX more tests
   XXX should this be a space?
-
- test that native guards don't throw on nonnear refs '
- 
-  ? testGuardMany([Ref.promise()[0]], boolean)
-  # value: []
 
   ? testSpecimenNotPrinted(boolean)
 
@@ -334,5 +338,33 @@ Negated guards
   # value: Not[int]
   
   ? testSpecimenNotPrinted(Not[any])
+
+getTheTrivialValue available-but-failing case:
+
+  ? <type:org.erights.e.elang.evm.NounExpr>.getTheTrivialValue()
+  # problem: No trivial value available
+
+Native guard behaviors
+
+ Should not throw on nonnear specimen
+ 
+  ? testGuardMany([Ref.promise()[0]], boolean)
+  # value: []
+
+ Check no-such-method, etc., as there is a matcher
+  
+  ? boolean.aardvarks()
+  # problem: no such method: org.cubik.cle.native.e.elib.cl-type-guard#aardvarks/0
+  
+  ? boolean.__respondsTo("aardvarks", 0)
+  # value: false
+  
+  ? boolean.__respondsTo("get", 1)
+  # value: false
+
+  ? boolean.__respondsTo("of", 1)
+  # value: false
+
+XXX should use a native guard which definitely isn't becoming a ordered space in the future '
 
 XXX trivial values for all Java unboxable types
