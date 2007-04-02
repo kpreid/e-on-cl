@@ -208,6 +208,7 @@
   (when (and (pattern-has-no-side-effects ejector-patt)
              (not (e-is-true (e. body-scope |uses| 
                                (e. (e. ejector-patt |getNoun|) |getName|)))))
+    ;; XXX condition assumes that all no-side-effects patterns have a noun like that. should retrieve from static scope instead
     #+(or) 
     (efuncall e.knot:+sys-trace+ (format nil "triggered ejector optimization for ~S in ~S" ejector-patt (scope-layout-fqn-prefix layout)))
     (return-from sequence-expr ;; XXX dependence on existence of block
@@ -411,11 +412,6 @@
 (defun %make-list-pattern-arity-error (has wants)
   (make-condition 'simple-error
     :format-control "a ~A size list doesn't match a ~A size list pattern"
-    :format-arguments (list has wants)))
-
-(defun %make-cdr-pattern-arity-error (has wants)
-  (make-condition 'simple-error
-    :format-control "a ~A size list doesn't match a >= ~A size list pattern"
     :format-arguments (list has wants)))
 
 (define-sequence-patt |ListPattern| (layout specimen ejector-spec &rest patterns
