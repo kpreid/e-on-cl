@@ -598,6 +598,7 @@
   (:documentation "Bootstrapping: setting up the E runtime environment after clrune starts the Lisp process.")
   (:export
     :rune
+    :rune-then-exit
     :in-e-user))
 
 (cl:defpackage :e.elib.vtable-methods

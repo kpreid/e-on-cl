@@ -3,6 +3,7 @@
 
 (in-package :e.rune)
 
+(defvar *parse-cache-name* nil)
 (defparameter *after-everything-hooks* '())
 
 ;; XXX TODO: restore the load counting mechanism
@@ -72,7 +73,7 @@
   (call-when-resolved
     (funcall starter)
     (efun (result)
-      (global-exit (if (ref-opt-problem result) 255 0))))
+      (return-from generic-toplevel result)))
   (setf *vat* nil) ;; allow potential other-vats created by user code -- XXX this seems like The Wrong Solution but I don't know what isn't
   (top-loop))
 
@@ -89,7 +90,7 @@
         (*runner* nil)) ;; XXX kludge
     (time (asdf:operate 'asdf:test-op +the-asdf-system+)))
   (force-output)
-  (global-exit 0))
+  nil)
 
 (define-toplevel lisptest-toplevel (args)
   "Run those tests for E-on-CL which do not involve executing the E language."
@@ -98,7 +99,7 @@
         (*runner* nil)) ;; XXX kludge
     (funcall (system-symbol "SYSTEM-TEST" :e.lisp-test :e-on-cl.lisp-test) nil +the-asdf-system+))
   (force-output)
-  (global-exit 0))
+  nil)
 
 (define-toplevel updoc-toplevel (args)
   "Invoke the Lisp-implemented Updoc implementation, interpreting the
@@ -129,13 +130,13 @@
   (let ((answer (stale)))
     (when answer
       (format *trace-output* "~&; Stale: ~A~%" answer))
+    ;; XXX shouldn't be using global-exit
     (global-exit (if answer 1 0))))
 
-(define-toplevel nothing-toplevel (args)
-  "Do nothing. In particular, do not exit, and do not run the vat.
-      This usually results in a Lisp REPL."
+(define-toplevel lisp-toplevel (args)
+  "Enter (or drop back to) the Lisp REPL, if possible."
   (declare (ignore args))
-  (values))
+  (throw 'lisp-toplevel nil))
 
 (defvar *image-is-detached*)
 (setf (documentation '*image-is-detached* 'variable)
@@ -240,9 +241,10 @@
   ;; XXX why is this a feature? why not an ordinary variable?
   (setf *features* (delete :e.saving-image *features*))
   
-  (e. (vat-safe-scope *vat*) |iterate| (efun (k v)
+  (e. (vat-safe-scope *vat*) |iterate| (efun (k s)
     (e. e.knot:+sys-trace+ |doing| (format nil "preloading ~A" k) (efun ()
-      (e. (e. v |getValue|) |__getAllegedType|)))))
+      (let ((v (e. s |getValue|))))
+        (ignore-errors (e. v |__getAllegedType|))))))
   
   (e.syntax::sub-save-flush)
   
@@ -299,12 +301,12 @@
 
 (defun %revive-start ()
   (revive-flush)
-  (apply #'rune (or #+sbcl (rest sb-ext:*posix-argv*)
-                    #+clisp ext:*args*
-                    #+openmcl (rest ccl::*command-line-argument-list*)
-                    #+cmucl (rest ext:*command-line-strings*)))
-  (break "Fell out of ~S." 'rune)
-  ;; XXX have an overall exit status policy
+  (apply #'rune-then-exit
+    (or #+sbcl (rest sb-ext:*posix-argv*)
+        #+clisp ext:*args*
+        #+openmcl (rest ccl::*command-line-argument-list*)
+        #+cmucl (rest ext:*command-line-strings*)))
+  (break "Fell out of rune")
   (global-exit 255))
 
 (defparameter *toplevels* '(("--updoc"      updoc-toplevel)
@@ -313,7 +315,7 @@
                             ("--translate"  translate-toplevel)
                             ("--lrepl"      repl-toplevel)
                             ("--irc"        irc-repl-toplevel)
-                            ("--nothing"    nothing-toplevel)
+                            ("--lisp"       lisp-toplevel)
                             ("--save"       save-toplevel)
                             ("--not-stale?" stale-test-toplevel)))
 
@@ -327,14 +329,13 @@
                    option
                    (gethash function *toplevel-documentation*))))
 
-(defvar *parse-cache-name* nil)
-
 (defun rune (&rest args
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)
          (toplevel             #'script-toplevel)
          parse-cache-name 
          do-usage)
+  "Does not return until the initial vat is shut down."
   (declare (optimize (debug 2) (safety 3)))
   
   (let ((*package* (find-package :cl-user)))
@@ -400,6 +401,11 @@ Lisp-level options:
   (when *parse-cache-name*
     (e.syntax:save-parse-cache-file *parse-cache-name*)))
 (pushnew 'save-specified-parse-cache *after-everything-hooks*)
+
+(defun rune-then-exit (&rest args)
+  ;; XXX better exit status scheme
+  (catch 'lisp-toplevel
+    (global-exit (if (ref-opt-problem (apply #'rune args)) 255 0))))
 
 ;; --- REPL tools ---
 

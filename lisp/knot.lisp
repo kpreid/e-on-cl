@@ -693,7 +693,7 @@
           
           ; --- utility: reference conditions ---
           ("&Data"       ,(lazy-import "org.erights.e.elib.serial.Data"))
-          ("&DeepPassByCopy" ,(make-unconnected-ref "DeepPassByCopy is not actually possible; use Data instead."))
+          ("DeepPassByCopy" ,(make-unconnected-ref "DeepPassByCopy is not actually possible; use Data instead."))
           ("&near"       ,(lazy-import "org.erights.e.elib.slot.near"))
           ("&PassByCopy" ,(lazy-import "org.erights.e.elib.serial.PassByCopy"))
           ("&rcvr"       ,(lazy-import "org.erights.e.elang.interp.rcvr"))

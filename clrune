@@ -170,7 +170,7 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
-      --eval '(apply (function e.rune:rune) (cdr sb-ext:*posix-argv*))' \
+      --eval '(apply (function e.rune:rune-then-exit) (cdr sb-ext:*posix-argv*))' \
       --end-toplevel-options \
       "$@"
   ;;
@@ -180,21 +180,21 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
-      -eval "(e.rune:rune `quote_args`)"
+      -eval "(e.rune:rune-then-exit `quote_args`)"
   ;;
   openmcl)
     "$EXEC" "$LISP" \
       "${LISP_EXTRA[@]}" \
       -e '(require :asdf)' \
       -e "$COMMON_INIT1" \
-      -e "(e.rune:rune `quote_args`)"
+      -e "(e.rune:rune-then-exit `quote_args`)"
   ;;
   ecl)
     # xxx is there a quiet flag?
     "$EXEC" "$LISP" \
       -eval '(require :asdf)' \
       -eval "$COMMON_INIT1" \
-      -eval "(e.rune:rune $QUOTED_ARGS)"
+      -eval "(e.rune:rune-then-exit $QUOTED_ARGS)"
   ;;
   clisp)
 
@@ -213,7 +213,7 @@ case "$LISPTYPE" in
     #"$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
     #  -x "(require :asdf)" \
     #     "$COMMON_INIT1" \
-    #     "(e.rune:rune `quote_args`)"
+    #     "(e.rune:rune-then-exit `quote_args`)"
     # xxx Ick! We load .clisprc because using this form of clisp startup unconditionally disables the rc file, and we want the rc so that the user's ASDF configuration is available.
     "$EXEC" "$LISP" -q -ansi "${LISP_EXTRA[@]}" \
       <(echo \
@@ -222,7 +222,7 @@ case "$LISPTYPE" in
            (when p (load p)))' \
         "(require :asdf)" \
         "$COMMON_INIT1" \
-        "(apply (function e.rune:rune) ext:*args*)") \
+        "(apply (function e.rune:rune-then-exit) ext:*args*)") \
       "$@"                    
   ;;
   gcl)
@@ -233,7 +233,7 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
        -eval "(require :asdf)" \
        -eval "$COMMON_INIT1" \
-       -eval "(e.rune:rune `quote_args`)"
+       -eval "(e.rune:rune-then-exit `quote_args`)"
   ;;
   abcl-jar)
     # XXX using e.jar only as a source of Antlr
@@ -242,7 +242,7 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
-      --eval "(e.rune:rune `quote_args`)"
+      --eval "(e.rune:rune-then-exit `quote_args`)"
   ;;
   abcl)
     # oops, can't set classpath
@@ -250,7 +250,7 @@ case "$LISPTYPE" in
       "${LISP_EXTRA[@]}" \
       --eval '(require :asdf)' \
       --eval "$COMMON_INIT1" \
-      --eval "(e.rune:rune `quote_args`)"
+      --eval "(e.rune:rune-then-exit `quote_args`)"
   ;;
   *)
     echo "$0: don't know how to start implementation type '$LISPTYPE' at $LISP" >&2
