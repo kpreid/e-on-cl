@@ -3,27 +3,32 @@
 
 (in-package :e.rune)
 
-(defvar *parse-cache-name* nil)
+(defparameter *after-everything-hooks* '())
+
+;; XXX TODO: restore the load counting mechanism
+#+(or)
+(defun report-load-counts ()
+  (maphash #'(lambda (fqn times)
+               (when (> times 1)
+                 (warn "note: ~A loaded ~A times" fqn times)))
+           (e. e.knot::+default-fresh-emaker-loader+
+               |_getLoadCounts|)))
+#+(or) (pushnew 'report-load-counts *after-everything-hooks*)
+
+#+e.instrument.ref-shorten-uses
+(defun report-ref-shorten-uses ()
+  (let ((entries (maphash #'list e.elib::*instrument-ref-shorten-kinds*)))
+    (mapcar #'(lambda (l) (destructuring-bind (key times) l
+             (when (> times 0)
+               (efuncall e.knot:+sys-trace+ (format nil "profiling: ~A shortened ~A times" key times)))))
+            (sort entries #'< :key #'second))))
+#+e.instrument.ref-shorten-uses
+(pushnew 'report-ref-shorten-uses *after-everything-hooks*)
 
 (defun global-exit (status)
   (check-type status (unsigned-byte 8))
-  (when *parse-cache-name*
-    (e.syntax:save-parse-cache-file *parse-cache-name*))
 
-  ;; XXX TODO: restore the load counting mechanism
-  #+(or)
-  (maphash #'(lambda (fqn times)
-             (when (> times 1)
-               (warn "note: ~A loaded ~A times" fqn times)))
-           (e. e.knot::+default-fresh-emaker-loader+
-               |_getLoadCounts|))
-  
-  #+e.instrument.ref-shorten-uses
-    (let ((entries (maphash #'list e.elib::*instrument-ref-shorten-kinds*)))
-      (mapcar #'(lambda (l) (destructuring-bind (key times) l
-               (when (> times 0)
-                 (efuncall e.knot:+sys-trace+ (format nil "profiling: ~A shortened ~A times" key times)))))
-              (sort entries #'< :key #'second)))
+  (map 'nil #'funcall *after-everything-hooks*)
 
   #+sbcl
     (sb-ext:quit :unix-status status)
@@ -322,6 +327,8 @@
                    option
                    (gethash function *toplevel-documentation*))))
 
+(defvar *parse-cache-name* nil)
+
 (defun rune (&rest args
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)
@@ -388,6 +395,11 @@ Lisp-level options:
     (establish-vat :label "initial"))
   
   (funcall toplevel args))
+
+(defun save-specified-parse-cache ()
+  (when *parse-cache-name*
+    (e.syntax:save-parse-cache-file *parse-cache-name*)))
+(pushnew 'save-specified-parse-cache *after-everything-hooks*)
 
 ;; --- REPL tools ---
 
