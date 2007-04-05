@@ -29,10 +29,6 @@
     :map-from-hash
     :system-symbol
 
-    :serve-event
-    :add-io-handler
-    :remove-io-handler
-    
     :native-pathname
     :native-namestring
     
@@ -78,6 +74,14 @@
 (cl:defpackage :e.elib
   (:nicknames :elib)
   (:use :cl :e.util :trivial-garbage :bordeaux-threads)
+  
+  #+(or sbcl cmu)
+  (:import-from #+sbcl sb-sys
+                #+cmu sys
+     :serve-event
+     :add-fd-handler
+     :remove-fd-handler)
+  
   (:export 
     :*compatible-catch-leakage*
     :*break-on-ejections*

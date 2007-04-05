@@ -3,9 +3,10 @@
 
 (in-package :e.elib)
 
-;; This file currently just contains the serve-event-runner, not all of the serve-event related code.
+;;; Runner class for Lisp systems providing SERVE-EVENT.
 
-;; XXX to finish current plans, move e.util serve-event extension code into here
+;;; The remainder of this file is within this conditional.
+#+(or sbcl cmu) (progn
 
 (defclass serve-event-runner (runner)
   ((time-queue :type sorted-queue
@@ -23,9 +24,9 @@
     (labels ((install ()
                ;(format *trace-output* "~&vraih install ~S" (list runner target direction function))
                (setf handler
-                 (add-io-handler target direction (lambda (target2)
+                 (add-fd-handler target direction (lambda (target2)
                    ;(format *trace-output* "~&vraih enqueueing ~S" (list runner target direction function))
-                   (remove-io-handler handler)
+                   (remove-fd-handler handler)
                    (setf handler nil)
                    (enqueue-turn runner (lambda ()
                      ;(format *trace-output* "~&vraih reporting ~S ~S" active (list runner target direction function))
@@ -39,7 +40,7 @@
                   ;(format *trace-output* "~&vraih stopper ~S" (list runner target direction function))
                   (setf active nil)
                   (when handler
-                    (remove-io-handler handler)
+                    (remove-fd-handler handler)
                     (setf handler nil))
                   (values)))))
 
@@ -61,11 +62,11 @@
     (if qtime
       (let ((delta (min (- qtime (get-fine-universal-time))
                         most-positive-fixnum)))
-        (e-util:serve-event (if timeout (min timeout delta)
-                                        delta)))
+        (serve-event (if timeout (min timeout delta)
+                                 delta)))
       (if timeout
-        (e-util:serve-event timeout)
-        (e-util:serve-event)))))
+        (serve-event timeout)
+        (serve-event)))))
 
 (defmethod runner-loop ((runner serve-event-runner))
   (assert (eql runner *runner*))
@@ -77,6 +78,4 @@
           (funcall (dequeue sends))
           (serve-event-with-time-queue time-queue sends 0))))))
 
-(defmethod make-runner-for-this-thread ()
-  ;; XXX todo: remove compatibility layers in e.util and make this implementation-dependent
-  (make-instance 'serve-event-runner))
+) ; end #+(or ...)

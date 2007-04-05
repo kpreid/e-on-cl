@@ -72,6 +72,7 @@
 
 (deftest ordinary-turn-excludes-io
   ;; Tests that turns created with ELIB:ENQUEUE-TURN do IO handler exclusion.
+  ;; XXX this test makes little sense now that there isn't an exclusion layer
   (let* ((runner (make-runner-for-this-thread))
          (*runner* runner)
          (vat (make-instance 'vat :label "ordinary-turn-excludes-io test"
@@ -92,7 +93,10 @@
           (enqueue-turn vat 
             (lambda ()
               #+(or) (warn "in send turn with ~S" unseen)
-              (e.util:serve-event 0.1) ;; allow the IO handler to possibly execute
+              (#+sbcl sb-sys:serve-event
+               #+cmu sys:serve-event
+               #-(or sbcl cmucl) identity
+                0.1) ;; allow the IO handler to possibly execute
               (decf unseen)
               (unless (plusp unseen)
                 (return-from done)))))

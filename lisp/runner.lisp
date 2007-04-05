@@ -21,6 +21,9 @@
 
 (defvar *runner* nil)
 
+(defun top-loop ()
+  (runner-loop *runner*))
+
 ;;; --- Basic runner ---
 
 (defclass runner ()
@@ -36,5 +39,10 @@
   (enqueue (slot-value runner 'sends) function)
   (values))
 
-(defun top-loop ()
-  (runner-loop *runner*))
+(defmethod runner-loop ((runner runner))
+  (assert (eql runner *runner*))
+  (with-slots (sends) runner
+    (loop
+      (if (queue-null sends)
+        (break "Ran out of things to do in ~S." runner)
+        (funcall (dequeue sends))))))

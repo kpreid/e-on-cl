@@ -34,58 +34,6 @@
     (setf (fdefinition alias)
           (fdefinition original))))
 
-;;; --- serve-event ---
-
-;; Simple passthrough
-
-(define-if-available 
-  (#+sbcl :sb-sys
-   #+cmu  :system)
-  (:serve-event     
-   (add-io-handler :add-fd-handler)
-   (remove-io-handler :remove-fd-handler)))
-
-;; Implement our own
-
-#-(or sbcl cmu) (progn
-  ;; XXX threading: for our purposes, this would better be represented as a vat/runner slot
-  (defvar *serve-event-handlers* (make-hash-table))
-  
-  (defclass handler ()
-    ((direction :initarg :direction
-                :type '(member :input :output)
-                :accessor handler-direction)
-     (function  :initarg :function
-                :accessor handler-function)))
-
-  (defclass zombie-handler () ())
-  
-  
-  (defun add-io-handler (target direction function)
-    (let ((handler (make-instance 'handler :direction direction :function function)))
-      (setf (gethash handler *serve-event-handlers*) target)
-      handler))
-  
-  (defun remove-io-handler (handler)
-    (coerce handler 'handler)
-    (remhash handler *serve-event-handlers*)
-    (change-class handler 'zombie-handler)
-    (values)))
-
-;; Stub
-
-(unless (fboundp 'serve-event)
-  (defun serve-event (&optional timeout)
-    "Portable fake serve-event if we don't have a real one."
-    (bordeaux-threads:thread-yield)
-    ;; XXX need to set up threads to make IO work if we have thread support
-    (if timeout 
-      (sleep timeout)
-      (progn
-        (warn "Sitting in fake serve-event with ~A handlers." (hash-table-count *serve-event-handlers*))
-        (sleep 20)))
-    nil))
-
 ;;; --- pathname handling ---
 
 (define-if-available 
