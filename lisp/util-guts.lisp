@@ -171,8 +171,11 @@
       #+ccl           :external-process-status
       #+(or sbcl cmu) :process-status)
      (external-process-exit-code
-      #+ccl           :external-process-exit-code
       #+(or sbcl cmu) :process-exit-code))))
+
+#+ccl
+(defun external-process-exit-code (process)
+  (nth-value 2 (ccl:external-process-status process)))
 
 (unless (fboundp 'run-program)
   (defun run-program (&rest args)
