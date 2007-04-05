@@ -30,8 +30,13 @@
             :depends-on ("util"))
      (:file "base"
             :depends-on ("util" "packages"))
+     (:file "runner"
+            :depends-on ("base" "util" "packages"))
+     (:file "serve-event"
+            ; serve-event-based runner (planned to be sbcl/cmucl only)
+            :depends-on ("runner"))
      (:file "elib"
-            :depends-on ("compile-options" "util" "base" "packages"))
+            :depends-on ("runner" "compile-options" "util" "base" "packages"))
      (:file "sugar" 
             ; convenience macros for E semantics
             :depends-on ("elib"))

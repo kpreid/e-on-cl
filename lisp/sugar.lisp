@@ -103,7 +103,7 @@
 (defun call-with-vat (function &rest initargs)
   (assert (null *vat*))
   ; xxx eventually we will need a shutdown operation on the vat to break inter-vat refs, do some sort of shutdown on registered input streams, etc.
-  (let* ((*runner* (make-instance 'runner))
+  (let* ((*runner* (make-runner-for-this-thread))
          (vat (apply #'make-instance 'vat :runner *runner* initargs)))
     (let ((*vat* vat))
       (funcall function))

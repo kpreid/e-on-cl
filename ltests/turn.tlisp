@@ -7,7 +7,7 @@
 
 
 (deftest vat-label.init
-  (label (make-instance 'vat :label "aardvarks" :runner (make-instance 'runner)))
+  (label (make-instance 'vat :label "aardvarks" :runner (make-runner-for-this-thread)))
   "aardvarks")
 
 (deftest vat-label.establish-vat
@@ -72,7 +72,7 @@
 
 (deftest ordinary-turn-excludes-io
   ;; Tests that turns created with ELIB:ENQUEUE-TURN do IO handler exclusion.
-  (let* ((runner (make-instance 'runner))
+  (let* ((runner (make-runner-for-this-thread))
          (*runner* runner)
          (vat (make-instance 'vat :label "ordinary-turn-excludes-io test"
                                   :runner runner))
@@ -84,7 +84,7 @@
                     :output 
                     (lambda (target) 
                       (declare (ignore target)) 
-                      (with-turn (vat :exclude-io nil)
+                      (with-turn (vat)
                         #+(or) (warn "in io turn with ~S" unseen)
                         #| nothing |#)))))
     (unwind-protect
@@ -104,7 +104,7 @@
 ;;; --- Running multiple vats ---
 
 (deftest two-vats
-  (let* ((*runner* (make-instance 'runner))
+  (let* ((*runner* (make-runner-for-this-thread))
          (vats (list (make-instance 'vat :runner *runner* :label "multivat-1")
                      (make-instance 'vat :runner *runner* :label "multivat-2")))
          (counter 0))

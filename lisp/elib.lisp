@@ -225,7 +225,6 @@ The 'name slot gives a label for the value which was not settled, such as the na
 ; --- defining some vat pieces early so that vat-checking does not come after local-resolver which subclasses it, which ABCL doesn't like ---
 
 (defvar *vat* nil)
-(defvar *runner* nil)
 
 (defclass vat-checking () 
   ((vat-checking-expected-vat :type vat))
@@ -435,7 +434,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 ; - vat -
 
-(defun call-with-turn (body vat &key exclude-io (label t))
+(defun call-with-turn (body vat &key (label t))
   "Execute the 'body' thunk, as a turn in the given vat."
   (assert label)
   (when (vat-in-turn vat)
@@ -446,30 +445,12 @@ If there is no current vat at initialization time, captures the current vat at t
   (unwind-protect
     (let ((*vat* vat))
       (setf (vat-in-turn vat) label)
-      (if (not exclude-io)
-        (funcall body)
-        (call-with-io-handler-exclusion 
-          body 
-          (handler-exclusion-group (vat-runner vat)) 
-          `(turn-in ,vat))))
+      (funcall body))
     (setf (vat-in-turn vat) nil)))
 
 (defmacro with-turn ((&rest args) &body body)
   "Execute the body, as a turn in the given vat."
   `(call-with-turn (lambda () ,@body) ,@args))
-
-(defclass runner ()
-  ((label :initarg :label
-          :initform nil
-          :type (or null string)
-          :reader label)
-   (sends :type queue
-          :initform (make-instance 'queue))
-   (time-queue :type sorted-queue
-               :initform (make-instance 'sorted-queue))
-   (handler-group :type io-handler-exclusion-group
-                  :initform (make-instance 'io-handler-exclusion-group)
-                  :reader handler-exclusion-group)))
 
 (defclass vat ()
   ((runner :initarg :runner
@@ -506,28 +487,11 @@ If there is no current vat at initialization time, captures the current vat at t
       (label vat)
       (vat-in-turn vat))))
 
-(defgeneric enqueue-turn (context function)
-  (:documentation "Must be safe for being called from the wrong thread."))
-
-(defmethod enqueue-turn ((runner runner) function)
-  ;; relies on the send queue being thread-safe
-  (enqueue (slot-value runner 'sends) function)
-  (values))
-
 (defmethod enqueue-turn ((vat vat) function)
   (enqueue-turn (vat-runner vat)
                 (lambda ()
-                  (call-with-turn function vat :label "basic turn"
-                                               :exclude-io t)))
+                  (call-with-turn function vat :label "basic turn")))
   (values))
-
-(defgeneric vr-add-io-handler (context target direction function))
-
-(defmethod vr-add-io-handler ((runner runner) target direction function)
-  (add-exclusive-io-handler (handler-exclusion-group runner)
-                            (ref-shorten target)
-                            (ref-shorten direction)
-                            function))
 
 (defmethod vr-add-io-handler ((vat vat) target direction function)
   (vr-add-io-handler (vat-runner vat)
@@ -535,14 +499,10 @@ If there is no current vat at initialization time, captures the current vat at t
                      direction
                      (lambda (target*)
                        (assert (eql target target*) () "buh?")
-                       (with-turn (vat :exclude-io nil 
-                                       :label (format nil "IO handler ~A for ~A"
+                       (with-turn (vat :label (format nil "IO handler ~A for ~A"
                                                       function
                                                       target)) 
                          (funcall (ref-shorten function) target*)))))
-
-(defun vr-remove-io-handler (handler)
-  (remove-exclusive-io-handler (ref-shorten handler)))
 
 (defmethod e-send-dispatch (rec mverb &rest args)
 ;; NOTE: edit this in parallel with e-send-only-dispatch above
@@ -572,38 +532,6 @@ If there is no current vat at initialization time, captures the current vat at t
         (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))))))
   (values))
 
-(defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
-  (destructuring-bind (&optional qtime &rest qfunc)
-      (sorted-queue-peek time-queue (lambda () nil))
-    (when (and qtime (<= qtime (get-fine-universal-time)))
-      (sorted-queue-pop time-queue)
-      (enqueue immediate-queue qfunc)
-      (return-from serve-event-with-time-queue t))
-    (if qtime
-      (let ((delta (min (- qtime (get-fine-universal-time))
-                        most-positive-fixnum)))
-        (e-util:serve-event (if timeout (min timeout delta)
-                                        delta)))
-      (if timeout
-        (e-util:serve-event timeout)
-        (e-util:serve-event)))))
-
-(defun runner-loop (runner)
-  (assert (eql runner *runner*))
-  (with-slots (sends time-queue) runner
-    (loop
-      (if (queue-null sends)
-        (serve-event-with-time-queue time-queue sends)
-        (progn
-          (funcall (dequeue sends))
-          (serve-event-with-time-queue time-queue sends 0))))))
-
-(defgeneric enqueue-timed (context time func))
-
-(defmethod enqueue-timed ((runner runner) time func)
-  (with-slots (time-queue) runner
-    (sorted-queue-put time-queue time func)))
-
 (defmethod enqueue-timed ((vat vat) time func)
   (enqueue-timed (vat-runner vat) time
                  (lambda ()
@@ -613,11 +541,8 @@ If there is no current vat at initialization time, captures the current vat at t
 (defun establish-vat (&rest initargs)
   (assert (null *vat*))
   (assert (null *runner*))
-  (setf *runner* (make-instance 'runner))
+  (setf *runner* (make-runner-for-this-thread))
   (setf *vat* (apply #'make-instance 'vat :runner *runner* initargs)))
-
-(defun top-loop ()
-  (runner-loop *runner*))
 
 (defvar *exercise-reffiness* nil
   "Set this true to test for code which is inappropriately sensitive to the presence of forwarding refs, by placing them around each argument to methods written in Lisp.")

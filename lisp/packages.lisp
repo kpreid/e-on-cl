@@ -98,19 +98,21 @@
   
     :+the-e+
     
+    :runner *runner*
+    :make-runner-for-this-thread
+    :runner-loop :top-loop
+    :enqueue-turn
+    :enqueue-timed
+    :vr-add-io-handler
+    :vr-remove-io-handler
+    
     :label
     :vat :*vat*
-    :runner *runner*
-    :runner-loop :top-loop
     :with-turn
     :establish-vat
     :vat-safe-scope
     :vat-privileged-scope
     :vat-checking
-    :enqueue-turn
-    :enqueue-timed
-    :vr-add-io-handler
-    :vr-remove-io-handler
     
     :sugar-cache-get 
     :sugar-cache-call
