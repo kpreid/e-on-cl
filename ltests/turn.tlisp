@@ -35,11 +35,11 @@
       (sb-sys:fd-stream (sb-sys:fd-stream-fd stream)))
   #-sbcl stream)
 
-#-(and) ;; XXX *TEMPORARILY* disabled because it leaks fds
+#-(and) ;; XXX disabled because it leaks fds. also, the entire io-handler  mechanism has been changed, so...
 (deftest exclusive-io-handler-pound
-  (let* ((vat (make-instance 'vat :label "exclusive-io-handler-pound test"))
+  (let* ((*runner* (make-runner-for-this-thread))
+         (vat (make-instance 'vat :label "exclusive-io-handler-pound test"))
          (*vat* vat)
-         (group (make-instance 'io-handler-exclusion-group))
          (seen 0)
          (streams 
            (loop for i below 20 collect
@@ -47,8 +47,8 @@
          (handlers (mapcar
                      (lambda (s &aux handler)
                        (setf handler
-                         (add-exclusive-io-handler
-                           group
+                         (vr-add-io-handler
+                           runner
                            (stream-handler-target s)
                            :input
                            (lambda (target)
@@ -56,7 +56,7 @@
                                (read s)
                                ;(warn "got ~S" ...)
                                (incf seen)
-                               (remove-exclusive-io-handler handler))))))
+                               (vr-remove-io-handler handler))))))
                      streams)))
     (unwind-protect
       (block pound
@@ -67,7 +67,7 @@
                    (e<- (e.knot::wrap-function #'task1) |run| (1+ i))))
           (task1 0)
           (top-loop)))
-      (map nil #'remove-exclusive-io-handler handlers))
+      (map nil #'vr-remove-io-handler handlers))
     (values)))
 
 (deftest ordinary-turn-excludes-io
@@ -78,8 +78,7 @@
                                   :runner runner))
          (*vat* vat)
          (unseen 3)
-         (handler (add-exclusive-io-handler 
-                    (elib::handler-exclusion-group runner) 
+         (handler (vr-add-io-handler runner
                     (stream-handler-target *standard-output* #|XXX assuming *standard-output* is always writable - bad assumption|#) 
                     :output 
                     (lambda (target) 
@@ -98,7 +97,7 @@
               (unless (plusp unseen)
                 (return-from done)))))
         (top-loop))
-      (remove-exclusive-io-handler handler))
+      (vr-remove-io-handler handler))
     (values)))
     
 ;;; --- Running multiple vats ---

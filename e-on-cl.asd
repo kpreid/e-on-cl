@@ -32,6 +32,9 @@
             :depends-on ("util" "packages"))
      (:file "runner"
             :depends-on ("base" "util" "packages"))
+     (:file "runner-late"
+            ; runner code that depends on elib/ref definitions
+            :depends-on ("runner" "elib" "sugar"))
      (:file "serve-event"
             ; serve-event-based runner (planned to be sbcl/cmucl only)
             :depends-on ("runner"))

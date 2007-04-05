@@ -8,17 +8,44 @@
 ;; XXX to finish current plans, move e.util serve-event extension code into here
 
 (defclass serve-event-runner (runner)
-  ((handler-group :type io-handler-exclusion-group
-                  :initform (make-instance 'io-handler-exclusion-group)
-                  :reader handler-exclusion-group)
-   (time-queue :type sorted-queue
+  ((time-queue :type sorted-queue
                :initform (make-instance 'sorted-queue))))
 
+(defclass serve-event-deferred-io-handler ()
+  ((stopper :initarg :stopper :reader %sedih-stopper)))
+
 (defmethod vr-add-io-handler ((runner serve-event-runner) target direction function)
-  (add-exclusive-io-handler (handler-exclusion-group runner)
-                            (ref-shorten target)
-                            (ref-shorten direction)
-                            function))
+  ;(format *trace-output* "~&vr-add-io-handler ~S" (list runner target direction function))
+  (setf target (ref-shorten target))
+  (setf direction (ref-shorten direction))
+  (let ((active t)
+        (handler nil))
+    (labels ((install ()
+               ;(format *trace-output* "~&vraih install ~S" (list runner target direction function))
+               (setf handler
+                 (add-io-handler target direction (lambda (target2)
+                   ;(format *trace-output* "~&vraih enqueueing ~S" (list runner target direction function))
+                   (remove-io-handler handler)
+                   (setf handler nil)
+                   (enqueue-turn runner (lambda ()
+                     ;(format *trace-output* "~&vraih reporting ~S ~S" active (list runner target direction function))
+                     (when active
+                       (install)
+                       (with-simple-restart (abort "Abort delivering IO notification for ~A on ~S to ~S." direction target function)
+                         (funcall function target2))))))))))
+      (install))
+    (make-instance 'serve-event-deferred-io-handler 
+      :stopper (lambda () 
+                  ;(format *trace-output* "~&vraih stopper ~S" (list runner target direction function))
+                  (setf active nil)
+                  (when handler
+                    (remove-io-handler handler)
+                    (setf handler nil))
+                  (values)))))
+
+(defmethod vr-remove-io-handler ((handler serve-event-deferred-io-handler))
+  (funcall (%sedih-stopper handler))
+  (values))
 
 (defmethod enqueue-timed ((runner serve-event-runner) time func)
   (with-slots (time-queue) runner
@@ -47,10 +74,7 @@
       (if (queue-null sends)
         (serve-event-with-time-queue time-queue sends)
         (progn
-          (call-with-io-handler-exclusion
-            (dequeue sends)
-            (handler-exclusion-group runner)
-            `(send-queue-in ,runner))
+          (funcall (dequeue sends))
           (serve-event-with-time-queue time-queue sends 0))))))
 
 (defmethod make-runner-for-this-thread ()

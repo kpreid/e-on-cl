@@ -13,9 +13,6 @@
 
 (defgeneric vr-remove-io-handler (handler))
 
-(defmethod vr-remove-io-handler ((handler t))
-  (remove-exclusive-io-handler (ref-shorten handler)))
-
 (defgeneric enqueue-timed (context time func))
 
 (defgeneric runner-loop (runner))
