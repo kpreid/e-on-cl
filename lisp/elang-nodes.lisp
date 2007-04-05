@@ -51,7 +51,7 @@
                                      (e. pd |getOptName|)
                                      (when (<= 0 i ,(1- (length param-types)))
                                        (locally
-                                         (declare (sb-ext:muffle-conditions warning)) ;; workaround for sbcl >= 1.0.3.40 type inference bug
+                                         #+sbcl (declare (sb-ext:muffle-conditions warning)) ;; workaround for sbcl >= 1.0.3.40 type inference bug
                                          (type-specifier-to-guard (elt ',param-types i))))))
                                  'vector)
                                (e. md |getOptResultGuard|))))
