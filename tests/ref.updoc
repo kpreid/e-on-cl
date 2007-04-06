@@ -198,6 +198,23 @@ Ref
 
   ? Ref.isEventual(Ref.promise()[0])
   # value: true
+  
+ optSealedDispatch
+ 
+  For near refs, Ref#optSealedDispatch acts exactly like calling optSealedDispatch on the ref. For non-near refs, it may provide sealed-dispatch communication with the underlying implementation of that ref; see proxy.updoc for tests of this behavior.
+  
+  ? [Ref.optSealedDispatch(def _ { to __optSealedDispatch(x) :any {return x}}, 1)]
+  # value: [1]
+
+  ? [Ref.optSealedDispatch(def _ {}, 1)]
+  # value: [null]
+  
+  ? [Ref.optSealedDispatch(Ref.broken("optSealedDispatch test broken"), 1)]
+  # value: [null]
+
+  ? [Ref.optSealedDispatch(Ref.promise()[0], 1)]
+  # value: [null]
+  
 
 Bugfix test: promise ref not propagating opt-problem correctly
 

@@ -12,7 +12,7 @@ def makeException := <import:org.cubik.cle.prim.makeException>
 def RefAuthor {
   # XXX map args?
   # Stamped rather than audited deep-frozen since DeepFrozen is nonprimitive and uses Ref itself in the course of auditing. XXX have DeepFrozenAuthor use primitives?
-  to run(makePromise, refState, refIsResolved, makeUnconnectedRef, refOptProblem, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
+  to run(makePromise, refState, refIsResolved, makeUnconnectedRef, refOptProblem, refOptSealedDispatch, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
 
     def nbmPrinter(out :TextWriter, ex) implements DeepFrozenStamp {
       out.quote(ex.getSpecimen())
@@ -83,6 +83,10 @@ def RefAuthor {
         } else {
           throw("not resolved (Ref#fulfillment)")
         }
+      }
+      
+      to optSealedDispatch(ref, brand) :any {
+        refOptSealedDispatch(ref, brand)
       }
     }
   }

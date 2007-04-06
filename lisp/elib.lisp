@@ -155,6 +155,11 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
       tag
       t)))
 
+(defgeneric ref-opt-sealed-dispatch (ref brand)
+  (:documentation "Provides access to the implementation of eventual references, and equivalent to __optSealedDispatch/1 on near references.")
+  (:method ((near t) brand)
+    (e-call-dispatch near :|__optSealedDispatch/1| brand)))
+
 (define-condition message-condition (condition)
   ((recipient :initarg :recipient :initform (error "no recipient") :reader message-condition-recipient)
    (mverb :initarg :mverb :initform (error "no mverb") :reader message-condition-mverb)
@@ -260,6 +265,10 @@ If there is no current vat at initialization time, captures the current vat at t
   (error "ref-shorten not implemented by ~W" (type-of x)))
 (defmethod ref-state ((x ref))
   (error "ref-state not implemented by ~W" (type-of x)))
+(defmethod ref-opt-sealed-dispatch ((ref ref) brand)
+  ;; XXX modify other methods to be like this one, because it's cleaner
+  (declare (ignore brand))
+  (error "~S not implemented for ~W" 'ref-opt-sealed-dispatch (type-of ref)))
 (defmethod e-call-dispatch ((x ref) mverb &rest args)
   (declare (ignore mverb args))
   (error "e-call-dispatch not implemented by ~W" (type-of x)))
@@ -302,6 +311,9 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmethod ref-state ((ref promise-ref))
   (values 'eventual nil))
+
+(defmethod ref-opt-sealed-dispatch ((ref promise-ref) brand)
+  nil)
 
 (defmethod e-call-dispatch ((ref promise-ref) mverb &rest args)
   (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
@@ -370,6 +382,9 @@ If there is no current vat at initialization time, captures the current vat at t
 (defclass unconnected-ref (broken-ref)
   ())
 
+(defmethod ref-opt-sealed-dispatch ((ref unconnected-ref) brand)
+  nil)
+
 ;;; - promises - 
 
 (defclass local-resolver (vat-checking)
@@ -422,6 +437,8 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmethod ref-state ((ref forwarding-ref))
   (ref-state (forwarding-ref-target ref)))
+(defmethod ref-opt-sealed-dispatch ((ref forwarding-ref) brand)
+  (ref-opt-sealed-dispatch (forwarding-ref-target ref) brand))
 
 (defmethod e-call-dispatch ((ref forwarding-ref) mverb &rest args)
   (apply #'e-call-dispatch (forwarding-ref-target ref) mverb args))

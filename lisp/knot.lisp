@@ -498,6 +498,8 @@
                    :stamps (list +deep-frozen-stamp+))
     (wrap-function #'ref-opt-problem
                    :stamps (list +deep-frozen-stamp+))
+    (wrap-function #'ref-opt-sealed-dispatch
+                   :stamps (list +deep-frozen-stamp+))
     'elib:broken
     'elib:near
     'elib:eventual

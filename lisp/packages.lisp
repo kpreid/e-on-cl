@@ -127,6 +127,7 @@
     :ref-is-resolved
     :ref-shorten
     :ref-opt-problem
+    :ref-opt-sealed-dispatch
     :make-promise
     :make-unconnected-ref
     :with-result-promise

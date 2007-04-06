@@ -11,7 +11,8 @@ User-defined Far refs and remote promises
 --- Far Ref
 
   ? var i := 0
-  # value: 0
+  > def exampleBrand {}
+  > null
 
   ? def farHandler {
   >   to handleSend(verb, args) :any {
@@ -21,6 +22,12 @@ User-defined Far refs and remote promises
   >   to handleSendOnly(verb, args) :any {
   >     println(`handleSendOnly $verb $args`)
   >     return [i += 1, verb, args] # should not be returned from the proxy
+  >   }
+  >   to handleOptSealedDispatch(brand) {
+  >     println(`handleOptSealedDispatch $brand`)
+  >     if (brand == exampleBrand) {
+  >       return def brandResult {}
+  >     }
   >   }
   > }
   # value: <farHandler>
@@ -183,8 +190,22 @@ Becoming-same resolutions: A Far ref must not change its identity, as it is reso
   ? makeProxy(Ref.promise(), Ref.promise()[0], false)
   # problem: <NotSettledException: not settled: proxy handler [<Promise>, <Resolver>]>
 
+--- optSealedDispatch
+
+  ? [Ref.optSealedDispatch(remote, exampleBrand)]
+  # value: [null]
+  
+  ? [Ref.optSealedDispatch(makeProxy(farHandler, Ref.promise()[0], true), exampleBrand)]
+  # stdout: handleOptSealedDispatch <exampleBrand>
+  #         
+  
+  # value: [<brandResult>]
+
+  ? [Ref.optSealedDispatch(makeProxy(farHandler, Ref.promise()[0], false), exampleBrand)]
+  # stdout: handleOptSealedDispatch <exampleBrand>
+  #         
+  
+  # value: [<brandResult>]
 
 XXX explicitly test hash code is preserved across breakage, so hash tables/TraversalKey etc. work
-XXX sends
-XXX optSealedDispatch/conformTo
 XXX resolution to near/other-promise targets

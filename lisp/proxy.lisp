@@ -87,6 +87,11 @@
 (defmethod ref-state ((ref proxy-ref))
   (error "ref-state not overridden for a proxy-ref"))
 
+(defmethod ref-opt-sealed-dispatch ((ref proxy-ref) brand)
+  (if (%maybe-resolve-proxy ref)
+    (apply #'ref-opt-sealed-dispatch ref brand)
+    (e. (%proxy-ref-handler ref) |handleOptSealedDispatch| brand)))
+
 (defmethod e-call-dispatch ((ref proxy-ref) mverb &rest args)
   (if (%maybe-resolve-proxy ref)
     (apply #'e-call-dispatch ref mverb args)
@@ -129,6 +134,11 @@
 (defmethod %resolve-proxy ((proxy remote-promise) resolution)
   "If we're a remote promise, then we can just become a forwarder."
   (change-class proxy 'forwarding-ref :target resolution))
+
+
+(defmethod ref-opt-sealed-dispatch ((ref disconnected-ref) brand)
+  nil)
+
 
 (defobject +the-make-proxy+ "org.erights.e.elib.ref.makeProxy"
     (:stamped +deep-frozen-stamp+)
