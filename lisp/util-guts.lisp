@@ -175,7 +175,7 @@
 
 #+ccl
 (defun external-process-exit-code (process)
-  (nth-value 2 (ccl:external-process-status process)))
+  (nth-value 1 (ccl:external-process-status process)))
 
 (unless (fboundp 'run-program)
   (defun run-program (&rest args)
