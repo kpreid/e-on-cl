@@ -6,7 +6,7 @@
 ; --- Setting up genhash ---
 
 (with-simple-restart (continue "Skip hash function registration.")
-  (register-hash-function 'samep #'same-hash #'samep))
+  (register-test-designator 'samep #'same-hash #'samep))
 
 ;;; --- Text position algorithms for Twine ---
 
@@ -601,7 +601,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   (declare (ignore slot-names))
   (unless (slot-boundp this 'table)
     (with-slots (table keys) this
-      (setf table (make-generic-hashtable :test 'samep))
+      (setf table (make-generic-hash-table :test 'samep))
       (loop for key across keys
             for i from 0
             do (setf (hashref key table) i)))))
@@ -628,8 +628,8 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defgeneric ensure-storage (this))
 
-(defun copy-samep-genhash (old &aux (new (make-generic-hashtable :test 'samep)))
-  (map-generic-hash #'(lambda (k v) (setf (hashref k new) v)) old)
+(defun copy-samep-genhash (old &aux (new (make-generic-hash-table :test 'samep)))
+  (hashmap #'(lambda (k v) (setf (hashref k new) v)) old)
   new)
 
 (defclass genhash-flex-map-impl (vat-checking)
@@ -639,7 +639,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
    (snapshot    :initform nil
                 :documentation "If non-nil, then reads should be redirected to this ConstMap (currently always genhash-const-map-impl). Writes should cause its state to be copied into new table, keys, and values.")
    (table       :initarg :table
-                :initform (make-generic-hashtable :test 'samep))
+                :initform (make-generic-hash-table :test 'samep))
    (keys        :initform (make-array 0 :fill-pointer 0 :adjustable t)
                 :type (or null (and vector 
                                     (satisfies adjustable-array-p)
@@ -792,7 +792,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
            (closed nil)
            (keys   (make-array 4 :adjustable t :fill-pointer 0))
            (values (make-array 4 :adjustable t :fill-pointer 0))
-           (table  (make-generic-hashtable :test 'samep)))
+           (table  (make-generic-hash-table :test 'samep)))
       (e. iteratable |iterate| 
         (e-lambda "org.cubik.cle.prim.ConstMapConstructionIterator" ()
           (:|run| (key value)
