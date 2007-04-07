@@ -48,7 +48,6 @@
     (if (samep *vat* (vat this))
       (unwrap-boot-ref this)
       (efuncall fail)))
-  (:|asProxyIdentity/0| 'identity)
   (:|run| (this message)
     (assert (deep-sharable-p message))
     ;; relies on enqueue-turn being safe to call from the wrong thread

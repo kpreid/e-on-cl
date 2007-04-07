@@ -55,8 +55,6 @@ For testing, we define boot-refs to local objects, and boot-refs to faked remote
 >       out.print(">")
 >     }
 >     to unwrap(fail) { fail() }
->     # XXX remove asProxyIdentity
->     to asProxyIdentity() { return entropy.nextSwiss() }
 >     to run(msg) {
 >       println(`message for $id: $msg`)
 >       for r in messageWaitResolvers { r.resolve(null) }
