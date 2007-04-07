@@ -31,9 +31,10 @@
 
   ; XXX these are the double-float versions - make this explicit
   (defconstant |NaN| 
-    (or #+(and sbcl ppc)
+    (or #+sbcl 
+        (ignore-errors
           (with-appropriate-floating-point-rules
-            (- sb-ext:double-float-positive-infinity sb-ext:double-float-positive-infinity))
+            (- sb-ext:double-float-positive-infinity sb-ext:double-float-positive-infinity)))
         '|NaN|)
     "The double-float Not-a-Number value if available, or a symbol.")
   (defconstant |Infinity|
