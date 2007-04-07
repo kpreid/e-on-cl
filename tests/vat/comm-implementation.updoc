@@ -41,6 +41,7 @@ For testing, we define boot-refs to local objects, and boot-refs to faked remote
 >       out.quote(o)
 >       out.print(">")
 >     }
+>     to unwrap(_) { return o }
 >     to run(msg) { testLink.receive(o, msg) }
 >   }
 > }
@@ -53,6 +54,8 @@ For testing, we define boot-refs to local objects, and boot-refs to faked remote
 >       out.quote(id)
 >       out.print(">")
 >     }
+>     to unwrap(fail) { fail() }
+>     # XXX remove asProxyIdentity
 >     to asProxyIdentity() { return entropy.nextSwiss() }
 >     to run(msg) {
 >       println(`message for $id: $msg`)
@@ -219,6 +222,22 @@ Incoming pass-by-construction, broken call:
 # problem: not synchronously callable: <Far ref>.add(1)
 XXX fix Updoc so it can report errors in sealed problems
 
+--- Shortening ---
+
+When the link sends one of its own proxies, it should send the underlying boot-ref.
+
+? def otherRemote := testLink.proxy(asRemote("shorteningTest"), false)
+# value: <Far ref>
+
+? interp.waitAtTop(def r := testRef <- expectNear(otherRemote)); null
+# stdout: message for foo: ["expectNear", [["proxy", <remote bootRef "shorteningTest">]], ["proxy", <local bootRef <Resolver>>]]
+#         
+
+When the link receives a boot-ref to an object in its vat, it should unserialize as the near referent.
+
+? testLink.receive(def shouldBeNear, ["resolve", [["proxy", asBootRef(1)]]])
+? shouldBeNear
+# value: 1
 
 --- Cycles ---
 

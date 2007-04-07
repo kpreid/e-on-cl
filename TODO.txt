@@ -37,6 +37,7 @@ Big features:
   - Pluribus
 
 Code cleanups not marked in the code:
+  - See if makeSharedRefLink.emaker is improved by not using deSubgraphKit. We'd have to reimplement object graph walking, but wouldn't have to contort to fit Data-E.
   - rename tables2.lisp now that elib-tables.lisp is gone
   - make sure we have vm.updoc tests for rebinding boundaries' presence and absence
 

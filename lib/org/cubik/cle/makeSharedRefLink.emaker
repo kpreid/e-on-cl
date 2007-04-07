@@ -6,6 +6,7 @@ pragma.syntax("0.9")
 def deSubgraphKit := <elib:serial.deSubgraphKit>
 def makeCycleBreaker := <elib:tables.makeCycleBreaker>
 def makeProxy := <elib:ref.makeProxy>
+def makeBrand := <elib:sealing.makeBrand>
 
 def mapL(f, l) {
   def out := [].diverge()
@@ -16,6 +17,9 @@ def mapL(f, l) {
 def makeSharedRefLink implements ExitViaHere { # implements DeepFrozen
   to run(Passable, MyPassByConstruction, asBootRef) {
     def sharedRefLink
+    
+    def [proxySealer, proxyUnsealer] := makeBrand("shared-ref link")
+    def proxyBrand := proxySealer.getBrand()
     
     def passesFlex := [].asMap().diverge()
     var lastPassId := -1
@@ -56,7 +60,8 @@ def makeSharedRefLink implements ExitViaHere { # implements DeepFrozen
       to optUncall(r) {
         def passId := (lastPassId += 1)
         def kind := Ref.isResolved(r).pick("proxy", "promise")
-        passesFlex.put(passId, [kind, asBootRef(r)], true)
+        def bootRef := if (Ref.optSealedDispatch(r, proxyBrand) =~ box :notNull) { proxyUnsealer.unseal(box) } else { asBootRef(r) }
+        passesFlex.put(passId, [kind, bootRef], true)
         return [sharer, "run", [passId]]
       }
     }
@@ -129,11 +134,11 @@ def makeSharedRefLink implements ExitViaHere { # implements DeepFrozen
     return bind sharedRefLink := {def sharedRefLink {
 
       to proxy(bootRef :Passable, isPromise :boolean) {
+        escape nonlocal {
+          return bootRef.unwrap(nonlocal)
+        }
+        
         def handler {
-
-          to handleResolution(_) {}
-          to reactToGC() {}
-
           to handleSend(verb :String, args :List) {
             bootRef <- ([verb,
                          mapL(recog, args),
@@ -145,6 +150,12 @@ def makeSharedRefLink implements ExitViaHere { # implements DeepFrozen
             bootRef <- ([verb,
                          mapL(recog, args)])
             flushPasses()
+          }
+          
+          to handleOptSealedDispatch(brand) {
+            if (brand == proxyBrand) {
+              return proxySealer.seal(bootRef)
+            }
           }
         }
         

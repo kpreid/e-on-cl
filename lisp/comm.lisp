@@ -43,6 +43,11 @@
     (e. tw |print| (vat this))
     (e. tw |write| ">")
     nil)
+  (:|unwrap| (this fail)
+    "If this boot-ref contains a reference which belongs to the vat in which this method is invoked, returns that reference; otherwise returns fail()."
+    (if (samep *vat* (vat this))
+      (unwrap-boot-ref this)
+      (efuncall fail)))
   (:|asProxyIdentity/0| 'identity)
   (:|run| (this message)
     (assert (deep-sharable-p message))
