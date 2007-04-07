@@ -109,6 +109,13 @@ def makeBrandAuthor { # not DeepFrozen, for dependencies
             def box :BoxGuard exit optEjector := specimen
             return box._offerContent(key)
           }
+          
+          /** If the ref responds non-null to Ref.optSealedDispatch(ref, brand), then returns a one-element tuple of the unsealing of the response; otherwise returns null. */
+          to amplify(ref :any) :nullOk[Tuple[any]] {
+            if (Ref.optSealedDispatch(ref, brand) =~ response :notNull) {
+              return [unsealer.unseal(response)]
+            }
+          }
         }
         
         def brandKit implements DeepFrozenWhichever {

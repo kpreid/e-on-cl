@@ -6,3 +6,37 @@ Testing that the makeBrand implementation is in fact DeepFrozen. Ordinary makeBr
 ? <import:org.erights.e.elib.sealing.makeBrandAuthor>(DeepFrozen)
 # value: <makeBrand>
 
+? def makeBrand := <elib:sealing.makeBrand>
+# value: <makeBrand>
+
+? def [aSealer, aUnsealer] := makeBrand("a")
+# value: <a brand kit>
+
+? def amplifiable {
+>   to __optSealedDispatch(brand) :any {
+>     if (brand == aSealer.getBrand()) {
+>       return aSealer.seal("hi")
+>     }
+>   }
+> }
+# value: <amplifiable>
+
+? def brokenAmp {
+>   to __optSealedDispatch(brand) :any {
+>     if (brand == aSealer.getBrand()) {
+>       return "grr"
+>     }
+>   }
+> }
+# value: <brokenAmp>
+
+? [aUnsealer.amplify(amplifiable)]
+# value: [["hi"]]
+
+? [aUnsealer.amplify("unamplifiable")]
+# value: [null]
+
+? [aUnsealer.amplify(brokenAmp)]
+# problem: "grr" is not a a sealed box
+
+XXX test basic sealing/unsealing
