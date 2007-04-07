@@ -528,7 +528,7 @@ XXX make precedence values available as constants"
 
 #-e.syntax::local-parser
 (progn
-  (defvar *parse-cache-hash* (make-generic-hashtable :test 'samep))
+  (defvar *parse-cache-hash* (make-generic-hash-table :test 'samep))
   (defvar *parser-process*))
 
 #-e.syntax::local-parser
@@ -1075,9 +1075,9 @@ XXX make precedence values available as constants"
     (format nil "Writing parse cache to ~A" (enough-namestring (pathname stream)))
     (efun ()
       (let ((data '()))
-        (map-generic-hash (lambda (source tree) 
-                            (push (list source tree) data))
-                          *parse-cache-hash*)
+        (hashmap (lambda (source tree) 
+                   (push (list source tree) data))
+                 *parse-cache-hash*)
         (with-standard-io-syntax
           (let ((*package* (find-package :e.elang.vm-node)))
             (write data :stream stream))))
