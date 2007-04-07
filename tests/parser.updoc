@@ -45,7 +45,7 @@
 EOF parse errors
 
   ? def broken := makeLALR1Parser("_", 1, [2], [[1, [2]]], ["tokenFunction" => identityValues]).parse([2, 2].asStream())
-  # value: <ref broken by problem: parse error: expected one of [EOF], got 2>
+  # value: <ref broken by problem: parse error: expected one of [YACC-EOF-SYMBOL], got 2>
 
 Actions
 
@@ -91,7 +91,7 @@ quasi-parser
 EOF parse errors from quasi-parser
 
   ? def broken := lalr1`"eoftest" := ${"x"}.`.parse([["x", null], ["x", null]].asStream())
-  # value: <ref broken by problem: parse error: expected one of [EOF], got "x">
+  # value: <ref broken by problem: parse error: expected one of [YACC-EOF-SYMBOL], got "x">
 
 bad terminal
   ? lalr1`"_" := ${"x"}.`.parse([["y", null]].asStream())
