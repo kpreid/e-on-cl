@@ -260,7 +260,7 @@
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeFlexMap|      elib:+the-make-flex-map+)
     (:|makeScope|        +the-make-scope+)
-    (:|makeSortedQueue|  elib:+the-make-sorted-queue+)
+    (:|makePriorityQueue| elib:+the-make-priority-queue+)
     (:|makeStaticScope|  elang:+the-make-static-scope+)
     (:|makeTextWriter|   elib:+the-make-text-writer+)
     (:|makeVarSlot|      +the-make-var-slot+)

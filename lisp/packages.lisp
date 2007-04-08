@@ -49,15 +49,15 @@
     :nreverse-here
     
     :queue
-    :sorted-queue
+    :priority-queue
     :enqueue
     :dequeue
     :queue-null
-    :sorted-queue-peek
-    :sorted-queue-snapshot
-    :sorted-queue-pop
-    :sorted-queue-put
-    :sorted-queue-length
+    :priority-queue-peek
+    :priority-queue-snapshot
+    :priority-queue-pop
+    :priority-queue-put
+    :priority-queue-length
     
     :class-precedence-list
     :class-finalized-p
@@ -213,7 +213,7 @@
     :+the-any-map-guard+
     :+the-make-list+
     :+the-make-int+
-    :+the-make-sorted-queue+    
+    :+the-make-priority-queue+    
     
     :e-quote
     :e-print
@@ -286,7 +286,7 @@
   elib:+the-make-text-writer+
   elib:+the-make-list+
   elib:+the-make-int+
-  elib:+the-make-sorted-queue+
+  elib:+the-make-priority-queue+
 
   elib:+the-e+
 

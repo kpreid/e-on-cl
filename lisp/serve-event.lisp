@@ -9,8 +9,8 @@
 #+(or sbcl cmu) (progn
 
 (defclass serve-event-runner (runner)
-  ((time-queue :type sorted-queue
-               :initform (make-instance 'sorted-queue))))
+  ((time-queue :type priority-queue
+               :initform (make-instance 'priority-queue))))
 
 (defclass serve-event-deferred-io-handler ()
   ((stopper :initarg :stopper :reader %sedih-stopper)))
@@ -50,13 +50,13 @@
 
 (defmethod enqueue-timed ((runner serve-event-runner) time func)
   (with-slots (time-queue) runner
-    (sorted-queue-put time-queue time func)))
+    (priority-queue-put time-queue time func)))
 
 (defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
   (destructuring-bind (&optional qtime &rest qfunc)
-      (sorted-queue-peek time-queue (lambda () nil))
+      (priority-queue-peek time-queue (lambda () nil))
     (when (and qtime (<= qtime (get-fine-universal-time)))
-      (sorted-queue-pop time-queue)
+      (priority-queue-pop time-queue)
       (enqueue immediate-queue qfunc)
       (return-from serve-event-with-time-queue t))
     (if qtime

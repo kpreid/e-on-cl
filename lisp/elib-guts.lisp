@@ -365,30 +365,30 @@
     (cl-type-fq-name type)
     (cl-type-parameters type nil)))
   
-; --- sorted queue ---
+; --- priority queue ---
 
-(defobject +the-make-sorted-queue+ "org.cubik.cle.prim.makeSortedQueue" ()
+(defobject +the-make-priority-queue+ "org.cubik.cle.prim.makePriorityQueue" ()
   (:|run| ()
-    (make-instance 'sorted-queue)))
+    (make-instance 'priority-queue)))
 
-(def-vtable sorted-queue
+(def-vtable priority-queue
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "<sorted queue of " (sorted-queue-length this) ">"))
+    (e. tw |print| "<priority queue of " (priority-queue-length this) ">"))
   (:|peek| (this absent-thunk)
     (block nil
-      (let ((p (sorted-queue-peek this (lambda () (return (efuncall absent-thunk))))))
+      (let ((p (priority-queue-peek this (lambda () (return (efuncall absent-thunk))))))
         (vector (car p) (cdr p)))))
   (:|pop| (this)
-    (let ((p (sorted-queue-pop this)))
+    (let ((p (priority-queue-pop this)))
       (vector (car p) (cdr p))))
   (:|put| (this key value)
     (e-coercef key 'real)
-    (sorted-queue-put this key value))
+    (priority-queue-put this key value))
   (:|asList| (this)
     (map 'vector 
          #'(lambda (c) (vector (car c) (cdr c)))
-         (sorted-queue-snapshot this))))
+         (priority-queue-snapshot this))))
 
 ; --- !!! SBCL-guts-specific optimization gimmicks ---
 

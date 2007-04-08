@@ -33,35 +33,35 @@
   (with-lock-held ((%queue-lock queue))
     (not (or (queue-out queue) (queue-in queue)))))
 
-;;; --- sorted queue ---
+;;; --- priority queue ---
 
-(defclass sorted-queue ()
+(defclass priority-queue ()
   ((elements :type list :initform nil))
-  (:documentation "A mutable queue in which entries have numeric keys and are inserted only in their sorted positions in the queue."))
+  (:documentation "A mutable priority queue with numeric priorities."))
   
-(defgeneric sorted-queue-peek (q absent-thunk))
-(defgeneric sorted-queue-snapshot (q))
-(defgeneric sorted-queue-pop (q))
-(defgeneric sorted-queue-put (q key value))
-(defgeneric sorted-queue-length (q))
+(defgeneric priority-queue-peek (q absent-thunk))
+(defgeneric priority-queue-snapshot (q))
+(defgeneric priority-queue-pop (q))
+(defgeneric priority-queue-put (q key value))
+(defgeneric priority-queue-length (q))
 
-(defmethod sorted-queue-peek ((q sorted-queue) absent-thunk)
+(defmethod priority-queue-peek ((q priority-queue) absent-thunk)
   (with-slots (elements) q
     (if elements
       (first elements)
       (funcall absent-thunk))))
 
-(defmethod sorted-queue-pop ((q sorted-queue))
+(defmethod priority-queue-pop ((q priority-queue))
   (with-slots (elements) q
     (if elements
       (pop elements)
       (error "empty queue"))))
       
-(defmethod sorted-queue-snapshot ((q sorted-queue))
+(defmethod priority-queue-snapshot ((q priority-queue))
   (with-slots (elements) q
     (copy-list elements)))
     
-(defmethod sorted-queue-put ((q sorted-queue) key value)
+(defmethod priority-queue-put ((q priority-queue) key value)
   #-sbcl (declare (real key)) ; apparent PCL bug triggered
   (with-slots (elements) q
     ;XXX more efficient than linear?
@@ -76,6 +76,6 @@
             finally (error "fell off end of queue")))
     nil))
 
-(defmethod sorted-queue-length ((q sorted-queue))
+(defmethod priority-queue-length ((q priority-queue))
   (with-slots (elements) q
     (length elements)))

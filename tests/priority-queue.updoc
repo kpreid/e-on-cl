@@ -1,8 +1,8 @@
-  ? def makeSortedQueue := <import:org.cubik.cle.prim.makeSortedQueue>
-  # value: <makeSortedQueue>
+  ? def makePriorityQueue := <import:org.cubik.cle.prim.makePriorityQueue>
+  # value: <makePriorityQueue>
   
-  ? def q := makeSortedQueue()
-  # value: <sorted queue of 0>
+  ? def q := makePriorityQueue()
+  # value: <priority queue of 0>
   
   ? q.put(10, 'a')
   
