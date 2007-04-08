@@ -367,37 +367,6 @@
   
 ; --- sorted queue ---
 
-(defmethod sorted-queue-peek ((q sorted-queue) absent-thunk)
-  (with-slots (elements) q
-    (if elements
-      (first elements)
-      (funcall absent-thunk))))
-
-(defmethod sorted-queue-pop ((q sorted-queue))
-  (with-slots (elements) q
-    (if elements
-      (pop elements)
-      (error "empty queue"))))
-      
-(defmethod sorted-queue-snapshot ((q sorted-queue))
-  (with-slots (elements) q
-    (copy-list elements)))
-    
-(defmethod sorted-queue-put ((q sorted-queue) key value)
-  #-sbcl (declare (real key)) ; apparent PCL bug triggered
-  (with-slots (elements) q
-    ;XXX more efficient than linear?
-    (if (or (null elements) (< key (car (first elements))))
-      (push (cons key value) elements)
-      (loop for prev = elements then (rest prev)
-            while prev
-            do (when (or (null (rest prev))
-                         (< key (car (second prev))))
-                 (push (cons key value) (rest prev))
-                 (return))
-            finally (error "fell off end of queue")))
-    nil))
-
 (defobject +the-make-sorted-queue+ "org.cubik.cle.prim.makeSortedQueue" ()
   (:|run| ()
     (make-instance 'sorted-queue)))
@@ -405,7 +374,7 @@
 (def-vtable sorted-queue
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| "<sorted queue of " (length (slot-value this 'elements)) ">"))
+    (e. tw |print| "<sorted queue of " (sorted-queue-length this) ">"))
   (:|peek| (this absent-thunk)
     (block nil
       (let ((p (sorted-queue-peek this (lambda () (return (efuncall absent-thunk))))))

@@ -5,7 +5,7 @@
 
 (cl:defpackage :e.util
   (:nicknames :e-util) ; XXX remove use of this nickname
-  (:use :cl)
+  (:use :cl :bordeaux-threads)
   
   #.(cl:let ((cl:package (cl:some #'cl:find-package '( 
                #+sbcl :sb-mop
@@ -47,6 +47,17 @@
     :without-prefix
     :popping-equal-case
     :nreverse-here
+    
+    :queue
+    :sorted-queue
+    :enqueue
+    :dequeue
+    :queue-null
+    :sorted-queue-peek
+    :sorted-queue-snapshot
+    :sorted-queue-pop
+    :sorted-queue-put
+    :sorted-queue-length
     
     :class-precedence-list
     :class-finalized-p

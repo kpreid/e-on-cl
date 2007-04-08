@@ -49,49 +49,6 @@
   (define-modify-macro e-coercef (result-type &optional ejector)
     e-coerce))
 
-; --- plain queue implementation ---
-
-; used for vat queues
-
-; xxx since this is using mutable conses anyway, should we use a mutate-the-tail approach instead of the current mostly-functional queue?
-;     is there a queue library available?
-
-(defgeneric enqueue (queue value))
-(defgeneric dequeue (queue))
-(defgeneric queue-null (queue))
-
-(defclass queue ()
-  ((lock :initform (make-lock) :reader %queue-lock)
-   (in  :initform () :accessor queue-in)
-   (out :initform () :accessor queue-out)))
-   
-(defmethod enqueue ((queue queue) value)
-  (with-lock-held ((%queue-lock queue))
-    (push value (queue-in queue)))
-  (values))
-
-(defmethod dequeue ((queue queue))
-  (with-lock-held ((%queue-lock queue))
-    (unless (queue-out queue)
-      (setf (queue-out queue) (reverse (queue-in queue))
-            (queue-in queue)  '()))
-    (pop (queue-out queue))))
-
-(defmethod queue-null ((queue queue))
-  (with-lock-held ((%queue-lock queue))
-    (not (or (queue-out queue) (queue-in queue)))))
-
-; --- sorted queue ---
-
-(defclass sorted-queue ()
-  ((elements :type list :initform nil))
-  (:documentation "A mutable queue in which entries have numeric keys and are inserted only in their sorted positions in the queue."))
-  
-(defgeneric sorted-queue-peek (q absent-thunk))
-(defgeneric sorted-queue-snapshot (q))
-(defgeneric sorted-queue-pop (q))
-(defgeneric sorted-queue-put (q key value))
-
 ; --- condition rules ---
 
 (deftype e-catchable-condition () 'error)

@@ -28,16 +28,18 @@
             :depends-on ("compile-options" "packages"))
      (:file "util-guts"
             :depends-on ("util"))
+     (:file "queues"
+            :depends-on ("packages"))
      (:file "base"
             :depends-on ("util" "packages"))
      (:file "runner"
-            :depends-on ("base" "util" "packages"))
+            :depends-on ("base" "util" "packages" "queues"))
      (:file "runner-late"
             ; runner code that depends on elib/ref definitions
             :depends-on ("runner" "elib" "sugar"))
      (:file "serve-event"
             ; serve-event-based runner (planned to be sbcl/cmucl only)
-            :depends-on ("runner"))
+            :depends-on ("runner" "queues"))
      (:file "elib"
             :depends-on ("runner" "compile-options" "util" "base" "packages"))
      (:file "sugar" 
@@ -47,7 +49,7 @@
             :depends-on ("elib" "sugar"))
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
-            :depends-on ("elib" "sugar"))
+            :depends-on ("elib" "sugar" "queues"))
      (:file "proxy"
             :depends-on ("elib" "sugar"))
      (:file "same"
