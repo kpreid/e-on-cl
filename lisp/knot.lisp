@@ -248,7 +248,7 @@
     (:|makeProxy|        +the-make-proxy+)
     
     ;; exceptions
-    (:|makeCoercionFailure| e.elib::+the-make-coercion-failure+)
+    (:|makeCoercionFailure| +the-make-coercion-failure+)
     (:|makeException|    +the-make-exception+)
     (:|makeStringException| e.elib::+the-make-string-error+)
     (:|StructureException| (type-specifier-to-guard 'e-structure-exception))
@@ -510,9 +510,9 @@
   (and (typep specimen 'function)
        (not (approvedp +selfless-stamp+ specimen))))
 
-(defun make-caching-emaker-loader (&optional (source *emaker-search-list*))
+(defun make-caching-emaker-loader (source)
   (let* ((load-functions
-           (mapcar #'make-load-function-from-desc *emaker-search-list*))
+           (mapcar #'make-load-function-from-desc source))
          (deep-frozen-cache (make-hash-table :test #'equal))
          (unget-table (tg:make-weak-hash-table :weakness :key :test #'eq)))
     (e-lambda "org.cubik.cle.internal.emakerImporter"
@@ -544,7 +544,7 @@
               result)))))))
 
 (defun default-safe-scope-roots ()
-  (let* ((emaker-importer (make-caching-emaker-loader)))
+  (let* ((emaker-importer (make-caching-emaker-loader *emaker-search-list*)))
     (make-scope "__defaultSafeScopeRoots.thisShouldNotBeVisible$"
       `(("&import__uriGetter"  ,(make-lazy-apply-slot (lambda ()
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles

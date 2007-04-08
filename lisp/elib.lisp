@@ -527,21 +527,21 @@ If there is no current vat at initialization time, captures the current vat at t
       (e. resolver |resolve| 
         (handler-case-with-backtrace
           (apply #'e-call-dispatch rec mverb args)
-          (error (p b)
+          (error (problem backtrace)
             ;; XXX using e printing routines here is invoking objects outside a proper turn; do one of:
             ;;   (a) CL print instead
             ;;   (b) make printing the error done in yet another turn (possible object's-print-representation-has-changed problem)
-            (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))
-            (make-unconnected-ref (transform-condition-for-e-catch p :backtrace b)))))))
+            (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) problem))
+            (make-unconnected-ref (transform-condition-for-e-catch problem :backtrace backtrace)))))))
     promise))
 
 (defmethod e-send-only-dispatch (rec mverb &rest args)
   ;; NOTE: edit this in parallel with e-send-dispatch above
   (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-only-dispatch default case was called with a non-NEAR receiver")
   (enqueue-turn *vat* (lambda ()
-    (handler-case-with-backtrace
+    (handler-case
       (apply #'e-call-dispatch rec mverb args)
-      (error (p b)
+      (error (p)
         (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))))))
   (values))
 
@@ -743,10 +743,12 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
     #-e.method-lambdas
       (declare (ignore type-name))
-    (let ((args-form 
-           `(if (and ',(keywordp verb-name) *exercise-reffiness*) 
-              (reffify-args ,args-sym)
-              ,args-sym)))
+    (let ((args-form
+           (if (keywordp verb-name)
+             `(if *exercise-reffiness*
+                (reffify-args ,args-sym)
+                ,args-sym)
+             args-sym)))
       #+e.method-lambdas 
         `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) 
                 ,@prefix-args ,args-form)

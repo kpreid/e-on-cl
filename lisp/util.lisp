@@ -216,6 +216,7 @@
 
 (defun function-lambda-list (function)
   "Return the lambda list of the given function, or '(&rest <unknown-lambda-list>) if it cannot be determined."
+  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
   (first
     (or
       #+sbcl

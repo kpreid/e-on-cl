@@ -172,6 +172,7 @@
     :def-class-opaque
     :cl-type-guard
     :make-e-type-error
+    :+the-make-coercion-failure+
     :type-specifier-to-guard
     :guard-to-type-specifier
     :standard-coerce
@@ -265,6 +266,8 @@
   elib:+the-make-simple-slot+
   elib:+the-make-var-slot+
   elib:+the-make-guarded-slot+
+
+  elib:+the-make-coercion-failure+
 
   elib:+the-any-map-guard+
   elib:+the-make-const-map+

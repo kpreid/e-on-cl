@@ -649,27 +649,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         (declare (ignore e))
         (error "not recognized as an integer: ~A" (e-quote value))))))
 
-; --- Type error pieces - to be moved ---
-
-(defun print-object-with-type (tw specimen)
-  "Print an object with information about its alleged type. Originally written for type-errors."
-  ;; XXX this should be exported
-  (when (eql (ref-state specimen) 'near)
-    (let* ((observed-type (observable-type-of specimen))) 
-      (e. tw |write| "the ")
-      (if (eql observed-type 't)
-        (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
-        (e. tw |print| (cl-type-simple-expr observed-type)))
-      (e. tw |write| " ")))
-  (e. tw |quote| specimen))
-
-(defun make-e-type-error (specimen guard)
-  ;; XXX this is duplicated with +the-make-coercion-failure+
-  (make-instance 'type-error
-    :datum specimen
-    :expected-type (guard-to-type-specifier guard)))
-
-
 ; --- Condition ---
 
 ; XXX the <typename: desc> is inherited from Java-E: consider whether it's the Right Thing
@@ -731,6 +710,23 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; - type-error / CoercionFailure -
 
+(defun print-object-with-type (tw specimen)
+  "Print an object with information about its alleged type. Originally written for type-errors."
+  ;; XXX this should be exported
+  (when (eql (ref-state specimen) 'near)
+    (let* ((observed-type (observable-type-of specimen))) 
+      (e. tw |write| "the ")
+      (if (eql observed-type 't)
+        (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
+        (e. tw |print| (cl-type-simple-expr observed-type)))
+      (e. tw |write| " ")))
+  (e. tw |quote| specimen))
+
+(defun make-e-type-error (specimen guard)
+  (make-condition 'type-error
+    :datum specimen
+    :expected-type (guard-to-type-specifier guard)))
+
 (def-fqn type-error "org.cubik.cle.fail.CoercionFailure")
 
 (def-vtable type-error
@@ -755,11 +751,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
      :stamped +standard-graph-exit-stamp+
      :stamped +thread-sharable-stamp+)
   (:|asType| () (type-specifier-to-guard 'type-error))
-  (:|run| (specimen guard)
-    (make-condition
-      'type-error
-      :datum specimen
-      :expected-type (guard-to-type-specifier guard))))
+  (:|run/2| 'make-e-type-error))
 
 ; - -
 
