@@ -1,0 +1,19 @@
+; Copyright 2007 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.test.util
+  (:use :cl :e.lisp-test :bordeaux-threads :e.util))
+(in-package :e.test.util)
+
+(when (handler-case 
+        (progn (make-thread (lambda ()) :name "threading existence test")
+               t)
+        (error () nil))
+
+  (deftest queue-unblocks
+    (let ((q (make-instance 'queue)))
+      (make-thread (lambda () (sleep 1) (enqueue q 1)))
+      (dequeue-blocking q))
+    1)
+
+  #||#) ; end WHEN threads available

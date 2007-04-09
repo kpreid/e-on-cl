@@ -10,16 +10,20 @@
 
 (defgeneric enqueue (queue value))
 (defgeneric dequeue (queue))
+(defgeneric dequeue-blocking (queue))
 (defgeneric queue-null (queue))
 
 (defclass queue ()
-  ((lock :initform (make-lock) :reader %queue-lock)
+  ((lock :initform (make-recursive-lock) :reader %queue-lock)
+   (nonempty-condition :initform (make-condition-variable)
+                       :reader %queue-nonempty-condition)
    (in  :initform () :accessor queue-in)
    (out :initform () :accessor queue-out)))
    
 (defmethod enqueue ((queue queue) value)
   (with-lock-held ((%queue-lock queue))
     (push value (queue-in queue)))
+  (condition-notify (%queue-nonempty-condition queue))
   (values))
 
 (defmethod dequeue ((queue queue))
@@ -28,6 +32,14 @@
       (setf (queue-out queue) (reverse (queue-in queue))
             (queue-in queue)  '()))
     (pop (queue-out queue))))
+
+(defmethod dequeue-blocking ((queue queue))
+  (with-lock-held ((%queue-lock queue))
+    (or (dequeue queue)
+        (progn
+          (condition-wait (%queue-nonempty-condition queue) 
+                          (%queue-lock queue))
+          (dequeue queue)))))
 
 (defmethod queue-null ((queue queue))
   (with-lock-held ((%queue-lock queue))

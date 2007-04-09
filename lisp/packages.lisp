@@ -52,6 +52,7 @@
     :priority-queue
     :enqueue
     :dequeue
+    :dequeue-blocking
     :queue-null
     :priority-queue-peek
     :priority-queue-snapshot
