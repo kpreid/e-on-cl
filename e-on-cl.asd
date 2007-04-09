@@ -28,6 +28,8 @@
             :depends-on ("compile-options" "packages"))
      (:file "util-guts"
             :depends-on ("util"))
+     (:file "bordeaux-threads-patch"
+            :depends-on ("util"))
      (:file "queues"
             :depends-on ("packages"))
      (:file "base"
