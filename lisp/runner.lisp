@@ -17,7 +17,7 @@
 
 (defgeneric runner-loop (runner))
 
-(defgeneric make-runner-for-this-thread ())
+(defgeneric make-runner-for-this-thread (&key label))
 
 (defvar *runner* nil)
 

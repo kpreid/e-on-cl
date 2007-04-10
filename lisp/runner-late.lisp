@@ -6,6 +6,10 @@
 (def-shorten-methods vr-add-io-handler 4)
 (def-shorten-methods vr-remove-io-handler 1)
 
-(defmethod make-runner-for-this-thread ()
-  (or #+(or sbcl cmu) (make-instance 'serve-event-runner)
-      (make-instance 'runner)))
+(defmethod make-runner-for-this-thread (&rest initargs &key &allow-other-keys)
+  (locally ; sb-pcl is confused otherwise
+    (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
+    (apply #'make-instance
+      (or #+(or sbcl cmu) 'serve-event-runner
+          'queue-blocking-runner)
+      initargs)))

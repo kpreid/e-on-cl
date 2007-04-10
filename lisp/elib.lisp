@@ -551,10 +551,10 @@ If there is no current vat at initialization time, captures the current vat at t
                    ;; XXX future improvement: human-formatted time
                    (call-with-turn func vat :label (format nil "~A at time ~A" func time)))))
 
-(defun establish-vat (&rest initargs)
+(defun establish-vat (&rest initargs &key label &allow-other-keys)
   (assert (null *vat*))
   (assert (null *runner*))
-  (setf *runner* (make-runner-for-this-thread))
+  (setf *runner* (make-runner-for-this-thread :label label))
   (setf *vat* (apply #'make-instance 'vat :runner *runner* initargs)))
 
 (defvar *exercise-reffiness* nil
