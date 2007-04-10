@@ -468,7 +468,7 @@
   (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node
         #+abcl :java ; local parser (no cache)
         #-abcl :net.hexapodia.hashtables ; for parse cache
-        )
+        :bordeaux-threads)
   (:export
     +e-printer+
     

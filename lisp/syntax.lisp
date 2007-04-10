@@ -528,6 +528,7 @@ XXX make precedence values available as constants"
 
 #-e.syntax::local-parser
 (progn
+  (defvar *parsing-lock* (make-lock "E parsing"))
   (defvar *parse-cache-hash* (make-generic-hash-table :test 'samep))
   (defvar *parser-process*))
 
@@ -671,17 +672,18 @@ XXX make precedence values available as constants"
     (setf args (mapcar #'convert args)))
   
   (let* ((key (list verb args)))
-    (multiple-value-bind (cached present-p) (hashref key *parse-cache-hash*)
-    (if present-p
-      cached
-      (e. e.knot:+sys-trace+ |doing|
-        (format nil "query-to-java: ~A(~{~A...~^, ~})"
-          verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg)) 
-                       args))
-        (efun ()
-          (let ((answer (call-to-java verb args)))
-            (setf (hashref key *parse-cache-hash*) answer)
-            answer)))))))
+    (with-lock-held (*parsing-lock*)
+      (multiple-value-bind (cached present-p) (hashref key *parse-cache-hash*)
+        (if present-p
+          cached
+          (e. e.knot:+sys-trace+ |doing|
+            (format nil "query-to-java: ~A(~{~A...~^, ~})"
+              verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg)) 
+                           args))
+            (efun ()
+              (let ((answer (call-to-java verb args)))
+                (setf (hashref key *parse-cache-hash*) answer)
+                answer))))))))
 
 #+(or)
 (defun parse-to-expr (source)
