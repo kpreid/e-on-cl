@@ -10,7 +10,7 @@
       (cl:error () '(:and)))
 (defmethod bordeaux-threads:current-thread ()
   "Patch by E-on-CL."
-  #:sole-thread)
+  +sole-thread+)
 
 
 

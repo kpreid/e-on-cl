@@ -1,0 +1,17 @@
+; Copyright 2007 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(defpackage :e.test.util
+  (:use :cl :e.lisp-test :bordeaux-threads :e.util))
+(in-package :e.test.util)
+
+(deftest t-current-thread
+  (collect-mismatches #'equal #'identity #'identity 
+    (list (list (current-thread)
+                (current-thread))))
+  nil)
+
+(deftest t-make-condition-variable
+  (progn (make-condition-variable)
+         t)
+  t)
