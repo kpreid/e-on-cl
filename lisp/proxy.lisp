@@ -50,14 +50,14 @@
       (check-type box e-simple-slot)
       (e. box |getValue|))
     (error ()
-      (bogus-resolution "Resolution promise of a Far ref handled by ~A didn't resolve to a simple slot, but ~A."
+      (bogus-resolution "Resolution promise of a proxy handled by ~A didn't resolve to a simple slot, but ~A."
         (e-quote (%proxy-ref-handler ref))
         (e-quote box)))))
 
 (defun verify-broken-resolution (ref resolution-ref)
   (if (eql (ref-state resolution-ref) 'broken)
     resolution-ref
-    (bogus-resolution "Attempt to resolve this Far ref handled by ~A to another identity (~A)." 
+    (bogus-resolution "Attempt to resolve a Far ref handled by ~A to another identity (~A)." 
       (e-quote (%proxy-ref-handler ref)) 
       (e-quote resolution-ref))))
 

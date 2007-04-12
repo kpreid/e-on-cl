@@ -183,12 +183,31 @@ Becoming-same resolutions: A Far ref must not change its identity, as it is reso
   ? p1 == pO
   # value: false
 
---- Odd cases
+--- Failure cases
 
-  Unsettled handler
+Unsettled handler
 
   ? makeProxy(Ref.promise(), Ref.promise()[0], false)
   # problem: <NotSettledException: not settled: proxy handler [<Promise>, <Resolver>]>
+
+Bad resolution box
+  
+  ? { def remote := makeProxy(stubHandler, (def resolution; resolution), false)
+  >   bind resolution := false
+  >   remote() }
+  # problem: Resolution promise of a proxy handled by <stubHandler> didn't resolve to a simple slot, but false.
+
+  ? { def remote := makeProxy(stubHandler, (def resolution; resolution), true)
+  >   bind resolution := false
+  >   remote() }
+  # problem: Resolution promise of a proxy handled by <stubHandler> didn't resolve to a simple slot, but false.
+
+Resolution identity conflict
+
+  ? { def remote := makeProxy(stubHandler, (def resolution; resolution), true)
+  >   bind resolution := &false
+  >   remote() }
+  # problem: Attempt to resolve a Far ref handled by <stubHandler> to another identity (false).
 
 --- optSealedDispatch
 
