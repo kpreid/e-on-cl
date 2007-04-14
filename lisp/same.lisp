@@ -13,7 +13,7 @@
 
 (defun identity-hash (target) (sxhash target))
 
-(defun sameness-fringe (original opt-fringe &optional (sofar (make-hash-table)))
+(defun sameness-fringe (original path opt-fringe &optional (sofar (make-hash-table)))
   "returns cl:boolean"
   ; XXX translation of Java
   ;(declare (optimize (speed 3) (safety 3)))
@@ -28,7 +28,8 @@
         (loop
           with result = t
           for elem across (spread-uncall obj)
-          do (setf result (and result (sameness-fringe elem opt-fringe sofar)))
+          for i from 0
+          do (setf result (and result (sameness-fringe elem (when opt-fringe (cons i path)) opt-fringe sofar)))
              (when (and (not result) (null opt-fringe))
                (return nil))
           finally (return result))))
@@ -37,7 +38,7 @@
         t)
       (progn
         (when opt-fringe
-          (setf (gethash obj opt-fringe) nil))
+          (vector-push-extend (cons obj path) opt-fringe))
         nil))))
 
 (declaim (inline transparent-selfless-p))
@@ -56,12 +57,12 @@
   (assert (not (eql left right)))
   nil)
 
-(defun %sameness-hash (target hash-depth opt-fringe)
+(defun %sameness-hash (target hash-depth path opt-fringe)
   ;(declare (optimize (speed 3) (safety 3)))
   (setf target (ref-shorten target))
   (if (<= hash-depth 0)
     (return-from %sameness-hash (cond
-      ((sameness-fringe target opt-fringe)
+      ((sameness-fringe target path opt-fringe)
         -1)
       ((null opt-fringe)
         (error "Must be settled"))
@@ -70,7 +71,8 @@
   (if (transparent-selfless-p target)
     (reduce #'logxor 
       (loop for a across (spread-uncall target)
-            collect (%sameness-hash a (1- hash-depth) opt-fringe)))
+            for i from 0
+            collect (%sameness-hash a (1- hash-depth) (when opt-fringe (cons i path)) opt-fringe)))
     (let ((hash (elib::same-hash-dispatch target)))
       (cond
         (hash
@@ -82,7 +84,7 @@
           (error "Must be settled"))
         (t
           ; target is an unresolved promise. Our caller will take its hash into account via opt-fringe.
-          (setf (gethash target opt-fringe) +e-false+)
+          (vector-push-extend (cons target path) opt-fringe)
           -1)))))
 
 (defmethod elib::same-hash-dispatch ((a null))
@@ -255,10 +257,9 @@
 
 (defun same-yet-hash (target fringe)
   "Used by TraversalKey implementation. Returns a hash value which corresponds to the equality test ELIB:SAME-YET-P mixed with the fringe's hashes."
-  (let ((result (%sameness-hash target +hash-depth+ fringe)))
-    (loop for prom being each hash-key of fringe do
-        (setf result (logxor result (identity-hash prom))))
-    result))
+  ;; identity-hash is correct here as long as it descends into conses
+  (reduce #'logxor fringe :key #'identity-hash :initial-value
+    (%sameness-hash target +hash-depth+ nil fringe)))
 
 (defclass traversal-key (vat-checking) 
   ((wrapped :initarg :wrapped
@@ -272,7 +273,9 @@
    
 (defun make-traversal-key (target)
   (let ((wrapped (ref-shorten target))
-        (fringe (make-hash-table :test #'eql)))
+        (fringe (make-array 1 :element-type 'cons
+                              :adjustable t 
+                              :fill-pointer 0)))
     (make-instance 'traversal-key
       :wrapped wrapped
       :fringe fringe
@@ -283,11 +286,15 @@
     (and (eql (tk-snap-hash a)
               (tk-snap-hash b))
          (same-yet-p (tk-wrapped a)
-                          (tk-wrapped b))
-         (eql (hash-table-count (tk-fringe a))
-              (hash-table-count (tk-fringe b)))
-         (loop for aelem being each hash-key of (tk-fringe a)
-               always (nth-value 1 (gethash aelem (tk-fringe b))))))
+                     (tk-wrapped b))
+         (let ((af (tk-fringe a))
+               (bf (tk-fringe b)))
+           (and (eql (length af)
+                     (length bf))
+                (loop for (a-promise . a-path) across af
+                      for (b-promise . b-path) across bf
+                      always (and (eql a-promise b-promise)
+                                  (equal a-path b-path)))))))
   tk-snap-hash)
 
 (def-vtable traversal-key
@@ -314,7 +321,7 @@
 
 (defun same-hash (target)
   "Return a hash value which corresponds to the equality test ELIB:SAMEP."
-  (%sameness-hash target +hash-depth+ nil))
+  (%sameness-hash target +hash-depth+ nil nil))
 
 (defun settledp (a)
-  (sameness-fringe a nil))
+  (sameness-fringe a nil nil))

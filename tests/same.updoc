@@ -133,6 +133,30 @@ TraversalKey
   ? makeTraversalKey([unresolved, 5]) == makeTraversalKey([unresolved, 6])
   # value: false
 
+Checking that TKs respect differing fringe positions. There was a bug where TK sameness just checked that the objects had the same hash, same *set* of then-promise-identities and were currently same-yet. That strategy breaks in this case.
+
+  ? def p
+  # value: <Resolver>
+
+  ? def [ka1, kb1] := [makeTraversalKey([1, p]), makeTraversalKey([p, 1])]
+  # value: [<key:[1, <Promise>]>, <key:[<Promise>, 1]>]
+
+  ? def [ka2, kb2] := [makeTraversalKey([p, p, 1]), makeTraversalKey([p, 1, p])]
+  # value: [<key:[<Promise>, <Promise>, 1]>, <key:[<Promise>, 1, <Promise>]>]
+
+  ? def [ka3, kb3] := [makeTraversalKey([p, 1, p]), makeTraversalKey([1, p, p])]
+  # value: [<key:[<Promise>, 1, <Promise>]>, <key:[1, <Promise>, <Promise>]>]
+
+  ? [ka1 == kb1, ka2 == kb2, ka3 == kb3]
+  # value: [false, false, false]
+
+  ? bind p := 1
+  # value: 1
+
+  ? [ka1 == kb1, ka2 == kb2, ka3 == kb3]
+  # value: [false, false, false]
+  (The bug caused these to be true.)
+
 PassByCopy
 
   ? a :PassByCopy
