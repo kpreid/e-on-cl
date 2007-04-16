@@ -179,11 +179,13 @@
               :accessor node-elements
               :type list)
    (static-scope :initform nil
-                 :type (or null function))
-   (static-scope-lock :initform (make-lock))
+                 :type (or null function)
+                 :accessor node-computed-static-scope)
+   (static-scope-lock :initform (make-lock) :accessor static-scope-lock)
    (source-span :initform nil
                 :type (or null source-span)
-                :initarg :source-span)))
+                :initarg :source-span
+                :accessor node-source-span)))
 
 (defclass |EExpr| (|ENode|) ())
 (defclass |Pattern| (|ENode|) ())
@@ -427,15 +429,14 @@ List nodes will be assumed to be sequences."
     "e??")
   (:|staticScope| (this)
     "Return a static scope analysis of this subtree that doesn't depend on the enclosing context."
-    (with-slots (static-scope static-scope-lock) this
-      (or (with-lock-held (static-scope-lock) static-scope)
+    (let ((static-scope (with-lock-held ((static-scope-lock this)) (node-computed-static-scope this))))
+      (or static-scope
           ;; by releasing the lock here, we avoid blocking other threads. the
           ;; computation might harmlessly happen twice, though.
           (let ((new (compute-node-static-scope this)))
-            (with-lock-held (static-scope-lock) 
-              (setf static-scope new))))))
-  (:|getOptSpan| (this)
-    (slot-value this 'source-span))
+            (with-lock-held ((static-scope-lock this)) 
+              (setf (node-computed-static-scope this) new))))))
+  (:|getOptSpan/0| 'node-source-span)
   (:|substitute| (this args)
     "Quasiliteral ValueMaker interface.
 
@@ -563,7 +564,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 ;; This is a class so that instances may be written to a compiled file.
 (defclass false-guard ()
-  ((text :initarg :text :type string))
+  ((text :initarg :text :type string :accessor %false-guard-text))
   (:documentation "This is a false Guard created by Miranda __getAllegedType() representing the name of the guard expression in this object, but not the actual guard since it would be sometimes a security problem and/or impossible due to the guard expression not being constant over the life of the object."))
 
 (defmethod make-load-form ((a false-guard) &optional environment)
@@ -575,7 +576,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this tw) 
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |write| (slot-value this 'text))))
+    (e. tw |write| (%false-guard-text this))))
 
 (defun opt-guard-expr-to-safe-opt-guard (opt-guard-expr
     &aux (opt-guard-string

@@ -55,29 +55,29 @@
                                    :opt-ejector opt-ejector)))
     
 (defclass e-simple-slot () 
-  ((value :initarg :value))
+  ((value :initarg :value :reader simple-slot-value))
   (:documentation "A normal immutable slot."))
 
 (defmethod print-object ((slot e-simple-slot) stream)
   ; xxx make readable under read-eval?
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "& ~W" (slot-value slot 'value))))
+    (format stream "& ~W" (simple-slot-value slot))))
 
 (def-vtable e-simple-slot
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (eql auditor +selfless-stamp+))
   (:|__optUncall| (this)
-    `#(,+the-make-simple-slot+ "run" #(,(slot-value this 'value))))
+    `#(,+the-make-simple-slot+ "run" #(,(simple-slot-value this))))
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<& ")
-    (e. tw |quote| (slot-value this 'value))
+    (e. tw |quote| (simple-slot-value this))
     (e. tw |print| ">")
     nil)
   (:|getValue| (this)
     "Returns the constant value of this slot."
-    (slot-value this 'value))
+    (simple-slot-value this))
   (:|setValue| (this new-value)
     "Always fails."
     (declare (ignore new-value))
@@ -92,20 +92,24 @@
 
 (defclass base-closure-slot (vat-checking)
   ((getter :initarg :getter
-           :type (function () t))
+           :type (function () t)
+           :accessor closure-slot-getter)
    (setter :initarg :setter
-           :type (function (t) *))))
+           :type (function (t) *)
+           :accessor closure-slot-setter)))
 
 (def-vtable base-closure-slot
   (:|getValue| (this)
-    (funcall (slot-value this 'getter)))
+    (funcall (closure-slot-getter this)))
   (:|isFinal| (this)
     (declare (ignore this))
     +e-false+))
 
 (defmethod shared-initialize :after ((slot base-closure-slot) slot-names &key (value nil value-supplied) &allow-other-keys)
   (declare (ignore slot-names))
-  (with-slots (getter setter) slot
+  (with-accessors ((getter closure-slot-getter) 
+                   (setter closure-slot-setter))
+                  slot
     (when value-supplied
       (assert (not (slot-boundp slot 'getter)))
       (assert (not (slot-boundp slot 'setter)))
@@ -125,7 +129,7 @@
   (:|__optUncall| (this)
     `#(,+the-make-var-slot+ "run" #(,(e. this |getValue|))))
   (:|setValue| (this new-value)
-    (funcall (slot-value this 'setter) new-value)
+    (funcall (closure-slot-setter this) new-value)
     nil))
 
 (defmethod print-object ((slot e-var-slot) stream)
@@ -133,7 +137,7 @@
     (format stream "var & ~W" (e. slot |getValue|))))
 
 (defclass e-guarded-slot (base-closure-slot) 
-  ((guard :initarg :guard)))
+  ((guard :initarg :guard :reader guarded-slot-guard)))
 
 (defmethod shared-initialize :around ((slot e-guarded-slot) slot-names &rest initargs &key (value nil value-supplied) guard opt-ejector &allow-other-keys)
   "if this slot is initialized with a value, it is coerced; if initialized with a getter and setter, it is assumed to be correct"
@@ -147,15 +151,17 @@
 (def-vtable e-guarded-slot
   (:|__printOn| (this tw) ; XXX move to e.syntax?
     (e-coercef tw +the-text-writer-guard+)
-    (with-slots (guard getter) this
+    (with-accessors ((guard guarded-slot-guard) 
+                     (getter closure-slot-getter))
+                    this
       (e. tw |print| "<var ")
       (e. tw |quote| (funcall getter))
       (e. tw |print| " :")
       (e. tw |quote| guard)
       (e. tw |print| ">")))
   (:|setValue| (this new-value)
-    (with-slots (guard setter) this
-      (funcall setter (e. guard |coerce| new-value nil)))
+    (funcall (closure-slot-setter this) 
+      (e. (guarded-slot-guard this) |coerce| new-value nil))
     nil))
 
 (defmethod print-object ((slot e-guarded-slot) stream)
@@ -164,7 +170,7 @@
       (if (slot-boundp slot 'getter) 
         (e. slot |getValue|)
         '#:<unbound-getter>)
-      (ignore-errors (slot-value slot 'guard)))))
+      (ignore-errors (guarded-slot-guard slot)))))
 
 ;; XXX this is duplicated with information in the maker functions
 (def-fqn e-simple-slot  "org.erights.e.elib.slot.FinalSlot")

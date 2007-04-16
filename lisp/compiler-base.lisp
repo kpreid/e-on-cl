@@ -115,33 +115,34 @@
 
 
 (defclass scope-layout () 
-  ((rest :initarg :rest))
+  ((rest :initarg :rest
+         :reader scope-layout-rest))
   (:documentation "Base class for simple 'inheriting' scopes. Forwards all operations to its 'rest' slot."))
 
 (defmethod print-object ((obj scope-layout) stream)
   (print-unreadable-object (obj stream :type t :identity nil)
-    (format stream ". ~W" (slot-value obj 'rest))))
+    (format stream ". ~W" (scope-layout-rest obj))))
 
 (defmethod scope-layout-noun-binding ((scope-layout scope-layout) noun-string)
-  (scope-layout-noun-binding (slot-value scope-layout 'rest) noun-string))
+  (scope-layout-noun-binding (scope-layout-rest scope-layout) noun-string))
 
 (defmethod scope-layout-fqn-prefix ((scope-layout scope-layout))
-  (scope-layout-fqn-prefix (slot-value scope-layout 'rest)))
+  (scope-layout-fqn-prefix (scope-layout-rest scope-layout)))
 
 (defmethod scope-layout-bindings ((scope-layout scope-layout))
-  (scope-layout-bindings (slot-value scope-layout 'rest)))
+  (scope-layout-bindings (scope-layout-rest scope-layout)))
 
 (defmethod scope-layout-noun-is-local ((scope-layout scope-layout) noun-string)
-  (scope-layout-noun-is-local (slot-value scope-layout 'rest) noun-string))
+  (scope-layout-noun-is-local (scope-layout-rest scope-layout) noun-string))
 
 (defmethod scope-layout-meta-state-bindings ((scope-layout scope-layout))
-  (scope-layout-meta-state-bindings (slot-value scope-layout 'rest)))
+  (scope-layout-meta-state-bindings (scope-layout-rest scope-layout)))
 
 (defmethod scope-layout-bindings-before ((inner scope-layout) outer)
-  (scope-layout-bindings-before (slot-value inner 'rest) outer))
+  (scope-layout-bindings-before (scope-layout-rest inner) outer))
 
 (defmethod scope-layout-opt-object-expr ((scope-layout scope-layout))
-  (scope-layout-opt-object-expr (slot-value scope-layout 'rest)))
+  (scope-layout-opt-object-expr (scope-layout-rest scope-layout)))
 
 
 (defclass prefix-scope-layout (scope-layout)
@@ -159,7 +160,8 @@
 
 (defclass object-scope-layout (scope-layout)
   ((nouns :initarg :nouns
-          :type list)
+          :type list
+          :reader %object-scope-layout-nouns)
   (object-expr :initarg :object-expr
                :type e.kernel:|ObjectExpr|
                :reader scope-layout-opt-object-expr))
@@ -167,7 +169,7 @@
 
 (defmethod scope-layout-meta-state-bindings ((scope-layout object-scope-layout))
   "Return a list of forms which evaluate to vector pairs for constructing the map which meta.getState returns."
-  (loop for noun in (slot-value scope-layout 'nouns) collect
+  (loop for noun in (%object-scope-layout-nouns scope-layout) collect
     `(vector ,(concatenate 'string "&" noun)
              ,(binding-get-slot-code (scope-layout-noun-binding scope-layout noun)))))
 
@@ -265,33 +267,35 @@
 
 
 (defclass value-binding ()
-  ((value :initarg :value)))
+  ((value :initarg :value
+          :reader binding-value)))
   
 (defmethod binding-get-code ((binding value-binding))
-  `',(slot-value binding 'value))
+  `',(binding-value binding))
 
 (defmethod binding-get-slot-code ((binding value-binding))
   ; requires that e-simple-slot be selfless (which it is now)
-  `',(make-instance 'elib:e-simple-slot :value (slot-value binding 'value)))
+  `',(make-instance 'elib:e-simple-slot :value (binding-value binding)))
 
 (defmethod binding-set-code ((binding value-binding) value-form)
   ; XXX This should probably be a different message. The current one is just imitating a previous implementation.
   ; Should we have a binding-is-assignable function? ejector on this?
   (declare (ignore value-form))
-  (error "not an assignable slot: <& ~A>" (e-quote (slot-value binding 'value))))
+  (error "not an assignable slot: <& ~A>" (e-quote (binding-value binding))))
 
 
 (defclass slot-binding ()
-  ((slot :initarg :slot)))
+  ((slot :initarg :slot
+         :reader %slot-binding-variable)))
   
 (defmethod binding-get-code ((binding slot-binding))
-  `(e. ',(slot-value binding 'slot) |getValue|))
+  `(e. ',(%slot-binding-variable binding) |getValue|))
 
 (defmethod binding-get-slot-code ((binding slot-binding))
-  `',(slot-value binding 'slot))
+  `',(%slot-binding-variable binding))
 
 (defmethod binding-set-code ((binding slot-binding) value-form)
-  `(e. ,(slot-value binding 'slot) |setValue| ,value-form))
+  `(e. ,(%slot-binding-variable binding) |setValue| ,value-form))
 
 
 (defgeneric binding-for-slot (slot))
@@ -364,11 +368,14 @@
 
 ;; This is a class so that instances may be written to a compiled file.
 (defclass static-context ()
-  ((source-span :initarg :source-span)
+  ((source-span :initarg :source-span
+                :reader static-context-source-span)
    (fqn-prefix :initarg :fqn-prefix
-               :initform (error "fqn-prefix not supplied"))
+               :initform (error "fqn-prefix not supplied")
+               :reader static-context-fqn-prefix)
    (opt-object-source :initarg :opt-object-source
-                      :initform (error "object-source not supplied")))
+                      :initform (error "object-source not supplied")
+                      :reader static-context-opt-object-source))
   #| (:documentation XXX) |#)
 
 (defmethod make-load-form ((a static-context) &optional environment)
@@ -397,21 +404,21 @@
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +selfless-stamp+)))
   (:|__optUncall| (this)
-    (with-slots (source-span fqn-prefix opt-object-source) this
-      `#(,+the-make-static-context+
-         "run"
-         #(,fqn-prefix nil ,opt-object-source ,source-span))))
+    `#(,+the-make-static-context+
+       "run"
+       #(,(static-context-fqn-prefix this)
+         nil
+         ,(static-context-opt-object-source this)
+         ,(static-context-source-span this))))
   (:|__printOn| (this tw)
     (declare (ignore this))
     (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<static context>"))
-  (:|getOptSource| (this)
-    (slot-value this 'opt-object-source))
+  (:|getOptSource/0| 'static-context-opt-object-source)
   (:|getSource| (this)
     (or (ref-shorten (e. this |getOptSource|))
-        (error "There is no enclosing object expression at ~A~/e.tables:~span/" (e. this |getFQNPrefix|) (slot-value this 'source-span))))
-  (:|getFQNPrefix| (this)
-    (slot-value this 'fqn-prefix)))
+        (error "There is no enclosing object expression at ~A~/e.tables:~span/" (e. this |getFQNPrefix|) (static-context-source-span this))))
+  (:|getFQNPrefix/0| 'static-context-fqn-prefix))
 
 (defun scope-layout-static-context (layout &key source-span)
   (make-instance 'static-context

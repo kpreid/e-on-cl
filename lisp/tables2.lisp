@@ -65,7 +65,12 @@
     (eql auditor +selfless-stamp+))
   (:|__printOn/1| (span out)
     (e-coercef out +the-text-writer-guard+)
-    (with-slots (uri one-to-one start-line end-line start-col end-col) span
+    (with-accessors ((uri        span-uri         )
+                     (one-to-one span-one-to-one-p)
+                     (start-line span-start-line  )
+                     (end-line   span-end-line    )
+                     (start-col  span-start-col   )
+                     (end-col    span-end-col     )) span
       (e. out |write| "<")
       (e. out |print| uri)
       (e. out |write| "#:")
@@ -80,7 +85,12 @@
       (e. out |print| end-col)
       (e. out |write| ">")))
   (:|__optUncall/0| (span)
-    (with-slots (uri one-to-one start-line end-line start-col end-col) span
+    (with-accessors ((uri        span-uri         )
+                     (one-to-one span-one-to-one-p)
+                     (start-line span-start-line  )
+                     (end-line   span-end-line    )
+                     (start-col  span-start-col   )
+                     (end-col    span-end-col     )) span
       (vector +the-make-source-span+ "run" (vector uri
                                                    (as-e-boolean one-to-one)
                                                    start-line
@@ -94,7 +104,11 @@
   (:|getStartCol/0| 'span-start-col)
   (:|getEndCol/0| 'span-end-col)
   (:|notOneToOne/0| (span)
-    (with-slots (uri one-to-one start-line end-line start-col end-col) span
+    (with-accessors ((uri        span-uri         )
+                     (start-line span-start-line  )
+                     (end-line   span-end-line    )
+                     (start-col  span-start-col   )
+                     (end-col    span-end-col     )) span
       (make-instance 'source-span :uri uri
                                   :one-to-one nil
                                   :start-line start-line
@@ -245,36 +259,37 @@
 
 
 (defclass composite-twine (%twine)
-  ((parts :initarg :parts :type list)))
+  ((parts :initarg :parts 
+          :type list
+          :reader %twine-parts)))
 
 (defmethod twine-string ((this composite-twine))
-  (apply #'concatenate 'string (mapcar #'twine-string (slot-value this 'parts))))
+  (apply #'concatenate 'string (mapcar #'twine-string (%twine-parts this))))
 
 (def-vtable composite-twine
   (:|__optUncall| (this)
-    (with-slots (parts) this
-      (vector +the-make-twine+ "fromParts" (vector (coerce parts 'vector)))))
+    (vector +the-make-twine+ "fromParts" (vector (coerce (%twine-parts this) 'vector))))
   (:|isBare| (this) 
     (declare (ignore this))
     +e-false+)
   (:|getOptSpan| (this) 
     (declare (ignore this))
     nil)
-  (:|getParts| (this) (coerce (slot-value this 'parts) 'vector)))
+  (:|getParts| (this) (coerce (%twine-parts this) 'vector)))
 
 
 (defclass leaf-twine (%twine)
   ((string :initarg :string :type string :reader twine-string)
-   (span :initarg :span :type source-span)))
+   (span :initarg :span :type (or null source-span) :reader twine-opt-span)))
 
 (def-vtable leaf-twine
   (:|__optUncall| (this)
-    (with-slots (string span) this
+    (with-accessors ((string twine-string) (span twine-opt-span)) this
       (vector +the-make-twine+ "fromString" (vector string span))))
   (:|isBare| (this) 
     (declare (ignore this))
     +e-false+)
-  (:|getOptSpan| (this) (slot-value this 'span))
+  (:|getOptSpan/0| 'twine-opt-span)
   (:|getParts| (this) (vector this))
   
   (:|run| (this start end)
@@ -283,7 +298,7 @@
     (e. +the-make-twine+ |fromString|
       (efuncall (twine-string this) start end)
       (when (plusp (- end start))
-        (let* ((span (slot-value this 'span))
+        (let* ((span (twine-opt-span this))
                (string (twine-string this))
                (drun (displaced-subseq string start end)))
           (multiple-value-bind (run-start-line run-start-col)
@@ -590,39 +605,39 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 ; --- genhash ConstMap ---
 
 (defclass genhash-const-map-impl (const-map)
-  ((table       :initarg :table)
+  ((table       :initarg :table
+                :accessor %genhash-const-map-table)
    (keys        :initarg :keys
-                :type vector)
+                :type vector
+                :reader %genhash-const-map-keys)
    (values      :initarg :values
-                :type vector)))
+                :type vector
+                :reader %genhash-const-map-values)))
 
 (defmethod shared-initialize :after ((this genhash-const-map-impl) slot-names &key &allow-other-keys)
   "Allow genhash-const-map-impls to be created with only :keys and :values initargs."
   (declare (ignore slot-names))
   (unless (slot-boundp this 'table)
-    (with-slots (table keys) this
-      (setf table (make-generic-hash-table :test 'samep))
-      (loop for key across keys
+    (let ((table (make-generic-hash-table :test 'samep)))
+      (setf (%genhash-const-map-table this) table)
+      (loop for key across (%genhash-const-map-keys this)
             for i from 0
             do (setf (hashref key table) i)))))
 
 (def-vtable genhash-const-map-impl
   (:|getPair| (this)
-    (with-slots (keys values) this
-      (vector keys values)))
+    (vector (%genhash-const-map-keys this) 
+            (%genhash-const-map-values this)))
   (:|snapshot/0| 'identity)
   (:|fetch| (this key absent-thunk)
-    (with-slots (table keys values) this
-      (let ((index (hashref key table)))
-        (if index
-          (aref values index)
-          (efuncall absent-thunk)))))
+    (let ((index (hashref key (%genhash-const-map-table this))))
+      (if index
+        (aref (%genhash-const-map-values this) index)
+        (efuncall absent-thunk))))
   (:|size| (this)
-    (with-slots (keys) this (length keys)))
-  (:|getKeys| (this)
-    (with-slots (keys) this keys))
-  (:|getValues| (this)
-    (with-slots (values) this values)))
+    (length (%genhash-const-map-keys this)))
+  (:|getKeys/0| '%genhash-const-map-keys)
+  (:|getValues/0| '%genhash-const-map-values))
 
 ; --- genhash FlexMap ---
 
@@ -633,25 +648,36 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   new)
 
 (defclass genhash-flex-map-impl (vat-checking)
-  ((self        :initarg :self)
-   (key-guard   :initarg :key-guard   :initform +the-any-guard+)
-   (value-guard :initarg :value-guard :initform +the-any-guard+)
+  ((self        :initarg :self
+                ;; XXX find out why this slot exists and document it
+                :reader %genhash-flex-map-impl-self)
+   (key-guard   :initarg :key-guard   :initform +the-any-guard+
+                :reader %genhash-flex-map-impl-key-guard)
+   (value-guard :initarg :value-guard :initform +the-any-guard+
+                :reader %genhash-flex-map-impl-value-guard)
    (snapshot    :initform nil
-                :documentation "If non-nil, then reads should be redirected to this ConstMap (currently always genhash-const-map-impl). Writes should cause its state to be copied into new table, keys, and values.")
+                :documentation "If non-nil, then reads should be redirected to this ConstMap (currently always genhash-const-map-impl). Writes should cause its state to be copied into new table, keys, and values."
+                :accessor %genhash-flex-map-impl-snapshot)
    (table       :initarg :table
-                :initform (make-generic-hash-table :test 'samep))
+                :initform (make-generic-hash-table :test 'samep)
+                :accessor %genhash-flex-map-impl-table)
    (keys        :initform (make-array 0 :fill-pointer 0 :adjustable t)
                 :type (or null (and vector 
                                     (satisfies adjustable-array-p)
-                                    (satisfies array-has-fill-pointer-p))))
+                                    (satisfies array-has-fill-pointer-p)))
+                :accessor %genhash-flex-map-impl-keys)
    (values      :initform (make-array 0 :fill-pointer 0 :adjustable t)
                 :type (or null (and vector
                                     (satisfies adjustable-array-p)
-                                    (satisfies array-has-fill-pointer-p))))))
+                                    (satisfies array-has-fill-pointer-p)))
+                :accessor %genhash-flex-map-impl-values)))
 
 
 (defmethod ensure-storage ((this genhash-flex-map-impl))
-  (with-slots (table keys values snapshot) this
+  (with-accessors ((table    %genhash-flex-map-impl-table) 
+                   (keys     %genhash-flex-map-impl-keys)
+                   (values   %genhash-flex-map-impl-values)
+                   (snapshot %genhash-flex-map-impl-snapshot)) this
     (when snapshot
       (assert (typep snapshot 'genhash-const-map-impl)) ; due to slot-value below - XXX ugly
       (let* ((s-keys (e. snapshot |getKeys|))
@@ -666,7 +692,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
                                  :fill-pointer t
                                  :adjustable t
                                  :initial-contents s-values)
-              table (copy-samep-genhash (slot-value snapshot 'table))
+              table (copy-samep-genhash (%genhash-const-map-table snapshot))
               snapshot nil)))))
 
 (def-vtable genhash-flex-map-impl
@@ -676,18 +702,22 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     ; XXX this is duplicated code with simple-flex-map, because we expect to throw out most of the CL-written flex-map machinery
     (if (zerop (e. this |size|))
       (e. tw |print| "[].asMap()")
-      (e. (slot-value this 'self) |printOn| "[" " => " ", " "]" tw))
+      (e. (%genhash-flex-map-impl-self this) |printOn| "[" " => " ", " "]" tw))
     (e. tw |print| ".diverge()"))
 
   (:|size| (this)
-    (with-slots (snapshot keys) this
+    (let ((snapshot (%genhash-flex-map-impl-snapshot this))) this
       (if snapshot
         (e. snapshot |size|)
-        (length keys))))
+        (length (%genhash-flex-map-impl-keys this)))))
 
   (:|put| (this key value strict opt-ejector)
     (ensure-storage this)
-    (with-slots (table keys values key-guard value-guard) this
+    (with-accessors ((table       %genhash-flex-map-impl-table) 
+                     (keys        %genhash-flex-map-impl-keys)
+                     (values      %genhash-flex-map-impl-values)
+                     (key-guard   %genhash-flex-map-impl-key-guard)
+                     (value-guard %genhash-flex-map-impl-value-guard)) this
       (e-coercef key key-guard)
       (e-coercef value value-guard)
       (let ((index (hashref key table)))
@@ -704,7 +734,10 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   ; XXX need to change the protocol to have an ejector
   (:|removeKey| (this key strict &aux opt-ejector)
     (ensure-storage this)
-    (with-slots (table keys values key-guard value-guard) this
+    (with-accessors ((table       %genhash-flex-map-impl-table) 
+                     (keys        %genhash-flex-map-impl-keys)
+                     (values      %genhash-flex-map-impl-values)
+                     (key-guard   %genhash-flex-map-impl-key-guard)) this
       (e-coercef key key-guard)
       (let ((index (hashref key table)))
         (if index
@@ -723,11 +756,14 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     nil)
 
   ; XXX to be moved to flexmap shell?
-  (:|keyType|   (this) (slot-value this 'key-guard))
-  (:|valueType| (this) (slot-value this 'value-guard))
+  (:|keyType|   (this) (%genhash-flex-map-impl-key-guard this))
+  (:|valueType| (this) (%genhash-flex-map-impl-value-guard this))
 
   (:|fetch| (this key absent-thunk)
-    (with-slots (snapshot table keys values key-guard) this
+    (with-accessors ((table       %genhash-flex-map-impl-table) 
+                     (values      %genhash-flex-map-impl-values)
+                     (snapshot    %genhash-flex-map-impl-snapshot)
+                     (key-guard   %genhash-flex-map-impl-key-guard)) this
       (e-coercef key key-guard)
       (if snapshot
         (e. snapshot |fetch| key absent-thunk)
@@ -737,13 +773,16 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
             (efuncall absent-thunk))))))
 
   (:|getPair| (this)
-    (with-slots (snapshot keys values) this 
+    (with-accessors ((keys        %genhash-flex-map-impl-keys)
+                     (values      %genhash-flex-map-impl-values)
+                     (snapshot    %genhash-flex-map-impl-snapshot)) this
       (if snapshot
         (e. snapshot |getPair|)
         (vector (copy-seq keys) (copy-seq values)))))
 
   (:|getKeys| (this)
-    (with-slots (snapshot keys) this
+    (with-accessors ((keys        %genhash-flex-map-impl-keys)
+                     (snapshot    %genhash-flex-map-impl-snapshot)) this
       (if snapshot
         (e. snapshot |getKeys|)
         (copy-seq keys)))))
@@ -840,7 +879,10 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
           (:|__optUncall| ()
             `#(,(e. map |snapshot|) "diverge" #(,key-guard ,value-guard)))
           (:|snapshot| ()
-            (with-slots (snapshot table keys values) impl
+            (with-accessors ((table       %genhash-flex-map-impl-table)
+                             (keys        %genhash-flex-map-impl-keys)
+                             (values      %genhash-flex-map-impl-values)
+                             (snapshot    %genhash-flex-map-impl-snapshot)) impl
               (unless snapshot
                 ; The principle here is that the most common use of snapshotting is to build a collection and then make it immutable. XXX benchmark such decisions.
                 (setf snapshot (make-instance 'genhash-const-map-impl 

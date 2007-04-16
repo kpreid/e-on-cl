@@ -283,4 +283,6 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
   external-process-output-stream
   external-process-error-stream
   
-  system-symbol))
+  system-symbol
+  
+  backtrace-value))

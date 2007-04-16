@@ -3,7 +3,8 @@
 
 (in-package :e.knot)
 
-(defglobals +e-ref-kit-slot+)
+(defglobals +e-ref-kit-slot+
+            +the-make-path-loader+)
 
 ; --- direct E-to-Lisp interfaces and powers ---
 
@@ -250,7 +251,7 @@
     ;; exceptions
     (:|makeCoercionFailure| +the-make-coercion-failure+)
     (:|makeException|    +the-make-exception+)
-    (:|makeStringException| e.elib::+the-make-string-error+)
+    (:|makeStringException| +the-make-string-error+)
     (:|StructureException| (type-specifier-to-guard 'e-structure-exception))
     (:|Throwable|        elib:+the-exception-guard+)
     

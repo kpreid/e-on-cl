@@ -252,7 +252,7 @@
       (e-coercef tw +the-text-writer-guard+)
       (e. tw |write| "<network address")
       #+sbcl
-      (with-slots (host-ent port) this
+      (with-accessors ((host-ent addr-info-host-ent) (port addr-info-port)) this
         (e. tw |write| " ")
         (e. tw |quote| (host-ent-name host-ent))
         (loop for address in (host-ent-addresses host-ent) do
@@ -261,7 +261,7 @@
         (e. tw |write| ":")
         (e. tw |print| port))
       #+openmcl
-      (with-slots (ip-number port) this
+      (with-accessors ((ip-number addr-info-ip-number) (port addr-info-port)) this
         (e. tw |write| " ")
         (e. tw |print| (e. "." |rjoin| (ip4-number-to-vector ip-number)))
         (e. tw |write| ":")

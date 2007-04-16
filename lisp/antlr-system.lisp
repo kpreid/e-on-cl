@@ -11,13 +11,13 @@
   ())
 
 (defclass antlr-source-file (source-file) 
-  ((output-names :initarg :output-names)))
+  ((output-names :initarg :output-names :reader antlr-source-file-output-names)))
 
 (defmethod source-file-type ((c antlr-source-file) (s module)) "g")
 (defmethod source-file-type ((c java-source-file) (s module)) "java")
 
 (defmethod output-files ((operation compile-op) (c antlr-source-file))
-  (loop for (name type) in (slot-value c 'output-names) 
+  (loop for (name type) in (antlr-source-file-output-names c) 
         collect
           (make-pathname :defaults (component-pathname c)
                          :name name

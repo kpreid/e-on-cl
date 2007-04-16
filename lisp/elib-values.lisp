@@ -786,17 +786,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defmethod shared-initialize :after ((this type-desc) slot-names &key &allow-other-keys)
   (declare (ignore slot-names))
-  (with-slots (message-types-v) this
-    (loop 
-      with seen = (make-hash-table)
-      for md across message-types-v
-      for mverb = (message-desc-mverb md)
-      do (when (gethash mverb seen)
-           (error "duplicate message desc for ~A: ~A then ~A"
-             mverb 
-             (e-quote (gethash mverb seen))
-             (e-quote md)))
-         (setf (gethash mverb seen) md))))
+  (loop 
+    with seen = (make-hash-table)
+    for md across (type-desc-message-types-v this)
+    for mverb = (message-desc-mverb md)
+    do (when (gethash mverb seen)
+         (error "duplicate message desc for ~A: ~A then ~A"
+           mverb 
+           (e-quote (gethash mverb seen))
+           (e-quote md)))
+       (setf (gethash mverb seen) md)))
 
 (defun message-desc-mverb (md)
   (e-util:mangle-verb (message-desc-verb md) (length (message-desc-params md))))
@@ -865,8 +864,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
               (char-upcase (char simple-name initial))))
       (e. tw |print| simple-name)))
   (:|__optUncall| (this)
-    (with-slots (doc-comment opt-fq-name supers auditors message-types-v) this
-      `#(,+the-make-type-desc+ "run" #(,doc-comment ,opt-fq-name ,supers ,auditors ,message-types-v))))
+    `#(,+the-make-type-desc+ "run"
+       #(,(type-desc-doc-comment this)
+         ,(type-desc-opt-fq-name this)
+         ,(type-desc-supers this)
+         ,(type-desc-auditors this)
+         ,(type-desc-message-types-v this))))
   (:|getOptFQName/0| 'type-desc-opt-fq-name)
   (:|getFQName| (td)
     (or (type-desc-opt-fq-name td) "_"))
@@ -881,11 +884,17 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (with-slots (verb doc-comment params opt-result-guard) this
-      (e. e.syntax:+e-printer+ |printMethodHeader| tw +e-false+ doc-comment verb params opt-result-guard)))
+    (e. e.syntax:+e-printer+ |printMethodHeader| tw +e-false+ 
+      (message-desc-doc-comment this)
+      (message-desc-verb this)
+      (message-desc-params this)
+      (message-desc-opt-result-guard this)))
   (:|__optUncall| (this)
-    (with-slots (doc-comment verb params opt-result-guard) this
-      `#(,+the-make-message-desc+ "run" #(,doc-comment ,verb ,params ,opt-result-guard))))
+    `#(,+the-make-message-desc+ "run"
+       #(,(message-desc-doc-comment this)
+         ,(message-desc-verb this)
+         ,(message-desc-params this)
+         ,(message-desc-opt-result-guard this))))
   (:|getVerb/0|           'message-desc-verb)
   (:|getDocComment/0|     'message-desc-doc-comment)
   (:|getParams/0|         'message-desc-params)
@@ -897,11 +906,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (eql auditor +selfless-stamp+))
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (with-slots (opt-name opt-guard) this
-      (e. e.syntax:+e-printer+ |printGuardedNounPattern| tw opt-name opt-guard)))
+    (e. e.syntax:+e-printer+ |printGuardedNounPattern| tw
+      (param-desc-opt-name this)
+      (param-desc-opt-guard this)))
   (:|__optUncall| (this)
-    (with-slots (opt-name opt-guard) this
-      `#(,+the-make-param-desc+ "run" #(,opt-name ,opt-guard))))
+    `#(,+the-make-param-desc+ "run"
+       #(,(param-desc-opt-name  this)
+         ,(param-desc-opt-guard this))))
   (:|getOptName/0|  'param-desc-opt-name)
   (:|getOptGuard/0| 'param-desc-opt-guard)
   (:|getName| (this)
@@ -914,9 +925,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 #+(or ccl clisp allegro)
 (defclass weak-ref-impl (vat-checking)
-  (#+ccl (table :initarg :table)
-   #+clisp (weak-pointer :initarg :weak-pointer)
-   #+allegro (vector :initarg :vector)))
+  (#+ccl (table :initarg :table :reader weak-ref-inner)
+   #+clisp (weak-pointer :initarg :weak-pointer :reader weak-ref-inner)
+   #+allegro (vector :initarg :vector :reader weak-ref-inner)))
 
 (defobject +the-make-weak-ref+ "org.erights.e.elib.vat.makeWeakRef" ()
   ; XXX run/4
@@ -965,9 +976,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Return the normal ref which is this weak ref's referent, or null if it has been GCed. This method cannot distinguish a weak reference to null."
     #+sbcl  (sb-ext:weak-pointer-value this)
     #+cmu   (extensions:weak-pointer-value this)
-    #+ccl   (gethash 't (slot-value this 'table) nil)
-    #+clisp (ext:weak-pointer-value (slot-value this 'weak-pointer))
-    #+allegro (aref (slot-value this 'vector) 0)
+    #+ccl   (gethash 't (weak-ref-inner this) nil)
+    #+clisp (ext:weak-pointer-value (weak-ref-inner this))
+    #+allegro (aref (weak-ref-inner this) 0)
     ))
 
 ; --- "E" object ---

@@ -10,7 +10,8 @@
 
 (defclass serve-event-runner (runner)
   ((time-queue :type priority-queue
-               :initform (make-instance 'priority-queue))))
+               :initform (make-instance 'priority-queue)
+               :reader %ser-time-queue)))
 
 (defclass serve-event-deferred-io-handler ()
   ((stopper :initarg :stopper :reader %sedih-stopper)))
@@ -49,8 +50,7 @@
   (values))
 
 (defmethod enqueue-timed ((runner serve-event-runner) time func)
-  (with-slots (time-queue) runner
-    (priority-queue-put time-queue time func)))
+  (priority-queue-put (%ser-time-queue runner) time func))
 
 (defun serve-event-with-time-queue (time-queue immediate-queue &optional (timeout nil))
   (destructuring-bind (&optional qtime &rest qfunc)
@@ -70,7 +70,8 @@
 
 (defmethod runner-loop ((runner serve-event-runner))
   (assert (eql runner *runner*))
-  (with-slots (sends time-queue) runner
+  (let ((sends (%runner-queue runner)) 
+        (time-queue (%ser-time-queue runner)))
     (loop
       (if (queue-null sends)
         (serve-event-with-time-queue time-queue sends)

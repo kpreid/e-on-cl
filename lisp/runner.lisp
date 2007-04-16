@@ -32,17 +32,18 @@
           :type (or null string)
           :reader label)
    (sends :type queue
+          :reader %runner-queue
           :initform (make-instance 'queue))))
 
 (defmethod enqueue-turn ((runner runner) function)
-  ;; relies on the send queue being thread-safe
-  (enqueue (slot-value runner 'sends) function)
+  ;; relies on the send queue being thread-safe if applicable
+  (enqueue (%runner-queue runner) function)
   (values))
 
 (defmethod runner-loop ((runner runner))
   (assert (eql runner *runner*))
-  (with-slots (sends) runner
+  (let ((queue (%runner-queue runner)))
     (loop
-      (if (queue-null sends)
+      (if (queue-null queue)
         (break "Ran out of things to do in ~S." runner)
-        (funcall (dequeue sends))))))
+        (funcall (dequeue queue))))))

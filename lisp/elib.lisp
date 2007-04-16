@@ -232,19 +232,20 @@ The 'name slot gives a label for the value which was not settled, such as the na
 (defvar *vat* nil)
 
 (defclass vat-checking () 
-  ((vat-checking-expected-vat :type vat))
+  ((vat-checking-expected-vat :type vat
+                              :accessor vat-checking-expected-vat))
   (:documentation "Remembers the current vat and checks that it is correct upon later opportunities (currently e-call-dispatch). Should not be relied upon, as it may be made a noop in an optimized mode.
 
 If there is no current vat at initialization time, captures the current vat at the next check time, so that vat-checking instances may be used during pre-vat-creation setup code."))
 
 (defmethod shared-initialize ((this vat-checking) slot-names &key &allow-other-keys)
   (when *vat*
-    (setf (slot-value this 'vat-checking-expected-vat) *vat*))
+    (setf (vat-checking-expected-vat this) *vat*))
   (call-next-method))
 
 (defmethod e-call-dispatch :before ((rec vat-checking) mverb &rest args)
   (declare (ignore mverb args))
-  (with-slots ((expected-vat vat-checking-expected-vat)) rec
+  (with-accessors ((expected-vat vat-checking-expected-vat)) rec
     (if (slot-boundp rec 'vat-checking-expected-vat)
       (assert (eq *vat* expected-vat))
       (when *vat*
@@ -295,7 +296,8 @@ If there is no current vat at initialization time, captures the current vat at t
 (defclass promise-ref (ref) 
   ((buffer :initform (make-array 0 :fill-pointer 0 :adjustable t)
            :type (array list)
-           :documentation "Messages are pushed on the end of this vector.")
+           :documentation "Messages are pushed on the end of this vector."
+           :reader promise-ref-buffer)
    (weak-when-more-resolved 
      :initform (make-weak-hash-table :weakness :key :test #'eq)
      :type hash-table
@@ -315,14 +317,12 @@ If there is no current vat at initialization time, captures the current vat at t
   (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
 
 (defmethod e-send-dispatch ((ref promise-ref) mverb &rest args)
-  (with-slots (buffer) ref
-    (multiple-value-bind (promise resolver) (make-promise)
-      (vector-push-extend (list resolver mverb args) buffer)
-      promise)))
+  (multiple-value-bind (promise resolver) (make-promise)
+    (vector-push-extend (list resolver mverb args) (promise-ref-buffer ref))
+    promise))
 
 (defmethod e-send-only-dispatch ((ref promise-ref) mverb &rest args)
-  (with-slots (buffer) ref
-    (vector-push-extend (list nil mverb args) buffer))
+  (vector-push-extend (list nil mverb args) (promise-ref-buffer ref))
   nil)
 
 (defgeneric weak-when-more-resolved (ref weak-reactor action))
@@ -344,18 +344,19 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defclass broken-ref (ref)
   ((problem :initarg :problem
-            :type t))
+            :type t
+            :reader %broken-ref-problem))
   (:documentation "Abstract. Make a DISCONNECTED-REF or an UNCONNECTED-REF instead of this."))
  
 (defmethod shared-initialize :after ((this broken-ref) slot-names &key &allow-other-keys)
   (declare (ignore slot-names))
   (when *compatible-catch-leakage*
-    (e-coercef (slot-value this 'problem) +the-exception-guard+)))
+    (e-coercef (%broken-ref-problem this) +the-exception-guard+)))
 
 (defmethod %ref-shorten ((x broken-ref))
   x)
 (defmethod ref-state ((x broken-ref))
-  (values 'broken (slot-value x 'problem)))
+  (values 'broken (%broken-ref-problem x)))
 
 (declaim (inline broken-ref-magic))
 (defun broken-ref-magic (ref mverb args)
@@ -385,7 +386,8 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defclass local-resolver (vat-checking)
   ((ref :initarg :ref
-        :type (or null promise-ref))))
+        :type (or null promise-ref)
+        :accessor resolver-opt-promise)))
 
 (declaim (ftype (function () (values ref local-resolver)) make-promise))
 (defun make-promise ()
@@ -1436,7 +1438,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 (declaim (inline promise-ref-resolve))
 (defun promise-ref-resolve (ref new-target
-    &aux (buffer (slot-value ref 'buffer))
+    &aux (buffer (promise-ref-buffer ref))
          (weak-wmrs (%weak-when-more-resolved-table ref)))
   (declare (type promise-ref ref)
            (type (vector list) buffer))
@@ -1462,7 +1464,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
   (defun resolve-race (this target)
     "Internal function used by the local-resolver vtable."
-    (with-slots (ref) this
+    (with-accessors ((ref resolver-opt-promise)) this
       (if (null ref)
         +e-false+
         (progn
@@ -1473,7 +1475,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 (def-vtable local-resolver
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
-    (e. tw |print| (if (slot-value this 'ref)
+    (e. tw |print| (if (resolver-opt-promise this)
                      "<Resolver>"
                      "<Closed Resolver>")))
   ; XXX resolve/2
@@ -1488,7 +1490,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
   (:|isDone| (this)
     "Returns whether this resolver's promise has been resolved already."
-    (as-e-boolean (not (slot-value this 'ref))))) 
+    (as-e-boolean (not (resolver-opt-promise this))))) 
 
 ;;; --- functions that might be referenced before they're defined in the elib package ---
 

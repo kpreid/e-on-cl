@@ -72,8 +72,7 @@
     #())
   (:|getMessageTypes| (this)
     ; xxx this is a bit inefficient
-    (with-slots (ts) this
-      (message-pairs-to-map-including-miranda-messages (vtable-message-types ts)))))
+    (message-pairs-to-map-including-miranda-messages (vtable-message-types (cl-type-specifier this)))))
 
 (def-atomic-sameness cl-type-guard
   (lambda (a b) (equal (cl-type-specifier a)
@@ -81,7 +80,7 @@
   (lambda (a)   (sxhash (cl-type-specifier a))))
 
 (defmethod e-call-match (fail (rec cl-type-guard) mverb &rest args)
-  (with-slots (ts) rec
+  (let ((ts (cl-type-specifier rec)))
     (if (eql ts 't) ; XXX bad OO
       (cond
         ((and (not (eql mverb :|get/0|))

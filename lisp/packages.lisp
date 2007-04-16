@@ -207,6 +207,9 @@
     :e-problem-to-condition
     :e-problem-unseal
     
+    :+the-make-coercion-failure+
+    :+the-make-string-error+
+    
     :make-traversal-key
     :+the-make-traversal-key+
     :+the-make-flex-map+
@@ -285,6 +288,8 @@
   elib:+the-map-guard+
   
   elib:+the-thrower+
+  elib:+the-make-coercion-failure+
+  elib:+the-make-string-error+
 
   elib:+the-make-flex-map+
   elib:+the-make-text-writer+
@@ -541,12 +546,14 @@
     :delta-extract-outer-scope
     :outer-scope-to-layout
     
+    :+the-evaluator+
+    
     :compile-e-to-file
     :load-compiled-e))
 
 (e.util:defglobals
   e.elang.compiler::+e-audition-guard+
-  e.elang.compiler::+the-evaluator+)
+  e.elang.compiler:+the-evaluator+)
 
 (cl:defpackage :e.elang.compiler.seq
   (:nicknames :e.compiler.seq)

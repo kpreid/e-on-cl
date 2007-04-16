@@ -98,12 +98,10 @@
     (error 'synchronous-call-error :recipient ref :mverb mverb :args args)))
 
 (defmethod e-send-dispatch ((ref proxy-ref) mverb &rest args)
-  (with-slots (handler) ref
-    (e<- handler |handleSend| (e-util:unmangle-verb mverb) (coerce args 'vector))))
+  (e<- (%proxy-ref-handler ref) |handleSend| (e-util:unmangle-verb mverb) (coerce args 'vector)))
 
 (defmethod e-send-only-dispatch ((ref proxy-ref) mverb &rest args)
-  (with-slots (handler) ref
-    (e-send-only-dispatch handler :|handleSendOnly/2| (e-util:unmangle-verb mverb) (coerce args 'vector)))
+  (e-send-only-dispatch (%proxy-ref-handler ref) :|handleSendOnly/2| (e-util:unmangle-verb mverb) (coerce args 'vector))
   nil)
 
 (defmethod weak-when-more-resolved ((ref proxy-ref) weak-reactor action)

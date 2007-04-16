@@ -266,18 +266,19 @@
 
 (defclass string-buffer (vat-checking)
   ((buffer :initarg :buffer
-           :type string)))
+           :type string
+           :reader string-buffer-buffer)))
            
 (def-vtable string-buffer
   (:|__printOn| (this tw)
     (e-coercef tw +the-text-writer-guard+)
     ; XXX should we not print the brackets if not isQuoting?
     (e. tw |print| "<stringBuffer ")
-    (e. tw |quote| (copy-seq (slot-value this 'buffer)))
+    (e. tw |quote| (copy-seq (string-buffer-buffer this)))
     (e. tw |print| ">"))
   (:|snapshot| (this)
     ; XXX make non-adjustable exact-sized string
-    (copy-seq (slot-value this 'buffer))))
+    (copy-seq (string-buffer-buffer this))))
 
 
 (defobject +the-make-text-writer+ "org.erights.e.elib.oldeio.makeTextWriter"

@@ -65,10 +65,10 @@
   (:stamped +deep-frozen-stamp+))
 
 (defclass cheap-sealed-box () 
-  ((value :initarg :value)))
+  ((value :initarg :value :accessor %cheap-sealed-box-value)))
 (defclass file-pathname-box (cheap-sealed-box) ())
 (defun unseal (box type)
-  (slot-value (coerce box type) 'value))
+  (%cheap-sealed-box-value (coerce box type)))
 (defun file-ref-pathname (file)
   (unseal (e. file |__optSealedDispatch| +file-pathname-brand+) 
           'file-pathname-box))
@@ -229,7 +229,7 @@
 
 ; --- CL-PPCRE interface ---
 
-(defclass ppcre-scanner-box () ((scanner :initarg :scanner)))
+(defclass ppcre-scanner-box () ((scanner :initarg :scanner :accessor ppcre-scanner)))
 
 ; XXX consider: should we, instead of emulating the Java classes, provide a natural interface to the CL-PPCRE library and write an emulation layer in E?
 ;   +: less/nicer native (CL) code
@@ -254,7 +254,7 @@
         (e-coercef input 'string)
         (e-coercef pattern 'ppcre-scanner-box)
         (multiple-value-bind (match-start match-end reg-starts reg-ends)
-            (cl-ppcre:scan (slot-value pattern 'scanner) input)
+            (cl-ppcre:scan (ppcre-scanner pattern) input)
           (setf result-obj 
             ;; XXX this match range check is what the original
             ;; Java code, but may not be what we actually want for 
