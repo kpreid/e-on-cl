@@ -110,6 +110,37 @@ Notice that even though the handler is written to resolve it immediately, the re
   ? accum [] for verb in ["isBroken", "isNear", "isEventual", "isFar", "isSettled", "isResolved", "optProblem"] { _.with(E.call(Ref, verb, [remotePromise])) }
   # value: [false, true, false, false, true, true, null]
 
+--- Promise resolution cases
+
+The current implementation checks for the resolution promise becoming resolved each time the proxy is used in some way, and converts it into a forwarding ref upon that resolution. This section tests such usage.
+
+  ? def makeJustResolved(value) :any {
+  >   def r
+  >   def p := makeProxy(promiseHandler, r, false)
+  >   bind r := __makeFinalSlot(value)
+  >   return p
+  > }; null
+
+  ? makeJustResolved(1).add(2)
+  # value: 3
+
+  ? Ref.state(makeJustResolved(1))
+  # value: "NEAR"
+  
+  ? Ref.state(makeJustResolved(Ref.broken("fb")))
+  # value: "BROKEN"
+  
+  ? Ref.optSealedDispatch(def _ match msg { msg }, 1)
+  # value: ["__optSealedDispatch", [1]]
+  
+  XXX these won't pass yet; as of this writing, kpreid is investigating why the fix for it is failing cryptically.
+  x ? interp.waitAtTop(makeJustResolved(println) <- ("ok"))
+  x # stdout: ok
+  x 
+  x ? E.sendOnly(def p := makeJustResolved(println), "run", ["ok2"])
+  x > interp.waitAtTop(p <- __getAllegedType())
+  x # stdout: ok2
+
 --- Sameness of Far refs
 
   ? def stubHandler {}
