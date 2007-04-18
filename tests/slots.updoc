@@ -1,0 +1,79 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Tests of built-in slots.
+
+  ? def <eslot> := <import:org.erights.e.elib.slot.*>; null
+
+Final
+
+  ? def makeFinalSlot :DeepFrozen := <eslot:makeFinalSlot>
+  # value: <makeFinalSlot>
+  
+  ? makeFinalSlot.__optUncall()
+  # value: [<import:*>, "get", ["org.erights.e.elib.slot.makeFinalSlot"]]
+  
+  ? def FinalSlot := makeFinalSlot.asType()
+  # value: FinalSlot
+  
+  ? (makeFinalSlot(safeScope) :FinalSlot) == &safeScope
+  # value: true
+
+makeVarSlot
+
+  ? def makeVarSlot :DeepFrozen := <eslot:makeVarSlot>
+  # value: <makeVarSlot>
+
+  ? makeVarSlot.__optUncall()
+  # value: [<import:*>, "get", ["org.erights.e.elib.slot.makeVarSlot"]]
+  
+  ? def VarSlot := makeVarSlot.asType()
+  # value: VarSlot
+
+  ? def v :VarSlot := makeVarSlot(1)
+  # value: <var 1>
+  
+  ? v.isFinal()
+  # value: false
+  
+  ? v.setValue(2)
+  ? v.getValue()
+  # value: 2
+  
+  ? v
+  # value: <var 2>
+
+  XXX readOnly/0
+
+Guarded
+
+  ? def makeGuardedSlot :DeepFrozen := <eslot:makeGuardedSlot>
+  # value: <makeGuardedSlot>
+
+  ? makeGuardedSlot.__optUncall()
+  # value: [<import:*>, "get", ["org.erights.e.elib.slot.makeGuardedSlot"]]
+  
+  ? def GuardedSlot := makeGuardedSlot.asType()
+  # value: GuardedSlot
+
+  ? makeGuardedSlot(int, null, def _(p) :any { print(p); [p] })
+  # stdout: problem: the Null null doesn't coerce to an int
+  
+  # problem: optEjector <_> returned: [problem: the Null null doesn't coerce to an int]
+
+  ? def v :GuardedSlot := makeGuardedSlot(int, 1, null)
+  # value: <var 1 :int>
+  
+  ? v.isFinal()
+  # value: false
+  
+  ? v.setValue(2)
+  ? v.getValue()
+  # value: 2
+  
+  ? v.setValue(null)
+  # problem: the Null null doesn't coerce to an int
+  
+  ? v
+  # value: <var 2 :int>
+

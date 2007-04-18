@@ -20,34 +20,6 @@
                :hi))))))
   "Method \"run\" has 0 parameters, which is not enough to accept 1 prefix argument.")
 
-(deftest guard->type-specifier->guard
-  (collect-mismatches 
-    #'samep
-    #'identity
-    (lambda (guard)
-      (type-specifier-to-guard (guard-to-type-specifier guard)))
-    (list (e-lambda "$typeSpecifierTest" ())))
-  nil)
-
-(deftest type-specifier->guard->type-specifier
-  (collect-mismatches 
-    #'equal
-    #'identity
-    (lambda (ts)
-      (guard-to-type-specifier (type-specifier-to-guard ts)))
-    '((integer -10 10)))
-  nil)
-
-(deftest shorten-guard
-  (guard-to-type-specifier
-    (make-instance 'e.elib::forwarding-ref :target
-      (type-specifier-to-guard 'integer)))
-  integer)
-  
-(deftest e-print-class-guard
-  (e-print (type-specifier-to-guard (find-class 'integer)))
-  "int")
-  
 (deftest boolean-print-readably-package
   (with-output-to-string (*standard-output*)
     (with-standard-io-syntax
@@ -65,3 +37,8 @@
  #.+E-TRUE+ #.+E-FALSE+ #.E.ELIB:+E-TRUE+ #.E.ELIB:+E-FALSE+
  :NR :NR :NR :NR
  #.+E-TRUE+ #.+E-FALSE+ #.E.ELIB:+E-TRUE+ #.E.ELIB:+E-FALSE+")
+
+(deftest cl-print-var-slot
+  (with-standard-io-syntax
+    (write-to-string (make-instance 'e-var-slot :value 1) :readably nil))
+  "#<var & 1>")

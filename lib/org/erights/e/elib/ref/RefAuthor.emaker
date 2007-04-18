@@ -26,6 +26,13 @@ def RefAuthor {
       to isNear(r)     :any { refState(r) == sElibNear }
       to isEventual(r) :any { refState(r) == sElibEventual }
       to isFar(r) :any { refState(r) == sElibEventual && refIsResolved(r) }
+      to state(r) :any {
+        switch (refState(r)) {
+          match ==sElibNear     { return "NEAR" }
+          match ==sElibEventual { return "EVENTUAL" }
+          match ==sElibBroken   { return "BROKEN" }
+        }
+      }
       
       to isSettled(r)  :any { __equalizer.isSettled(r) }
       to isResolved(r) :any { refIsResolved(r) }

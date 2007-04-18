@@ -365,12 +365,7 @@
   (concatenate 'string
     (simplify-fq-name (cl-type-fq-name type)) 
     (cl-type-parameters type nil)))
-  
-(defun cl-type-fq-expr (type)
-  (concatenate 'string 
-    (cl-type-fq-name type)
-    (cl-type-parameters type nil)))
-  
+
 ; --- priority queue ---
 
 (defobject +the-make-priority-queue+ "org.cubik.cle.prim.makePriorityQueue" ()

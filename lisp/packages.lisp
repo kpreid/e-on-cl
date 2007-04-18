@@ -161,7 +161,7 @@
     :+the-make-guarded-slot+
     
     :cl-type-fq-name
-    :cl-type-fq-expr :cl-type-simple-expr
+    :cl-type-simple-expr
     :cl-type-parameters
     :def-fqn
     

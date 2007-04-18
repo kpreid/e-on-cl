@@ -260,6 +260,7 @@
     (:|makeArray|        e.elib.tables:+the-make-array+)
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeFlexMap|      elib:+the-make-flex-map+)
+    (:|makeGuardedSlot|  +the-make-guarded-slot+)
     (:|makeScope|        +the-make-scope+)
     (:|makePriorityQueue| elib:+the-make-priority-queue+)
     (:|makeStaticScope|  elang:+the-make-static-scope+)

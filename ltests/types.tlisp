@@ -1,0 +1,88 @@
+; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(deftest guard->type-specifier->guard
+  (collect-mismatches 
+    #'samep
+    #'identity
+    (lambda (guard)
+      (type-specifier-to-guard (guard-to-type-specifier guard)))
+    (list (e-lambda "$typeSpecifierTest" ())))
+  nil)
+
+(deftest type-specifier->guard->type-specifier
+  (collect-mismatches 
+    #'equal
+    #'identity
+    (lambda (ts)
+      (guard-to-type-specifier (type-specifier-to-guard ts)))
+    '((integer -10 10)))
+  nil)
+
+(deftest shorten-guard
+  (guard-to-type-specifier
+    (make-instance 'e.elib::forwarding-ref :target
+      (type-specifier-to-guard 'integer)))
+  integer)
+
+(defmacro define-type-specifier-print-test (name type-specifier text)
+  `(deftest ,name
+     (e-print (type-specifier-to-guard ,type-specifier))
+     ,text))
+
+(define-type-specifier-print-test type-print.class
+  (find-class 'integer) "int")
+
+(define-type-specifier-print-test type-print.uncustomized
+  'readtable "readtable")
+
+(define-type-specifier-print-test type-print.and.0
+  '(and) "all[]")
+
+(define-type-specifier-print-test type-print.and.1
+  '(and integer) "all[int]")
+
+(define-type-specifier-print-test type-print.and.2
+  '(and integer number) "all[int, number]")
+
+(define-type-specifier-print-test type-print.or.0
+  '(or) "any[]")
+
+(define-type-specifier-print-test type-print.or.1
+  '(or integer) "any[int]")
+
+(define-type-specifier-print-test type-print.or.2
+  '(or integer string) "any[int, String]")
+
+(define-type-specifier-print-test type-print.float64
+  'float64 "float64")
+
+(define-type-specifier-print-test type-print.vector.t
+  '(vector t) "ConstList")
+
+(define-type-specifier-print-test type-print.vector.t.length
+  '(vector t 10) "ConstList[any, 10]")
+
+(define-type-specifier-print-test type-print.vector.*.length
+  '(vector * 10) "ConstList[any, 10]")
+
+(define-type-specifier-print-test type-print.vector.specialized
+  '(vector bit) "ConstList[bit]")
+
+(define-type-specifier-print-test type-print.vector.specialized.length
+  '(vector bit 10) "ConstList[bit, 10]")
+
+(define-type-specifier-print-test type-print.vector.upgrade
+  '(vector readtable) "ConstList")
+
+(define-type-specifier-print-test type-print.vector.upgrade.length
+  '(vector readtable 10) "ConstList[any, 10]")
+
+(define-type-specifier-print-test type-print.vector.character
+  ;; E code should never actually see this...
+  '(vector character) "ConstList[char]")
+
+(deftest observable-type-of-ref
+  (observable-type-of (make-instance 'e.elib::forwarding-ref :target 1))
+  integer)
+
