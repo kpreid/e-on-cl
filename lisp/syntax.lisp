@@ -143,11 +143,17 @@
     "The print representation of a Lisp cons. Not parsable."
     (e-coercef tw +the-text-writer-guard+)
     (e-coercef this 'cons)
-    ; XXX this is a lousy print syntax
-    (e. tw |write| "< ")
+    (e. tw |write| "<(")
     (e. tw |quote| (car this))
-    (e. tw |write| " > + ")
-    (e. tw |quote| (cdr this)))
+    (loop for x = (ref-shorten (cdr this)) then (ref-shorten (cdr x))
+          while (consp x)
+          do (e. tw |write| ", ")
+             (e. tw |quote| (car x))
+          finally
+            (when x
+              (e. tw |write| " . ")
+              (e. tw |quote| x)))
+    (e. tw |write| ")>"))
   
   (:|printCharacter| (tw this)
     "The print representation of a character."

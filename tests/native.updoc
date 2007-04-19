@@ -85,3 +85,27 @@ symbol-function
   # value: true
 
 XXX alleged type of CL functions
+
+Conses
+
+  ? def cons := lisp["CL", "CONS"].getFunction(); null
+
+  ? def c := cons(1, cons(false, null))
+  # value: <(1, false)>
+  
+  ? cons(1, 2)
+  # value: <(1 . 2)>
+  
+  ? cons(1, cons(2, 3))
+  # value: <(1, 2 . 3)>
+
+  testing forwarding-ref ignoring
+  ? def np; bind np := null
+  > cons(1, np)
+  # value: <(1)>
+
+  ? def cp; bind cp := cons(2, null)
+  > cons(1, cp)
+  # value: <(1, 2)>
+
+This print syntax is arbitrary and designed as a compromise between E and CL syntaxes.
