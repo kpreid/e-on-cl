@@ -258,6 +258,7 @@
     ;; simple makers
     (:|getCharacter|     +the-get-character+)
     (:|makeArray|        e.elib.tables:+the-make-array+)
+    (:|makeConstList|    +the-make-list+)
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeFlexMap|      elib:+the-make-flex-map+)
     (:|makeGuardedSlot|  +the-make-guarded-slot+)

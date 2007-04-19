@@ -124,6 +124,11 @@ TypeDesc
   ? def td := makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [md])
   # value: N
 
+  ? makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [md, md])
+  # problem: duplicate message desc for verb/1: /** doc comment */
+  #          to verb(arg) :float64 then /** doc comment */
+  #          to verb(arg) :float64
+
  selflessness
 
   ? td.__optUncall()

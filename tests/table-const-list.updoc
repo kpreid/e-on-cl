@@ -4,9 +4,6 @@
 ? [1, 2] + [3, 4]
 # value: [1, 2, 3, 4]
 
-? __makeList :DeepFrozen
-# value: <makeConstList>
-
 ? [1, 2, 2].asMap()
 # value: [0 => 1, 1 => 2, 2 => 2]
 
@@ -57,3 +54,14 @@ sort
   # value: [3, 2, 1]
 
 XXX consider how to test all the same methods on Strings (or, for String-specific quirks, coercions, etc.)
+
+makeList
+
+  ? def makeConstList :DeepFrozen := <elib:tables.makeConstList>
+  # value: <makeConstList>
+
+  ? __makeList == makeConstList
+  # value: true
+
+  ? makeConstList.unrecognized()
+  # problem: no such method: org.erights.e.elib.tables.makeConstList#unrecognized/0

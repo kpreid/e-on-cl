@@ -86,3 +86,43 @@
   (observable-type-of (make-instance 'e.elib::forwarding-ref :target 1))
   integer)
 
+(deftest string-error.ok
+  (typep (make-condition 'simple-error :format-control "hello world"
+                                       :format-arguments '())
+         'elib::string-error)
+  t)
+
+(deftest string-error.simple-not-string
+  (typep (make-condition 'simple-error :format-control (formatter "foo")
+                                       :format-arguments '())
+         'elib::string-error)
+  nil)
+
+(deftest string-error.simple-extra-args
+  (typep (make-condition 'simple-error :format-control ""
+                                       :format-arguments '(junk))
+         'elib::string-error)
+  nil)
+
+(deftest string-error.simple-formatty
+  (typep (make-condition 'simple-error :format-control "~A"
+                                       :format-arguments '(junk))
+         'elib::string-error)
+  nil)
+
+(deftest string-error.not-simple
+  (typep (make-condition 'program-error)
+         'elib::string-error)
+  nil)
+
+(deftest string-error.not-error
+  (typep (make-condition 'simple-condition)
+         'elib::string-error)
+  nil)
+
+(deftest string-error.uncall-other-simple-error
+  ;; because the uncall for string-errors is defined in the vtable for simple-errors
+  (e. (make-condition 'simple-error :format-control "~A"
+                                    :format-arguments '(junk))
+      |__optUncall|)
+  nil)

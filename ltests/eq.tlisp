@@ -32,6 +32,10 @@
   (fast-sameness-test 'symbol 't)
   #.#'samep)
 
+(deftest fast-sameness-test.symbol
+  (fast-sameness-test 'symbol 'symbol)
+  #.#'eq)
+
 #-abcl ;; as of 0.0.9, ABCL's subtypep isn't smart enough for this
 (deftest fast-sameness-test.disjoint-general
   (resembles-constantly nil (fast-sameness-test 'symbol 'function))

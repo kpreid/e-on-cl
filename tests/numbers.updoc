@@ -51,6 +51,20 @@
 ? 5.floor()
 # value: 5
 
+approxDivide (by zero), and print of funny floats
+
+  ? [-1 / 0, 0 / 0, 1 / 0]
+  # value: [-Infinity, NaN, Infinity]
+
+  ? [-1.0 / 0, 0.0 / 0, 1.0 / 0]
+  # value: [-Infinity, NaN, Infinity]
+
+  ? [-1 / 0.0, 0 / 0.0, 1 / 0.0]
+  # value: [-Infinity, NaN, Infinity]
+
+  ? [-1.0 / 0.0, 0.0 / 0.0, 1.0 / 0.0]
+  # value: [-Infinity, NaN, Infinity]
+
 Exponentiation
 
   ? 2 ** 16

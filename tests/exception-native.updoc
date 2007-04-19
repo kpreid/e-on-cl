@@ -12,17 +12,29 @@
 
 --- Simple string exception ---
 
+  ? def makeStringException :DeepFrozen := <import:org.cubik.cle.fail.makeStringException>
+  # value: <makeStringException>
+
+  ? def StringException := makeStringException.asType()
+  # value: StringException
+
   ? def stringEx := "a" :Throwable
   # value: problem: a
   
   ? stringEx :Throwable
   # value: problem: a
+
+  ? stringEx :StringException
+  # value: problem: a
+  
+  ? 1 :StringException
+  # problem: the int 1 doesn't coerce to a StringException
   
   ? Ref.isPassByCopy(stringEx)
   # value: true
   ? stringEx.__optUncall()
   # value: [<makeStringException>, "run", ["a"]]
-  ? stringEx.__optUncall()[0] == <import:org.cubik.cle.fail.makeStringException>
+  ? stringEx.__optUncall()[0] == makeStringException
   # value: true
   ? stringEx == E.call(E, "call", stringEx.__optUncall())
   # value: true
