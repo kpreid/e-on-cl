@@ -12,9 +12,8 @@
   (let ((zipfile (open-zipfile pathname)))
     ; XXX finalizer to close zip file
     (e-lambda "org.cubik.cle.prim.open-jar$jar" ()
-      (:|getOpt| (subpath)
+      (:|getOpt| ((subpath 'string))
         "Return a file from the jar file, or null if it does not exist. Does not yet support getting directories."
-        (e-coercef subpath 'string)
         (let ((zip-entry (get-zipfile-entry subpath zipfile)))
           (when zip-entry
             (e-lambda |entry| ()

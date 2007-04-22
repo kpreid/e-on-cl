@@ -494,7 +494,7 @@ SlotPattern
   #            /** Quasiliteral ValueMaker interface.
   #            
   #            NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced. */
-  #            to substitute(args)
+  #            to substitute(args :ConstList)
   #            to asKernelE()
   #            to welcome(visitor)
   #            /** Java-E compatibility */

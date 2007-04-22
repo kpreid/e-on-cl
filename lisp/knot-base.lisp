@@ -65,11 +65,10 @@
      :stamped +standard-graph-exit-stamp+)
   (:|asType| ()
     (type-specifier-to-guard 'scope))
-  (:|_make| (state fqn-prefix local-definitions)
+  (:|_make| ((state +the-any-map-guard+)
+             (fqn-prefix 'string)
+             (local-definitions 'vector))
     "XXX this is the uncall constructor, in need of a better interface"
-    (e-coercef state +the-any-map-guard+)
-    (e-coercef fqn-prefix 'string)
-    (e-coercef local-definitions 'vector)
     (make-scope fqn-prefix
                 (loop with (keys values) = (coerce (e. state |getPair|) 'list)
                       for key across keys
@@ -77,10 +76,9 @@
                       collect (list (e-coerce key 'string) value))
                 (map 'vector (lambda (k) (e-coerce k 'string)) 
                              local-definitions)))
-  (:|fromState| (state fqn-prefix)
+  (:|fromState| ((state +the-any-map-guard+)
+                 (fqn-prefix 'string))
     "XXX document"
-    (e-coercef state +the-any-map-guard+)
-    (e-coercef fqn-prefix 'string)
     (make-scope fqn-prefix
                 (loop with (keys values) = (coerce (e. state |getPair|) 'list)
                       for key across keys
@@ -100,8 +98,7 @@
     (declare (ignore this))
     (eql auditor +selfless-stamp+))
 
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| "<scope " (scope-fqn-prefix this) ">")
     nil)
   (:|__optUncall| (this)
@@ -121,9 +118,8 @@
                     (lambda (noun junk) (declare (ignore junk)) noun)
                     (local-definitions this))
                   #'string<)))))
-  (:|or| (inner outer)
+  (:|or| (inner (outer 'scope))
     "Return a scope which maps all nouns either scope does, preferring this scope's slots. The FQN prefix will be that of this scope."
-    (e-coercef outer 'scope)
     (flet ((overlay (accessor)
              (let ((new-table (make-hash-table 
                                 :test #'equal 
@@ -137,23 +133,20 @@
       :fqn-prefix        (scope-fqn-prefix inner)
       :slot-table        (overlay 'slot-table)
       :local-definitions (overlay 'local-definitions))))
-  (:|maps| (this noun)
+  (:|maps| (this (noun 'string))
     "Return whether this scope has a slot for the given noun string."
-    (e-coercef noun 'string)
     (as-e-boolean (nth-value 1 (gethash noun (slot-table this)))))
   (:|get| (scope noun)
     "Return the value of this scope's slot for the given noun string, or throw if it has no slot."
     (e. (e. scope |getSlot| noun) |getValue|))
-  (:|getSlot| (this noun)
+  (:|getSlot| (this (noun 'string))
     "Return this scope's slot for the given noun string, or throw if it has no slot."
-    (e-coercef noun 'string)
     (multiple-value-bind (slot present) (gethash noun (slot-table this))
       (if present
         slot
         (error "binding not in scope: ~A" (e-quote noun)))))
-  (:|fetch| (this noun absent-thunk)
+  (:|fetch| (this (noun 'string) absent-thunk)
     "Return the value of this scope's slot for the given noun string, or the result of absent-thunk if it has no slot."
-    (e-coercef noun 'string)
     (multiple-value-bind (slot present) (gethash noun (slot-table this))
       (if present
         (e. slot |getValue|)
@@ -179,9 +172,8 @@
   (:|with| (scope noun value)
     "Return a scope which has an immutable slot for 'value' bound to 'noun', and this scope's other bindings and FQN prefix."
     (e. scope |withSlot| noun (make-instance 'e-simple-slot :value value)))
-  (:|withSlot| (scope new-noun new-slot)
+  (:|withSlot| (scope (new-noun 'string) new-slot)
     "Return a scope which has 'new-slot' bound to 'new-noun', and this scope's other bindings and FQN prefix."
-    (e-coercef new-noun 'string)
     (when (gethash new-noun (local-definitions scope))
       (error "~A already in scope" (e-quote new-noun)))
     ; xxx support efficient accumulation?
@@ -200,18 +192,16 @@
             (copy-hash-table-entries (local-definitions scope) new-table)
             (setf (gethash new-noun new-table) t)
             new-table))))
-  (:|withPrefix| (scope new)
+  (:|withPrefix| (scope (new 'string))
     "Return a scope which is identical to this scope, except for having the given FQN prefix."
-    (e-coercef new 'string)
     (make-instance 'scope 
       :fqn-prefix new
       :slot-table (slot-table scope)
       :local-definitions (local-definitions scope)))
   (:|getFQNPrefix/0| 'scope-fqn-prefix)
   
-  (:|without| (scope removed-noun)
+  (:|without| (scope (removed-noun 'string))
     "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."
-    (e-coercef removed-noun 'string)
     (let ((slot-table (slot-table scope)))
       (make-instance 'scope 
         :fqn-prefix (scope-fqn-prefix scope)
@@ -267,8 +257,7 @@
                          (subseq name 1))))
 
 (def-vtable e-structure-exception
-  (:|__printOn| (condition tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (condition (tw +the-text-writer-guard+))
     (e. tw |write| "problem: ")
     (efuncall (se-printer condition) tw condition))
   (:|__getAllegedType| (condition)
@@ -301,10 +290,10 @@
 
 (defobject +the-make-exception+ "org.cubik.cle.prim.makeException" 
     (:stamped +deep-frozen-stamp+)
-  (:|run| (types properties printer)
-    (setf types (map 'vector (lambda (x) (e-coercef x 'string)) (e-coerce types 'vector)))
-    (e-coercef properties +the-map-guard+)
-    (e-coercef printer (eelt (vat-safe-scope *vat*) "DeepFrozen"))
+  (:|run| ((types 'vector) 
+           (properties +the-map-guard+) 
+           (printer (eelt (vat-safe-scope *vat*) "DeepFrozen")))
+    (setf types (map 'vector (lambda (x) (e-coercef x 'string)) types))
     (make-condition
       'e-structure-exception
       :types types
@@ -316,8 +305,7 @@
 
 (defobject +the-looper+ "org.erights.e.elang.interp.loop" 
     (:stamped +deep-frozen-stamp+)
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "<__loop>")
     nil)
   (:|run| (body)
@@ -339,25 +327,21 @@
     "org.quasiliteral.text.makeFirstCharSplitter"
     (:stamped +deep-frozen-stamp+)
   ;; In the future, this might become part of something for working with character sets in general, and Unicode character categories. Consider Cocoa's NSCharacterSet and NSScanner.
-  (:|run| (specials)
-    (e-coercef specials 'string)
+  (:|run| ((specials 'string))
     (flet ((match (ch) (position ch specials)))
       (e-lambda "org.quasiliteral.text.makeFirstCharSplitter$firstCharSplitter" 
           (:stamped +deep-frozen-stamp+)
-        (:|__printOn| (out)
-          (e-coercef out +the-text-writer-guard+)
+        (:|__printOn| ((out +the-text-writer-guard+))
           (e. out |write| "<finds any of ")
           (e. out |quote| specials)
           (e. out |write| ">"))
-        (:|findIn| (str)
+        (:|findIn| ((str 'string))
           "Equivalent to .findInFrom(str, 0)."
-          (e-coercef str 'string)
           (or (position-if #'match str)
               -1))
-        (:|findInFrom| (str start) ; XXX write tests
+        (:|findInFrom| ((str 'string) (start `(integer 0 ,(length str))))
+          ; XXX write tests
           "Return the first index greater than 'start' of a character of 'str' which is one of the special characters of this splitter, or -1 if no such index exists."
-          (e-coercef str 'string)
-          (e-coercef start `(integer 0 ,(length str)))
           (or (position-if #'match str :start start)
               -1))))))
 

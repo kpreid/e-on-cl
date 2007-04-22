@@ -305,8 +305,7 @@
                                                         :print-steps print-steps
                                                         :file file)))
            (updoc-interp (e-lambda "org.cubik.cle.updoc.$updocInterp" ()
-              (:|__printOn| (tw)
-                (e-coercef tw +the-text-writer-guard+)
+              (:|__printOn| ((tw +the-text-writer-guard+))
                 ; XXX we should eventually be using an e.extern file-cap for this, at which point we shouldn't be printing <file: ourselves
                 ; XXX giving all updoc scripts the authority to see their own pathname. This could be considered a problem.
                 (e. tw |print| "<updoc loop for <file:" (enough-namestring file) ">>"))

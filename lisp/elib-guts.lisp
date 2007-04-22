@@ -11,8 +11,7 @@
 
 (defobject +the-audit-checker+ "org.erights.e.elib.slot.auditChecker"
     (:stamped +deep-frozen-stamp+)
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "__auditedBy")) ; XXX move to e.syntax?
   (:|run| (auditor specimen)
     (as-e-boolean (approvedp auditor specimen))))
@@ -69,8 +68,7 @@
     (eql auditor +selfless-stamp+))
   (:|__optUncall| (this)
     `#(,+the-make-simple-slot+ "run" #(,(simple-slot-value this))))
-  (:|__printOn| (this tw) ; XXX move to e.syntax?
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
     (e. tw |print| "<& ")
     (e. tw |quote| (simple-slot-value this))
     (e. tw |print| ">")
@@ -121,8 +119,7 @@
   ())
 
 (def-vtable e-var-slot
-  (:|__printOn| (this tw) ; XXX move to e.syntax?
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
     (e. tw |print| "<var ")
     (e. tw |quote| (e. this |getValue|))
     (e. tw |print| ">"))
@@ -149,8 +146,7 @@
     (call-next-method)))
 
 (def-vtable e-guarded-slot
-  (:|__printOn| (this tw) ; XXX move to e.syntax?
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
     (with-accessors ((guard guarded-slot-guard) 
                      (getter closure-slot-getter))
                     this
@@ -187,36 +183,31 @@
         (eql auditor +standard-graph-exit-stamp+)
         (eql auditor +thread-sharable-stamp+)))
 
-  (:|__printOn| (this tw) ; XXX move to e.syntax?
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
     (e. tw |print| (if (e-is-true this)
                      "true"
                      "false")))
-  (:|and| (this other)
+  (:|and| (this (other 'e-boolean))
     "Boolean and."
-    (e-coercef other 'e-boolean)
     (if (e-is-true this) other +e-false+))
   (:|not| (this)
     "Boolean negation."
     (if (eql this +e-false+) +e-true+ +e-false+))
-  (:|or| (this other)
+  (:|or| (this (other 'e-boolean))
     "Boolean or."
-    (e-coercef other 'e-boolean)
     (if (e-is-true this) +e-true+ other))
   (:|pick| (this true-value false-value)
     "Return the first argument if this is true, otherwise return the second argument."
     (if (e-is-true this) true-value false-value))
-  (:|xor| (this other)
+  (:|xor| (this (other 'e-boolean))
     "Boolean exclusive or."
-    (e-coercef other 'e-boolean)
     (if (e-is-true this) (e. other |not|) other)))
 
 ; --- Throw and Ejector ---
 
 (defobject +the-thrower+ "org.erights.e.elib.prim.throw"
     (:stamped +deep-frozen-stamp+)
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "throw")
     nil)
   (:|run| (problem)
@@ -251,8 +242,7 @@
 
 (defun ejector (label fn)
   (e-lambda "org.erights.e.elib.base$ejector" ()
-    (:|__printOn| (tw)
-      (e-coercef tw +the-text-writer-guard+)
+    (:|__printOn| ((tw +the-text-writer-guard+))
       (e. tw |print| "<" label " ejector>"))
     (:|run| ()      (%ejector-throw label fn nil))
     (:|run| (value) (%ejector-throw label fn value))))
@@ -373,8 +363,7 @@
     (make-instance 'priority-queue)))
 
 (def-vtable priority-queue
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| "<priority queue of " (priority-queue-length this) ">"))
   (:|peek| (this absent-thunk)
     (block nil
@@ -383,8 +372,7 @@
   (:|pop| (this)
     (let ((p (priority-queue-pop this)))
       (vector (car p) (cdr p))))
-  (:|put| (this key value)
-    (e-coercef key 'real)
+  (:|put| (this (key 'real) value)
     (priority-queue-put this key value))
   (:|asList| (this)
     (map 'vector 

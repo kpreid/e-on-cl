@@ -64,9 +64,9 @@
       (,(locally
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
           (e-util:mangle-verb "run" (+ 2 (length param-types))))
-        (,span-sym ,@param-syms ,jlayout-sym)
-        (assert (null (ref-shorten ,jlayout-sym)))
-        (e-coercef ,span-sym '(or null source-span))
+        ((,span-sym '(or null source-span)) ,@param-syms (,jlayout-sym 'null))
+        (declare (ignore ,jlayout-sym))
+        ;; XXX now that we have guarded lambda lists we should rewrite this
         ,@(loop for param in param-syms
                 for type in param-types
                 ;; XXX half-baked fix for vector args
@@ -407,8 +407,7 @@ List nodes will be assumed to be sequences."
     (declare (ignore this))
     (or (eql auditor +selfless-stamp+)
         (eql auditor +thread-sharable-stamp+)))
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (let ((quote (e-is-true (e. tw |isQuoting|))))
       (when quote
         (e. tw |print| (e. this |quasiTypeTag|) "`"))
@@ -437,11 +436,10 @@ List nodes will be assumed to be sequences."
             (with-lock-held ((static-scope-lock this)) 
               (setf (node-computed-static-scope this) new))))))
   (:|getOptSpan/0| 'node-source-span)
-  (:|substitute| (this args)
+  (:|substitute| (this (args 'vector))
     "Quasiliteral ValueMaker interface.
 
 NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced."
-    (e-coercef args 'vector)
     (kernelize
       (if (zerop (length args))
         this
@@ -574,8 +572,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (eql auditor +deep-frozen-stamp+))
-  (:|__printOn| (this tw) 
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |write| (%false-guard-text this))))
 
 (defun opt-guard-expr-to-safe-opt-guard (opt-guard-expr
@@ -601,8 +598,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                     (not (e-is-true has-meta-state-expr)))))
   (with-result-promise (self)
     (e-lambda "org.erights.e.elang.evm.StaticScope" (:stamped +selfless-stamp+)
-      (:|__printOn| (tw)
-        (e-coercef tw +the-text-writer-guard+)
+      (:|__printOn| ((tw +the-text-writer-guard+))
         (e. tw |print| "<" (e. set-names  |getKeys|) " := "
                            (e. read-names |getKeys|) " =~ "
                            (e. def-names  |getKeys|) " + var "
@@ -690,7 +686,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
   (defobject +the-make-static-scope+ "org.erights.e.evm.makeStaticScope" ()
-    (:|run| (sn rn dn vn hms)
+    (:|run| (sn rn dn vn (hms 'e-boolean))
       "General StaticScope constructor. Currently provided only to make StaticScopes selfless."
       (let ((map-guard (e. (e-import "org.erights.e.elib.slot.Map")
                            |get|
@@ -701,30 +697,26 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         
         ;; this is rather loose, but it shouldn't matter, as a StaticScope
         ;; is only worth as much as what you got it from
+        
+        ;; XXX convert to guarded lambda list
         (e-coercef sn map-guard)
         (e-coercef rn map-guard)
         (e-coercef dn map-guard)
         (e-coercef vn map-guard))
-      (e-coercef hms 'e-boolean)
       (make-static-scope :set-names sn
                          :read-names rn
                          :def-names dn
                          :var-names vn
                          :has-meta-state-expr hms))
-    (:|scopeAssign| (node)
-      (e-coercef node '|ENode|)
+    (:|scopeAssign| ((node '|ENode|))
       (make node :set-names (e. node |getName|)))
-    (:|scopeDef| (node)
-      (e-coercef node '|ENode|)
+    (:|scopeDef| ((node '|ENode|))
       (make node :def-names (e. (e. node |getNoun|) |getName|)))
-    (:|scopeRead| (node)
-      (e-coercef node '|ENode|)
+    (:|scopeRead| ((node '|ENode|))
       (make node :read-names (e. node |getName|)))
-    (:|scopeVar| (node)
-      (e-coercef node '|ENode|)
+    (:|scopeVar| ((node '|ENode|))
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
-    (:|scopeSlot| (node)
-      (e-coercef node '|ENode|)
+    (:|scopeSlot| ((node '|ENode|))
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
     (:|getEmptyScope| () +empty-static-scope+)))

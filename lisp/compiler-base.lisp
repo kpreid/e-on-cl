@@ -333,8 +333,7 @@
   ((noun :initarg :noun :reader unbound-noun-noun :type string)))
 
 (def-vtable unbound-noun
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     ;; XXX review wording of this error
     (e. tw |write| "problem: shouldn't happen: uncaught unbound noun in compiler: ")
     (e. tw |print| (unbound-noun-noun this))))
@@ -385,11 +384,11 @@
     "org.erights.e.elang.scope.makeStaticContext"
     (:stamped +deep-frozen-stamp+)
   (:|asType| () (type-specifier-to-guard 'static-context))
-  (:|run| (fqn-prefix syn-env opt-object-source source-span)
-    (e-coercef fqn-prefix 'string)
-    (e-coercef syn-env 'null)
-    (e-coercef opt-object-source '(or null e.kernel:|ObjectExpr|))
-    (e-coercef source-span '(or null source-span))
+  (:|run| ((fqn-prefix 'string) 
+           (syn-env 'null)
+           (opt-object-source '(or null e.kernel:|ObjectExpr|))
+           (source-span '(or null source-span)))
+    (declare (ignore syn-env))
     (make-instance 'static-context
       :source-span source-span
       :fqn-prefix fqn-prefix
@@ -410,9 +409,8 @@
          nil
          ,(static-context-opt-object-source this)
          ,(static-context-source-span this))))
-  (:|__printOn| (this tw)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (declare (ignore this))
-    (e-coercef tw +the-text-writer-guard+)
     (e. tw |print| "<static context>"))
   (:|getOptSource/0| 'static-context-opt-object-source)
   (:|getSource| (this)
@@ -561,8 +559,7 @@
     (setf audition
       (e-lambda "org.erights.e.elang.evm.Audition" 
           (:stamped +e-audition-stamp+)
-        (:|__printOn| (tw)
-          (e-coercef tw +the-text-writer-guard+)
+        (:|__printOn| ((tw +the-text-writer-guard+))
           (e. tw |write| (concatenate 'string
             "<"
             (if audition-ok "" "closed ")

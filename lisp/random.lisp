@@ -7,8 +7,7 @@
 (defconstant +swiss-upper-bound+ (expt 2 (* 8 +swiss-size-in-octets+)))
 
 (def-vtable random-state
-  (:|__printOn| (this out)
-    (e-coercef out +the-text-writer-guard+)
+  (:|__printOn| (this (out +the-text-writer-guard+))
     (with-standard-io-syntax
       (e. out |write| (prin1-to-string this))))
   (:|nextSwiss| (this)

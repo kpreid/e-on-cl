@@ -248,8 +248,7 @@
      (port :initarg :port :accessor addr-info-port :type (unsigned-byte 16))))
   
   (def-vtable pseudo-addr-info
-    (:|__printOn| (this tw)
-      (e-coercef tw +the-text-writer-guard+)
+    (:|__printOn| (this (tw +the-text-writer-guard+))
       (e. tw |write| "<network address")
       #+sbcl
       (with-accessors ((host-ent addr-info-host-ent) (port addr-info-port)) this
@@ -269,10 +268,10 @@
       (e. tw |write| ">"))))
 
 (defun get-addr-info (host service hints)
-  ;; XXX needs a failure ejector
   (e-coercef host '(or null string))
   (e-coercef service '(or null string))
   (e-coercef hints 'null)
+  ;; XXX needs a failure ejector
   (e<- (efun () 
          (or 
           #+sbcl (make-instance 'pseudo-addr-info
@@ -327,8 +326,7 @@
 (defun make-fd-ref (opt-fd)
   (check-type opt-fd (integer 0))
   (e-lambda |FDRef| ()
-    (:|__printOn| (out)
-      (e-coercef out +the-text-writer-guard+)
+    (:|__printOn| ((out +the-text-writer-guard+))
       (if opt-fd
         (progn
           (e. out |write| "<file descriptor ")
@@ -347,10 +345,7 @@
       (values))
 
     #+sbcl
-    (:|write| (vector error-ejector start length)
-      (e-coercef vector 'vector)
-      (e-coercef start 'integer)
-      (e-coercef length '(or null integer))
+    (:|write| ((vector 'vector) error-ejector (start 'integer) (length '(or null integer)))
       (setf vector (coerce vector '(vector (unsigned-byte 8))))
       (multiple-value-bind (n errno)
           ;; This signal handling is unnecessary as of SBCL 0.9.11.27, which ignores SIGPIPE globally. XXX when 0.9.12 is released, remove this code
@@ -363,9 +358,8 @@
           (eject-or-ethrow error-ejector (errno-to-condition errno)))))
 
     #+sbcl
-    (:|read| (max-octets error-ejector eof-ejector)
+    (:|read| ((max-octets '(integer 0)) error-ejector eof-ejector)
       "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
-      (e-coercef max-octets '(integer 0))
       ; XXX be able to avoid allocating the buffer
       ; thanks to nyef on irc://irc.freenode.net/lisp for this code --
       ;   http://paste.lisp.org/display/7891

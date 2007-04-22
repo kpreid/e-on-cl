@@ -77,8 +77,7 @@
   ;; XXX prohibit slashes? what are our consistency rules?
   (let ((pathname (path-components-to-pathname path-components)))
     (e-lambda |file| ()
-      (:|__printOn| (tw)
-        (e-coercef tw +the-text-writer-guard+)
+      (:|__printOn| ((tw +the-text-writer-guard+))
         (e. tw |print| "<file://")
         (if (not (zerop (length path-components)))
           (loop for x across path-components do
@@ -111,8 +110,7 @@
           (some #'probe-file 
             (list pathname
                   (cl-fad:pathname-as-directory pathname)))))
-      (:|get| (subpath)
-        (e-coercef subpath 'string)
+      (:|get| ((subpath 'string))
         (let* ((splat (e. subpath |split| "/")))
           (make-file-getter
             (concatenate 'vector
@@ -210,14 +208,12 @@
   (+ (/ jt 1000) +java-epoch-delta+))
 
 (defobject +the-timer+ "$timer" ()
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "<a Timer>")
     nil)
   (:|now| ()
     (cl-to-java-time (get-fine-universal-time)))
-  (:|whenPast| (time thunk)
-    (e-coercef time 'real)
+  (:|whenPast| ((time 'real) thunk)
     (let ((utime (java-to-cl-time time)))
       (multiple-value-bind (p r) (make-promise)
         (enqueue-timed *vat* utime (lambda ()
@@ -242,17 +238,14 @@
 (defobject +rx-perl5-compiler+ "org.apache.oro.text.regex.makePerl5Compiler" ()
   (:|run| ()
     (e-lambda "org.apache.oro.text.regex.perl5Compiler" ()
-      (:|compile(String)| (s)
-        (e-coercef s 'string)
+      (:|compile(String)| ((s 'string))
         ;(print (list 'oro-compiling s))
         (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s))))))
   
 (defobject +rx-perl5-matcher+ "org.apache.oro.text.regex.makePerl5Matcher" ()
   (:|run| (&aux result-obj)
     (e-lambda "org.apache.oro.text.regex.perl5Matcher" ()
-      (:|matches(PatternMatcherInput, Pattern)| (input pattern)
-        (e-coercef input 'string)
-        (e-coercef pattern 'ppcre-scanner-box)
+      (:|matches(PatternMatcherInput, Pattern)| ((input 'string) (pattern 'ppcre-scanner-box))
         (multiple-value-bind (match-start match-end reg-starts reg-ends)
             (cl-ppcre:scan (ppcre-scanner pattern) input)
           (setf result-obj 
@@ -269,8 +262,7 @@
               (e-lambda "$matchResult" ()
                 (:|groups| () 
                   (1+ (length reg-starts)))
-                (:|group| (index) 
-                  (e-coercef index 'unsigned-byte)
+                (:|group| ((index 'unsigned-byte))
                   (if (zerop index)
                     (subseq input match-start match-end)
                     (let* ((cindex (1- index))
@@ -312,8 +304,7 @@
 (defobject +spawn+ "org.cubik.cle.prim.spawn" ()
   (:|run| (file args)
     (efuncall +spawn+ file args (e. #() |asMap|)))
-  (:|run| (file args options)
-    (e-coercef args 'vector)
+  (:|run| (file (args 'vector) options)
     (mapping-bind options
                   ((in-o "stdin" t) ;; XXX using t for these isn't right
                    (out-o "stdout" t)

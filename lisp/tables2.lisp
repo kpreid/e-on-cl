@@ -63,8 +63,7 @@
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (eql auditor +selfless-stamp+))
-  (:|__printOn/1| (span out)
-    (e-coercef out +the-text-writer-guard+)
+  (:|__printOn/1| (span (out +the-text-writer-guard+))
     (with-accessors ((uri        span-uri         )
                      (one-to-one span-one-to-one-p)
                      (start-line span-start-line  )
@@ -121,13 +120,12 @@
      :stamped +standard-graph-exit-stamp+)
   (:|asType| () 
     (type-specifier-to-guard 'source-span))
-  (:|run| (uri one-to-one start-line start-col end-line end-col) 
-    (e-coercef uri        'string)
-    (e-coercef one-to-one 'e-boolean)
-    (e-coercef start-line '(integer 1))
-    (e-coercef end-line   '(integer 1))
-    (e-coercef start-col  '(integer 0))
-    (e-coercef end-col    '(integer 0))
+  (:|run| ((uri        'string)
+           (one-to-one 'e-boolean)
+           (start-line '(integer 1))
+           (start-col  '(integer 0))
+           (end-line   '(integer 1))
+           (end-col    '(integer 0)))
     (unless (or (not (e-is-true one-to-one))
                 (= start-line end-line))
       (error "one-to-one span must be on a single line"))
@@ -157,8 +155,7 @@
   (:documentation "Class of non-bare twines."))
 
 (def-vtable %twine
-  (:|__printOn| (this out)
-    (e-coercef out +the-text-writer-guard+)
+  (:|__printOn| (this (out +the-text-writer-guard+))
     (e. out |printSame| (twine-string this)))
   (:|__conformTo| (this guard)
     (declare (ignore guard))
@@ -177,8 +174,7 @@
     (error "twine type not implementing run/2"))
   
   ;; XXX Twine plus String
-  (:|add| (this other)
-    (e-coercef other 'twine)
+  (:|add| (this (other 'twine))
     (make-twine-from-parts (lambda (f) (e. (e. this |getParts|) |iterate| f)
                                        (e. (e. other |getParts|) |iterate| f))))
   (:|split| (this sep)
@@ -292,9 +288,9 @@
   (:|getOptSpan/0| 'twine-opt-span)
   (:|getParts| (this) (vector this))
   
-  (:|run| (this start end)
-    (e-coercef start 'integer)
-    (e-coercef end 'integer)
+  (:|run| (this
+           (start 'integer)
+           (end 'integer))
     (e. +the-make-twine+ |fromString|
       (efuncall (twine-string this) start end)
       (when (plusp (- end start))
@@ -330,9 +326,8 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
         ; out-of-dynamic-extent calls are harmless
         (push v values)))
       (coerce (nreverse values) 'string)))
-  (:|fromString| (string span)
-    (e-coercef string 'string)
-    (e-coercef span '(or null source-span))
+  (:|fromString| ((string 'string)
+                  (span '(or null source-span)))
     (if span
       (progn 
         (unless (plusp (length string))
@@ -359,25 +354,20 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       (if (eql brand +the-flex-array-array-brand+)
         (make-instance 'flex-array-array-sealed-box :array array)))
   
-    (:|elt| (i)
-      (e-coercef i 'integer)
+    (:|elt| ((i 'integer))
       (elt array i))
-    (:|setElt| (i new)
-      (e-coercef i 'integer)
+    (:|setElt| ((i 'integer) new)
       (setf new (ref-shorten new))
       (setf (elt array i) new))
-    (:|aref| (i)
-      (e-coercef i 'integer)
+    (:|aref| ((i 'integer))
       (aref array i)) ; XXX support n-ary aref
     (:|length| () (length array))
     (:|getFillPointer| () (fill-pointer array))
-    (:|setFillPointer| (new) 
-      (e-coercef new 'integer)
+    (:|setFillPointer| ((new 'integer)) 
       (setf (fill-pointer array) new))
 
     (:|getAdjustable| () (as-e-boolean (adjustable-array-p array)))
-    (:|getDimension| (i) 
-      (e-coercef i 'integer)
+    (:|getDimension| ((i 'integer)) 
       (array-dimension array i))
     
     (:|snapshotVector| ()
@@ -392,22 +382,19 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
     (:|fill| (value)           
       (setf value (ref-shorten value))
       (fill array value))
-    (:|fill| (value start)     
+    (:|fill| (value (start 'integer))
       (setf value (ref-shorten value))
-      (e-coercef start 'integer)
       (fill array value :start start))
-    (:|fill| (value start end) 
+    (:|fill| (value (start 'integer) (end 'integer)) 
       (setf value (ref-shorten value))
-      (e-coercef start 'integer)
-      (e-coercef end 'integer)
       (fill array value :start start :end end))
 
-    (:|replace| (seq start1 end1 start2 end2)
+    (:|replace| (seq
+                 (start1 'integer)
+                 (end1   'integer)
+                 (start2 'integer)
+                 (end2   'integer))
       "XXX for now seq must be another flex-array"
-      (e-coercef start1 'integer)
-      (e-coercef end1   'integer)
-      (e-coercef start2 'integer)
-      (e-coercef end2   'integer)
       (let ((source (unseal-flex-array-array-sealed-box
                       (e. seq |__optSealedDispatch|
                         +the-flex-array-array-brand+))))
@@ -432,9 +419,8 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 
 (defobject +the-make-array+ "org.cubik.cle.prim.makeArray" 
     (:stamped +deep-frozen-stamp+)
-  (:|fromSequence| (seq adjustable)
+  (:|fromSequence| ((seq 'sequence) adjustable)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
-    (e-coercef seq 'sequence)
     (make-flex-array (make-array (length seq) 
                                  :initial-contents seq
                                  :adjustable (e-is-true adjustable)
@@ -471,8 +457,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   ; XXX import documentation strings lazily from EMap interface
   (:|__optUncall| (this)
     `#(,+the-make-const-map+ "fromColumns" ,(e. this |getPair|)))
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (if (zerop (e. this |size|))
       (e. tw |print| "[].asMap()")
       (e. this |printOn| "[" " => " ", " "]" tw)))
@@ -525,8 +510,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
         nil))
       +e-true+))
 
-  (:|and| (map mask)
-    (e-coercef mask +the-any-map-guard+)
+  (:|and| (map (mask +the-any-map-guard+))
     (e. +the-make-const-map+ |fromIteratable|
       (e-lambda "org.cubik.cle.prim.mapAndIterator" () (:|iterate| (f)
         (e. map |iterate| (efun (key value)
@@ -537,8 +521,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       +e-true+))
 
   ; simpler but not-like-Java-E butNot. XXX discuss whether it would be acceptable to use this
-  ;(:|butNot| (map mask)
-  ;  (e-coercef mask +the-any-map-guard+)
+  ;(:|butNot| (map (mask +the-any-map-guard+))
   ;  (e. +the-make-const-map+ |fromIteratable|
   ;    (e-lambda (:|iterate| (f)
   ;      (e. map |iterate| (e-lambda (:|run| (key value)
@@ -548,8 +531,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
   ;      nil))
   ;    +e-true+))
 
-  (:|butNot| (map mask)
-    (e-coercef mask +the-any-map-guard+)
+  (:|butNot| (map (mask +the-any-map-guard+))
     (let* ((map-keys (e-coerce (e. map |getKeys|) 'vector))
            (ordering (make-array (length map-keys) 
                                  :initial-contents map-keys
@@ -696,8 +678,7 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
               snapshot nil)))))
 
 (def-vtable genhash-flex-map-impl
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     ; XXX call e-printer
     ; XXX this is duplicated code with simple-flex-map, because we expect to throw out most of the CL-written flex-map machinery
     (if (zerop (e. this |size|))
@@ -795,14 +776,12 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
 (defobject +the-make-const-map+ "org.erights.e.elib.tables.makeConstMap"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "__makeMap"))
   (:|asType| ()
     ; XXX we provide the sugared Map guard instead of the primitive one - is this really appropriate?
     (eelt (vat-safe-scope *vat*) "Map"))
-  (:|fromPairs| (pairs)
-    (e-coercef pairs 'vector)
+  (:|fromPairs| ((pairs 'vector))
     (loop
       with keys   = (make-array (length pairs))
       with values = (make-array (length pairs))
@@ -812,10 +791,9 @@ The ConstList version of this is called fromIteratableValues, unfortunately. XXX
       do (setf (aref keys i)   (aref pair 0)
                (aref values i) (aref pair 1))
       finally (return (e. +the-make-const-map+ |fromColumns| keys values))))
-  (:|fromColumns| (keys values)
+  (:|fromColumns| ((keys 'vector)
+                   (values 'vector))
     ; XXX Java-E uses the valueType of keys and values
-    (e-coercef keys 'vector)
-    (e-coercef values 'vector)
     (make-instance 'genhash-const-map-impl :keys keys :values values))
   (:|fromProperties| (props)
     "Java-E compatibility. Makes a ConstMap from whatever we're providing that imitates a Java properties(?) object."

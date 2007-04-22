@@ -1052,10 +1052,9 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (declare (ignore auditor))
       nil)
   
-    (:|__printOn| (tw)
+    (:|__printOn| ((tw +the-text-writer-guard+))
       ; FUNCTION-based E-objects must always implement their own __printOn/1.
       (assert (not (typep self 'function)))
-      (e-coercef tw +the-text-writer-guard+)
       (e. tw |print| "<" (e-util:aan (simplify-fq-name (cl-type-fq-name (observable-type-of self)))) ">"))
 
     (:|__getAllegedType| ()
@@ -1064,10 +1063,8 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (scan-example-for-vtable-message-types self)
       (type-specifier-to-guard (observable-type-of self)))
 
-    (:|__respondsTo| (verb arity)
+    (:|__respondsTo| ((verb 'string) (arity '(integer 0)))
       ;; The object itself must handle returning true for those verbs which it implements.
-      (e-coercef verb 'string)
-      (e-coercef arity '(integer 0))
       (if (member (e-util:mangle-verb verb arity) miranda-mverbs)
         +e-true+
         (funcall matcher-func (constantly +e-false+))))
@@ -1090,28 +1087,24 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (declare (ignore reactor))
       nil)
 
-    (:|__order| (nested-verb nested-args)
+    (:|__order| ((nested-verb 'string) (nested-args 'vector))
       ; XXX document further (original doc is Mozilla-licensed)
       "Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this."
-      (vector (e-call self 
-                      (e-coercef nested-verb 'string) 
-                      (e-coercef nested-args 'vector)) 
+      (vector (e-call self nested-verb nested-args)
               self))
 
     (:|__reactToLostClient| (problem)
       (declare (ignore problem))
       nil)
 
-    (:|__getPropertySlot| (prop-name)
-      (e-coercef prop-name 'string)
+    (:|__getPropertySlot| ((prop-name 'string))
       ; XXX should we have a fqn derived from the original object? a print derived from its simple name?
       (let* ((cap-name (string-upcase prop-name :end (min 1 (length prop-name))))
              (get-verb (e-util:mangle-verb (concatenate 'string "get" cap-name) 0))
              (set-verb (e-util:mangle-verb (concatenate 'string "set" cap-name) 1)))
       (e-lambda "org.cubik.cle.prim.DefaultPropertySlot"
           (:doc "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object.")
-        (:|__printOn| (tw)
-          (e-coercef tw +the-text-writer-guard+)
+        (:|__printOn| ((tw +the-text-writer-guard+))
           (e. e.syntax:+e-printer+ |printPropertySlot| tw prop-name))
         (:|getValue| ()
           "E.call(target, `get$Property`)"
@@ -1414,8 +1407,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (defglobal +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
       (:stamped +deep-frozen-stamp+
        :stamped +thread-sharable-stamp+)
-    (:|__printOn| (tw) ; XXX move to e.syntax?
-      (e-coercef tw +the-text-writer-guard+)
+    (:|__printOn| ((tw +the-text-writer-guard+)) ; XXX move to e.syntax?
       (e. tw |print| "void"))
     (:|coerce| (specimen opt-ejector)
       (declare (ignore specimen opt-ejector))
@@ -1562,8 +1554,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
           +e-true+)))))
 
 (def-vtable local-resolver
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| (if (resolver-opt-promise this)
                      "<Resolver>"
                      "<Closed Resolver>")))

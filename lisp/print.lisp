@@ -60,19 +60,16 @@
                     (e. writer |write| "<ref broken by ")
                     (e. tw |print| problem)
                     (e. writer |write| ">"))
-                  (:|problem| (tw fqn problem)
-                    (e-coercef fqn 'string)
+                  (:|problem| (tw (fqn 'string) problem)
                     (e. tw |print| "<***"
                                     (e.util:aan fqn)
                                     " threw "
                                     problem
                                     " when printed"
                                     "***>"))
-                  (:|write| (text)
-                    (e-coercef text 'string)
+                  (:|write| ((text 'string))
                     (replace-newlines text line-separator (lambda (x) (e. writer |write| x))))
-                  (:|indent| (indent-arg)
-                    (e-coercef indent-arg 'string)
+                  (:|indent| ((indent-arg 'string))
                     (spawn is-quoting (concatenate 'string line-separator indent-arg)))
                   (:|asQuoting| ()
                     (spawn t line-separator))
@@ -142,8 +139,7 @@
                        #(,(e-lambda "forwarder" ()
                             (otherwise (mverb &rest args)
                               (apply #'e-call-dispatch tw mverb args))))))
-                  (:|__printOn| (ptw)
-                    (e-coercef ptw +the-text-writer-guard+)
+                  (:|__printOn| ((ptw +the-text-writer-guard+))
                     (e. ptw |print| "<textWriter>"))
                   (:|close| ()
                     "Prevent this TextWriter from printing anything more; close the underlying stream if appropriate."
@@ -184,8 +180,7 @@
                         (e. syntax |exitReference|)))
                     nil)
                   (:|isQuoting| () (e. syntax |isQuoting|))
-                  (:|printAll| (vector)
-                    (e-coercef vector 'vector)
+                  (:|printAll| ((vector 'vector))
                     (loop for x across vector do (e. tw |print| x))
                     nil)
                   (:|println| (obj)
@@ -201,8 +196,7 @@
                     nil)
                   (:|indent| ()
                     (e. tw |indent| indent-step))
-                  (:|indent| (step)
-                    (e-coercef step 'string)
+                  (:|indent| ((step 'string))
                     (nest :syntax (e. syntax |indent| step)
                           :should-close nil))
                   (:|withAutoflush| ()
@@ -270,8 +264,7 @@
            :reader string-buffer-buffer)))
            
 (def-vtable string-buffer
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     ; XXX should we not print the brackets if not isQuoting?
     (e. tw |print| "<stringBuffer ")
     (e. tw |quote| (copy-seq (string-buffer-buffer this)))
@@ -285,9 +278,8 @@
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
   (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
-  (:|makeBufferingPair| (options)
+  (:|makeBufferingPair| ((options 'e.elib.tables:const-map))
     "Return a tuple of a TextWriter and a StringBuffer from which the output of the TextWriter is readable."
-    (e-coercef options 'e.elib.tables:const-map)
     ; xxx arbitrary initial size figure. CLISP didn't like an initial size of 0 (adjust-array signaled the error "index too large")
     (let ((buffer (make-array 80
                               :element-type 'character

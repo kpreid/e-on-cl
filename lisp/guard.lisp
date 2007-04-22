@@ -43,8 +43,7 @@
 
   (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (cl-type-specifier guard) opt-ejector guard))
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| (cl-type-simple-expr (cl-type-specifier this))))
   
   (:|getFQName| (this)

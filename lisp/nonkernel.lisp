@@ -1243,8 +1243,7 @@
   (expand-one-method-object node ""))
 
 (def-vtable |OneMethodObject|
-  (:|withFunctionDocumentation| (this doc)
-    (e-coercef doc '(or null string))
+  (:|withFunctionDocumentation| (this (doc '(or null string)))
     (expand-one-method-object this doc)))
 
 (defemacro |FunctionObject| (|OneMethodObject|) 

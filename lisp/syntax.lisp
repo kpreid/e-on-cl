@@ -84,16 +84,13 @@
     (:doc "Centralized object for generating E source and E-like text."
      :stamped +deep-frozen-stamp+)
   
-  (:|__printOn| (tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "<E-syntax printer>")
     nil)
   
-  (:|printDocComment| (tw text)
+  (:|printDocComment| ((tw +the-text-writer-guard+) (text 'string))
     ; XXX have a strictness (about */) argument
     "Print a \"/** */\" documentation comment with a trailing line break on 'tw', if 'text' is not an empty string."
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef text 'string)
     (when (string/= text "")
       (when (search "*/" text)
         ; xxx is there an escaping mechanism we can use?
@@ -103,19 +100,15 @@
       (e. tw |println|))
     nil)
   
-  (:|printVerb| (tw verb)
+  (:|printVerb| ((tw +the-text-writer-guard+) (verb 'string))
     "Print a verb with appropriate quoting, as in CallExpr or EMethod."
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef verb 'string)
     (if (is-identifier verb)
       (e. tw |print| verb)
       (e. tw |quote| verb))
     nil)
    
-  (:|printNoun| (tw noun)
+  (:|printNoun| ((tw +the-text-writer-guard+) (noun 'string))
     "Print a noun with appropriate quoting, as in NounExpr."
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef noun 'string)
     (if (is-identifier noun)
       (e. tw |print| noun)
       (progn
@@ -123,26 +116,20 @@
         (e. tw |quote| noun)))
     nil)
   
-  (:|printPropertySlot| (tw prop-name)
+  (:|printPropertySlot| ((tw +the-text-writer-guard+) (prop-name 'string))
     "The print representation of a property-slot object. Not parsable."
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef prop-name 'string)
     (e. tw |print| "_::&")
     (if (is-identifier prop-name)
       (e. tw |write| prop-name)
       (e. tw |quote| prop-name)))
   
-  (:|printString| (tw this)
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef this 'string)
+  (:|printString| ((tw +the-text-writer-guard+) (this 'string))
     (e. tw |write| "\"")
     (print-escaped tw this "\"")
     (e. tw |write| "\""))
   
-  (:|printCons| (tw this)
+  (:|printCons| ((tw +the-text-writer-guard+) (this 'cons))
     "The print representation of a Lisp cons. Not parsable."
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef this 'cons)
     (e. tw |write| "<(")
     (e. tw |quote| (car this))
     (loop for x = (ref-shorten (cdr this)) then (ref-shorten (cdr x))
@@ -155,18 +142,13 @@
               (e. tw |quote| x)))
     (e. tw |write| ")>"))
   
-  (:|printCharacter| (tw this)
+  (:|printCharacter| ((tw +the-text-writer-guard+) (this 'character))
     "The print representation of a character."
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef this 'character)
     (e. tw |write| "'")
     (print-escaped tw (vector this) "\'")
     (e. tw |write| "'"))
   
-  (:|printList| (tw this quote-elements)
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef this 'vector)
-    (e-coercef quote-elements 'e-boolean)
+  (:|printList| ((tw +the-text-writer-guard+) (this 'vector) (quote-elements 'e-boolean))
     (if (e-is-true quote-elements)
       (e. this |printOn| "[" ", " "]" tw)
       (progn
@@ -176,13 +158,10 @@
               do (e. tw |print| sep element))
         (e. tw |print| #|[|# "]"))))
   
-  (:|printMethodHeader| (tw is-kernel doc-comment verb params opt-result-guard)
+  (:|printMethodHeader| ((tw +the-text-writer-guard+) (is-kernel 'e-boolean) doc-comment verb (params 'vector) opt-result-guard)
     "Print a to/method as in an EScript or interface sugar."
     ; XXX should we have quoting options for params and opt-result-guard?
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef is-kernel 'e-boolean)
     ; coercion of doc-comment, verb handled elsewhere
-    (e-coercef params 'vector)
 
     (e. +e-printer+ |printDocComment| tw doc-comment)
     (e. tw |print| (if (e-is-true is-kernel) "method " "to "))
@@ -196,9 +175,7 @@
       (e. tw |print| " :")
       (e. tw |print| opt-result-guard)))
   
-  (:|printGuardedNounPattern| (tw opt-name opt-guard)
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef opt-name '(or null string))
+  (:|printGuardedNounPattern| ((tw +the-text-writer-guard+) (opt-name '(or null string)) opt-guard)
     (if opt-name
       (e. +e-printer+ |printNoun| tw opt-name)
       (e. tw |print| "_"))
@@ -217,7 +194,8 @@
   (:|makePrintENodeVisitor| (tw)
     (e. +e-printer+ |makePrintENodeVisitor| tw +precedence-outer+))
   
-  (:|makePrintENodeVisitor| (tw precedence)
+  (:|makePrintENodeVisitor| ((tw +the-text-writer-guard+)
+                             (precedence '(or null integer)))
     "Return an ETreeVisitor which prints nodes to 'tw' in standard E syntax. 'precedence' controls whether the expression is parenthesized. 
 
 XXX make precedence values available as constants"
@@ -225,8 +203,6 @@ XXX make precedence values available as constants"
     ; XXX have a self argument for implementation inheritance
     ; strictness controls?
     ; XXX tests for the visitor's Ref-transparency
-    (e-coercef tw +the-text-writer-guard+)
-    (e-coercef precedence '(or null integer))
     (macrolet ((precedential ((this-min) &body body)
                  `(progn
                     (assert precedence (precedence) "This subnode cares about precedence")
@@ -265,8 +241,7 @@ XXX make precedence values available as constants"
                     (e-coercef index 'integer)
                     (e. tw |print| tag "{" index "}"))))
         (e-lambda "$printVisitor" ()
-          (:|__printOn| (ptw)
-            (e-coercef ptw +the-text-writer-guard+)
+          (:|__printOn| ((ptw +the-text-writer-guard+))
             (e. ptw |print| "<E-syntax node visitor printing to " tw ">")
             nil)
           
@@ -344,9 +319,8 @@ XXX make precedence values available as constants"
             (e. tw |print| " else ")
             (subprint-block false-block))
           
-          (:|visitLiteralExpr| (opt-original value)
+          (:|visitLiteralExpr| (opt-original (value '(or string integer character float64)))
             (declare (ignore opt-original))
-            (e-coercef value '(or string integer character float64))
             (etypecase value
               (string
                 (e. +e-printer+ |printString| tw value))
@@ -376,10 +350,12 @@ XXX make precedence values available as constants"
             (declare (ignore opt-original))
             (e. +e-printer+ |printNoun| tw noun))
           
-          (:|visitObjectExpr| (opt-original doc-comment pattern auditors script)
+          (:|visitObjectExpr| (opt-original 
+                               (doc-comment 'string) 
+                               pattern
+                               (auditors 'vector)
+                               script)
             (declare (ignore opt-original))
-            (e-coercef doc-comment 'string)
-            (e-coercef auditors 'vector)
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
             (subprint pattern nil)
@@ -405,10 +381,10 @@ XXX make precedence values available as constants"
               (e. tw |print| "&")
               (subprint noun +precedence-in-slot-expr+)))
           
-          (:|visitEScript| (opt-original opt-methods matchers)
+          (:|visitEScript| (opt-original
+                            (opt-methods '(or null vector))
+                            (matchers 'vector))
             (declare (ignore opt-original))
-            (e-coercef opt-methods '(or null vector))
-            (e-coercef matchers 'vector)
             ; XXX print patterns and opt-result-guard directly
             (if opt-methods
               (progn
@@ -426,23 +402,24 @@ XXX make precedence values available as constants"
                 (e. tw |print| " ")
                 (subprint (aref matchers 0) nil))))
             
-          (:|visitEMethod| (opt-original doc-comment verb patterns opt-result-guard body)
+          (:|visitEMethod| (opt-original
+                            (doc-comment 'string)
+                            verb
+                            (patterns 'vector)
+                            opt-result-guard
+                            body)
             (declare (ignore opt-original))
-            (e-coercef doc-comment 'string)
-            (e-coercef patterns 'vector)
             (e. tw |println|)
             (e. +e-printer+ |printMethodHeader| tw +e-true+
               doc-comment
               verb
               (map 'vector
                 (lambda (pattern)
-                  (e-lambda "syntax-printer" () (:|__printOn| (tw)
-                    (e-coercef tw +the-text-writer-guard+)
+                  (e-lambda "syntax-printer" () (:|__printOn| ((tw +the-text-writer-guard+))
                     (subprint pattern +precedence-outer+ :tw tw))))
                 patterns) 
               (when (ref-shorten opt-result-guard)
-                (e-lambda "syntax-printer" () (:|__printOn| (tw)
-                  (e-coercef tw +the-text-writer-guard+)
+                (e-lambda "syntax-printer" () (:|__printOn| ((tw +the-text-writer-guard+))
                   (subprint-guard opt-result-guard :tw tw)))))
             (e. tw |print| " ")
             (subprint-block body))
@@ -741,9 +718,10 @@ XXX make precedence values available as constants"
   ;; XXX regularize this interface
   (:|run| (source quasi-info syntax-ejector)
     (elt (e. +prim-parser+ |parseWithProps| source (e. +the-make-const-map+ |fromPairs| #()) quasi-info syntax-ejector) 0))
-  (:|parseWithProps| (source props quasi-info syntax-ejector)
-    (e-coercef source 'twine)
-    (e-coercef props 'e.tables:const-map)
+  (:|parseWithProps| ((source 'twine) 
+                      (props 'e.tables:const-map)
+                      quasi-info
+                      syntax-ejector)
     (setf quasi-info (ref-shorten quasi-info))
     (when quasi-info
       ;; vector of vectors of integers ([valueHoles, patternHoles])
@@ -751,11 +729,9 @@ XXX make precedence values available as constants"
         (map-e-list (mapper-e-list (e-coercer 'integer)) 
                     quasi-info)))
     (coerce (multiple-value-list (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :props props)) 'vector))
-  (:|run| (source)
-    (e-coercef source 'twine)
+  (:|run| ((source 'twine))
     (e-source-to-tree source))
-  (:|pattern| (source quasi-info syntax-ejector)
-    (e-coercef source 'twine)
+  (:|pattern| ((source 'twine) quasi-info syntax-ejector)
     (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t)))
 
 ;;; --- Antlr parser support ---
@@ -1119,8 +1095,7 @@ XXX make precedence values available as constants"
 ; --- ---
 
 (def-vtable e-syntax-error
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| "syntax error: ")
     (e. tw |print| (princ-to-string this))))
     

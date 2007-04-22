@@ -298,8 +298,7 @@
   tk-snap-hash)
 
 (def-vtable traversal-key
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print|
       "<key:"
       (tk-wrapped this)

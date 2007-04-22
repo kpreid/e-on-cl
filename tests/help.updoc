@@ -265,7 +265,7 @@ MessageDesc of a miranda method
 
   ? def m := false.__getAllegedType().getMessageTypes()["__order/2"]
   # value: /** Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this. */
-  #        to __order(::"nested-verb", ::"nested-args")
+  #        to __order(::"nested-verb" :String, ::"nested-args" :ConstList)
 
   ? m.getVerb()
   # value: "__order"
@@ -274,7 +274,7 @@ MessageDesc of a miranda method
   # value: "Returns a tuple of the result of immediately calling this.<nested-verb>(<nested-args>*) and this."
   
   ? m.getParams()
-  # value: [::"nested-verb", ::"nested-args"]
+  # value: [::"nested-verb" :String, ::"nested-args" :ConstList]
   
   ? [m.getOptResultGuard()]
   # value: [null]

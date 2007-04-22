@@ -48,8 +48,7 @@
 (defun make-symbol-accessor (symbol)
   "Return an E object providing access to the mutable properties of 'symbol'."
   (e-lambda "org.cubik.cle.prim.lisp$symbolAccessor" ()
-    (:|__printOn| (tw)
-      (e-coercef tw +the-text-writer-guard+)
+    (:|__printOn| ((tw +the-text-writer-guard+))
       (e. tw |write| "<")
       (e. tw |print| 
         (with-standard-io-syntax
@@ -73,11 +72,10 @@
 
 (defobject +lisp+ "org.cubik.cle.prim.lisp"
     (:doc "This object is the maximum possible authority that an E program may hold, offering near-complete access to the underlying Lisp system. Handle with care.")
-  (:|get| (package-name symbol-name)
+  (:|get| ((package-name 'string)
+           (symbol-name 'string))
     ; xxx should allow ejectors/absent-thunks for missing package and symbol
     "Returns the named symbol in the named package. This is CL:FIND-SYMBOL, except that it throws an exception instead of returning nil, and takes the package argument first."
-    (e-coercef package-name 'string)
-    (e-coercef symbol-name 'string)
     (unless (find-package package-name)
       (error "the package ~S does not exist" package-name))
     (multiple-value-bind (symbol status) (find-symbol symbol-name package-name)
@@ -210,8 +208,7 @@
       (e. |resource__uriGetter| |fetch| subpath
         (e-lambda "$getFailureThunk" () (:|run| () 
           (error "~A can't find ~A" (e-quote |resource__uriGetter|) (e-quote subpath))))))
-    (:|fetch| (subpath absent-thunk)
-      (e-coercef subpath 'string)
+    (:|fetch| ((subpath 'string) absent-thunk)
       (loop for (root) in search-list
             for file = (e. root |getOpt| subpath)
             when file
@@ -292,8 +289,7 @@
         (:stamped +deep-frozen-stamp+
          :stamped +thread-sharable-stamp+ 
          :stamped +standard-graph-exit-stamp+)
-      (:|__printOn| (out)
-        (e-coercef out +the-text-writer-guard+)
+      (:|__printOn| ((out +the-text-writer-guard+))
         (e. out |write| "<shared:*>"))
       (otherwise (mverb &rest args)
         (apply #'e-call-dispatch real-loader mverb args)))))
@@ -338,8 +334,7 @@
   (let* ((prefixes '("org.erights.e.elang.evm.make")))
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
-      (:|fetch| (fqn absent-thunk)
-        (e-coercef fqn 'string)
+      (:|fetch| ((fqn 'string) absent-thunk)
         (let ((local-name (some (lambda (p) (without-prefix fqn p)) 
                                 prefixes)))
           (if local-name
@@ -361,8 +356,7 @@
 ;; XXX support optUnget
 (defobject +vm-node-type-importer+ "vm-node-type-importer"
     (:stamped +deep-frozen-stamp+)
-  (:|fetch| (fqn absent-thunk)
-    (e-coercef fqn 'string)
+  (:|fetch| ((fqn 'string) absent-thunk)
     (let ((local-name (without-prefix fqn "org.erights.e.elang.evm.type.")))
       (if local-name
         (let* ((sym (find-symbol local-name :e.elang.vm-node)))
@@ -407,8 +401,7 @@
             (error (condition backtrace)
               (efuncall |trace|
                 (e-lambda nil ()
-                  (:|__printOn| (tw)
-                    (e-coercef tw +the-text-writer-guard+)
+                  (:|__printOn| ((tw +the-text-writer-guard+))
                     (e. tw |print| "caught problem in ")
                     (e. tw |quote| (efuncall context-thunk))
                     (e. tw |print| ": " (e-print condition)))))
@@ -524,8 +517,7 @@
         (setf specimen (ref-shorten specimen))
         (or (gethash specimen unget-table)
             (setf (gethash specimen unget-table) nil)))
-      (:|fetch| (fqn absent-thunk)
-        (e-coercef fqn 'string)
+      (:|fetch| ((fqn 'string) absent-thunk)
         (multiple-value-bind (cache-value cache-present) (gethash fqn deep-frozen-cache)
           (if cache-present
             cache-value

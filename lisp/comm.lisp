@@ -37,8 +37,7 @@
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (or (eql auditor +thread-sharable-stamp+)))
-  (:|__printOn| (this tw)
-    (e-coercef tw +the-text-writer-guard+)
+  (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |write| "<boot-ref of ")
     (e. tw |print| (vat this))
     (e. tw |write| ">")
@@ -88,16 +87,14 @@
       ;; XXX should be in vat-privileged scope?
       (assert (eq *vat* vat))
       (e. program |eval| (vat-safe-scope vat)))
-    (:|shutdown| (problem)
+    (:|shutdown| ((problem 'condition))
+      (declare (ignore problem))
       (assert (eq *vat* vat))
-      (e-coercef problem 'condition)
       (error "unimplemented"))))
 
 (defobject +the-make-vat+ "org.cubik.cle.prim.makeVat" ()
-  (:|run| (opt-runner name)
+  (:|run| ((opt-runner '(or null runner)) (name 'string))
     "Passing null for opt-runner means to use the current runner."
-    (e-coercef opt-runner '(or null runner))
-    (e-coercef name 'string)
     (let* ((new-vat (make-instance 'vat 
                       :label (format nil "user vat ~A" name)
                       :runner (or opt-runner *runner*)))
