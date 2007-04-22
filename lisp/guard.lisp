@@ -23,13 +23,7 @@
     (setf (get sym 'satisfies-type-specifier-guard) guard)
     `(satisfies ,sym)))
 
-(defun type-specifier-to-guard (ts)
-  (or
-    (and (consp ts)
-         (= (length ts) 2)
-         (eq (first ts) 'satisfies)
-         (get (second ts) 'satisfies-type-specifier-guard))
-    (make-instance 'cl-type-guard :type-specifier ts)))
+;; type-specifier-to-guard is defined earlier, in elib.lisp
 
 (defglobal +the-any-guard+    (type-specifier-to-guard 't))
 (defglobal +the-nullok-guard+ (type-specifier-to-guard 'null))

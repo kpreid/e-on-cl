@@ -3,6 +3,11 @@
 
 (defclass for-test () ())
 
+(defmacro with-temporary-vat (&body body)
+  `(block with-temporary-vat-block
+     (with-vat (:label "with-temporary-vat")
+       (return-from with-temporary-vat-block ,@body))))
+
 (deftest unexternalizable-optimization.no
   (macrolet ((x (&environment e) (unexternalizable-optimization-p e)))
     (x))
@@ -19,6 +24,22 @@
              (:|run| ()
                :hi))))))
   "Method \"run\" has 0 parameters, which is not enough to accept 1 prefix argument.")
+
+(deftest smethod.shows-types.quote
+  (with-temporary-vat
+    (e-print (e. (e. (e. (efun ((x 'string) y) (list x y)) |__getAllegedType|) |getMessageTypes|) |get| "run/2")))
+  "to run(x :String, y)")
+
+(deftest smethod.shows-types.global
+  (with-temporary-vat
+    (e-print (e. (e. (e. (efun ((x +the-void-guard+) y) (list x y)) |__getAllegedType|) |getMessageTypes|) |get| "run/2")))
+  "to run(x :void, y)")
+
+(deftest smethod.coerces
+  (efuncall (efun ((x 'string)) x)
+            (e-lambda nil ()
+              (:|__conformTo| (guard) (declare (ignore guard)) "hi")))
+  "hi")
 
 (deftest boolean-print-readably-package
   (with-output-to-string (*standard-output*)

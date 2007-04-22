@@ -742,6 +742,41 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
           do (push thing head)
           finally (return decls-and-forms)))
 
+  (defun convert-coercing-lambda-list (coercing-ll body)
+    (let* ((ordinary-ll '())
+           (lets '()))
+      (loop with aux = nil
+            for x in coercing-ll do
+        (cond
+          (aux
+            (push x lets))
+          ((and (typep x '(cons t (cons t null))))
+           (let ((uncoerced (gensym (format nil "UNCOERCED-~A" x))))
+             (push uncoerced ordinary-ll)
+             (push `(,(first x) (e-coerce ,uncoerced ,(second x))) lets)))
+          ((member x '(&aux))
+           (setf aux t))
+          ((member x '(&rest))
+           (push x ordinary-ll))
+          ((member x lambda-list-keywords)
+           (error "lambda-list-keyword ~S in ~S unsupported by ~S" x coercing-ll 'convert-coercing-lambda-list))
+          (t
+            ;; so declarations and scoping work right
+            (let ((g (gensym (format nil "ENTRY-~A" x))))
+               (push g ordinary-ll)
+               (push `(,x ,g) lets)))))
+      (nreverse-here ordinary-ll)
+      (nreverse-here lets)
+      (let ((decls '())
+            (doc nil))
+        (loop while (typep body '(or (cons string               cons)
+                                     (cons (cons (eql declare)) t))) do
+          ;; (declare ...) or non-final string
+          (if (typep (first body) 'string)
+            (push (pop body) doc)
+            (push (pop body) decls)))
+        `(,ordinary-ll ,@doc (let* ,lets ,@(nreverse decls) ,@body)))))
+
   (defun smethod-body (body args-sym prefix-args &key type-name verb-name)
     #-e.method-lambdas
       (declare (ignore type-name))
@@ -757,9 +792,11 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
       #-e.method-lambdas
         (if (functional-smethod-body-p body)
           `(apply ,(first body) ,@prefix-args ,args-form)
-          `(destructuring-bind ,(first body)
-               (list* ,@prefix-args ,args-form)
-             ,@(delete-documentation (rest body))))))
+          (destructuring-bind (post-ll &rest post-body)
+              (convert-coercing-lambda-list (first body) (rest body))
+            `(destructuring-bind ,post-ll
+                 (list* ,@prefix-args ,args-form)
+               ,@(delete-documentation post-body))))))
   
   (defun smethod-function-form (body &key type-name verb-name)
     "XXX transfer the relevant portions of smethod-case-entry's documentation here"
@@ -776,17 +813,52 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                    for free = name then (format nil "~A-dup-~A" name i)
                    while (find-symbol name :e.elib.vtable-methods) 
                    finally (intern free :e.elib.vtable-methods))))
-        `(named-lambda ,name-sym ,@body))))
+        `(named-lambda ,name-sym ,@(convert-coercing-lambda-list (first body) (rest body))))))
 
   ;; XXX move this to e.util
   (defun guess-lowercase-string (string)
     (if (notany #'lower-case-p string)
       (string-downcase string)
       string))
-
-  (defun symbol-to-param-desc (symbol)
-    (make-instance 'param-desc :opt-name (guess-lowercase-string (symbol-name symbol))))
-
+  
+  (defun conventional-constant-symbol-p (specimen)
+    (and (symbolp specimen)
+         (let ((name (symbol-name specimen)))
+           (and (> (length name) 2)
+                (eql #\+ (elt name 0))
+                (eql #\+ (elt name (1- (length name))))))
+         (boundp specimen)))
+  
+  (defun eval-if-global-constant (form otherwise)
+    (typecase form
+      ((or (cons (eql quote) (cons t null)) ; quote form
+           keyword
+           (satisfies conventional-constant-symbol-p) ; +foo+
+           (not (or symbol cons))) ; per CLHS 3.1.2.1.3
+       (eval form))
+      (otherwise
+       (funcall otherwise))))
+ 
+  (defun coercing-lambda-list-item-to-param-desc (item)
+    (etypecase item
+      (symbol
+       (make-instance 'param-desc
+         :opt-name (guess-lowercase-string (symbol-name item))))
+      ((cons t (cons t null))
+       (destructuring-bind (name type-form) item
+         (make-instance 'param-desc
+            :opt-name (guess-lowercase-string (symbol-name name))
+            :opt-guard (block nil
+                         (let ((type (eval-if-global-constant type-form
+                                       (lambda () (return)))))
+                           (typecase type
+                             ((or symbol cons)
+                              (if (fboundp 'type-specifier-to-guard)
+                                ;; XXX evil bootstrap kludge
+                                (type-specifier-to-guard type)))
+                             (otherwise
+                              type)))))))))
+  
   (defun lambda-list-to-param-desc-vector (list arity prefix-arity
       &aux (end (or (position '&aux list) (length list))))
     (unless (= end (+ arity prefix-arity))
@@ -798,7 +870,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
         (when (member sym lambda-list-keywords)
           (error "constructing param-desc vector from lambda list ~S with keyword ~s not possible" list sym))
       collect 
-        (symbol-to-param-desc sym)) 'vector))
+        (coercing-lambda-list-item-to-param-desc sym)) 'vector))
                             
   (defun smethod-message-desc-pair (smethod &rest keys &key (prefix-arity 0) &allow-other-keys
       &aux (mverb (smethod-mverb smethod prefix-arity)))
@@ -1397,6 +1469,13 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
              long-specimen
              ejector)))
 
+(defun type-specifier-to-guard (ts)
+  (or
+    (and (consp ts)
+         (= (length ts) 2)
+         (eq (first ts) 'satisfies)
+         (get (second ts) 'satisfies-type-specifier-guard))
+    (make-instance 'cl-type-guard :type-specifier ts)))
 
 ;;; --- Additional reference pieces ---
 
