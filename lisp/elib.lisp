@@ -582,6 +582,17 @@ If there is no current vat at initialization time, captures the current vat at t
     rec
     args))
 
+;;; --- Early CL-type stuff ---
+
+(defgeneric observable-type-of (specimen)
+  ;; This should arguably be observable-class-of.
+  (:documentation "Given an object, return the narrowest type specifier which should visible (in its FQN form) to the E programmer. Usually specialized via the def-class-opaque macro."))
+
+(defmacro def-class-opaque (class-name &optional (visible-type class-name))
+  `(defmethod observable-type-of ((a ,class-name))
+    (declare (ignore a))
+    ',visible-type))
+
 ; --- Type description objects ---
 
 ; These are defined early here so that the classes are available for use in the various __getAllegedType implementations, some of which construct the type description at macroexpansion time.
@@ -628,7 +639,25 @@ If there is no current vat at initialization time, captures the current vat at t
      (opt-guard :initarg :opt-guard :initform nil
                 :reader param-desc-opt-guard
                 :type t)))
-
+  
+  (defclass eval-param-desc (param-desc)
+    ((form :initarg :form
+           :reader eval-param-desc-form))
+    (:documentation "Gimmick so that a CL object's alleged type's parameter guards remain late-bound and don't need to be put into compiled files."))
+  
+  ;; We aren't equipped to make eval-param-descs have a different E 
+  ;; selfless-identity, so we make them look just like ordinary param-descs
+  ;; instead.
+  (def-class-opaque param-desc)
+  
+  (defmethod param-desc-opt-guard ((this eval-param-desc))
+    (let ((guard-specifier (eval (eval-param-desc-form this))))
+      (typecase guard-specifier
+         ((or symbol cons)
+          (type-specifier-to-guard guard-specifier))
+         (otherwise
+          guard-specifier))))
+  
   ; The vtables for {type,message,param}-desc may be found in elib-values.lisp.
 
   ; This is necessary because E-LAMBDA and elang objects have 'literal' 
@@ -829,37 +858,27 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
                 (eql #\+ (elt name (1- (length name))))))
          (boundp specimen)))
   
-  (defun eval-if-global-constant (form otherwise)
-    (typecase form
-      ((or (cons (eql quote) (cons t null)) ; quote form
-           keyword
-           (satisfies conventional-constant-symbol-p) ; +foo+
-           (not (or symbol cons))) ; per CLHS 3.1.2.1.3
-       (eval form))
-      (otherwise
-       (funcall otherwise))))
+  (deftype global-constant ()
+    '(or (cons (eql quote) (cons t null)) ; quote form
+         keyword
+         (satisfies conventional-constant-symbol-p) ; +foo+
+         (not (or symbol cons)))) ; per CLHS 3.1.2.1.3
  
   (defun coercing-lambda-list-item-to-param-desc (item)
     (etypecase item
+      ((cons t (cons global-constant null))
+       (destructuring-bind (name type-form) item
+         (make-instance 'eval-param-desc
+           :opt-name (guess-lowercase-string (symbol-name name))
+           :form type-form)))
+      ((cons t (cons t null))
+       (make-instance 'param-desc
+         :opt-name (guess-lowercase-string (symbol-name (first item)))))
       (symbol
        (make-instance 'param-desc
-         :opt-name (guess-lowercase-string (symbol-name item))))
-      ((cons t (cons t null))
-       (destructuring-bind (name type-form) item
-         (make-instance 'param-desc
-            :opt-name (guess-lowercase-string (symbol-name name))
-            :opt-guard (block nil
-                         (let ((type (eval-if-global-constant type-form
-                                       (lambda () (return)))))
-                           (typecase type
-                             ((or symbol cons)
-                              (if (fboundp 'type-specifier-to-guard)
-                                ;; XXX evil bootstrap kludge
-                                (type-specifier-to-guard type)))
-                             (otherwise
-                              type)))))))))
+         :opt-name (guess-lowercase-string (symbol-name item))))))
   
-  (defun lambda-list-to-param-desc-vector (list arity prefix-arity
+  (defun coercing-lambda-list-to-param-desc-vector (list arity prefix-arity
       &aux (end (or (position '&aux list) (length list))))
     (unless (= end (+ arity prefix-arity))
       (error "arity ~A + prefix-arity ~A doesn't match lambda list ~S" arity prefix-arity list))
@@ -886,7 +905,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
         :verb verb
         :doc-comment (or (find-if #'stringp impl-desc) "") ; XXX too lenient
         :params (if (rest impl-desc) ; therefore inline
-                  (lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
+                  (coercing-lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
                   (make-array arity :initial-element 
                     (make-instance 'param-desc))))))
   
@@ -1243,15 +1262,6 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
             (e-is-true (call-next-method))))))
   
         (otherwise (call-next-method))))))
-
-(defgeneric observable-type-of (specimen)
-  ;; This should arguably be called observable-class-of.
-  (:documentation "Given an object, return the narrowest type specifier which should visible (in its FQN form) to the E programmer. Usually specialized via the def-class-opaque macro."))
-
-(defmacro def-class-opaque (class-name &optional (visible-type class-name))
-  `(defmethod observable-type-of ((a ,class-name))
-    (declare (ignore a))
-    ',visible-type))
 
 ; xxx it might be useful to enforce the constraint that anything stamped +selfless-stamp+ and not a FUNCTION must have a specialized observable-type-of, or something to that effect.
 ;
