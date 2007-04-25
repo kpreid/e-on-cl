@@ -56,7 +56,7 @@ Guarded
   ? def GuardedSlot := makeGuardedSlot.asType()
   # value: GuardedSlot
 
-  ? makeGuardedSlot(int, null, def _(p) :any { print(p); [p] })
+  ? makeGuardedSlot(int, null, def _(p) :any { print(p); return [p] })
   # stdout: problem: the Null null doesn't coerce to an int
   
   # problem: optEjector <_> returned: [problem: the Null null doesn't coerce to an int]

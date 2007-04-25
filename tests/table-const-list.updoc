@@ -50,7 +50,7 @@ sort
   ? [3, 2, 1].sort()
   # value: [1, 2, 3]
   
-  ? [1, 2, 3].sort(def reverseCompare(a, b) :any { -(a.op__cmp(b)) })
+  ? [1, 2, 3].sort(def reverseCompare(a, b) :any { return -(a.op__cmp(b)) })
   # value: [3, 2, 1]
 
 XXX consider how to test all the same methods on Strings (or, for String-specific quirks, coercions, etc.)

@@ -98,14 +98,23 @@ A decimal point must have at least one following digit, because otherwise it is 
 ? t("3.")
 # problem: (line 1)@3: unexpected token: ["null",<1>,line=1,col=3]
 ? t("3.e2")
-# problem: (line 1)@3: The optional "verb-curry" syntax is currently off.
+# stdout: CurryE. CallE.
+#           LiteralE. 3
+#           e2
+#           []
 
 An additional dot always indicates call syntax.
 
 ? t("3.2.a")
-# problem: (line 1)@5: The optional "verb-curry" syntax is currently off.
+# stdout: CurryE. CallE.
+#           LiteralE. 3.2
+#           a
+#           []
 ? t("3e2.a")
-# problem: (line 1)@5: The optional "verb-curry" syntax is currently off.
+# stdout: CurryE. CallE.
+#           LiteralE. 300.0
+#           a
+#           []
 
 There must also be at least one preceding digit.
 
@@ -412,7 +421,7 @@ XXX test resulting pragma state directly?
 #             NounE. b
 #             []
 #             NullE.
-#             false
+#             true
 
 ? t("def a() :b implements c {}")
 # problem: (line 1)@23: The optional "function-implements" syntax is currently off.
@@ -428,7 +437,7 @@ XXX test resulting pragma state directly?
 #             NounE. b
 #             [] NounE. c
 #             NullE.
-#             false
+#             true
 
 Testing discrimination between functions and call patterns:
 
@@ -443,7 +452,7 @@ Testing discrimination between functions and call patterns:
 #             null
 #             []
 #             NullE.
-#             false
+#             true
 
 ? t("pragma.disable(\"explicit-result-guard\"); pragma.enable(\"function-implements\"); def a() implements b {}")
 # stdout: SeqE. [] ObjectHeadE.
@@ -456,7 +465,7 @@ Testing discrimination between functions and call patterns:
 #             null
 #             [] NounE. b
 #             NullE.
-#             false
+#             true
 
 ? t("def a() :b {}")
 # stdout: ObjectHeadE.
@@ -469,7 +478,7 @@ Testing discrimination between functions and call patterns:
 #             NounE. b
 #             []
 #             NullE.
-#             false
+#             true
 
 --- modPow ---
 
@@ -618,7 +627,7 @@ one-method-object
 #             NounE. c
 #             []
 #             NounE. d
-#             false
+#             true
 
 --- URISchemeExpr ---
 

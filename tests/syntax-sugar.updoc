@@ -795,6 +795,7 @@ MatchBindExpr
   #                        } catch f {
   #                            g
   #                        }
+  #                        null
   #                    }
   #                }
   #            })
@@ -820,6 +821,7 @@ MatchBindExpr
   #                        } finally {
   #                            j
   #                        }
+  #                        null
   #                    }
   #                }
   #            })
@@ -833,6 +835,7 @@ MatchBindExpr
   #                    escape __return {
   #                        def c := Ref.fulfillment(resolution__1)
   #                        e
+  #                        null
   #                    }
   #                }
   #            })
@@ -850,6 +853,7 @@ MatchBindExpr
   #                    escape __return {
   #                        def [d, e] := Ref.fulfillment(resolution__1)
   #                        f
+  #                        null
   #                    }
   #                }
   #            })
@@ -1072,7 +1076,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
 
 'FunctionObject'
 
-  ? t("/** a */ def b() :c { d }")
+  ? t("pragma.disable(\"easy-return\"); /** a */ def b() :c { d }")
   # value: e`def b {
   #            
   #            /** a */
@@ -1095,13 +1099,14 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   #            }
   #        }`
 
-  ? t("pragma.enable(\"function-implements\"); /** a */ def b() :c implements d { e }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"function-implements\"); /** a */ def b() :c implements d { e }")
   # value: e`def b implements d {
   #            
   #            /** a */
   #            method run() :c {
   #                escape __return {
   #                    e
+  #                    null
   #                }
   #            }
   #        }`
@@ -1117,23 +1122,25 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
 
 This currently shares most of the implementation of FunctionExpr, so I'm not testing it much. '
 
-  ? t("pragma.enable(\"one-method-object\"); /** a */ def b.c() :d { e }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"one-method-object\"); /** a */ def b.c() :d { e }")
   # value: e`def b {
   #            
   #            /** a */
   #            method c() :d {
   #                escape __return {
   #                    e
+  #                    null
   #                }
   #            }
   #        }`
 
-  ? t("pragma.enable(\"one-method-object\"); def b.c() :d { e }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"one-method-object\"); def b.c() :d { e }")
   # value: e`def b {
   #            
   #            method c() :d {
   #                escape __return {
   #                    e
+  #                    null
   #                }
   #            }
   #        }`
@@ -1141,7 +1148,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
 
 'ETo'
 
-  ? t("def a { to b() :c { d } }")
+  ? t("pragma.syntax(\"0.8\"); def a { to b() :c { d } }")
   # value: e`def a {
   #            
   #            method b() :c {
@@ -1151,7 +1158,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
   #            }
   #        }`
   
-  ? t("pragma.disable(\"explicit-result-guard\"); def a { to b() { d } }")
+  ? t("pragma.syntax(\"0.8\"); pragma.disable(\"explicit-result-guard\"); def a { to b() { d } }")
   # value: e`def a {
   #            
   #            method b() :void {
@@ -1161,7 +1168,7 @@ This currently shares most of the implementation of FunctionExpr, so I'm not tes
   #            }
   #        }`
 
-  ? t("pragma.enable(\"easy-return\"); def a { to b() :c { d } }")
+  ? t("pragma.syntax(\"0.8\"); pragma.enable(\"easy-return\"); def a { to b() :c { d } }")
   # value: e`def a {
   #            
   #            method b() :c {

@@ -1,8 +1,7 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-  ? pragma.enable("trinary-define")
-  ? pragma.enable("anon-lambda")
+  ? pragma.syntax("0.9")
 
   Using the primitive guards, not the complex E-implemented ones
   ? def tfloat64 := <import:org.cubik.cle.prim.float64>; null
@@ -219,7 +218,7 @@ EscapeExpr optimizer testing
   There is an optimization routine which deletes block and ejector creation for EscapeExprs whose ejectors are not used. These are tests for visible failures.
   
   meta.getState can see it
-  ? def _() :any { escape x { meta.getState()["&x"] } } ()
+  ? def _() :any { return escape x { meta.getState()["&x"] } } ()
   # value: <& <x ejector>>
 
   failing patterns
@@ -303,8 +302,8 @@ Furthermore, we choose that it be always the same, i.e. selfless.
 
 MetaStateExpr
 
-  ? (def _() :any { def x := &int; meta.getState() })()
-  # value: ["&x" => <& <LazyEvalSlot>>, "&__return" => <& <__return ejector>>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
+  ? (def _() :any { def x := &int; return meta.getState() })()
+  # value: ["&x" => <& <LazyEvalSlot>>, "&__return" => <& <__return ejector>>, "&null" => <& null>, "&int" => <LazyEvalSlot>, "&any" => <& any>]
   
   XXX toplevel meta.getState()
 
@@ -336,12 +335,13 @@ ObjectExpr
   
   
  Apparent usage of 'implements' in the script is rejected (this test once tested that it was actual usage and allowed)
-  ? { def x := 1; { def thing implements (def x {to audit(_) :any {return true}}) { to run() :any {x} }; [x, thing()] }}
+  ? { def x := 1; { def thing implements (def x {to audit(_) :any {return true}}) { to run() :any {return x} }; [x, thing()] }}
   # problem: <misleading-apparent-usage-error: a ObjectExpr's script (e??` {
   #              
   #              method run() :any {
   #                  escape __return {
-  #                      x
+  #                      __return.run(x)
+  #                      null
   #                  }
   #              }
   #          }`) may not appear to use definitions from its auditorExprs ([e`def x {
@@ -349,6 +349,7 @@ ObjectExpr
   #              method audit(_) :any {
   #                  escape __return {
   #                      __return.run(true)
+  #                      null
   #                  }
   #              }
   #          }`])>

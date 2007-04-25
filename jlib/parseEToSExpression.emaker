@@ -77,7 +77,7 @@ def author(<unsafe>) {
       match [vh, ph] { elexer.setHoles(vh, ph) }
       match ==null {}
     }
-    parser.setSyntax(makeCommonToken(-1, "0.8"))
+    parser.setSyntax(makeCommonToken(-1, "0.9"))
     if (props != null) {
       for k => v in props {
         parser.setPocket(makeCommonToken(-1, k), v)

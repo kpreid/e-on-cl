@@ -5,6 +5,7 @@
 #   DeepFrozen
 #   more helpful failure message
 
+pragma.syntax("0.8")
 pragma.enable("function-implements")
 
 def EventuallyDeepFrozen := DeepFrozen."eventually"()

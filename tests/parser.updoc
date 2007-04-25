@@ -13,7 +13,7 @@
   
   ? def mapStream := <import:org.cubik.cle.io.mapStream>; null
   
-  ? def identityValues implements DeepFrozen { to run(s) :any { [s, s] }}; null
+  ? def identityValues implements DeepFrozen { to run(s) :any { return [s, s] }}; null
   
   ? def parser := makeLALR1Parser("from cl-yacc test 4-20",
   >                               s,
@@ -53,11 +53,11 @@ Actions
   >                               "a",
   >                               ["c"],
   >                               [["a", ["b"], 
-  >                                   def _(x) :any {`[$x]`}],
+  >                                   fn x {`[$x]`}],
   >                                ["b", ["c", "c"], 
-  >                                   def _(x,y) :any {`$x $y`}]],
+  >                                   fn x,y {`$x $y`}]],
   >                               ["tokenFunction" => \
-  >                                def _(s) :any { [s(0,1), s] }])
+  >                                fn s { [s(0,1), s] }])
   # value: <action test LALR(1) parser>
 
   ? parser.parse(["carrots", "celery"].asStream())
@@ -99,14 +99,14 @@ bad terminal
 
 quasi-parser with actions
 
-  ? def calls(verb) :any { def caller implements DeepFrozen { 
+  ? def calls(verb) :any { return def caller implements DeepFrozen { 
   >   match [=="run", [rec] + args] { 
   >     E.call(rec, verb, args) }}}
   > null
 
   ? lalr1`"sums" := sum.
   >       sum := ${'1'} => ${calls("getCodepoint")}. 
-  >       sum := sum ${'+'} sum => ${def _(l,_,r) :any {l + r}}.
+  >       sum := sum ${'+'} sum => ${def _(l,_,r) :any {return l + r}}.
   >      `.parse(mapStream(any, "1+1+1".asStream(), identityValues))
   # value: 147
 

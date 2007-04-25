@@ -298,7 +298,7 @@ Remote TextWriters
   ? def vat := <unsafe:org.erights.e.elib.vat.Vat>(null, "TextWriter passing test")
   # value: <Far ref>
 
-  ? def remote := vat <- seedEval(e`def remote(o, _) :any { (o :TextWriter) <- println("hi"); "done" }`)
+  ? def remote := vat <- seedEval(e`def remote(o, _) :any { (o :TextWriter) <- println("hi"); return "done" }`)
   # value: <Promise>
 
   ? interp.waitAtTop(def res := remote <- run(stdout, 1)); res

@@ -137,6 +137,7 @@ XXX enable this and the similar below as soon as we support var patterns
   #              } else {
   #                  null
   #              }
+  #              null
   #          }`
   
   ? def lazyFailer9 implements EventuallyDeepFrozen {

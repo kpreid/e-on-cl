@@ -1,10 +1,9 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-pragma.disable("easy-return")
-pragma.disable("explicit-result-guard")
-
+pragma.syntax("0.8")
 pragma.enable("function-implements")
+pragma.disable("explicit-result-guard")
 
 def Throwable := <import:org.cubik.cle.prim.Throwable>
 def makeException := <import:org.cubik.cle.prim.makeException>

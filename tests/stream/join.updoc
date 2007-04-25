@@ -16,14 +16,14 @@
   >       to flush() :void { print("<flush>") }
   >       to terminate(t) :void { print(`<terminate $t>`) }})
   >   #printStreamBackend.setAvailable(ALL)
-  >   [stream, printStreamBackend]
+  >   return [stream, printStreamBackend]
   > }
   # value: <variablePrintStream>
   
   ? def makePrintStream() :any {
   >   def [s, b] := variablePrintStream()
   >   b.setAvailable(ALL)
-  >   s
+  >   return s
   > }
   # value: <makePrintStream>
 

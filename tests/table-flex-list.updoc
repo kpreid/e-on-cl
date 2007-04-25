@@ -311,7 +311,7 @@ sort
   ? floatList.sort()
   # value: [3.0, 40.0, 50.0]
 
-  ? floatList.sort(def reverseCompare(a, b) :any { -(a.op__cmp(b)) })
+  ? floatList.sort(def reverseCompare(a, b) :any { return -(a.op__cmp(b)) })
   # value: [50.0, 40.0, 3.0]
 
 

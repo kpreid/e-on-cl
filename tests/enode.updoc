@@ -794,7 +794,7 @@ eval
   ? e`1 + 1`.eval(safeScope)
   # value: 2
   
-  ? e`def f(x) :any {print(x); x + 1}`.eval(privilegedScope)(44)
+  ? e`def f(x) :any {print(x); return x + 1}`.eval(privilegedScope)(44)
   # stdout: 44
   
   # value: 45

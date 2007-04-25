@@ -12,10 +12,10 @@
 
   ? def makeTermParser := <qu:term.makeTermParser>; null
 
-  ? def makeLexStream() :any { makeTermLexer(false)("foo".asStream()) }; null
+  ? def makeLexStream() :any { return makeTermLexer(false)("foo".asStream()) }; null
   
   ? def genericBuilder { 
-  >   to doesQuasis() :any { true }
+  >   to doesQuasis() :any { return true }
   >   match [v, a] { [v] + a } }
   > def gbParser := makeTermParser(genericBuilder)
   # value: <termParser>
@@ -28,7 +28,7 @@
 
 --- Grammar
 
-  ? def p(tokens) :any { gbParser.parse(tokens.asStream()) }; null
+  ? def p(tokens) :any { return gbParser.parse(tokens.asStream()) }; null
 
 foo()
 

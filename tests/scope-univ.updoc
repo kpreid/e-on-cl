@@ -115,7 +115,7 @@ E
   # value: 3
   
   XXX primitive list guard isn't the same as List so we can't test that exactly yet - this is a significant problem
-  ? E.call(1, "add", def _{to __conformTo(_) :any {[4]}})
+  ? E.call(1, "add", def _{to __conformTo(_) :any {return [4]}})
   # value: 5
   
   ? E.callWithPair(1, ["add", [-1]])
@@ -129,7 +129,7 @@ E
   ? E.callWithPair(1, ["add"])
   # problem: the ConstList ["add"] doesn't coerce to a ConstList[any, 2]
   
-  ? E.callWithPair(1, def _{to __conformTo(_) :any {["add", [10]]}})
+  ? E.callWithPair(1, def _{to __conformTo(_) :any {return ["add", [10]]}})
   # value: 11
   
   E.send and sendOnly is tested in send.updoc

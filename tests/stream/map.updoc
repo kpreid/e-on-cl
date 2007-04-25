@@ -22,7 +22,7 @@
   > def s := mapStream.chunked(int, 
   >                            [1, 2, 3].asStream(), 
   >                            def chunkFunc(es) :any {
-  >                              accum [] for x in es { _.with(x+1) }})
+  >                              return accum [] for x in es { _.with(x+1) }})
   # value: <-<chunkFunc>-[1, 2, 3, ...].asStream()
   
   ? s.readAll()

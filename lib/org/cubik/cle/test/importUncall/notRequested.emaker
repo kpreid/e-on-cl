@@ -1,1 +1,3 @@
+pragma.syntax("0.9")
+
 def notRequested implements DeepFrozen {}
