@@ -166,7 +166,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|isBare| (this)
     "Return true, because this is an ordinary String."
     (declare (ignore this))
-    +e-true+))
+    +e-true+)
+  (:|toUpperCase/0| 'string-upcase)
+  (:|toLowerCase/0| 'string-downcase))
 
 (def-atomic-sameness string string= sxhash)
 
@@ -253,7 +255,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (char-nearby this +1))
   (:|previous| (this)
     "Return the previous character in the total ordering of characters. Throws an exception if this is the first character."
-    (char-nearby this -1)))
+    (char-nearby this -1))
+  (:|toUpperCase/0| 'char-upcase)
+  (:|toLowerCase/0| 'char-downcase))
 
 ; --- ConstList (vector) ---
 

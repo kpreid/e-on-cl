@@ -220,3 +220,33 @@ Characters
 
   ? ' ' <=> '4'
   # value: false
+
+String & Character
+
+ Case
+ 
+  ? "Aa?".toUpperCase()
+  # value: "AA?"
+  
+  ? 'A'.toUpperCase()
+  # value: 'A'
+
+  ? 'a'.toUpperCase()
+  # value: 'A'
+
+  ? '?'.toUpperCase()
+  # value: '?'
+
+  ? "Aa?".toLowerCase()
+  # value: "aa?"
+  
+  ? 'A'.toLowerCase()
+  # value: 'a'
+
+  ? 'a'.toLowerCase()
+  # value: 'a'
+
+  ? '?'.toLowerCase()
+  # value: '?'
+  
+  XXX Write Unicode case tests
