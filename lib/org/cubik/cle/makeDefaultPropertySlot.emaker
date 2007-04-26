@@ -1,0 +1,33 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def ePrinter := <import:org.erights.e.elang.syntax.ePrinter>
+
+def makeDefaultPropertySlot(object, propertyName :String) implements DeepFrozen {
+  
+  def capName := { def mark := 1.min(propertyName.size())
+                   propertyName(0, mark).toUpperCase() + 
+                     propertyName(mark) }
+  def getVerb := "get" + capName
+  def setVerb := "set" + capName
+  /** This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object. */
+  def defaultPropertySlot {
+    to __printOn(out :TextWriter) {
+      ePrinter.printPropertySlot(out, propertyName)
+    }
+    /** E.call(target, `get$Property`, []) */
+    to getValue() {
+      return E.call(object, getVerb, [])
+    }
+    /** E.call(target, `set$Property`, [new]); null */
+    to setValue(new) {
+      E.call(object, setVerb, [new])
+      null
+    }
+    to isFinal() { return false }
+  }
+  return defaultPropertySlot
+}

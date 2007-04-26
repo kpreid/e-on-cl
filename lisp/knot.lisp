@@ -719,6 +719,7 @@
           ("&__bind"         ,(lazy-import "org.erights.e.elang.expand.makeViaBinder"))
           ("&__booleanFlow"  ,(lazy-import "org.erights.e.elang.expand.booleanFlow"))
           ("&__comparer"     ,(lazy-import "org.erights.e.elang.expand.comparer"))
+          ("&__getPropertySlot" ,(lazy-import "org.cubik.cle.makeDefaultPropertySlot"))
           ("&__makeVerbFacet",(lazy-import "org.erights.e.elang.expand.__makeVerbFacet"))
           ("&__mapEmpty"     ,(lazy-import "org.erights.e.elang.expand.viaEmptyMap"))
           ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.expand.makeViaExtractor"))

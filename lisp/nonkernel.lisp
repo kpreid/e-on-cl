@@ -831,7 +831,7 @@
 (defemacro |PropertySlotExpr| (|EExpr|) ((|recipient| t |EExpr|) 
                                          (|key| nil string))
                                     ()
-  (mn '|CallExpr| |recipient| "__getPropertySlot" (node-quote |key|)))
+  (mn '|CallExpr| (mn '|NounExpr| "__getPropertySlot") "run" |recipient| (node-quote |key|)))
 
 (defemacro |QuasiExpr| (|EExpr|) 
     ((|optParser| t (or null |EExpr|))
@@ -1261,7 +1261,7 @@
     (declare (ignore node))
     "run"))
 
-;; XXX bring together this, convention-uncapitalize, and the __getPropertySlot stuff
+;; XXX bring together this, convention-uncapitalize, and makeDefaultPropertySlot
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun convention-capitalize (string)
     (string-upcase string :end (min 1 (length string)))))

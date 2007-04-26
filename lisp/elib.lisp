@@ -1097,24 +1097,6 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (declare (ignore problem))
       nil)
 
-    (:|__getPropertySlot| ((prop-name 'string))
-      ; XXX should we have a fqn derived from the original object? a print derived from its simple name?
-      (let* ((cap-name (string-upcase prop-name :end (min 1 (length prop-name))))
-             (get-verb (e-util:mangle-verb (concatenate 'string "get" cap-name) 0))
-             (set-verb (e-util:mangle-verb (concatenate 'string "set" cap-name) 1)))
-      (e-lambda "org.cubik.cle.prim.DefaultPropertySlot"
-          (:doc "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object.")
-        (:|__printOn| ((tw +the-text-writer-guard+))
-          (e. e.syntax:+e-printer+ |printPropertySlot| tw prop-name))
-        (:|getValue| ()
-          "E.call(target, `get$Property`)"
-          (e-call-dispatch self get-verb))
-        (:|setValue| (new)
-          "E.call(target, `set$Property`, new); null"
-          (e-call-dispatch self set-verb new)
-          nil)
-        (:|isFinal| () +e-false+))))
-
     (otherwise
       (funcall matcher-func (lambda ()
         (no-such-method self mverb args)))))

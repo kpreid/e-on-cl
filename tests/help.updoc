@@ -232,7 +232,6 @@ __getAllegedType details, def-vtable-based
   #         __whenBroken/1
   #         __order/2
   #         __reactToLostClient/1
-  #         __getPropertySlot/1
   #         and/1
   #         not/0
   #         or/1
@@ -281,17 +280,17 @@ MessageDesc of a miranda method
 
 __getAllegedType, e-lambda
   
-  ? def t := EIO.__getPropertySlot("ALL").__getAllegedType()
-  # value: DefaultPropertySlot
+  ? def t := __makeInt.__getAllegedType()
+  # value: MakeInt
 
-  ? t.coerce(EIO.__getPropertySlot("NOW"), throw)
+  ? t.coerce(null, throw)
   # problem: no such method: org.erights.e.elib.base.TypeDesc#coerce/2
   
   ? t.getFQName()
-  # value: "org.cubik.cle.prim.DefaultPropertySlot"
+  # value: "org.cubik.cle.prim.makeInt"
 
   ? t.getDocComment()
-  # value: "This is a Slot acting as a facet on the `get$Property` and `set$Property` methods of another object."
+  # value: "Operations for producing integers from other data such as strings."
   
   ? t.getSupers()
   # value: []
@@ -312,24 +311,21 @@ __getAllegedType, e-lambda
   #         __whenBroken/1
   #         __order/2
   #         __reactToLostClient/1
-  #         __getPropertySlot/1
-  #         getValue/0
-  #         setValue/1
-  #         isFinal/0
+  #         run/1
   #         
 
-  ? def m := t.getMessageTypes()["setValue/1"]
-  # value: /** E.call(target, `set$Property`, new); null */
-  #        to setValue(new)
+  ? def m := t.getMessageTypes()["run/1"]
+  # value: /** Return the integer denoted by the given string in base ten. A leading '+' or '-' is allowed; whitespace or other extraneous characters are not. */
+  #        to run(value :String)
   
   ? m.getVerb()
-  # value: "setValue"
+  # value: "run"
   
   ? m.getDocComment()
-  # value: "E.call(target, `set$Property`, new); null"
+  # value: "Return the integer denoted by the given string in base ten. A leading '+' or '-' is allowed; whitespace or other extraneous characters are not."
   
   ? m.getParams()
-  # value: [new]
+  # value: [value :String]
   
   ? [m.getOptResultGuard()]
   # value: [null]
@@ -379,7 +375,6 @@ __getAllegedType, E object
   #         __whenBroken/1
   #         __order/2
   #         __reactToLostClient/1
-  #         __getPropertySlot/1
   #         and/1
   #         not/0
   #         or/1

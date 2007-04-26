@@ -605,16 +605,16 @@ MatchBindExpr
 'PropertyExpr'
 
   ? t("pragma.enable(\"dot-props\"); a::b")
-  # value: e`a.__getPropertySlot("b").getValue()`
+  # value: e`__getPropertySlot.run(a, "b").getValue()`
   
   ? t("pragma.enable(\"dot-props\"); a::&b")
-  # value: e`a.__getPropertySlot("b")`
+  # value: e`__getPropertySlot.run(a, "b")`
   
   ? t("pragma.enable(\"dot-props\"); a::\"b\"")
-  # value: e`a.__getPropertySlot("b").getValue()`
+  # value: e`__getPropertySlot.run(a, "b").getValue()`
   
   ? t("pragma.enable(\"dot-props\"); a::&\"b\"")
-  # value: e`a.__getPropertySlot("b")`
+  # value: e`__getPropertySlot.run(a, "b")`
 
 'QuasiExpr'
 
