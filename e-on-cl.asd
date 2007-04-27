@@ -70,9 +70,10 @@
             :depends-on ("elib" "sugar"))
      (:file "random"
             :depends-on ("elib"))
-     (:file "sockets")
+     (:file "sockets"
+            :depends-on ("elib"))
      (:file "sockets2"
-            :depends-on ("sockets"))
+            :depends-on ("sockets" "sugar"))
      (:file "comm"
             :depends-on ("elib" "sugar"))
      (:file "knot-base"

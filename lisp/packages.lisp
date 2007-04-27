@@ -362,6 +362,7 @@
   
 (e.util:defglobals
   e.knot:+sharable-importer+
+  e.knot:+lisp+
   e.knot:+trace+
   e.knot:+sys-trace+
   e.knot:+the-make-path-loader+)

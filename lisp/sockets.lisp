@@ -341,7 +341,7 @@
       (when opt-fd
         #+sbcl (sb-posix:close opt-fd)
         #-sbcl (warn "leaking fd ~A; XXX need non-SBCL shutdown implementation" opt-fd))
-      (setf fd nil)
+      (setf opt-fd nil)
       (values))
 
     #+sbcl

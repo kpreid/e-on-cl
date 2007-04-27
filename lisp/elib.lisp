@@ -345,7 +345,7 @@ If there is no current vat at initialization time, captures the current vat at t
 (defclass broken-ref (ref)
   ((problem :initarg :problem
             :type t
-            :reader %broken-ref-problem))
+            :accessor %broken-ref-problem))
   (:documentation "Abstract. Make a DISCONNECTED-REF or an UNCONNECTED-REF instead of this."))
  
 (defmethod shared-initialize :after ((this broken-ref) slot-names &key &allow-other-keys)
