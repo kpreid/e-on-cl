@@ -780,10 +780,10 @@ MatchBindExpr
 
 'WhenExpr'
 
-  ? t("when (a) -> b(c) :d { e }")
-  # problem: (line 1)@25: The optional "easy-when" syntax is currently off.
+  ? t("pragma.syntax(\"0.8\"); when (a) -> b(c) :d { e }")
+  # problem: (line 1)@47: The optional "easy-when" syntax is currently off.
   
-  ? t("when (a) -> b(c) :d { e } catch f { g }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"hard-when\"); when (a) -> b(c) :d { e } catch f { g }")
   # value: e`{
   #            Ref.whenResolved(a, def b {
   #                
@@ -801,7 +801,7 @@ MatchBindExpr
   #            })
   #        }`
   
-  ? t("when (a) -> b(c) :d { e } catch f { g } catch h { i } finally { j }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"hard-when\"); when (a) -> b(c) :d { e } catch f { g } catch h { i } finally { j }")
   # value: e`{
   #            Ref.whenResolved(a, def b {
   #                
@@ -827,7 +827,7 @@ MatchBindExpr
   #            })
   #        }`
   
-  ? t("pragma.enable(\"easy-when\"); when (a) -> b(c) :d { e }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"hard-when\"); when (a) -> b(c) :d { e }")
   # value: e`{
   #            Ref.whenResolved(a, def b {
   #                
@@ -841,11 +841,11 @@ MatchBindExpr
   #            })
   #        }`
 
-  ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d) :e { f }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"hard-when\"); when (a, b) -> c(d) :e { f }")
   # problem: must have same number of expressions and patterns
   XXX should be syntax error
   
-  ? t("pragma.enable(\"easy-when\"); when (a, b) -> c(d, e) :e { f }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"hard-when\"); when (a, b) -> c(d, e) :e { f }")
   # value: e`{
   #            Ref.whenResolved(promiseAllFulfilled.run(__makeList.run(a, b)), def c {
   #                
@@ -859,7 +859,7 @@ MatchBindExpr
   #            })
   #        }`
 
-  ? t("pragma.enable(\"easy-return\"); when (a) -> b(c) :d { e } catch f { g }")
+  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"hard-when\"); pragma.disable(\"easy-return\"); when (a) -> b(c) :d { e } catch f { g }")
   # value: e`{
   #            Ref.whenResolved(a, def b {
   #                
@@ -871,8 +871,17 @@ MatchBindExpr
   #                        } catch f {
   #                            g
   #                        }
-  #                        null
   #                    }
+  #                }
+  #            })
+  #        }`
+
+  ? t("pragma.syntax(\"0.9\"); when (a) -> { b }")
+  # value: e`{
+  #            Ref.whenResolved(a, def _ {
+  #                
+  #                method run(_) {
+  #                    b
   #                }
   #            })
   #        }`

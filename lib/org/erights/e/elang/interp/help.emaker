@@ -45,7 +45,7 @@ def help implements DeepFrozen, ExitViaHere {
     } else if (Ref.isFar(specimen)) {
     
       # This won't work because we have no print()-or-similar authority to display the help in another turn.
-      # when (specimen <- __getAllegedType()) -> gotType(t) {
+      # when (def t := specimen <- __getAllegedType()) -> {
       #   print(formatType(t))
       # } catch p {
       # }
@@ -53,10 +53,8 @@ def help implements DeepFrozen, ExitViaHere {
       # return makeUnQuote("This is a Far reference. Sending request...")
       # return makeUnQuote("This is a Far reference. Currently, help() is not capable of retrieving interface information for it.")
       
-      return when (specimen <- __getAllegedType()) -> gotType(t) {
-        return formatType(t)
-      } catch p {
-        throw(p)
+      return when (def t := specimen <- __getAllegedType()) -> {
+        formatType(t)
       }
       
     } else if (Ref.optProblem(specimen) =~ p :notNull) {

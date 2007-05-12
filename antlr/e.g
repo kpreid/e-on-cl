@@ -120,6 +120,7 @@ tokens {
     AccumPlaceholderExpr;
     MessageDescExpr;
     ParamDescExpr;
+    WhenBlockExpr;
     WhenFnExpr;
 
     // patterns
@@ -290,6 +291,8 @@ setSyntax![Token arg]: {
     // XXX these should be in syntax-definition files; this is a quick hack
     if ("0.8".equals(syntaxName)) {
         myPocket.put("easy-return", "disable");
+        myPocket.put("easy-when", "disable");
+        myPocket.put("hard-when", "enable");
         myPocket.put("explicit-result-guard", "enable");
         myPocket.put("anon-lambda", "enable");
         myPocket.put("plumbing", "enable");
@@ -299,6 +302,8 @@ setSyntax![Token arg]: {
         myPocket.put("verb-curry", "disable");
     } else if ("0.9".equals(syntaxName)) {
         myPocket.put("easy-return", "enable");
+        myPocket.put("easy-when", "enable");
+        myPocket.put("hard-when", "disable");
         myPocket.put("explicit-result-guard", "disable");
         myPocket.put("anon-lambda", "enable");
         myPocket.put("plumbing", "enable");
@@ -391,9 +396,13 @@ accumBody:                      // XXX full set of binary ops
 
 accumPlaceholder: "_" {##.setType(AccumPlaceholderExpr);} ;
 
-whenExpr:       "when"^ parenArgsList br "->"!  whenFn   {##.setType(WhenExpr);} ;
+whenExpr:       "when"^ parenArgsList br "->"!  whenBody   {##.setType(WhenExpr);} ;
 
-whenFn:         objName parenParamList optGuard block whenCatcherList optFinally getPocket["easy-return"]  {##=#([WhenFnExpr],##);}  ;
+whenBody:       objName pocket["hard-when"] parenParamList optGuard
+                  block whenCatcherList optFinally getPocket["easy-return"]
+                  {##=#([WhenFnExpr],##);}
+            |   block whenCatcherList optFinally {##=#([WhenBlockExpr],##);}
+            ;
 
 whenCatcherList:   
                 (catcher)+ {##=#([List],##);}

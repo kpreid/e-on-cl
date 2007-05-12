@@ -46,6 +46,7 @@
     :|UpdateExpr|
     :|URIExpr|
     :|URISchemeExpr|
+    :|WhenBlockExpr|
     :|WhenExpr|
     :|WhenFnExpr|
     :|WhileExpr|
@@ -963,11 +964,13 @@
                                      ()
   (mn '|NounExpr| (format nil "~A__uriGetter" (string-downcase |scheme|))))
 
+(defgeneric check-when-reactor (args reactor))
+
 (defemacro |WhenExpr| (|EExpr|) ((|args| t (e-list |EExpr|))
-                                 (|reactor| t |WhenFnExpr|)) ;; loosen?
+                                 (|reactor| t (or |WhenBlockExpr|
+                                                  |WhenFnExpr|)))
                                 ()
-  (assert (= (length |args|) (length (ref-shorten (e. |reactor| |getParams|)))) ()
-          "must have same number of expressions and patterns")
+  (check-when-reactor |args| |reactor|)
   (mn '|HideExpr|
     (mn '|CallExpr|
       (mn '|NounExpr| "Ref")
@@ -977,6 +980,31 @@
         (mn '|CallExpr| (mn '|NounExpr| "promiseAllFulfilled") "run"
                         (apply #'mn '|ListExpr| (coerce |args| 'list))))
       |reactor|)))
+
+(defemacro |WhenBlockExpr| (|EExpr|) ((|body| t |EExpr|)
+                                      (|catchers| t (e-list |EMatcher|))
+                                      (|optFinally| t (or null |EExpr|)))
+                                     ()
+  (let ()
+    (mn '|FunctionExpr|
+      (vector (mn '|IgnorePattern|))
+      (labels ((do-finally (e)
+                 (if |optFinally|
+                   (mn '|FinallyExpr| e |optFinally|)
+                   e))
+               (do-catchers (c e)
+                 (if c
+                   (let ((catcher (first c)))
+                     (do-catchers (rest c) (mn '|CatchExpr| e (e. catcher |getPattern|) (e. catcher |getBody|))))
+                   e)))
+      (do-finally 
+        (do-catchers (coerce |catchers| 'list) 
+          |body|))))))
+
+(defmethod check-when-reactor (args (reactor |WhenBlockExpr|))
+  (declare (ignore args)))
+
+;; XXX WhenBlockExpr and WhenFnExpr are similar
 
 (defemacro |WhenFnExpr| (|EExpr|) ((|name| t |Pattern|)
                                    (|params| t (e-list |Pattern|))
@@ -1011,6 +1039,10 @@
                 (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution))
               |body|))))
         |isEasyReturn|))))
+
+(defmethod check-when-reactor (args (reactor |WhenFnExpr|))
+  (assert (= (length args) (length (ref-shorten (e. reactor |getParams|)))) ()
+          "must have same number of expressions and patterns"))
 
 (defemacro |WhileExpr| (|EExpr|) ((|test| t |EExpr|)
                                   (|body| t |EExpr|))

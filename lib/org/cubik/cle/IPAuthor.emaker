@@ -79,7 +79,7 @@ def IPAuthor implements DeepFrozen, ExitViaHere {
             def inStream
             def outStream
             
-            when (IP.getAddrInfo(hostSpec, serviceSpec, null)) -> done(address) {
+            when (def address := IP.getAddrInfo(hostSpec, serviceSpec, null)) -> {
               def socket := fooConnectTcp(address, throw)
               
               # this value is semantically arbitrary, but matching the socket's default send buffer is, I hope, good for efficiency

@@ -119,7 +119,7 @@ An additional dot always indicates call syntax.
 There must also be at least one preceding digit.
 
 ? t(".2")
-# problem: (line 1)@1: unexpected token: [".",<132>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: [".",<133>,line=1,col=1]
 
 --- Nouns ---
 
@@ -236,7 +236,7 @@ XXX ListExpr doesn't really belong here '
 
 Fails for the sake of sane precedence rules, even though it would be unambiguous, sort of.
 ? t("1 + def a := 2")
-# problem: (line 1)@11: unexpected token: [":=",<161>,line=1,col=11]
+# problem: (line 1)@11: unexpected token: [":=",<162>,line=1,col=11]
 XXX produce a nice error for this?
 
 ? t("a & def _ {}")
@@ -554,7 +554,7 @@ Parentheses disable modPow form
 #           NounE. a
 
 ? t("a :b :c")
-# problem: (line 1)@6: unexpected token: [":",<171>,line=1,col=6]
+# problem: (line 1)@6: unexpected token: [":",<172>,line=1,col=6]
 XXX prettier error
 
 --- ForExpr ---
@@ -632,7 +632,7 @@ one-method-object
 --- URISchemeExpr ---
 
 ? t("<>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<201>,line=1,col=1]
 
 ? t("<a>")
 # stdout: URISchemeE. a
@@ -647,11 +647,35 @@ would-be-keywords
 
 erroneous
 ? t("<ab cd>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<201>,line=1,col=1]
 ? t("<+a>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<201>,line=1,col=1]
 ? t("<a!b>")
-# problem: (line 1)@1: unexpected token: ["<",<200>,line=1,col=1]
+# problem: (line 1)@1: unexpected token: ["<",<201>,line=1,col=1]
+
+--- WhenExpr ---
+
+? t("pragma.syntax(\"0.9\"); when (a) -> { b }")
+# stdout: SeqE. [] WhenE.
+#           [] NounE. a
+#           WhenBlockE.
+#             NounE. b
+#             []
+#             null
+
+? t("pragma.syntax(\"0.9\"); when (a) -> { b } catch c { d } finally { e }")
+# stdout: SeqE. [] WhenE.
+#           [] NounE. a
+#           WhenBlockE.
+#             NounE. b
+#             [] EMatcher
+#               FinalP.
+#                 NounE. c
+#                 null
+#               NounE. d
+#             NounE. e
+
+XXX incomplete tests; borrow when-fn examples from syntax-sugar
 
 --- CallPattern, FunCallPattern, GetPattern ---
 

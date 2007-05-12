@@ -66,6 +66,8 @@
     (enqueue-turn vat (lambda ()
       (e. resolver |resolve| 
         (handler-case-with-backtrace
+          ;; XXX there is currently some bug being muffled at this point
+          ;(handler-bind ((error #'invoke-debugger)) (funcall function))
           (funcall function)
           (error (p b)
             (efuncall e.knot:+sys-trace+ (format nil "in %enqueue-with-response thunk: ~A" p))
