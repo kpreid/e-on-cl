@@ -783,8 +783,6 @@
             ("props"      ,+eprops+)
             ,@(when interp-supplied
               `(("interp" ,interp)))
-            ("&IP"        ,(make-lazy-apply-slot (lambda ()
-                             (efuncall (e-import "org.cubik.cle.IPAuthor") +lisp+))))
             ("getSocketPeerRef"  ,e.streams:+the-get-socket-peer-ref+)
             ("getSocketLocalRef" ,e.streams:+the-get-socket-local-ref+)
             ("makePipe"          ,e.streams:+the-make-pipe+)
