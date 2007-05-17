@@ -688,7 +688,7 @@ XXX make precedence values available as constants"
       (apply #'e-source-to-tree source options)
     (values (kernelize node) props)))
 
-(defun e-source-to-tree (source &key syntax-ejector pattern quasi-info props)
+(defun e-source-to-tree (source &key (syntax-ejector +the-thrower+) pattern quasi-info props)
   (let ((location
           (let ((span (e. source |getOptSpan|)))
             (when span (e. span |getUri|)))))
