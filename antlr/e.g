@@ -868,21 +868,28 @@ quasiString:    QUASIOPEN!
                 (   exprHole
                 |   pattHole
                 |   QUASIBODY
+                |   keywordError
                 )* // {##=#([QuasiContent],##);}
                 QUASICLOSE!  // NOTE: '`' is the QUASICLOSE token in the quasi
                              // lexer
             ;
 
-exprHole:       DOLLARCURLY^
+exprHole:       DOLLAR_CURLY^
                 seq {##.setType(QuasiExprHole);}
                 "}"!
-            |   DOLLARHOLE {##.setType(STRING);##=#([QuasiExprHole],#([NounExpr],##));}
+            |   DOLLAR_IGNORE {throwSemanticHere("Cannot have ignore as an expression hole.");}
+            |   DOLLAR_IDENT {##.setType(STRING); ##=#([QuasiExprHole],#([NounExpr],##));}
             ;
 
-pattHole:       ATCURLY^
+pattHole:       AT_CURLY^
                 br pattern br {##.setType(QuasiPatternHole);}
                 "}"!
-            |   ATHOLE {##.setType(STRING);##=#([QuasiPatternHole],#([FinalPattern],#([NounExpr], ##),#([Absent])));}
+            |   AT_IGNORE  {##=#([QuasiPatternHole],#([IgnorePattern]));}
+            |   AT_IDENT  {##.setType(STRING);##=#([QuasiPatternHole],#([FinalPattern],#([NounExpr], ##),#([Absent])));}
+            ;
+
+keywordError:   k:ERROR_QUASI_KEYWORD
+                {throwSemanticHere("unexpected keyword " + quoteForMessage(k.getText()) + " in quasi hole");}
             ;
 
 // makes grammar compilation take too long

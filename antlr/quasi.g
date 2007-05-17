@@ -27,18 +27,32 @@ options {
     private String octalChar(Token s) {
         return String.valueOf((char) Integer.parseInt(s.getText(), 8));
     }
+    private boolean isEKeyword(String s) {
+        // XXX Add a way for this code to be completed, and use it.
+        // return selector.[...].testLiteralsTable(s, 0) != 0;
+        
+        // This is a special case so that we can exercise the error-handling
+        // code for `$somekeyword` in the absence of real keyword testing.
+        return "if".equals(s);
+    }
 }
 
 //QUASICLOSE: '`'  ('`' QUASIn {$setType(QUASIBODY);} | {selector.pop();})  ;
 
-QUASIBODY:      "${"            {$setType(DOLLARCURLY); selector.push("e");}
-            |   '$'! IDENT_S    {$setType(DOLLARHOLE);}
-            |   "@{"            {$setType(ATCURLY); selector.push("e");}
-            |   '@'! IDENT_S    {$setType(ATHOLE);}
+QUASIBODY:      "${"            {$setType(DOLLAR_CURLY); selector.push("e");}
+            |   '$'! IDENT_S
+                { if ("_".equals($getText))      { $setType(DOLLAR_IGNORE); }
+                  else if (isEKeyword($getText)) { $setType(ERROR_QUASI_KEYWORD); }
+                  else                           { $setType(DOLLAR_IDENT); } }
+            |   "@{"            {$setType(AT_CURLY); selector.push("e");}
+            |   '@'! IDENT_S
+                { if ("_".equals($getText))      { $setType(AT_IGNORE); }
+                  else if (isEKeyword($getText)) { $setType(ERROR_QUASI_KEYWORD); }
+                  else                           { $setType(AT_IDENT); } }
             |   '$''$'! QUASIn
             |   "$\\"! ESC QUASIn
             |   '@''@'! QUASIn
-            |   "@\\"! ESC QUASIn
+            |   "@\\"! ESC QUASIn // XXX bogus?
             |   QUASI1 QUASIn
             |   ("``")=> '`''`'! QUASIn  //lookahead is needed to not conflict
             |   '`' {$setType(QUASICLOSE);} {selector.pop();}
