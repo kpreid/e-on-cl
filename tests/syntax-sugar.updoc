@@ -301,6 +301,32 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #            null
   #        }`
 
+  ? t("for a in b { c } catch d { e }")
+  # value: e`escape __break {
+  #            def var valid__1 := true
+  #            try {
+  #                b.iterate(def _ {
+  #                    
+  #                    method run(key__2, value__3) {
+  #                        __validateFor.run(valid__1)
+  #                        escape __continue {
+  #                            escape skip__4 {
+  #                                def _ exit skip__4 := key__2
+  #                                def a exit skip__4 := value__3
+  #                                c
+  #                            }
+  #                            null
+  #                        }
+  #                    }
+  #                })
+  #            } finally {
+  #                valid__1 := false
+  #            }
+  #            null
+  #        } catch d {
+  #            e
+  #        }`
+
   ? t("for a => b in a { c }")
   # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`a`) may not appear to use definitions from its optKeyPattern (epatt`a`)>
   ? t("for a => b in b { c }")
@@ -903,6 +929,25 @@ MatchBindExpr
   #                    }
   #                }
   #            })
+  #        }`
+
+  ? t("while (a) { b } catch c { d }")
+  # value: e`escape __break {
+  #            __loop.run(def _ {
+  #                
+  #                method run() :boolean {
+  #                    if (a) {
+  #                        escape __continue {
+  #                            b
+  #                        }
+  #                        true
+  #                    } else {
+  #                        false
+  #                    }
+  #                }
+  #            })
+  #        } catch c {
+  #            d
   #        }`
 
 'BindPattern'  

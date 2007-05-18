@@ -484,7 +484,8 @@
 (defemacro |ForExpr| (|EExpr|) ((|optKeyPattern| t (or |Pattern| null))
                                 (|valuePattern| t |Pattern|)
                                 (|collection| t |EExpr|)
-                                (|body| t |EExpr|))
+                                (|body| t |EExpr|)
+                                (|optBreakCatch| t (or null |EMatcher|)))
                                (&whole node)
   (let ((valid-flag-var (gennoun "valid"))
         (key-var (gennoun "key"))
@@ -534,11 +535,12 @@
           (mn '|AssignExpr| valid-flag-var (mn '|NounExpr| "false")))
         ;; this null-expr prevents the return value of 'iterate' from being returned from the for expr; only __break can return non-null
         (mn '|NullExpr|))
-      nil nil)))
+      (when |optBreakCatch| (e. |optBreakCatch| |getPattern|)) 
+      (when |optBreakCatch| (e. |optBreakCatch| |getBody|)))))
 
 (defmethod expand-accum-body ((node |ForExpr|) accum-var)
-  (destructuring-bind (k v c body) (node-visitor-arguments node)
-    (mn '|ForExpr| k v c (expand-accum-body body accum-var))))
+  (destructuring-bind (k v s body c) (node-visitor-arguments node)
+    (mn '|ForExpr| k v s (expand-accum-body body accum-var) c)))
 
 (defemacro |ForwardExpr| (|EExpr|) ((|noun| nil |EExpr|)) ()
   (let* ((real-noun (e-macroexpand-all |noun|))
@@ -1045,7 +1047,8 @@
           "must have same number of expressions and patterns"))
 
 (defemacro |WhileExpr| (|EExpr|) ((|test| t |EExpr|)
-                                  (|body| t |EExpr|))
+                                  (|body| t |EExpr|)
+                                  (|optBreakCatch| t (or null |EMatcher|)))
                                  ()
   (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
     (mn '|CallExpr| (mn '|NounExpr| "__loop") "run"
@@ -1065,11 +1068,12 @@
                 (mn '|NounExpr| "true"))
               (mn '|NounExpr| "false")))) 
           #())))
-    nil nil))
+    (when |optBreakCatch| (e. |optBreakCatch| |getPattern|)) 
+    (when |optBreakCatch| (e. |optBreakCatch| |getBody|))))
 
 (defmethod expand-accum-body ((node |WhileExpr|) accum-var)
-  (destructuring-bind (test body) (node-visitor-arguments node)
-    (mn '|WhileExpr| test (expand-accum-body body accum-var))))
+  (destructuring-bind (test body catch) (node-visitor-arguments node)
+    (mn '|WhileExpr| test (expand-accum-body body accum-var) catch)))
     
 (defemacro |BindPattern| (|Pattern|) ((|noun| t |EExpr|)
                                       (|optGuard| t (or null |EExpr|)))

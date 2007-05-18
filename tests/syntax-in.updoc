@@ -568,6 +568,8 @@ Parentheses disable modPow form
 #             null
 #           NounE. c
 #           NounE. d
+#           null
+
 ? t("for b in c { d }")
 # stdout: ForE.
 #           null
@@ -576,6 +578,21 @@ Parentheses disable modPow form
 #             null
 #           NounE. c
 #           NounE. d
+#           null
+
+? t("for b in c { d } catch e { f }")
+# stdout: ForE.
+#           null
+#           FinalP.
+#             NounE. b
+#             null
+#           NounE. c
+#           NounE. d
+#           EMatcher
+#             FinalP.
+#               NounE. e
+#               null
+#             NounE. f
 
 --- InterfaceExpr ---
 
@@ -728,6 +745,24 @@ erroneous
 
 XXX incomplete tests; borrow when-fn examples from syntax-sugar
 
+--- WhileExpr ---
+
+? t("while (a) { b }")
+# stdout: WhileE.
+#           NounE. a
+#           NounE. b
+#           null
+
+? t("while (a) { b } catch c { d }")
+# stdout: WhileE.
+#           NounE. a
+#           NounE. b
+#           EMatcher
+#             FinalP.
+#               NounE. c
+#               null
+#             NounE. d
+
 --- CallPattern, FunCallPattern, GetPattern ---
 
 ? tp("a.b(c)")
@@ -776,7 +811,7 @@ XXX incomplete tests; borrow when-fn examples from syntax-sugar
 XXX added to test the def and _ cases -- write others
 
 ? tp("[=> def a]")
-# problem: (line 1)@9: Reserved syntax: forward export
+# problem: (line 1)@5: Reserved syntax: forward export
 
 ? tp("[=> a]")
 # stdout: MapP. [] MapP.Required MapP.Import FinalP.

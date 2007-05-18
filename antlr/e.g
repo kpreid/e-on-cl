@@ -364,8 +364,7 @@ ifExpr:     "if"^ parenExpr br block  // MARK should BR before block be allowed?
              |                        {##.setType(If1Expr);})
             ;
 
-// XXX should have catch block (attaches to escape __break)
-forExpr:    "for"^ forPatt "in"! br assign block {##.setType(ForExpr);} ;
+forExpr:    "for"^ forPatt "in"! br assign block optCatch {##.setType(ForExpr);} ;
 
 // XXX rewrite this so it produces the right tree without lookahead
 forPatt:        (pattern br "=>") => pattern br "=>"! pattern
@@ -376,9 +375,10 @@ accumExpr:      "accum"^ call accumulator pocket["accumulator"]!
                 {##.setType(AccumExpr);};
 
 accumulator:
-        "for"^ forPatt "in"! logical accumBody {##.setType(ForExpr);}
- |      "if"^ parenExpr            accumBody   {##.setType(If1Expr);}
- |      "while"^ parenExpr         accumBody   {##.setType(WhileExpr);}
+        "for"^ forPatt "in"! logical
+                           accumBody optCatch {##.setType(ForExpr);}
+ |      "if"^ parenExpr    accumBody          {##.setType(If1Expr);}
+ |      "while"^ parenExpr accumBody optCatch {##.setType(WhileExpr);}
  ;
 
 accumBody:                      // XXX full set of binary ops
@@ -403,10 +403,11 @@ whenCatcherList:
                 (catcher)+ {##=#([List],##);}
             |   pocket["easy-when"] {##=#([List],##);} ;
 
-// XXX should have catch block (attaches to escape __break)
-whileExpr:      "while"^ parenExpr block {##.setType(WhileExpr);} ;
+whileExpr:      "while"^ parenExpr block optCatch {##.setType(WhileExpr);} ;
 
-escapeExpr:     "escape"^ pattern block optCatchClause {##.setType(EscapeExpr);} ;
+escapeExpr:     "escape"^ pattern block ( "catch"! pattern block 
+                                        |          filler  filler)
+                {##.setType(EscapeExpr);} ;
 
 thunkExpr:      "thunk"^ pocket["thunk"] block {##.setType(ThunkExpr);} ;
 
@@ -760,12 +761,9 @@ guard:
     (options{greedy=true;}: "["^ args "]"! {##.setType(GetExpr);})*
     ;
 
-// duplication because they generate different trees
-catcher:        "catch"^ pattern block ;
+catcher:        "catch"^ pattern block {##.setType(EMatcher);} ;
 
-optCatchClause: "catch"! pattern block 
-            |            filler  filler
-            ;
+optCatch:      catcher | filler ;
 
 // Patterns
 pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )? ;

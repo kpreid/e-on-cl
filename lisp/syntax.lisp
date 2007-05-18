@@ -912,9 +912,6 @@ XXX make precedence values available as constants"
         ;; -- special-purpose branches ---
         ((e.grammar::|List|)
           (coerce out-children 'vector))
-        (e.grammar::|"catch"| 
-          (destructuring-bind (pattern body) out-children
-            (mnp '|EMatcher| span pattern body)))
         (e.grammar::|Assoc|
           ;; XXX loses span info
           (list* 'assoc out-children))
