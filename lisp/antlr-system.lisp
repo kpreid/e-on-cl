@@ -111,6 +111,8 @@
   :pathname (merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
   :components
     ((:java-source-file "ExtAST")
+     (:java-source-file "ExtToken"
+                        :depends-on ("e"))
      (:java-source-file "CountingCharBuffer")
      (:java-source-file "CountingLexerSharedInputState")
      (:antlr-source-file "e"

@@ -64,10 +64,11 @@ def author(<unsafe>) {
     def elexer := makeEALexer(makeCountingLexerSharedInputState(makeStringReader(text), 0))
     def qlexer := makeQuasiLexer(elexer.getInputState())
     def tb := makeTokenMultiBuffer(["e", "quasi"], [elexer, qlexer])
-    elexer.setSelector(tb)
-    qlexer.setSelector(tb)
-    elexer.setFilename(fname)
-    qlexer.setFilename(fname)
+    for lexer in [elexer, qlexer] {
+      lexer.setSelector(tb)
+      lexer.setFilename(fname)
+      lexer.setTokenObjectClass("ExtToken")
+    }
   
     def parser := makeEParser(tb)
     parser.setFilename(fname)
