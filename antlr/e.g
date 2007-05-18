@@ -41,13 +41,7 @@ header {
 
 // TODO:
 // . plurals
-// anonymous lambda syntax
-
-// TODO add doco for matcher?
-
-// MARK: Trailing comma in implements and extends lists would be ambiguous
-// with HideExpr.  Perhaps HideExpr should not be allowed as an
-// arbitrary expression?
+// XXX what does this todo item mean? -- kpreid
 
 class EParser extends Parser;
 
@@ -190,11 +184,11 @@ tokens {
     STRING;
     URI;
     URIGetter;
-    URIStart;
     WS;
 }
 
 {
+// XXX Capability violation - these warnings should not be going to stderr, they should go only to something specified by the invoker of the parser
 // overrides inherited warning method
 public void reportWarning(String s) {
     try {
@@ -343,6 +337,7 @@ pragma!:     "pragma"^ "."! verb
               parenParamList // for antlr's lookahead
             ) ;
 
+// XXX what's the current status of meta.scope()?
 metaExpr:  "meta"^ "."! verb
             (   {is("getState")}? {##=#([MetaStateExpr,"MetaScope"]);}
             |   {is("scope")}?    {##=#([MetaStateExpr,"MetaScope"]);}
@@ -369,8 +364,8 @@ ifExpr:     "if"^ parenExpr br block  // MARK should BR before block be allowed?
              |                        {##.setType(If1Expr);})
             ;
 
-forExpr:    "for"^ forPatt "in"! br assign block (catcher)?
-                                               {##.setType(ForExpr);}  ;
+// XXX should have catch block (attaches to escape __break)
+forExpr:    "for"^ forPatt "in"! br assign block {##.setType(ForExpr);} ;
 
 // XXX rewrite this so it produces the right tree without lookahead
 forPatt:        (pattern br "=>") => pattern br "=>"! pattern
@@ -408,7 +403,8 @@ whenCatcherList:
                 (catcher)+ {##=#([List],##);}
             |   pocket["easy-when"] {##=#([List],##);} ;
 
-whileExpr:      "while"^ parenExpr block  {##.setType(WhileExpr);}  (catcher)? ;
+// XXX should have catch block (attaches to escape __break)
+whileExpr:      "while"^ parenExpr block {##.setType(WhileExpr);} ;
 
 escapeExpr:     "escape"^ pattern block optCatchClause {##.setType(EscapeExpr);} ;
 
@@ -492,27 +488,26 @@ multiExtends: "extends"^ br order (","! order)* {##.setType(List);}
              | {##=#([List],##);} ;
             // trailing comma would be ambiguous with HideExpr
 
-objName:        nounExpr        filler {##=#([FinalPattern],##);}
-            |   "_"^                   {##.setType(IgnorePattern);}
-            |   "bind"^ noun    filler {##.setType(BindPattern);}
-            |   "var"^ nounExpr filler {##.setType(VarPattern);}
-            |   "&"^ nounExpr   filler {##.setType(SlotPattern);}
+objName:        nounExpr         filler {##=#([FinalPattern],##);}
+            |   "_"^                    {##.setType(IgnorePattern);}
+            |   "bind"^ nounExpr filler {##.setType(BindPattern);}
+            |   "var"^ nounExpr  filler {##.setType(VarPattern);}
+            |   "&"^ nounExpr    filler {##.setType(SlotPattern);}
             ;
 
 //TODO MARK: what is typeParamList for?  it appears to come right after "def name"
-typeParamList:     "["^ typePatterns br "]" ; // should have a br before the "]"
+typeParamList:  "["^ typePatterns br "]" ; // should have a br before the "]"
 
-typePatterns:    (nounExpr optGuard ("," typePatterns)?)? ;
+typePatterns:   (nounExpr optGuard ("," typePatterns)?)? ;
 
-scriptPair:  "{"! methodList matcherList  "}"! ;
+scriptPair:     "{"! methodList matcherList  "}"! ;
 
 methodList:     ( method br )* {##=#([List], ##);} ;
 matcherList:    ( matcher br )* {##=#([List], ##);} ;
 
-// (not used) methodPredict:  doco ("to"|"method"|"on") ;
-
 method:         doco ( "method"^ methodTail {##.setType(EMethod);}
-                     | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}              ) ;
+                     | "to"^ methodTail getPocket["easy-return"] {##.setType(ETo);}
+                     ) ;
 methodTail:     optVerb parenParamList optResultGuard block ;
 
 optVerb:        verb | {##=#([FunctionVerb]);} ;
@@ -520,7 +515,7 @@ optVerb:        verb | {##=#([FunctionVerb]);} ;
 matcher:        "match"^ pattern block  {##.setType(EMatcher);} ;
 
 patterns:       (pattern (","! patterns)?)? ;
-parenParams:  "("! patterns br ")"! ;
+parenParams:    "("! patterns br ")"! ;
 patternList:    patterns {##=#([List],##);} ;
 parenParamList: parenParams {##=#([List],##);} ;
 
@@ -559,7 +554,7 @@ iguards:        ("guards"! pattern)
             |   ({##=#([Absent]);})
             ;
 
-iscript:    "{"^ (messageDesc br)* "}"! {##.setType(List);} ;
+iscript:        "{"^ (messageDesc br)* "}"! {##.setType(List);} ;
 
 messageDesc:    doco ("to"^ | "method"^ | "on"^) optVerb parenParamDescList optGuard
                  {##.setType(MessageDescExpr);}
@@ -572,7 +567,6 @@ paramDescs:     (paramDesc (","! paramDescs)?)? ;
 parenParamDescList:     
                 "("! paramDescs br ")"!   {##=#([List],##);} ;
 
-// The current E grammar only let's you put these in a few places.
 doco:       DOC_COMMENT | {##=#([DOC_COMMENT]);} ;
 
 block:          "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
@@ -705,7 +699,7 @@ call:   prim
                   ( parenArgs { ##.setType(FunSendExpr); }
                   | verb (("(") => parenArgs // )
                          | pocket["verb-curry"]! { ##=#([CurryExpr], ##);})
-                  | "::"^ ("&")? prop // XXX bad AST
+                  // | "::"^ ("&")? prop // XXX design tree
                   )
         |   "::"^ ( "&"! prop {##.setType(PropertySlotExpr);}
                   | prop      {##.setType(PropertyExpr);} )
@@ -731,8 +725,6 @@ prim:           literal
             |   quasiString              {##=#([QuasiExpr,"simple"],
                                                [Absent],##);}
             |   URI                      {##=#([URIExpr],##);}
-            |   URIStart add ">"!        {##=#([URIExpr],##);}
-                                         warn["computed URIExpr is deprecated"]!
             |   "["^
                 (   (seq "=>" | "=>") => assocs
                                                 {##.setType(MapExpr);}
@@ -746,7 +738,8 @@ assocs:    (assoc (","! assocs)?)? ;
 assoc:          seq "=>"^ seq {##.setType(Assoc);}
             |   "=>"^ ( nounExpr
                       | slotExpr
-                      // | "def" nounExpr // XXX should be an explicit error; EoJ says: reserved: Forward exporter
+                      | "def" nounExpr
+                        {throwSemanticHere("Reserved syntax: forward export");}
                       ) {##.setType(Export);}
             ;
 
@@ -767,7 +760,7 @@ guard:
     (options{greedy=true;}: "["^ args "]"! {##.setType(GetExpr);})*
     ;
 
-// XXX remove duplication of syntax
+// duplication because they generate different trees
 catcher:        "catch"^ pattern block ;
 
 optCatchClause: "catch"! pattern block 
@@ -775,7 +768,8 @@ optCatchClause: "catch"! pattern block
             ;
 
 // Patterns
-pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )?   ;
+pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )? ;
+// XXX allow nested SuchThatPatterns for completeness
 
 listPatt:
         eqPatt
@@ -817,12 +811,11 @@ eqPatt:         (IDENT QUASIOPEN) =>
             |   slotPatt
             ;
 
-// namePatts are patterns that bind at most one name.
-// this is expanded inline into eqPatt, but used directly elsewhere
-// Note that this is not a simple subset of eqPatt.
+// namePatts are patterns that have an inherent name, and so can be used in
+// map-pattern imports.
+// eqPatt accepts everything this does, but has additional cases meaning this
+// cannot be used as an alternative in eqPatt.
 namePatt:       nounExpr optGuard    {##=#([FinalPattern],##);}
-            |   // "_"^ optGuard     {##.setType(IgnorePattern);} // not yet
-                "_"^                 {##.setType(IgnorePattern);}
             |   keywordPatt
             |   slotPatt
             ;
@@ -832,24 +825,22 @@ justNoun:       IDENT
             |   URIGetter
             ;
 
-// XXX rename sensibly
-noun:       justNoun {##=#([NounExpr],##);} ;
-
-// XXX rename sensibly
-nounExpr:       noun
-            |   dollarHole                   {##=#([QuasiLiteralExpr],##);}
-            |   atHole                       {##=#([QuasiPatternExpr],##);}
+// nounExpr happens to be the leaf which it is handy to hang the source hole
+// rule on
+nounExpr:       justNoun {##=#([NounExpr],##);}
+            |   sourceHole
             ;
 
-// returns the index; the parent must take care of wrapping the quasi node
-dollarHole:     SOURCE_VALUE_HOLE   {##.setType(INT);} ;
-atHole:         SOURCE_PATTERN_HOLE {##.setType(INT);} ;
+sourceHole:     SOURCE_VALUE_HOLE
+                  {##.setType(INT);##=#([QuasiLiteralExpr],##);}
+            |   SOURCE_PATTERN_HOLE
+                  {##.setType(INT);##=#([QuasiPatternExpr],##);}
+            ;
 
-key:            parenExpr | literal  ;
+key:            parenExpr | literal ;
 
-parenExpr:      "("! seq ")"!  ;
+parenExpr:      "("! seq ")"! ;
 
-//mapPattList:    mapPatts {##=#([List],##);} ;
 mapPatts:       (mapPattern (","! mapPatts)?)? ;
 
 mapPattern:       mapPatternAddressing (":="^ order {##.setType(MapPatternOptional);}
@@ -857,6 +848,7 @@ mapPattern:       mapPatternAddressing (":="^ order {##.setType(MapPatternOption
 
 mapPatternAddressing: key br "=>"^ pattern {##.setType(MapPatternAssoc);}
                     | "=>"^ namePatt       {##.setType(MapPatternImport);}
+                    | "=>"^ "def" {throwSemanticHere("Reserved syntax: forward export");} nounExpr
                     ;
 
 // QUASI support
@@ -869,7 +861,7 @@ quasiString:    QUASIOPEN!
                 |   pattHole
                 |   QUASIBODY
                 |   keywordError
-                )* // {##=#([QuasiContent],##);}
+                )*
                 QUASICLOSE!  // NOTE: '`' is the QUASICLOSE token in the quasi
                              // lexer
             ;

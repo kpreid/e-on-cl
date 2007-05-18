@@ -608,6 +608,15 @@ XXX more tests (this section was written to test guardless ParamDesc)
 #                 null
 #             null
 
+--- MapExpr ---
+
+XXX added to test the def case -- write others
+
+? t("[=> def a]")
+# problem: (line 1)@9: Reserved syntax: forward export
+
+See also MapPattern below.
+
 --- ObjectExpr ---
 
 one-method-object
@@ -762,6 +771,24 @@ XXX incomplete tests; borrow when-fn examples from syntax-sugar
 ? tp("_ :int")
 # stdout: GuardTestP. NounE. int
 
+--- MapPattern ---
+
+XXX added to test the def and _ cases -- write others
+
+? tp("[=> def a]")
+# problem: (line 1)@9: Reserved syntax: forward export
+
+? tp("[=> a]")
+# stdout: MapP. [] MapP.Required MapP.Import FinalP.
+#           NounE. a
+#           null
+
+? tp("[=> _]")
+# problem: (line 1)@2: unexpected token: <"=>" @ 1:2>
+NOTE: kpreid doesn't understand why it unexpects the => rather than the _, but considers this good enough behavior
+
+See also MapExpr above.
+
 --- Via-pattern ---
 
 ? tp("via (a) b")
@@ -808,9 +835,6 @@ XXX should escape quotes
 
 ? t("0 <ab>")
 # problem: (line 1)@3: unexpected token: <"<ab>" @ 1:3>
-
-? t("0 <ab: ")
-# problem: (line 1)@3: unexpected token: <"<ab:" @ 1:3>
 
 
 XXX test acceptance of line breaks everywhere

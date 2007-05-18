@@ -34,8 +34,6 @@ public class ExtToken extends CommonToken {
             return "<" + getText() + ">";
         } else if (type == ETokenTypes.URIGetter) {
             return "<" + getText() + ">";
-        } else if (type == ETokenTypes.URIStart) {
-            return "<" + getText();
         } else {
             return getText();
         }

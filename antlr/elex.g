@@ -182,11 +182,11 @@ OPERATOR options {testLiterals=true;} :
                                  // URI
     ;
 
-LT:   ('<'  URISCHEME ('>' | ':')) =>
-                      '<'! URISCHEME ( '>'! {$setType(URIGetter);}
-                                 | ':' (    (ANYWS)=> BR {$setType(URIStart);}
-                                       |   URI '>'!  {$setType(URI);}))
-                |    a:LT2 {$setToken(a);} ;
+LT:   ('<' URISCHEME ('>' | ':')) =>
+        '<'! URISCHEME ( '>'! {$setType(URIGetter);}
+                       | ':' URI '>'!  {$setType(URI);} )
+    |   a:LT2 {$setToken(a);}
+    ;
 
 protected
 LT2 options {testLiterals=true;} :
