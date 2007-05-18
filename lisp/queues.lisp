@@ -21,20 +21,20 @@
    (out :initform () :accessor queue-out)))
    
 (defmethod enqueue ((queue queue) value)
-  (with-lock-held ((%queue-lock queue))
+  (with-recursive-lock-held ((%queue-lock queue))
     (push value (queue-in queue)))
   (condition-notify (%queue-nonempty-condition queue))
   (values))
 
 (defmethod dequeue ((queue queue))
-  (with-lock-held ((%queue-lock queue))
+  (with-recursive-lock-held ((%queue-lock queue))
     (unless (queue-out queue)
       (setf (queue-out queue) (reverse (queue-in queue))
             (queue-in queue)  '()))
     (pop (queue-out queue))))
 
 (defmethod dequeue-blocking ((queue queue))
-  (with-lock-held ((%queue-lock queue))
+  (with-recursive-lock-held ((%queue-lock queue))
     (or (dequeue queue)
         (progn
           (condition-wait (%queue-nonempty-condition queue) 
@@ -42,7 +42,7 @@
           (dequeue queue)))))
 
 (defmethod queue-null ((queue queue))
-  (with-lock-held ((%queue-lock queue))
+  (with-recursive-lock-held ((%queue-lock queue))
     (not (or (queue-out queue) (queue-in queue)))))
 
 ;;; --- priority queue ---
