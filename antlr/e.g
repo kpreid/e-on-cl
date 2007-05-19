@@ -138,7 +138,9 @@ tokens {
     VarPattern;
     ViaPattern;
 
-    // special: map pattern parts
+    // special: map parts
+    MapExprAssoc;
+    MapExprExport;
     MapPatternAssoc;
     MapPatternImport;
     MapPatternOptional;
@@ -162,9 +164,7 @@ tokens {
 
     // miscellaneous structure
     Absent;
-    Assoc;
     DocComment;
-    Export;
     False;
     List;
     True;
@@ -738,12 +738,12 @@ prim:           literal
 
 assocs:    (assoc (","! assocs)?)? ;
 
-assoc:          seq "=>"^ seq {##.setType(Assoc);}
+assoc:          seq "=>"^ seq {##.setType(MapExprAssoc);}
             |   "=>"^ ( nounExpr
                       | slotExpr
                       | "def" nounExpr
                         {throwSemanticHere("Reserved syntax: forward export");}
-                      ) {##.setType(Export);}
+                      ) {##.setType(MapExprExport);}
             ;
 
 //Property names for use e.g., with the :: syntax.

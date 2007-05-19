@@ -24,6 +24,8 @@
     :|InterfaceExpr|
     :|ListExpr|
     :|MapExpr|
+    :|MapExprAssoc|
+    :|MapExprExport|
     :|MatchBindExpr|
     :|MessageDescExpr|
     :|MismatchExpr|
@@ -698,11 +700,41 @@
                          pattern-nouns)))
       result)))
 
-(defemacro |MapExpr| (|EExpr|) ((|pairs| t (e-list |EExpr|)))
+(defgeneric expand-map-expr-part (part))
+(def-shorten-methods expand-map-expr-part 1)
+
+;; XXX this is somewhat duplicative of the MapPattern expansion code, but
+;; different in many details. can we improve matters?
+
+(defemacro |MapExpr| (|EExpr|) ((|parts| t (e-list |MapExprPart|)))
                                (:rest-slot t)
-  (mn '|CallExpr| (mn '|NounExpr| "__makeMap") 
-                  "fromPairs" 
-                  (apply #'mn '|ListExpr| (coerce |pairs| 'list))))
+  (mn '|CallExpr| (mn '|NounExpr| "__makeMap") "fromPairs"
+    (apply #'mn '|ListExpr| (map 'list #'expand-map-expr-part |parts|))))
+
+(define-node-class |MapExprPart| (|ENode|)
+  ())
+
+(define-node-class |MapExprAssoc| (|MapExprPart|)
+  ((:|key| t |EExpr|)
+   (:|value| t |EExpr|)))
+
+(define-node-class |MapExprExport| (|MapExprPart|)
+  ((:|keyValue| t |EExpr|)))
+
+(defmethod expand-map-expr-part ((part |MapExprAssoc|))
+  (apply #'mn '|ListExpr| (node-visitor-arguments part)))
+
+(defgeneric map-export-name (expr)
+  (:method ((e |NounExpr|))
+    (e. e |getName|))
+  (:method ((e |SlotExpr|))
+    (format nil "&~A" (e. (e. e |getNoun|) |getName|))))
+(def-shorten-methods map-export-name 1)
+
+(defmethod expand-map-expr-part ((part |MapExprExport|))
+  (let ((key-value (e-macroexpand-all (e. part |getKeyValue|))))
+    (mn '|ListExpr| (mn '|LiteralExpr| (map-export-name key-value))
+                    key-value)))
 
 (defemacro |MessageDescExpr| (|EExpr|)
     ((|docComment| nil string)

@@ -217,9 +217,8 @@ NOTE: these tests were produced by inspection of antlr/e.g. They are not complet
 #             LiteralE. 1
 #             LiteralE. 2
 
-XXX ListExpr doesn't really belong here '
 ? t("[1;2 => 3]")
-# stdout: MapE. [] ListE. []
+# stdout: MapE. [] MapE.Assoc
 #           SeqE. []
 #             LiteralE. 1
 #             LiteralE. 2

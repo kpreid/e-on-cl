@@ -908,16 +908,8 @@ XXX make precedence values available as constants"
         (e.grammar::|URIGetter| 
           (assert (null out-children))
           (cons tag text))
-
-        ;; -- special-purpose branches ---
         ((e.grammar::|List|)
           (coerce out-children 'vector))
-        (e.grammar::|Assoc|
-          ;; XXX loses span info
-          (list* 'assoc out-children))
-        (e.grammar::|Export|
-          ;; XXX kpreid expects this to go away by handling MapExpr the same way as MapPattern
-          (list* 'export out-children))
         
         ;; -- node type de-confusion --  
         (e.grammar::|UpdateExpr|
@@ -965,25 +957,6 @@ XXX make precedence values available as constants"
               (string (make-from-tag noun))
               ((cons (eql e.grammar::|URIGetter|) t)
                 (mnp '|URISchemeExpr| span (cdr noun))))))
-        (e.grammar::|MapExpr|
-          ;; needs processing of its children
-          (apply #'make-from-tag
-            (loop for item in out-children collect
-                  ;; XXX the expander should be doing most of this instead
-                    (etypecase item
-                      ((cons (eql assoc) (cons t (cons t null)))
-                        (destructuring-bind (key value) (rest item)
-                          (mn '|ListExpr| key value)))
-                      ((cons (eql export) (cons t null))
-                        (destructuring-bind (key-value) (rest item)
-                          (mn '|ListExpr|
-                            (mn '|LiteralExpr|
-                              (etypecase key-value
-                                (|NounExpr| (e. key-value |getName|))
-                                (|SlotExpr| (format nil "&~A" (e. (e. key-value |getNoun|) |getName|)))))
-                            key-value)))
-                      (e.nonkernel.impl::|MapPatternPart|
-                        item)))))
         ((e.grammar::|InterfaceExpr|)
           (destructuring-bind (name &rest rest) out-children
             (apply #'make-from-tag
