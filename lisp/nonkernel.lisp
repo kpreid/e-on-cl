@@ -6,11 +6,11 @@
   (:export
     :|AccumExpr|
     :|AccumPlaceholderExpr|
+    :|AndExpr|
     :|BinaryExpr|
     :|CdrPattern|
     :|CoerceExpr|
     :|CompareExpr|
-    :|ConditionalExpr|
     :|CurryExpr|
     :|DefrecExpr|
     :|ExitExpr|
@@ -32,6 +32,7 @@
     :|NKObjectExpr|
     :|NullExpr|
     :|ObjectHeadExpr|
+    :|OrExpr|
     :|ParamDescExpr|
     :|PrefixExpr|
     :|PropertyExpr|
@@ -333,12 +334,13 @@
                  (symbol (mn '|TemporaryExpr| name)))) 
              (ref-shorten (e. map |getKeys|))))
 
-(defemacro |ConditionalExpr| (|EExpr|) ((|op| nil (satisfies conditional-op-p))
-                                        (|left| t |EExpr|)
+(defgeneric expand-conditional-core (node kernel-left kernel-right success-list failure-list left-map right-map))
+
+(defemacro |ConditionalExpr| (|EExpr|) ((|left| t |EExpr|)
                                         (|right| t |EExpr|))
-                                       ()
-  (let* ((broken (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow") "broken"))
-         (kernel-left  (e-macroexpand-all |left|))
+                                       (&whole node)
+  "Abstract superclass of AndExpr and OrExpr."
+  (let* ((kernel-left  (e-macroexpand-all |left|))
          (kernel-right (e-macroexpand-all |right|))
          (left-map  (e. (e. kernel-left |staticScope|) |outNames|))
          (right-map (e. (e. kernel-right |staticScope|) |outNames|))
@@ -347,10 +349,38 @@
          (success-list (apply #'mn '|ListExpr| 
                          (mn '|NounExpr| "true")
                          (map 'list (lambda (noun) (mn '|SlotExpr| noun))
-                                 both-nouns)))
+                              both-nouns)))
          (failure-list (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow")
                                        "failureList"
                                        (node-quote (length both-nouns)))))
+    (mn '|SeqExpr|
+      (mn '|DefineExpr|
+        (apply #'mn '|ListPattern|
+               (mn '|FinalPattern| result-var nil)
+               (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
+                          both-nouns))
+        nil
+        (expand-conditional-core node kernel-left kernel-right success-list failure-list left-map right-map))
+      result-var)))
+
+(define-node-class |AndExpr| (|ConditionalExpr|)
+  ((|left| t |EExpr|)
+   (|right| t |EExpr|)))
+
+(define-node-class |OrExpr| (|ConditionalExpr|)
+  ((|left| t |EExpr|)
+   (|right| t |EExpr|)))
+
+(defmethod expand-conditional-core ((e |AndExpr|) kernel-left kernel-right success-list failure-list left-map right-map)
+  (declare (ignore left-map right-map))
+  (mn '|IfExpr| kernel-left
+                (mn '|IfExpr| kernel-right
+                              success-list
+                              failure-list)
+                failure-list))
+
+(defmethod expand-conditional-core ((e |OrExpr|) kernel-left kernel-right success-list failure-list left-map right-map)
+  (let ((broken (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow") "broken")))
     (labels ((partial-failure (failed-nouns) 
                (apply #'mn '|SeqExpr| 
                  (nconc
@@ -360,29 +390,13 @@
                                                   broken))
                               failed-nouns)
                    (list success-list)))))
-      (mn '|SeqExpr|
-        (mn '|DefineExpr|
-          (apply #'mn '|ListPattern|
-                 (mn '|FinalPattern| result-var nil)
-                 (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
-                            both-nouns))
-          nil
-          (ecase (find-symbol |op| :keyword)
-            (:\|\|
-             (let* ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
-                    (right-only (keys-to-nouns (e. right-map |butNot| left-map))))
-               (mn '|IfExpr| kernel-left 
-                             (partial-failure right-only)
-                             (mn '|IfExpr| kernel-right
-                               (partial-failure left-only)
-                               failure-list))))
-            (:&&   
-             (mn '|IfExpr| kernel-left
-                           (mn '|IfExpr| kernel-right
-                                         success-list
-                                         failure-list)
-                           failure-list))))
-        result-var))))
+      (let ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
+            (right-only (keys-to-nouns (e. right-map |butNot| left-map))))
+        (mn '|IfExpr| kernel-left 
+                      (partial-failure right-only)
+                      (mn '|IfExpr| kernel-right
+                        (partial-failure left-only)
+                        failure-list))))))
 
 (defemacro |CurryExpr| (|EExpr|) ((|expr| t (or |CallExpr| |SendExpr|)))
                                  ()

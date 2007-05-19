@@ -57,12 +57,12 @@ options {
 tokens {
     // expressions
     AccumExpr;
+    AndExpr;
     BinaryExpr;
     CallExpr;
     CatchExpr;
     CoerceExpr;
     CompareExpr;
-    ConditionalExpr;
     CurryExpr;
     DefrecExpr;
     EscapeExpr;
@@ -91,6 +91,7 @@ tokens {
     NKAssignExpr;
     NounExpr;
     ObjectHeadExpr;
+    OrExpr;
     PrefixExpr;
     PropertyExpr;
     PropertySlotExpr;
@@ -157,6 +158,7 @@ tokens {
     // special: quasiliteral parts
     QuasiExprHole;
     QuasiPatternHole;
+    QuasiText;
 
     // miscellaneous structure
     Absent;
@@ -166,7 +168,7 @@ tokens {
     False;
     List;
     True;
-
+    
     //for lexer
     CHAR_LITERAL;
     DOC_COMMENT;
@@ -599,11 +601,13 @@ assignOp:       "//=" | "+="  | "-="  | "*="  | "/="
             |   "^="  | "|="  | "&="
             ;
 
-ejector:        (   "break"^
-                |   "continue"^
-                |   "return"^
-                ) ejectorArg         {##.setType(ExitExpr);}
-            |   "^"^ assign          {##.setType(ExitExpr);##.setText("return");}
+ejector:        (   "break"
+                |   "continue"
+                |   "return"
+                ) ejectorArg         {##.setType(STRING);
+                                      ##=#([ExitExpr],##);}
+            |   "^"^ assign          {##.setType(ExitExpr);
+                                      ##.setText("return");}
                                      warn["Smalltalk-style '^' deprecated"]!
             ;
 
@@ -613,11 +617,9 @@ ejectorArg: ("(" ")") => "("! ")"! {##=#([Absent], ##);}
             ;
 
 // || is don't-care associative
-cond:           condAnd ("||"^ condAnd  {##.setType(ConditionalExpr);})*
-            ;
+cond:           condAnd ( "||"^ condAnd {##.setType(OrExpr);} )* ;
 // && is don't-care associative
-condAnd:        logical ("&&"^ logical  {##.setType(ConditionalExpr);})*
-            ;
+condAnd:        logical ( "&&"^ logical {##.setType(AndExpr);} )* ;
 
 // ==, !=, &, |, ^, =~, and !~ are all non associative with each
 // other.  & and |, normally used for associative operations, are each
@@ -638,7 +640,8 @@ logical:        order
 
 order:          interval
                 (   o:compareOp! interval
-                      {##=#(o, ##);}{##.setType(CompareExpr);}
+                      {#o.setType(STRING);
+                       ##=#([CompareExpr],o,##);}
                 |   ":"^ guard      {##.setType(CoerceExpr);}
                 |   )  // empty
             ;
@@ -857,12 +860,14 @@ quasiParser:    parenExpr
 quasiString:    QUASIOPEN!
                 (   exprHole
                 |   pattHole
-                |   QUASIBODY
+                |   quasiText
                 |   keywordError
                 )*
                 QUASICLOSE!  // NOTE: '`' is the QUASICLOSE token in the quasi
                              // lexer
             ;
+
+quasiText:      QUASIBODY {##.setType(STRING);##=#([QuasiText],##);} ;
 
 exprHole:       DOLLAR_CURLY^
                 seq {##.setType(QuasiExprHole);}

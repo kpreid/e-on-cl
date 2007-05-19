@@ -937,12 +937,6 @@ XXX make precedence values available as constants"
             ;; GRUMBLE: either .., ..! should be marked as RangeExpr by the parser or CompareExpr should be another kind of BinaryExpr
             (make-from-tag text left (coerce rights 'vector))))
 
-        ;; -- text introduction --
-        ((e.grammar::|CompareExpr| 
-          e.grammar::|ConditionalExpr| 
-          e.grammar::|ExitExpr|)
-          (apply #'make-from-tag text out-children))
-
         ;; -- doc-comment introduction --
         ((e.grammar::|ThunkExpr| e.grammar::|ObjectHeadExpr|)
           (apply #'make-from-tag (or enclosing-doc-comment "") out-children))
@@ -1011,12 +1005,6 @@ XXX make precedence values available as constants"
                 name)
               rest)))
 
-        ;; -- quasi stuff --
-        ((e.grammar::|QUASIBODY|) 
-          (assert (null out-children))
-          ;; XXX parser or this level needs to unescape quasi syntax escapes
-          (mnp '|QuasiText| span text))
-        
         (otherwise
           (let* ((tag-name (symbol-name tag))
                  (length (length tag-name)))

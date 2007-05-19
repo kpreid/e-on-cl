@@ -76,6 +76,8 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        }
   #        accum__1`
 
+'AndExpr': see ConditionalExpr
+
 'BinaryExpr'
 
   ? t("a + b")
@@ -148,7 +150,7 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("a < b")
   # value: e`__comparer.lessThan(a, b)`
 
-'ConditionalExpr'
+'ConditionalExpr' (aka 'AndExpr' and 'OrExpr')
 
   ? t("(def a := b) || (def c := d)")
   # value: e`def [ok__1, &c, &a] := if (def a := b) {
@@ -622,6 +624,8 @@ MatchBindExpr
   # value: e`{
   #            null
   #        }`
+
+'OrExpr': see ConditionalExpr
 
 'PrefixExpr'
 
