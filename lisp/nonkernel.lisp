@@ -44,6 +44,7 @@
     :|SendExpr|
     :|SwitchExpr|
     :|ThunkExpr|
+    :|TryExpr|
     :|UpdateExpr|
     :|URIExpr|
     :|URISchemeExpr|
@@ -941,6 +942,23 @@
       (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
                              #())))
 
+(defemacro |TryExpr| (|EExpr|) ((|body| t |EExpr|)
+                                (|catchers| t (e-list |EMatcher|))
+                                (|optFinally| t (or null |EExpr|)))
+                               ()
+  (labels ((do-finally (e)
+             (if |optFinally|
+               (mn '|FinallyExpr| e |optFinally|)
+               e))
+           (do-catchers (c e)
+             (if c
+               (let ((catcher (first c)))
+                 (do-catchers (rest c) (mn '|CatchExpr| e (e. catcher |getPattern|) (e. catcher |getBody|))))
+               e)))
+    (do-finally 
+      (do-catchers (coerce |catchers| 'list) 
+        |body|))))
+
 (defemacro |UpdateExpr| (|EExpr|) ((|call| t (or |CallExpr| |BinaryExpr|)))
                                   ()
   (let ((exp (e-macroexpand-all |call|)))
@@ -1001,26 +1019,12 @@
                                       (|catchers| t (e-list |EMatcher|))
                                       (|optFinally| t (or null |EExpr|)))
                                      ()
-  (let ()
-    (mn '|FunctionExpr|
-      (vector (mn '|IgnorePattern|))
-      (labels ((do-finally (e)
-                 (if |optFinally|
-                   (mn '|FinallyExpr| e |optFinally|)
-                   e))
-               (do-catchers (c e)
-                 (if c
-                   (let ((catcher (first c)))
-                     (do-catchers (rest c) (mn '|CatchExpr| e (e. catcher |getPattern|) (e. catcher |getBody|))))
-                   e)))
-      (do-finally 
-        (do-catchers (coerce |catchers| 'list) 
-          |body|))))))
+  (mn '|FunctionExpr|
+    (vector (mn '|IgnorePattern|))
+    (mn '|TryExpr| |body| |catchers| |optFinally|)))
 
 (defmethod check-when-reactor (args (reactor |WhenBlockExpr|))
   (declare (ignore args)))
-
-;; XXX WhenBlockExpr and WhenFnExpr are similar
 
 (defemacro |WhenFnExpr| (|EExpr|) ((|name| t |Pattern|)
                                    (|params| t (e-list |Pattern|))
@@ -1034,26 +1038,17 @@
     (mn '|ObjectHeadExpr|
       "" |name|
       (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard| #()
-        ;; XXX replace finally/catch handling with expansion to TryExpr, once that's nonkernel instead of syntax layer
-        (labels ((do-finally (e)
-                   (if |optFinally|
-                     (mn '|FinallyExpr| e |optFinally|)
-                     e))
-                 (do-catchers (c e)
-                   (if c
-                     (let ((catcher (first c)))
-                       (do-catchers (rest c) (mn '|CatchExpr| e (e. catcher |getPattern|) (e. catcher |getBody|))))
-                     e)))
-        (do-finally 
-          (do-catchers (coerce |catchers| 'list) 
-            (mn '|SeqExpr|
-              (mn '|DefineExpr|
-                (if (= 1 (length |params|))
-                  (elt |params| 0)
-                  (apply #'mn '|ListPattern| (coerce |params| 'list)))
-                nil
-                (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution))
-              |body|))))
+        (mn '|TryExpr| 
+          (mn '|SeqExpr|
+            (mn '|DefineExpr|
+              (if (= 1 (length |params|))
+                (elt |params| 0)
+                (apply #'mn '|ListPattern| (coerce |params| 'list)))
+              nil
+              (mn '|CallExpr| (mn '|NounExpr| "Ref") "fulfillment" resolution))
+            |body|)
+          |catchers|
+          |optFinally|)
         |isEasyReturn|))))
 
 (defmethod check-when-reactor (args (reactor |WhenFnExpr|))

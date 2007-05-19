@@ -984,18 +984,6 @@ XXX make precedence values available as constants"
                             key-value)))
                       (e.nonkernel.impl::|MapPatternPart|
                         item)))))
-        (e.grammar::|TryExpr|
-          (destructuring-bind (expr &rest stuff) out-children
-            (loop for thing in stuff do
-              (cond 
-                ((typep thing '|EMatcher|)
-                  (setf expr (mnp '|CatchExpr| (e. thing |getOptSpan|) expr (e. thing |getPattern|) (e. thing |getBody|))))
-                ((typep thing '|EExpr|)
-                  ;; GRUMBLE: this is a finally block, and it isn't marked
-                  (setf expr (mnp '|FinallyExpr| (e. thing |getOptSpan|) expr thing)))
-                (t
-                  (error "unexpected TryExpr element: ~S" thing))))
-            expr))
         ((e.grammar::|InterfaceExpr|)
           (destructuring-bind (name &rest rest) out-children
             (apply #'make-from-tag

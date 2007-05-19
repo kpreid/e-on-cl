@@ -420,9 +420,8 @@ switchExpr:     "switch"^ parenExpr
                 "{"! (matcher br)* "}"!    {##.setType(SwitchExpr);}
             ;
 
-tryExpr:        "try"^ block
-                (catcher)*
-                ("finally"! block)?                      {##.setType(TryExpr);}
+tryExpr:        "try"^ block catcherList ("finally"! block | filler)
+                {##.setType(TryExpr);}
             ;
 
 bindPatt:       "bind"^ nounExpr optGuard {##.setType(BindPattern);} ;
@@ -765,8 +764,8 @@ guard:
     ;
 
 catcher:        "catch"^ pattern block {##.setType(EMatcher);} ;
-
-optCatch:      catcher | filler ;
+catcherList:    (catcher)* {##=#([List],##);} ;
+optCatch:       catcher | filler ;
 
 // Patterns
 pattern:        listPatt ("?"^ order  {##.setType(SuchThatPattern);}  )? ;
