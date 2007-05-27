@@ -141,6 +141,18 @@ In order to preserve E semantics by default:
   >   print(response)
   > })
   # stdout: null
+  
+Closing, and connect() errors or lack thereof
+  
+  ? listener.close(throw)
+  
+  ? def closedCheck := makeSocket(makeSocket::internet, makeSocket::stream)
+  > interp.waitAtTop(def r := closedCheck.connect(loop))
+  ? r
+  # value: true
+  ? interp.waitAtTop(def r := closedCheck.getIn().takeAtMost(1))
+  ? r
+  # value: <ref broken by problem: file descriptor read error: 61 (Connection refused)>
 
 XXX Design change: make making sockets privileged. you can run out of sockets, and it would be nice not to have it be a vat-killing error; we might want to allow listen without bind to Just Work; probably others I haven't thought of. generally, less error-prone to implement. '
 

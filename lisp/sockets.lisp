@@ -17,6 +17,12 @@
 
   (:|getFD/0| 'socket-file-descriptor)
 
+  (:|close| (this opt-ejector)
+    (handler-case
+        (socket-close this)
+      (socket-error (condition)
+        (eject-or-ethrow opt-ejector condition))))
+
   (:|connect| (this host port opt-ejector)
     (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
     (e-coercef port '(unsigned-byte 16))
@@ -184,11 +190,21 @@
     #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-receive-buffer not implemented")))
 
+(defun (setf foo-sockopt-receive-buffer) (new impl-socket)
+  (form-or
+    #+sbcl (funcall #'(setf sockopt-receive-buffer) new impl-socket)
+    (error "setf foo-sockopt-receive-buffer not implemented")))
+
 (defun foo-sockopt-send-buffer (impl-socket)
   (form-or
     #+sbcl (sockopt-send-buffer impl-socket)
     #+openmcl 512 ;; XXX not available? "surely it's at least this big"
     (error "foo-sockopt-send-buffer not implemented")))
+
+(defun (setf foo-sockopt-send-buffer) (new impl-socket)
+  (form-or
+    #+sbcl (funcall #'(setf sockopt-send-buffer) new impl-socket)
+    (error "setf foo-sockopt-send-buffer not implemented")))
 
 ;; XXX name/peername need to return their results in terms of sockaddr-oid E-structures so they're not ipv4-tied
 

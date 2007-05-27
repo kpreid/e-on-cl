@@ -136,6 +136,7 @@
 (defun make-socket-wrapper (impl-socket domain type &key did-bind-visible did-connect-visible)
   (with-result-promise (our-socket)
     (let* (listen-ok
+           cleanups
            (out-stream-slot
              (make-retriable-lazy-slot (lambda ()
                (make-socket-out-stream our-socket impl-socket))))
@@ -186,8 +187,13 @@
               (socket-error (c) 
                 (make-unconnected-ref c)))))
         
+        (:|close| (ejector)
+          (loop while cleanups do (funcall (pop cleanups)))
+          (e. impl-socket |close| ejector))
+                
         (:|connect| ((peer-ref +peer-ref-guard+))
           "connect() this socket eventually. Resolves to nil for no error, true for EINPROGRESS, and a broken reference (XXX specify errno access) for all other errors."
+          ;; XXX correct handling of EINTR
           (when-resolved (addr-info)
               (get-addr-info (e. peer-ref |getHostName|)
                              (e. peer-ref |getServiceName|)
@@ -208,12 +214,14 @@
         (:|listen| ((opt-backlog '(or null integer)) handler)
           (assert listen-ok)
           (foo-listen impl-socket opt-backlog)
-          (foo-add-receive-handler impl-socket (efun ()
-            (efuncall handler (make-socket-wrapper (foo-accept impl-socket nil)
-                                                   domain
-                                                   type
-                                                   :did-bind-visible t
-                                                   :did-connect-visible t))))
+          (let ((handler (foo-add-receive-handler impl-socket (efun ()
+            (efuncall handler (make-socket-wrapper 
+                                (foo-accept impl-socket nil)
+                                domain
+                                type
+                                :did-bind-visible t
+                                :did-connect-visible t))))))
+            (push (lambda () (foo-remove-receive-handler handler)) cleanups))
           nil)
         
         (:|getOut| () (e. out-stream-slot |getValue|))

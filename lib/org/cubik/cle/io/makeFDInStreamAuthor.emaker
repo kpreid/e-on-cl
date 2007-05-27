@@ -44,26 +44,25 @@ def makeFDInStreamAuthor implements ExitViaHere {
             if (maximum.isZero()) { return [] }
             
             def chunk
-            trace(`$inStream: adding handler for $maximum`)
+            #trace(`$inStream: adding handler for $maximum`)
             def inFDHandler := fooAddReceiveHandler(fdRef, def fdReactor() {
               bind chunk := try {
-                trace(`$inStream: removing handler for $maximum`)
+                #trace(`$inStream: removing handler for $maximum`)
                 fooRemoveReceiveHandler(inFDHandler)
                 escape error {
                   escape eofExit {
                     fdRef.read(maximum, error, eofExit)
                   } catch _ {
-                    trace(`$inStream: eof from $fdRef`)
+                    #trace(`$inStream: eof from $fdRef`)
                     null
                   }
                 } catch p {
                   Ref.broken(p)
                 }
               } catch p {
-                trace(`$inStream: crashed $p`)
+                #trace(`$inStream: crashed $p`)
                 Ref.broken(p)
               }
-              trace(`$inStream: resolved chunk to ${chunk.__getAllegedType()}`)
             })
             return chunk
           }
