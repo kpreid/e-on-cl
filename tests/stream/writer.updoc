@@ -1,0 +1,119 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  > def ALL := EIO.getALL()
+
+  ? def makeWriterStream := <import:org.cubik.cle.io.makeWriterStream>
+  # value: <makeWriterStream>
+  
+  ? def make() { return makeWriterStream(
+  >   String,
+  >   E.call,
+  >   def reporter { match msg { println(msg) }}) }
+  # value: <make>
+
+Writing, flushing
+
+  ? def s := make()
+  # value: -><calling "call" facet>(<reporter>, ...)
+  
+  ? s.getChunkType()
+  # value: String
+  
+  ? s.terminates()
+  # value: <Promise>
+  
+  ? s.reserve().resolve("12")
+  # stdout: ["write", ["12"]]
+  #         
+  
+  ? s.flush()
+  # stdout: ["flush", []]
+  #         
+
+  ? s.reserve().resolve([1, 2])
+  # stdout: ["fail", [problem: the ConstList [1, 2] doesn't coerce to a String]]
+  #         
+
+  ? s.terminates()
+  # value: <ref broken by problem: the ConstList [1, 2] doesn't coerce to a String>
+  
+Closing
+
+  ? def s := make()
+  # value: -><calling "call" facet>(<reporter>, ...)
+  
+  ? s.reserve().resolve(null)
+  # stdout: ["close", []]
+  #         
+  
+  ? [s.terminates()]
+  # value: [null]
+
+Failing
+
+  ? def s := make()
+  # value: -><calling "call" facet>(<reporter>, ...)
+  
+  ? s.reserve().resolve(Ref.broken("a"))
+  # stdout: ["fail", [problem: a]]
+  #         
+
+  ? [s.terminates()]
+  # value: [<ref broken by problem: a>]
+
+Out-of-order flushing
+
+  ? def s := make()
+  # value: -><calling "call" facet>(<reporter>, ...)
+
+  ? def r := s.reserve()
+  > s.flush()
+  > r.resolve("12")
+  # stdout: ["write", ["12"]]
+  #         ["flush", []]
+  #         
+
+Out-of-order writing
+
+  ? def s := make()
+  # value: -><calling "call" facet>(<reporter>, ...)
+
+  ? def a := s.reserve()
+  > def b := s.reserve()
+  > def c := s.reserve()
+  > def d := s.reserve()
+  > c.resolve("3")
+  > a.resolve("1")
+  > d.resolve("4")
+  > b.resolve("2")
+  # stdout: ["write", ["1"]]
+  #         ["write", ["2"]]
+  #         ["write", ["3"]]
+  #         ["write", ["4"]]
+  #         
+
+Resolution to promises
+
+  ? def s := make()
+  > def chunk
+  > s.reserve().resolve(chunk)
+  > s.reserve().resolve("2")
+  > bind chunk := "1"
+  > null
+  ?
+  # stdout: ["write", ["1"]]
+  #         ["write", ["2"]]
+  #         
+
+  ? def s := make()
+  > def chunk
+  > s.reserve().resolve(chunk)
+  > bind chunk := "1"
+  > s.reserve().resolve("2")
+  # stdout: ["write", ["1"]]
+  #         ["write", ["2"]]
+  #         
+
+XXX tests for robustness against recipient exiting

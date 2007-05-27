@@ -30,7 +30,7 @@ def ToProblem implements DeepFrozen {
 
 def lex(textIn) implements DeepFrozen {
   # XXX get a better lexer library/pattern
-  var text := textIn.read(EIO::ALL, EIO::ALL)
+  var text := EIO.takeAll(textIn)
   #traceln(`text is ->$text<-, match ${text =~ rx`(?s)"(@mid.*)`} ->$mid<-`)
   def tokens := [].diverge()
   

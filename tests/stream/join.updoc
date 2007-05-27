@@ -1,76 +1,74 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-  ? pragma.enable("dot-props")
-  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
-  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
+  ? pragma.syntax("0.9")
+  > pragma.enable("dot-props")
+  > pragma.enable("call-pattern")
+  > pragma.enable("one-method-object")
+  >def ALL := EIO::ALL
   > null
-
-  ? def makeOutStreamShell := <elib:eio.makeOutStreamShell>
-  > def variablePrintStream() :any {
-  >   def stream := makeOutStreamShell(
-  >     char, 
-  >     def printStreamBackend,
-  >     def impl {
-  >       to write(elements) :void { print(__makeTwine.fromSequence(elements)) }
-  >       to flush() :void { print("<flush>") }
-  >       to terminate(t) :void { print(`<terminate $t>`) }})
-  >   #printStreamBackend.setAvailable(ALL)
-  >   return [stream, printStreamBackend]
-  > }
-  # value: <variablePrintStream>
   
-  ? def makePrintStream() :any {
-  >   def [s, b] := variablePrintStream()
-  >   b.setAvailable(ALL)
-  >   return s
+  ? def makeWriterStream := <import:org.cubik.cle.io.makeWriterStream>
+  # value: <makeWriterStream>
+  
+  ? var notifyPair := Ref.promise()
+  > def notify() { notifyPair[1].resolve(null); notifyPair := Ref.promise() }
+  # value: <notify>
+  
+  ? def makePrintStream() { 
+  >   return makeWriterStream(
+  >     String,
+  >     E.call,
+  >     def reporter {
+  >       to write(elements) :void { print(elements); notify() }
+  >       to flush() :void { print("<flush>"); notify() }
+  >       to close() :void { print(`<close>`); notify() }
+  >       to fail(p) :void { print(`<fail $p>`); notify() }
+  >     })
   > }
   # value: <makePrintStream>
-
---- Meta-testing
-
-  ? if (makePrintStream().available() =~ v ? (v != ALL)) { v }
 
 --- Join
 
 Trivial join
-  ? EIO.join("abcdef".asStream(), makePrintStream())
-  # stdout: abcdef<terminate true>
 
-  # value: true
-  
+  ? [EIO.join("abcdef".asStream(), makePrintStream())]
+  # stdout: abcdef<close>
+
+  # value: [null]
+
+  The return value is near because both streams are prompt; the output is delayed because our test 
+
 Incremental read availability
   ? def [po, pi] := EIO.pipe([].asMap()); null
   
   ? def jr := EIO.join(pi, makePrintStream())
   # value: <Promise>
   
-  ? po.write("hi")
+  ? po.reserve() <- resolve("hi"); interp.waitAtTop(notifyPair[0])
   # stdout: hi
   
-  ? po.write("bye")
+  ? po.reserve() <- resolve("bye"); interp.waitAtTop(notifyPair[0])
   # stdout: bye
   
-  (The quoting is to capture the state of the reference *then* rather than after all three subexpressions have evaluated; the fourth item is to delay a bit.)
-  ? [E.toQuote(jr), E.toQuote(po.close()), E.toQuote(jr), interp.waitAtTop(false <- not())]
-  # value: ["<Promise>", "true", "true", null]
-  
-  # stdout: <terminate true>
+  ? po.reserve() <- resolve(null); interp.waitAtTop(notifyPair[0])
+  # stdout: <close>
 
 Incremental write availability
 
-  ? def [outStream, streamBackend] := variablePrintStream()
-  > def jr := EIO.join("abcdef".asStream(), outStream)
-  # value: <Promise>
-  
-  ? streamBackend.setAvailable(2)
-  # stdout: ab
-  
-  ? streamBackend.setAvailable(1); streamBackend.setAvailable(2)
-  # stdout: cde
-  
-  ? streamBackend.setAvailable(2)
-  # stdout: f<terminate true>
+XXX stream redesign: rewrite these tests for the new streams
+  x ? def [outStream, streamBackend] := variablePrintStream()
+  x > def jr := EIO.join("abcdef".asStream(), outStream)
+  x # value: <Promise>
+  x 
+  x ? streamBackend.setAvailable(2)
+  x # stdout: ab
+  x 
+  x ? streamBackend.setAvailable(1); streamBackend.setAvailable(2)
+  x # stdout: cde
+  x 
+  x ? streamBackend.setAvailable(2)
+  x # stdout: f<terminate true>
 
 XXX Output close propagation
 

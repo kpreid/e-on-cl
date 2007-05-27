@@ -12,7 +12,7 @@ def ::"US-ASCII" implements ExitViaHere { # implements DeepFrozen
   to __printOn(tw :TextWriter) { tw.print("<US-ASCII encoding>") }
   to decode(octetStream, ==([].asMap())) {
   
-    return mapStream.chunked(char, octetStream, def asciiChunkDecoder {
+    return mapStream.chunked(String, octetStream, def asciiChunkDecoder {
       to __printOn(tw :TextWriter) {
         tw.write("from ASCII")
       }
@@ -28,8 +28,8 @@ def ::"US-ASCII" implements ExitViaHere { # implements DeepFrozen
   }
 
   to encode(charStream, ==([].asMap())) {
-  
-    return mapStream.chunked(int, charStream, def asciiChunkEncoder {
+    # XXX should be int8
+    return mapStream.chunked(List[int], charStream, def asciiChunkEncoder {
       to __printOn(tw :TextWriter) {
         tw.write("to ASCII")
       }

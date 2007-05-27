@@ -32,7 +32,7 @@ def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFroze
     var bits :nullOk[int] := null
     var expect :nullOk[int] := null
     var octetRange := 0..0xFF
-    return mapStream.chunked(char, octetStream, def utf8ChunkDecoder {
+    return mapStream.chunked(String, octetStream, def utf8ChunkDecoder {
       to __printOn(tw :TextWriter) {
         tw.write("from UTF-8")
       }
@@ -68,7 +68,7 @@ def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFroze
   }
   
   to encode(charStream, ==([].asMap())) {
-    return mapStream.chunked(char, charStream, def utf8ChunkEncoder {
+    return mapStream.chunked(List[int], charStream, def utf8ChunkEncoder {
       to __printOn(tw :TextWriter) {
         tw.write("to UTF-8")
       }

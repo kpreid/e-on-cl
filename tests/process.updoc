@@ -40,8 +40,8 @@ Streams.
   > ) <- getOptStdout())
   ? interp.waitAtTop(output)
   ? def outText := ascii.decode(output, [].asMap()); null
-  ? interp.waitAtTop(outText <- whenAvailable(4, fn{}))
-  ? outText.read(0, EIO.getALL())
+  ? interp.waitAtTop(def r := EIO.takeAll(outText))
+  ? r
   # value: "ding"
 
   ? def process := spawn <- (
@@ -52,9 +52,9 @@ Streams.
   # value: <Promise>
   ? interp.waitAtTop(def input := process <- getOptStdin())
   ? interp.waitAtTop(def output := process <- getOptStdout())
-  ? input.write([3, 1, 4, 1, 5]); input.close(); null
-  ? interp.waitAtTop(output <- whenAvailable(5, fn{}))
-  ? output.read(0, EIO.getALL())
+  ? input.reserve() <- resolve([3, 1, 4, 1, 5]); input.reserve() <- resolve(null); null
+  ? interp.waitAtTop(def r := EIO.takeAll(output))
+  ? r
   # value: [3, 1, 4, 1, 5]
 
   ? interp.waitAtTop(def output := spawn <- (
@@ -64,8 +64,8 @@ Streams.
   > ) <- getOptStderr())
   ? interp.waitAtTop(output)
   ? def outText := ascii.decode(output, [].asMap()); null
-  ? interp.waitAtTop(outText <- whenAvailable(4, fn{}))
-  ? outText.read(0, EIO.getALL())
+  ? interp.waitAtTop(def r := EIO.takeAll(outText))
+  ? r
   # value: "cat: ding: No such file or directory
   #        "
   

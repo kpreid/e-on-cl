@@ -1,52 +1,93 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-  ? pragma.enable("dot-props")
-  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
-  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
-  > null
+  ? def makeSimplePipe := <import:org.cubik.cle.io.makeSimplePipe>
+  # value: <makeSimplePipe>
+  
+  ? def [o, i] := makeSimplePipe(["Chunk" => List])
+  # value: [->"anonymous" pipe, <-"anonymous" pipe]
 
-  ? def [o, i] := EIO.pipe(["bufferLimit" => 10, "synchronous" => true, "label" => "test"])
-  # value: [->"test" pipe, <-"test" pipe]
-
-  ? o.available()
-  # value: 10
-  
-  ? i.available()
-  # value: 0
-  
-  ? o.write("abc")
-
-  ? o.available()
-  # value: 7
-  
-  ? i.available()
-  # value: 3
-  
-  ? i.read(0, ALL)
-  # value: ['a', 'b', 'c']
-  
-  ? i.available()
-  # value: 0
-  
-  ? o.available()
-  # value: 10
-  
-Asynchronous
-  
-  ? def [o, i] := EIO.pipe(["synchronous" => false, "label" => "async test"])
-  # value: [->"async test" pipe, <-"async test" pipe]
-
-  ? def iap := i.whenAvailable(1, fn { println(`${i.available()} available.`); "ia" })
+  ? def op := o.reserve()
   # value: <Promise>
+
+  ? def ip := i.takeAtMost(1)
+  # value: <Promise>
+
+  ? op
+  # value: <Resolver>
+
+  ? op.resolve([1,2,3])
+  ? interp.waitAtTop(ip)
+  ? ip
+  # value: [1]
+
+  ? def ip2 := i.takeAtMost(1)
+  # value: <Promise>
+
+  ? ip2
+  # value: [2]
+
+  ? def [op2, op3] := [o.reserve(), o.reserve()]
+  # value: [<Promise>, <Promise>]
+
+  ? op3 <- resolve([5])
+  # value: <Promise>
+
+  ? op2 <- resolve([4])
+  # value: <Promise>
+
+  ? interp.waitAtTop(def ip3 := i.takeAtMost(1))
+  ? ip3
+  # value: [3]
+
+  ? interp.waitAtTop(def ip4 := i.takeAtMost(1))
+  ? ip4
+  # value: [4]
+
+  ? interp.waitAtTop(def ip5 := i.takeAtMost(1))
+  ? ip5
+  # value: [5]
+
+Forward closure
+
+  ? o.reserve() <- resolve(null)
+  > interp.waitAtTop(def ip := i <- takeAtMost(1))
+  ? [ip]
+  # value: [null]
+
+  ? interp.waitAtTop(def ip := i <- takeAtMost(1))
+  ? [ip]
+  # value: [null]
+
+  ? def [o, i] := makeSimplePipe(["Chunk" => List])
+  > interp.waitAtTop(def ip := i <- takeAtMost(1))
+  > o.reserve() <- resolve(null)
+  > null
+  ? [ip]
+  # value: [null]
+
+Reverse closure
+
+  ? def [o, i] := makeSimplePipe(["Chunk" => List])
+  > i.close()
+  > interp.waitAtTop(o.terminates())
+  ? [o.terminates()]
+  # value: [null]
+
+  ? def [o, i] := makeSimplePipe(["Chunk" => List])
+  > i.fail("x")
+  > interp.waitAtTop(o.terminates())
+  ? [o.terminates()]
+  # value: [<ref broken by problem: x>]
+
+take/0
+
+  ? def [o, i] := makeSimplePipe(["Chunk" => List])
+  # value: [->"anonymous" pipe, <-"anonymous" pipe]
   
-  ? o.write("xy"); "result"
-  # value: "result"
-  
-  # stdout: 2 available.
-  #         
-  
-  ? iap
-  # value: "ia"
-  
-  
+  x? interp.waitAtTop(def r := i.takeAtMost(0))
+  x? r
+  x# value: []
+
+XXX closure
+XXX failure from bogus chunks, bogus maximums

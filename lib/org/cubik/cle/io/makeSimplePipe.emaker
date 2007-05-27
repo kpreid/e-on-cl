@@ -3,79 +3,122 @@
 
 pragma.syntax("0.9")
 pragma.enable("dot-props")
+pragma.enable("function-implements")
 
-def makeOutStreamShell := <elib:eio.makeOutStreamShell>
-def makeInStreamShell := <elib:eio.makeInStreamShell>
+def ALL := EIO.getALL()
 
+def enqueue(item, &tail) implements DeepFrozen {
+  def resolver := tail
+  tail := def next
+  resolver.resolve([item, next])
+}
+
+# XXX revise parameter map for new stream scheme
 def makeSimplePipe implements DeepFrozen, ExitViaHere {
-  to run([=> Element :Guard := any, 
+  to run([=> Chunk :Guard := any, 
           => bufferLimit :(EIO::Range) := EIO::ALL, 
           => synchronous :boolean := false, 
           => label :DeepFrozen := "anonymous"]) {
-    def buffer := [].diverge(Element)
-  
-    def inBackend
-    def inStream
-  
-    def outStream := makeOutStreamShell(Element, def outBackend, def outImpl {
-      to __printOn(tw :TextWriter) {
-        tw.quote(label)
-        tw.write(" pipe")
-      }
-      
-      to write(elements :List) {
-        buffer.append(elements)
-        if (synchronous) {
-          inBackend.setAvailable(buffer.size())
-        } else {
-          inBackend <- setAvailable(buffer.size())
-        }
-      }
-      
-      to terminate(t) {
-        if (!inStream.isTerminated()) {
-          if (Ref.isBroken(t)) {
-            inStream.fail(Ref.optProblem(t))
-          } else {
-            inStream.close()
-          }
-        }
-      }
-    })
     
-    bind inStream := makeInStreamShell(Element, inBackend__Resolver, def inImpl {
-      to __printOn(tw :TextWriter) {
-        tw.quote(label)
-        tw.write(" pipe")
-      }
-      
-      to semiObtain(count, proceed, report) :any { 
-        def n := if (count == EIO::ALL) { buffer.size() } \
-                                   else { count.max(buffer.size()) }
-        def r := if (report == EIO::ELEMENTS) { buffer(0, n) }
-        if (proceed == EIO::ADVANCE) { 
-          buffer(0, n) := []
-          inBackend.setAvailable(buffer.size()) 
-          if (bufferLimit != EIO::ALL) {
-            outBackend.setAvailable(bufferLimit - buffer.size()) 
+    require(synchronous == false)
+    require(bufferLimit == EIO::ALL)
+    
+    def [var chunkQHead, var chunkQTail] := Ref.promise()
+    def [var holeQHead,  var holeQTail ] := Ref.promise()
+    def terminator
+
+    def terminate(t) {
+      bind terminator := t
+      def closedLoop := [t, closedLoop]
+      chunkQTail.resolve(closedLoop)
+      chunkQTail := def deadQResolver { to resolve(_) {} }
+      holeQHead := closedLoop
+    }
+
+    def makeAvailable() {
+      def [item, hole] := Ref.promise()
+      enqueue(hole, &holeQTail)
+      when (item) -> {
+        if (item == null || Ref.isBroken(item)) {
+          terminate(item)
+        } else {
+          escape bogus {
+            enqueue(Chunk.coerce(item, bogus), &chunkQTail)
+          } catch p {
+            terminate(Ref.broken(p))
           }
         }
-        return r
+      }
+    }
+    makeAvailable()
+
+    def outStream {
+      to __printOn(tw :TextWriter) {
+        tw.write("->")
+        tw.quote(label)
+        tw.write(" pipe")
       }
 
-      to terminate(t) {
-        if (!outStream.isTerminated()) {
-          if (Ref.isBroken(t)) {
-            outStream.fail(Ref.optProblem(t))
-          } else {
-            outStream.close()
-          }
+      to reserve() {
+        def qCur := holeQHead
+        def qRest
+        holeQHead := qRest
+        return when (qCur) -> {
+          def [r, bind qRest] := qCur
+          r
         }
       }
-    })
+
+      /** Flushing has no effect for this variety of stream. */
+      to flush() {}
+      to getChunkType() { return Chunk }
+      to terminates() { return terminator }
+    }
     
-    outBackend.setAvailable(bufferLimit)
+    def inStream {
+      to __printOn(tw :TextWriter) {
+        tw.write("<-")
+        tw.quote(label)
+        tw.write(" pipe")
+      }
+      
+      to takeAtMost(maximum) {
+        if (Ref.isBroken(chunkQHead)) {
+          throw(Ref.optProblem(chunkQHead))
+        }
+
+        def qCur := chunkQHead
+        def takenChunk := when (qCur <- get(0)) -> {
+          def [availableChunk, qRest] := qCur
+          if (availableChunk == null || 
+              Ref.isBroken(availableChunk) || 
+              maximum == ALL || 
+              availableChunk.size() <= maximum) { 
+            # chunk completely used, or stream closed
+            makeAvailable()
+            chunkQHead := qRest
+            availableChunk
+          } else {
+            # chunk partly used
+            def taken := availableChunk.size().min(maximum)
+            chunkQHead := [availableChunk(taken), qRest]
+            availableChunk(0, taken)
+          }
+        } catch p {
+          # XXX should be stream failure
+          chunkQHead := Ref.broken(p)
+        }
+
+        chunkQHead := Ref.broken("There is already an outstanding take request.")
+
+        return takenChunk
+      }
+      to getChunkType() { return Chunk }
+      to fail(problem) { terminate(Ref.broken(problem)) }
+      to close() { terminate(null) }
+    }
     
     return [outStream, inStream]
   }
 }
+

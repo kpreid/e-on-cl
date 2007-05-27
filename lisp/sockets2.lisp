@@ -19,82 +19,108 @@
 
 (defun make-socket-out-stream (our-socket impl-socket)
   (make-fd-out-stream our-socket
-                      impl-socket ;; XXX is this correct for non-sbcl?
-                      (foo-sockopt-receive-buffer impl-socket)))
+                      impl-socket #|XXX is this correct for non-sbcl?|#))
 
-(defun make-fd-out-stream (name fd-ref buffer-size)
-  (with-result-promise (stream)
-    (multiple-value-bind (backend backend-resolver) (make-promise)
-      (let* ((buffer (make-array 
-                       buffer-size 
-                       :element-type '(unsigned-byte 8)))
-             ;; UNIX-WRITE doesn't like non-simple arrays
-             (end-of-buffer 0)
-             (should-shutdown nil)
-             (is-waiting))
-        (labels ((wait-for-available ()
+(defun eventual-write-simple-array (fd-ref array start end done closed failed)
+  ;; XXX rewrite this in E
+  (with-result-promise (handler)
+    (vr-add-io-handler *vat* (%convert-handler-target fd-ref) :output (lambda (target)
+      (declare (ignore target))
+      (escape-bind (write-error-ej)
+          (let ((n (e. fd-ref |write| array write-error-ej start end)))
+            (cond
+              ((>= n (- end start))
+                (vr-remove-io-handler handler)
+                (funcall done))
+              ((zerop n)
+                (vr-remove-io-handler handler)
+                (funcall closed))
+              (t
+                (incf start n))))
+        (error)
+          (vr-remove-io-handler handler)
+          (funcall failed error))))))
+
+(defun make-fd-out-stream (name fd-ref)
+  ;; XXX rewrite this in E (as in makeFDInStreamAuthor.emaker)
+  ;; XXX review this for synchronous-information leaks
+  (let* ((is-waiting nil)
+         (reservations (make-instance 'queue))
+         (t2 (multiple-value-list (make-promise)))
+         (terminator (first t2))
+         (terminator-resolver (second t2)))
+    (labels ((shutdown ()
+               (warn "got to shutdown") ;; debug
+               (escape (ignore)
+                 (e. fd-ref |shutdown| :output
+                   (efun (condition)
+                     (invoke-debugger condition) ;; debug
+                     (setf condition (ref-shorten condition))
+                     (typecase condition
+                       ((or #+sbcl sb-bsd-sockets:not-connected-error)
+                        nil)
+                       (t 
+                        (e. e.knot:+trace+ |run| (format nil "Error from attempted shutdown of ~A for writing at end of stream: ~A" (e-quote fd-ref) condition))))
+                     (e. ignore |run|)))))
+             (done-chunk ()
+               (warn "~S done-chunk" name)
+               (setf is-waiting nil)
+               (check-reservations))
+             (handle-chunk (chunk)
+               (setf chunk (ref-shorten chunk))
+               (warn "~S ~S handling chunk ~S" name fd-ref (type-of chunk))
+               (etypecase chunk
+                 (vector
+                   (setf is-waiting t)
+                   (eventual-write-simple-array
+                      fd-ref
+                      (coerce chunk '(simple-array (unsigned-byte 8) (*)))
+                      0 (length chunk)
+                      #'done-chunk
+                      (lambda ()
+                        (e. terminator-resolver |resolve| nil)
+                        (done-chunk))
+                      (lambda (error)
+                        (e. terminator-resolver |resolve| (make-unconnected-ref error))
+                        (done-chunk))))
+                 (null
+                   (e. terminator-resolver |resolve| nil)
+                   (shutdown)
+                   (done-chunk))
+                 ((satisfies ref-opt-problem)
+                   (e. terminator-resolver |resolve| chunk)
+                   (shutdown)
+                   (done-chunk))))
+             (check-reservations ()
+               (warn "~S check-reservations" name)
+               (cond
+                 (is-waiting)
+                 ((ref-is-resolved terminator)
+                   (loop for resolver = (dequeue reservations)
+                         while resolver
+                         do (e. resolver |resolve| terminator)))
+                 (t 
                    (unless is-waiting
-                     (with-result-promise (handler)
-                       (setf is-waiting t)
-                       (vr-add-io-handler *vat* (%convert-handler-target fd-ref) :output (lambda (target)
-                         (declare (ignore target))
-                         (vr-remove-io-handler handler)
-                         (setf is-waiting nil)
-                         (e<- backend |setAvailable| (- (array-dimension buffer 0) end-of-buffer))
-                         (when should-shutdown
-                           ;; doing this at a time when we don't have a
-                           ;; handler installed
-                           ;; XXX this looks wrong - not giving the buffer a
-                           ;; chance to be emptied - but we haven't proven it
-                           ;; wrong yet
-                           (escape (ignore)
-                             (e. fd-ref |shutdown| :output
-                               (efun (condition)
-                                 (setf condition (ref-shorten condition))
-                                 (typecase condition
-                                   ((or #+sbcl sb-bsd-sockets:not-connected-error)
-                                    nil)
-                                   (t 
-                                    (e. e.knot:+trace+ |run| (format nil "Error from attempted shutdown of ~A for writing at end of stream: ~A" (e-quote fd-ref) condition))))
-                                 (e. ignore |run|)))))
-                         (when (> end-of-buffer 0)
-                           (flush))))))
-                   (values))
-                 (flush ()
-                   (escape-bind (write-error-ej)
-                         (let ((n (e. fd-ref |write|
-                                    buffer 
-                                    write-error-ej 
-                                    0 end-of-buffer)))
-                           
-                           (replace buffer buffer :start2 n)
-                           (decf end-of-buffer n)
-                           (wait-for-available))
-                       (error)
-                         #+(or) (efuncall e.knot:+trace+ error)
-                         (unless (ref-is-resolved (e. stream |terminates|))
-                           (e. stream |fail| error)))))
-          (let ((impl
-                 (e-lambda "$outImpl" ()
-                   (:|__printOn| ((tw +the-text-writer-guard+))
-                     (e. tw |print| name))
-                   (:|write| ((elements 'vector))
-                     (let ((mark end-of-buffer))
-                       (assert (<= (length elements) (- (array-dimension buffer 0) mark)))
-                       (incf end-of-buffer (length elements))
-                       (replace buffer elements :start1 mark)))
-                   (:|flush| ()
-                     (flush)
-                     nil)
-                   (:|terminate| (terminator)
-                     (declare (ignore terminator))
-                     (setf should-shutdown t)
-                     (flush)))))
-            (wait-for-available)
-            (efuncall (e-import "org.erights.e.elib.eio.makeOutStreamShell")
-              '(unsigned-byte 8)
-              backend-resolver
-              impl)))))))
+                     (let ((resolver (dequeue reservations)))
+                       (when resolver
+                         (setf is-waiting t)
+                         (e. resolver |resolve|
+                           (multiple-value-bind (chunk chunk-resolver) (make-promise)
+                             (when-resolved (chunk) chunk
+                               (handle-chunk chunk))
+                             chunk-resolver)))))))))
+      (e-lambda "$fdOutStream" ()
+        (:|__printOn| ((out +the-text-writer-guard+))
+          (e. out |write| "->")
+          (e. out |printSame| name))
+        (:|getChunkType| () (type-specifier-to-guard '(vector (unsigned-byte 8))))
+        (:|flush| () nil)
+        (:|terminates| () terminator)
+        (:|reserve| ()
+          (multiple-value-bind (reservation resolver-resolver) (make-promise)
+            (enqueue reservations resolver-resolver)
+            (check-reservations)
+            reservation))))))
 
 (defun make-socket-in-stream (our-socket impl-socket)
   (let ((make-fd-in-stream (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor") e.knot::+lisp+)))
@@ -250,8 +276,7 @@
 ;; NOTE: used by e.extern:+spawn+
 (defun cl-to-eio-out-stream (stream name)
   (make-fd-out-stream name
-                      (stream-to-fd-ref stream :output)
-                      +converted-stream-buffer-size+))
+                      (stream-to-fd-ref stream :output)))
                       
 
 (defun fd-ref-to-eio-in-stream (fd-ref name buffer)
@@ -262,7 +287,23 @@
     fd-ref
     buffer))
 
-;; XXX this is not really about sockets
+#+sbcl
+(defun set-fd-non-blocking-mode (fd non-blocking-p)
+  ;; XXX borrowed from sb-bsd-sockets misc.lisp, 2007-05-12. I'd rather use
+  ;; something higher-level, but sb-bsd-sockets' code is restricted to the fds
+  ;; it manages
+  (declare (optimize (speed 3)))
+  (let* ((arg1 (the (signed-byte 32) (sb-posix::fcntl fd sb-posix::f-getfl 0)))
+         (arg2
+          (if non-blocking-p
+              (logior arg1 sb-posix::o-nonblock)
+            (logand (lognot sb-posix::o-nonblock) arg1))))
+    (when (= (the (signed-byte 32) -1)
+             (the (signed-byte 32)
+               (sb-posix::fcntl fd sb-posix::f-setfl arg2)))
+      (socket-error "fcntl"))
+    non-blocking-p))
+
 (defobject +the-make-pipe+ "$makePipe" ()
   (:|run| (ejector)
     #-sbcl (error "makePipe not yet implemented for ~A" (lisp-implementation-type))
@@ -270,12 +311,12 @@
         (with-ejection (ejector) 
           #+sbcl (sb-posix:pipe)
           #-sbcl nil)
-      ;; XXX arrange for finalization of streams to close the fds
-      ;; XXX set nonblocking
+      ;; XXX arrange for finalization of fd-refs to close the fds
+      (set-fd-non-blocking-mode read t)
+      (set-fd-non-blocking-mode write t)
       (vector
         (fd-ref-to-eio-in-stream (make-fd-ref read) 
                                  (e-lambda "system pipe" ())
                                  4096)
         (make-fd-out-stream (e-lambda "system pipe" ())
-                            (make-fd-ref write)
-                            4096)))))
+                            (make-fd-ref write))))))

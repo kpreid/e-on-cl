@@ -2,52 +2,42 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
+pragma.enable("call-pattern")
+pragma.enable("function-implements")
 
-def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := def eiop { to fetch(key, _) { return E.call(EIO, "get" + key, []) } to without(key) { return eiop } }
+def ALL := EIO.getALL()
+
+def terminating(chunk) implements DeepFrozen {
+  return chunk == null || Ref.isBroken(chunk)
+}
 
 def join implements DeepFrozen, ExitViaHere {
   /** Transfers the elements of an InStream to an OutStream. Acts immediately if possible; for non-immediate effects, use join <- (...). The return value will be resolved, to the terminator of the input stream, as soon as no more elements will be delivered to the OutStream; at this time, the output stream will also be terminated. */
   to run(input, output) {
-    # XXX incomplete implementation - see stream-misc.updoc
-    
-    def again
-    
-    var queued := false
-    var willLoop := false
-    
-    def transfer() {
-      traceln(`join transfer $input $output: ${input.available()}, ${output.available()}`)
-      output.write(def e := input.read(0, output.available()))
-      traceln(`join transferred: ${E.toQuote(e)}`)
-      if (Ref.isResolved(def t := input.terminates())) {
-        if (Ref.isBroken(t)) {
-          output.fail(Ref.optProblem(t))
+    def loop() {
+      while (true) {
+        def chunk := input.takeAtMost(ALL)
+        def resolver := output.reserve()
+        if (Ref.isNear(resolver)) {
+          resolver.resolve(chunk)
         } else {
-          output.close()
+          resolver <- resolve(chunk)
         }
-      } else {
-        queued := false
-        if (!willLoop) {
-          again()
+        if (Ref.isNear(chunk)) {
+          if (terminating(chunk)) {
+            return chunk
+          }
+        } else {
+          return when (chunk) -> {
+            if (terminating(chunk)) {
+              chunk
+            } else {
+              loop()
+            }
+          }
         }
       }
     }
-    
-    bind again() {
-      try {
-        willLoop := true
-        __loop(fn {
-          queued := true
-          output.whenAvailable(1, fn {
-            input.whenAvailable(1, transfer) })
-          return !queued
-        })
-      } finally {
-        willLoop := false
-      }
-    }
-    
-    transfer()
-    return input.terminates()
+    return loop()
   }
 }

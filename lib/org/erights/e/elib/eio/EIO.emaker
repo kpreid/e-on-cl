@@ -2,29 +2,31 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
+pragma.enable("accumulator")
+pragma.enable("function-implements")
 
-def enums {
-  to fetch(key, _) { return key }
-  to without(key) { return enums }
+def makeTextWriter := <elib:oldeio.makeTextWriter>
+
+def ALL := null # XXX should be something else
+def Range := nullOk[int >= 0]
+
+def whenMaybeNow(ref, reactor) implements DeepFrozen {
+  return if (Ref.isResolved(ref)) {
+    reactor(ref)
+  } else {
+    Ref.whenResolved(ref, reactor)
+  }
 }
 
-def [=> NOW, => LATER, => WAIT, => ELEMENTS, => STATUS, => ADVANCE, => QUERY] | _ := enums
+def evSplit(n, l) {
+  return accum [] for i in 0..!n { _.with(l <- get(i)) }
+}
 
 def EIO implements DeepFrozen, ExitViaHere {
-  to getRange() { return nullOk[int >= 0] }
+  to getRange() { return Range }
 
   /** The value denoting all remaining elements in an EIO stream. */
-  to getALL() { return null }
-  
-  # XXX technically these are only used by InStream
-  # xxx should they be non-strings?
-  to getNOW() { return NOW }
-  to getLATER() { return LATER }
-  to getWAIT() { return WAIT }
-  to getELEMENTS() { return ELEMENTS }
-  to getSTATUS() { return STATUS }
-  to getADVANCE() { return ADVANCE }
-  to getQUERY() { return QUERY }
+  to getALL() { return ALL }
   
   /** Transfers the elements of an InStream to an OutStream. Acts immediately if possible; for non-immediate effects, use EIO <- join(...). The return value will be resolved, to the terminator of the input stream, as soon as no more elements will be delivered to the OutStream; at this time, the output stream will also be terminated. */
   to join(input, output) {
@@ -32,7 +34,44 @@ def EIO implements DeepFrozen, ExitViaHere {
   }
   
   to pipe(options) {
-    return <import:org.cubik.cle.io.makeSimplePipe>(
-             options)
+    return <import:org.cubik.cle.io.makeSimplePipe>(options)
+  }
+  
+  /** XXX stream redesign: to be reviewed */
+  to takeAll(inStream) {
+    traceln(`entering takeAll $inStream`)
+    return whenMaybeNow(inStream.takeAtMost(0), fn first {
+      traceln(`got first chunk $first`)
+      def [append, snapshot] := switch (first) {
+        # XXX doesn't work for Twines 
+        match =="" { def [tw, sb] := makeTextWriter.makeBufferingPair(); [tw.write, sb.snapshot] }
+        match _ { def l := [].diverge(); [l.append, l.snapshot] }
+      }
+      def result
+      def loop() :any {
+        traceln(`takeAll loop`)
+        while (!Ref.isResolved(result)) {
+          def taken := inStream.takeAtMost(ALL)
+          def handle() {
+            switch (taken) {
+              match ==null { bind result := snapshot() }
+              match b ? (Ref.isBroken(b)) { bind result := b }
+              match chunk { append(chunk) }
+            }
+          }
+          if (!Ref.isResolved(taken)) {
+            when (taken) -> { 
+              handle()
+              loop()
+            }
+            return
+          } else {
+            handle()
+          }
+        }
+      }
+      loop()
+      result
+    })
   }
 }

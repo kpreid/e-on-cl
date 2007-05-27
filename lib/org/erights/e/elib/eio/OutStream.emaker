@@ -1,0 +1,16 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def Resolver := any # XXX define properly. Is allowed to be other than a standard promise resolver.
+
+<import:org.cubik.cle.makeAdvisoryInterface>(
+interface "org.erights.e.elib.eio.outStream" \
+  extends <import:org.erights.e.elib.eio.stream> {
+  /** Yields a resolver which should be resolved to the next chunk, or terminator, of this stream. */
+  to reserve() :vow[Resolver]
+  
+  /** Obligates this stream to eventually deliver (i.e. not retain in a buffer) elements up to the end of the chunk provided for the most recent reserve/0 message, and pass on the obligation to any downstream components if possible. */
+  to flush() :void
+})

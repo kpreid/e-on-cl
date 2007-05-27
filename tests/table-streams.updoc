@@ -10,25 +10,20 @@
   ? def s := t.asStream()
   # value: "Teh quike bruin fax \...".asStream()
   
-  ? s.available()
-  # value: 46
-  
-  ? s.remaining()
-  # value: 46
-  
-  ? s.read(0, 10)
+  ? s.takeAtMost(10)
   # value: "Teh quike "
   
   ? s
   # value: "bruin fax jimp't ova\...".asStream()
 
-  ? s.read(0, ALL)
+  ? s.takeAtMost(ALL)
   # value: "bruin fax jimp't ovah thy lizy dugz."
   
-  ? s.terminates()
-  # value: true
+  ? [s.takeAtMost(1)]
+  # value: [null]
   
 XXX Should FlexLists have asStream? If so, what would it mean?
 XXX all varieties of map streams (pairs, values, keys)?
 XXX Set streams
 XXX turning streams into tables
+XXX other stream methods

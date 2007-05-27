@@ -5,8 +5,6 @@ pragma.syntax("0.9")
 pragma.enable("dot-props")
 pragma.enable("accumulator")
 
-def makeBufferedInStreamShell := <import:org.cubik.cle.io.makeBufferedInStreamShell>
-
 def Range := EIO::Range
 def ALL := EIO::ALL
 
@@ -35,22 +33,43 @@ def makeFDInStreamAuthor implements ExitViaHere {
       /** 'nameObj' is used for printing the stream. */
       to run(nameObj :any, fdRef, bufferLimit :(int >= 1)) {
 
-        def inFDHandler
-        def removeHandler() {
-          fooRemoveReceiveHandler((lisp["ELIB", "REF-SHORTEN"]::"function")(inFDHandler))
-        }
-        
-        def inStream := makeBufferedInStreamShell(Element, def inBackend, def inImpl {
+        def inStream {
           to __printOn(out :TextWriter) {
+            out.write("<-")
             out.printSame(nameObj)
           }
 
-          # XXX todo: try a lazily-reading version - reads more only upon wants()
-          to taken(_) {}
+          to takeAtMost(var maximum :Range) {
+            if (maximum == ALL) { maximum := bufferLimit }
+            if (maximum.isZero()) { return [] }
+            
+            def chunk
+            trace(`$inStream: adding handler for $maximum`)
+            def inFDHandler := fooAddReceiveHandler(fdRef, def fdReactor() {
+              bind chunk := try {
+                trace(`$inStream: removing handler for $maximum`)
+                fooRemoveReceiveHandler(inFDHandler)
+                escape error {
+                  escape eofExit {
+                    fdRef.read(maximum, error, eofExit)
+                  } catch _ {
+                    trace(`$inStream: eof from $fdRef`)
+                    null
+                  }
+                } catch p {
+                  Ref.broken(p)
+                }
+              } catch p {
+                trace(`$inStream: crashed $p`)
+                Ref.broken(p)
+              }
+              trace(`$inStream: resolved chunk to ${chunk.__getAllegedType()}`)
+            })
+            return chunk
+          }
           
-          to terminate(t) { 
-            # XXX proper error handling?
-            removeHandler()
+          to close() {
+            # XXX handle ENOTSOCK specifically
             escape ignore {
               fdRef.shutdown(l`:input`, def shutdownError(error) {
                 trace(`error from shutdown for $inStream: $error`)
@@ -58,31 +77,12 @@ def makeFDInStreamAuthor implements ExitViaHere {
               })
             }
           }
-          
-        })
-        
-        def vat := lisp["E.ELIB", "*VAT*"]::value
-        
-        bind inFDHandler := fooAddReceiveHandler(fdRef, def fdHandler() {
-          
-          escape error {
-            escape eofExit {
-              def elements := fdRef.read(bufferLimit - inBackend.buffered(), error, eofExit)
-              #trace(`$inStream: read $elements from fd $fdRef`)
-              inBackend <- supply(elements)
-            } catch _ {
-              trace(`$inStream: eof from $fdRef`)
-              removeHandler()
-              inBackend <- close()
-            }
-          } catch p {
-            trace(`$inStream: error $p from $fdRef`)
-            removeHandler()
-            # XXX this effectively discards any input that's been buffered
-            inStream.fail(p)
+
+          to fail(_) {
+            inStream.close()
           }
-        })
-        
+        }
+                
         return inStream
       }
     }

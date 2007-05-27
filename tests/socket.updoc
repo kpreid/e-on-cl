@@ -62,29 +62,28 @@ In order to preserve E semantics by default:
   ? def ins := socket.getIn()
   # value: <-<internet stream socket connected to 127.0.0.1:80>
   
-  ? ins.available()
-  # value: 0
-  
-  
-  ? interp.waitAtTop(outs.whenAvailable(18, fn {}))
-  
-  ? outs.available() > 0
-  # value: true
   
   this is "GET / HTTP/1.0\r\n\r\n"
-  ? outs.write([71, 69, 84, 32, 47, 32, 72, 84, 84, 80, 47, 49, 46, 48, 13, 10, 13, 10])
+  ? outs.reserve() <- resolve([71, 69, 84, 32, 47, 32, 72, 84, 84, 80, 47, 49, 46, 48, 13, 10, 13, 10])
+  # value: <Promise>
   
   ? outs.flush()
   
-  ? interp.waitAtTop(ins.whenAvailable(8, fn { 
-  >   print(ins.read(0, 17))
-  > }))
+  ? interp.waitAtTop(when (def response := ins.takeAtMost(17)) -> {
+  >   # XXX improper: not guaranteed to read 17
+  >   print(response)
+  > })
 
   this is "HTTP/1.1 200 OK\r\n"
   # stdout: [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10]
   
-  ? [ins.close(), outs.close()]
-  # value: [true, true]
+  ? ins.close()
+  > outs.reserve() <- resolve(null)
+  > interp.waitAtTop(outs.terminates())
+  
+  ? [outs.terminates()]
+  # value: [null]
+  
 
 --- Listening socket
 
@@ -112,10 +111,7 @@ In order to preserve E semantics by default:
   ? listener.listen(null, def handler(serverEnd) :void {
       XXX address return from socket accept()
   >   print("Accepted")
-  >   #EIO.join(serverEnd.getIn(), serverEnd.getOut())
-  >   def ins := serverEnd.getIn()
-  >   def outs := serverEnd.getOut()
-  >   ins.whenAvailable(1, fn {outs.write(ins.read(0, ALL)); outs.close()})
+  >   EIO.join(serverEnd.getIn(), serverEnd.getOut())
   > })
   
   no portable way to check whether a socket is listening
@@ -132,27 +128,19 @@ In order to preserve E semantics by default:
   
   ? def outs := client.getOut(); def ins := client.getIn(); null
   
-  ? Ref.whenResolved(ins.terminates(), def _(v) :void { print(`client ins terminated: $v`) })
+  ? outs.reserve() <- resolve([1, 2, 3]); outs.reserve() <- resolve(null)
   # value: <Promise>
   
-  ? outs.write([1, 2, 3]); outs.close()
-  # value: true
-  
-  ? interp.waitAtTop(ins.whenAvailable(1, fn { 
-  >   print(ins.read(0, ALL))
-  > }))
-
+  ? interp.waitAtTop(when (def response := ins.takeAtMost(ALL)) -> {
+  >   # XXX improper: not guaranteed to read everything
+  >   print(response)
+  > })
   # stdout: [1, 2, 3]
   
-  # stdout: client ins terminated: true
-  
-  ? outs.close()
-  # value: true
-  
-  ? interp.waitAtTop(ins.terminates())
-
-  ? ins.terminates()
-  # value: true
+  ? interp.waitAtTop(when (def response := ins.takeAtMost(ALL)) -> {
+  >   print(response)
+  > })
+  # stdout: null
 
 XXX Design change: make making sockets privileged. you can run out of sockets, and it would be nice not to have it be a vat-killing error; we might want to allow listen without bind to Just Work; probably others I haven't thought of. generally, less error-prone to implement. '
 

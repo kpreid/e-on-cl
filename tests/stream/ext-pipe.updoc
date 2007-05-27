@@ -4,8 +4,7 @@
 This test exists for the purpose of exercising the general file-descriptor-stream code in E-on-CL.
 
   ? pragma.enable("dot-props")
-  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
-  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
+  > def ALL := EIO::ALL
   > null
 
 XXX to be reviewed: makePipe should probably not be in the privilegedScope top level, but we have no suitable namespace for it as yet
@@ -18,23 +17,18 @@ XXX to be reviewed: makePipe should probably not be in the privilegedScope top l
   ? def [i, o] := pipe
   # value: [<-<system pipe>, -><system pipe>]
   
-  ? [i.available(), o.available()]
-  # value: [0, 4096]
-
-  ? o.write([9])
+  ? o.reserve() <- resolve([9]); null
   ? o.flush()
-  ? interp.waitAtTop(i.whenAvailable(1, fn{}))
-  
-  ? [i.available(), i.read(0, ALL)]
-  # value: [1, [9]]
+  ? interp.waitAtTop(def r := i.takeAtMost(ALL))
+  ? [r]
+  # value: [[9]]
   
 closure propagation, write-to-read
   
-  ? o.close(); null
-  ? interp.waitAtTop(i.whenAvailable(1, fn{}))
-
-  ? i.terminates()
-  # value: true
+  ? o.reserve() <- resolve(null); null
+  ? interp.waitAtTop(def r := i.takeAtMost(ALL))
+  ? [r]
+  # value: [null]
 
 closure propagation, read-to-write
 
@@ -45,7 +39,7 @@ closure propagation, read-to-write
   
   ? i.close(); null
 
-  ? o.write([10]); o.flush() # XXX done solely to trigger a write which will notice the failure -- necessary?
+  ? o.reserve() <- resolve([10]); o.flush() # XXX done solely to trigger a write which will notice the failure -- necessary?
   
   ? interp.waitAtTop(o.terminates())
 
@@ -61,23 +55,55 @@ closing write end does not discard data
   attempt to stuff all buffers
   ? var written := 0
   > def t := timer.now() + 2000
-  > while (def a := o.available(); a > 0 || timer.now() < t) {
-  >   written += a
-  >   o.write([233] * a)
+  > var r := null
+  > while (r := o.reserve()
+  >        Ref.isNear(r)) {
+  >   written += 65536
+  >   r.resolve([233] * 65536)
   >   o.flush()
   > }
-  > o.close()
+  > r <- resolve(null)
   > trace(`$written elements stuffed`)
   > null
   
   ? var read := 0
   > def r() :any {
   >  trace(`$read`)
-  >  if (i.remaining() != 0) {
-  >    return i.whenAvailable(1, fn { read += i.read(0, ALL).size(); r() })
-  >  }
+  >  def done
+  >  when (def v := i.takeAtMost(ALL)) -> { trace(`taken`); bind done := switch (v) {match l :List { read += l.size(); trace(`recurring`); r()} match _ {trace(`stopping`);null}} }
+  >  return done
   > }
   > interp.waitAtTop(r())
   
-  ? [i.terminates(), read - written]
-  # value: [true, 0]
+  ? read - written
+  # value: 0
+
+taking 0, no data
+
+  ? interp.waitAtTop(def pipe := makePipe <- run(throw))
+  ? def [i, o] := pipe; null
+  
+  ? interp.waitAtTop(def r := i <- takeAtMost(0))
+  ? r
+  # value: []
+  
+taking 0, with data
+
+  ? interp.waitAtTop(def pipe := makePipe <- run(throw))
+  ? def [i, o] := pipe; null
+  
+  ? o.reserve() <- resolve([73]); null
+  ? interp.waitAtTop(def r := i <- takeAtMost(0))
+  ? r
+  # value: []
+  
+taking 0, closed
+
+  ? interp.waitAtTop(def pipe := makePipe <- run(throw))
+  ? def [i, o] := pipe; null
+  
+  ? o.reserve() <- resolve(null); null
+  ? interp.waitAtTop(def r := i <- takeAtMost(0))
+  ? r
+  # value: []
+  XXX this should be null instead

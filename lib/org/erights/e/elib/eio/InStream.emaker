@@ -1,0 +1,28 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+<import:org.cubik.cle.makeAdvisoryInterface>(
+/** XXX Finish this documentation
+  * 
+  * Additional elements may be available from a stream even if terminates() has resolved, e.g. if the stream has a buffer.
+  */
+interface "org.erights.e.elib.eio.inStream" \
+  extends <import:org.erights.e.elib.eio.stream> {
+  /** Take up to the specified size of chunk from the stream. 
+    *
+    * Returns (possibly a promise for) either the taken chunk, or the stream's terminator if the stream has no more elements and is terminated.
+    * 
+    * takeAtMost(0) must eventually resolve even if no elements are yet available.
+    * 
+    * A client should not invoke takeAtMost/1 before the result of a previous invocation has resolved; a stream should throw if this occurs, and must not become terminated.
+    */
+  to takeAtMost(maximum :EIO::Range) :vow[any]
+  
+  /** Make the stream closed, if it is not already terminated. */
+  to close() :void
+  
+  /** Make the stream failed, if it is not already terminated. */
+  to fail(problem :<type:java.lang.Throwable>) :void # XXX Throwable is Java legacy
+})

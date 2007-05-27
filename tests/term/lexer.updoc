@@ -5,7 +5,7 @@
 
   ? def makeTermLexer := <qu:term.makeTermLexer>; null
 
-  ? def lex(twine) :any { return makeTermLexer(false)(twine.asStream()).readAll() }; null
+  ? def lex(twine) :any { return EIO.takeAll(makeTermLexer(false)(twine.asStream())) }; null
 
   ? lex("foo")
   # value: [["Tag", [["Ident", "foo"]]]]

@@ -1,0 +1,21 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+<import:org.cubik.cle.makeAdvisoryInterface>(
+/** XXX Finish this documentation
+  * 
+  * A stream's 'terminator' is either null, for a closed stream, or broken, for a stream which has failed. A stream may be told to fail, may fail because of a communication problem, or propagate a failure reported at its other end.
+  * 
+  * A chunk must not be null or broken.
+  */
+interface "org.erights.e.elib.eio.stream" {
+  /** Return a guard for the chunks that this stream supplies or accepts. */
+  to getChunkType() :Guard
+  
+  # XXX consider changing getChunkType to getChunkMaker, such that you can make a mutable-buffer for takeAll, and concat and split, with it. If we do this, revise EIO.takeAll and makeSimplePipe's chunk splitting
+  
+  /** Returns a promise for the stream's terminator. */
+  to terminates() :vow[any]
+})

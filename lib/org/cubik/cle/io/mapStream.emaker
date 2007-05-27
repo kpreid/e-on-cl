@@ -5,71 +5,56 @@ pragma.syntax("0.9")
 pragma.enable("dot-props")
 pragma.enable("function-implements")
 
-def makeInStreamShell := <elib:eio.makeInStreamShell>
-def NOW := EIO::NOW
-def ELEMENTS := EIO::ELEMENTS
-
-def terminate(stream, terminator) implements DeepFrozen {
-  switch (Ref.optProblem(terminator)) {
-    match p :notNull { stream.fail(p) }
-    match ==null     { stream.close() }
-    match _          { throw("reality failure") }
-  }
-}
-
 def chunkedMapStream implements DeepFrozen {
-  to run(outType :Guard, sourceStream, func, namer) :any {
+  to run(OutChunk :Guard, sourceStream, func, namer) :any {
     
-    def ourStream := makeInStreamShell(outType, def backend, def mapStreamImpl {
+    def mappingStream {
       to __printOn(tw :TextWriter) {
+        tw.write("<-")
         tw.print(namer)
         tw.write("-")
         tw.quote(sourceStream)
       }
       
-      to semiObtain(count :(EIO::Range), proceed, report) {
-        def original := sourceStream.obtain(count, count, NOW, proceed, report)
-        return if (report == ELEMENTS) {
-                 func(original)
-               } else {
-                 original
-               }
+      to takeAtMost(maximum :(EIO::Range)) {
+        return switch (sourceStream.takeAtMost(maximum)) {
+          match p ? (!Ref.isResolved(p)) {
+            when (p) -> {
+              switch (p) {
+                match t ? (t == null || Ref.isBroken(t)) { t }
+                match chunk { func(chunk) :OutChunk }
+              }
+            }
+          }
+          match t ? (t == null || Ref.isBroken(t)) { t }
+          # XXX add a restriction that the result list must be the same length
+          match chunk { func(chunk) :OutChunk }
+        }
       }
       
-      to terminate(t) { terminate(sourceStream, t) }
-    })
-
-    def update() {
-      backend.setAvailable(sourceStream.available())
-      if ((def r := sourceStream.remaining()) != EIO::ALL) {
-        backend.resolveRemaining(r)
-      }
-      if (Ref.isResolved(def t := sourceStream.terminates())) {
-        terminate(ourStream, t)
-      }
-      sourceStream.whenMoreAvailable(update)
+      to getChunkType() { return OutChunk }
+      
+      to close() { sourceStream.close() }
+      to fail(p) { sourceStream.fail(p) }
     }
     
-    update()
-    
-    return ourStream 
+    return mappingStream
   }
 }
 
 def mapStream implements DeepFrozen, ExitViaHere {
   /** Return an InStream which takes elements from the given InStream and provides the results of the given function applied to each element. */
-  to run(outType, sourceStream, func) :any {
-    def buffer := [].diverge(outType)
-    return chunkedMapStream(outType, sourceStream, def unchunker(l) {
-      buffer.setSize(l.size())
-      for i => x in l { buffer.put(i, func(x)) }
+  to run(OutElement, sourceStream, func) :any {
+    def buffer := [].diverge() # XXX support chunk types
+    return chunkedMapStream(List[OutElement], sourceStream, def unchunker(l) {
+      for i => x in l { buffer.put(i, func(x) :OutElement) }
       return buffer.snapshot()
     }, func)
   }
 
   /** Return an InStream which takes elements from the given InStream and provides the result of the given function applied to lists of elements. */
-  to chunked(outType, sourceStream, func) :any {
-    return chunkedMapStream(outType, sourceStream, func, func)
+  to chunked(OutChunk, sourceStream, func) :any {
+    return chunkedMapStream(OutChunk, sourceStream, func, func)
   }
   
 }

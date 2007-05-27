@@ -2,8 +2,7 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
   ? pragma.enable("dot-props")
-  > def [ALL, NOW, ADVANCE, QUERY, ELEMENTS] := \
-  >     [EIO::ALL, EIO::NOW, EIO::ADVANCE, EIO::QUERY, EIO::ELEMENTS]
+  > def ALL := EIO::ALL
   > null
 
   ? def mapStream :DeepFrozen := <import:org.cubik.cle.io.mapStream>
@@ -12,44 +11,29 @@
   ? def s := mapStream(List, [1, 2, 3].asStream(), __makeList)
   # value: <-<makeConstList>-[1, 2, 3, ...].asStream()
   
-  ? s.getElementType()
-  # value: List
+  ? s.getChunkType()
+  # value: List[List]
   
-  ? s.readAll()
+  ? EIO.takeAll(s)
   # value: [[1], [2], [3]]
   
   ? pragma.enable("accumulator")
-  > def s := mapStream.chunked(int, 
+  > def s := mapStream.chunked(List[int], 
   >                            [1, 2, 3].asStream(), 
   >                            def chunkFunc(es) :any {
   >                              return accum [] for x in es { _.with(x+1) }})
   # value: <-<chunkFunc>-[1, 2, 3, ...].asStream()
   
-  ? s.readAll()
+  ? EIO.takeAll(s)
   # value: [2, 3, 4]
 
-Promptness of availability propagation
-
-  ? def [bo, bi] := EIO.pipe(["synchronous" => true])
-  > def bm := mapStream(any, bi, __makeList)
-  > null
-  
-  ? bm.whenAvailable(2, fn{print("got")})
-  # value: <Promise>
-
-  ? bo.write([1, 2, 3]); bm.available()
-  # stdout: got
-  
-  # value: 3
-  
 Closure
 
-  ? def [bo, bi] := EIO.pipe(["synchronous" => true])
+  ? def [bo, bi] := EIO.pipe([].asMap())
   > def bm := mapStream(any, bi, __makeList)
-  > null
-  
-  ? bo.close()
-  # value: true
-  
-  ? bm.terminates()
-  # value: true
+  > bo.reserve() <- resolve(null)
+  > interp.waitAtTop(def r := bm.takeAtMost(1))
+  ? [r]
+  # value: [null]
+
+XXX closing map stream propagates
