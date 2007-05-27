@@ -64,24 +64,6 @@
   (declare (ignore error))
   nil)
 
-
-#+sbcl
-(defun foo-connect-tcp (addr-info opt-ejector)
-  (e-coercef addr-info 'pseudo-addr-info)
-  (let ((socket (make-instance 'inet-socket 
-                  :type :stream
-                  :protocol :tcp)))
-    (setf (non-blocking-mode socket) t)
-    (handler-case
-        (socket-connect socket
-                        (host-ent-address (addr-info-host-ent addr-info)) 
-                        (addr-info-port addr-info))
-      ((satisfies in-progress-socket-error-p) (condition)
-        (declare (ignore condition)))
-      (socket-error (condition)
-        (eject-or-ethrow opt-ejector condition)))
-    socket))
-
 ; --- ---
 
 (defgeneric socket-shorten (socket))
