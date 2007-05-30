@@ -906,12 +906,18 @@ MatchBindExpr
   #            })
   #        }`
 
+XXX is there a nicer way to write the below expansion?
+
   ? t("pragma.syntax(\"0.9\"); when (a) -> { b }")
   # value: e`{
   #            Ref.whenResolved(a, def _ {
   #                
-  #                method run(_) {
-  #                    b
+  #                method run(ref__1) {
+  #                    if (Ref.isBroken(ref__1)) {
+  #                        Ref.broken(Ref.optProblem(ref__1))
+  #                    } else {
+  #                        b
+  #                    }
   #                }
   #            })
   #        }`

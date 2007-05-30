@@ -1051,9 +1051,17 @@
                                       (|catchers| t (e-list |EMatcher|))
                                       (|optFinally| t (or null |EExpr|)))
                                      ()
-  (mn '|FunctionExpr|
-    (vector (mn '|IgnorePattern|))
-    (mn '|TryExpr| |body| |catchers| |optFinally|)))
+  (let ((ref (gennoun "ref")))
+    (mn '|FunctionExpr|
+      (vector (mn '|FinalPattern| ref nil))
+      (mn '|TryExpr|
+        (mn '|SeqExpr|
+          (mn '|IfExpr| (mn '|CallExpr| (mn '|NounExpr| "Ref") "isBroken" ref)
+            (mn '|CallExpr| (mn '|NounExpr| "Ref") "broken"
+              (mn '|CallExpr| (mn '|NounExpr| "Ref") "optProblem" ref))
+            |body|))
+        |catchers|
+        |optFinally|))))
 
 (defmethod check-when-reactor (args (reactor |WhenBlockExpr|))
   (declare (ignore args)))
