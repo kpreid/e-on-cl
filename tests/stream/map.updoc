@@ -9,7 +9,7 @@
   # value: <mapStream>
   
   ? def s := mapStream(List, [1, 2, 3].asStream(), __makeList)
-  # value: <-<makeConstList>-[1, 2, 3, ...].asStream()
+  # value: <-<makeConstList>-[1, 2, 3].asStream()
   
   ? s.getChunkType()
   # value: List[List]
@@ -22,7 +22,7 @@
   >                            [1, 2, 3].asStream(), 
   >                            def chunkFunc(es) :any {
   >                              return accum [] for x in es { _.with(x+1) }})
-  # value: <-<chunkFunc>-[1, 2, 3, ...].asStream()
+  # value: <-<chunkFunc>-[1, 2, 3].asStream()
   
   ? EIO.takeAll(s)
   # value: [2, 3, 4]

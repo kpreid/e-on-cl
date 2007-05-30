@@ -326,38 +326,50 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e. (e-import "org.erights.e.elib.tables.makeConstSet") 
         |make| (e. vector |asKeys|)))
   (:|asStream| (vector
-      &aux (position 0))
+      &aux (position 0)
+           (termination (multiple-value-list (make-promise))))
     "Return a stream providing the elements of this list."
-    ;; XXX make this support the full stream protocol when we know what it is
     (e-lambda "org.erights.e.elib.tables$constListStream" ()
       (:|__printOn| ((out +the-text-writer-guard+))
-        (if (stringp vector)
-          (progn
-            (e. out |write| "\"")
-            (e. out |print| (subseq vector position (min (length vector) (+ position 20))))
-            (e. out |write| "\\...\".asStream()"))
-          (progn
-            (e. out |write| "[" #|]|#)
-            (e. (subseq vector position (min (length vector) (+ position 5))) |printOn| "" ", " "" out)
-            (e. out |write| #|[|# ", ...].asStream()"))))
+        ;; XXX this would be greatly simplified by a print-truncated-list,
+        ;; which is probably useful elsewhere too
+        (flet ((p (limit open etc-close body)
+                 (if (> (length vector) (+ position limit))
+                   (progn
+                     (e. out |write| open)
+                     (funcall body (subseq vector position (+ position limit)))
+                     (e. out |write| etc-close))
+                   (e. out |quote| (subseq vector position)))
+                 (e. out |write| ".asStream()")))
+          (if (stringp vector)
+            (p 20 "\"" "\\...\""
+               (lambda (v) (e. out |print| v)))
+            (p 5 "[" ", ...]"
+               (lambda (v) (e. v |printOn| "" ", " "" out))))))
 
       (:|getChunkType| () (observable-type-of vector))
       
       (:|takeAtMost| ((maximum '(or integer null))) ;; XXX should be ANY token
-        (when (< position (length vector))
+        (if (< position (length vector))
           (let ((end (min (+ position (or maximum (length vector)))
                           (length vector))))
             (prog1
               (subseq vector position end)
-              (setf position end)))))
+              (setf position end)))
+          (progn
+            (e. (second termination) |resolveRace| nil)
+            (first termination))))
+      
+      (:|terminates| () (first termination))
       
       (:|close| ()
         (setf position (length vector))
+        (e. (second termination) |resolveRace| nil)
         nil)
       
       (:|fail| (problem)
-        (declare (ignore problem))
         (setf position (length vector))
+        (e. (second termination) |resolveRace| (make-unconnected-ref (e-coerce problem 'condition)))
         nil)))
   (:|size/0| 'length)
   (:|get| (this index)

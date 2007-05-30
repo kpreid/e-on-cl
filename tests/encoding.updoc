@@ -26,7 +26,7 @@
 
 
   ? def s := ascii.encode("apples and oranges".asStream(), [].asMap())
-  # value: <-to ASCII-"apples and oranges\...".asStream()
+  # value: <-to ASCII-"apples and oranges".asStream()
   
   ? EIO.takeAll(s)
   # value: [97, 112, 112, 108, 101, 115, 32, 97, 110, 100, 32, 111, 114, 97, 110, 103, 101, 115]
@@ -42,7 +42,7 @@
   # value: "• holés"
   
   ? def s := utf_8.encode("ab•cdéfअ 𐐀".asStream(), [].asMap())
-  # value: <-to UTF-8-"ab•cdéfअ 𐐀\...".asStream()
+  # value: <-to UTF-8-"ab•cdéfअ 𐐀".asStream()
   
   ? EIO.takeAll(s)
   # value: [97, 98, 226, 128, 162, 99, 100, 195, 169, 102, 224, 164, 133, 32, 240, 144, 144, 128]
