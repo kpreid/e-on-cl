@@ -107,3 +107,19 @@ taking 0, closed
   ? r
   # value: []
   XXX this should be null instead
+
+File descriptor GC test
+
+  ? pragma.enable("accumulator")
+
+  ? var n := 1024
+  > interp.waitAtTop(def r := def loop() {
+  >   return if ((n -= 1) >= 0) {
+  >     when (def s := makePipe <- run(throw)) -> {
+  >       # XXX workaround: 'when' incorrectly executes the body on a broken ref. to be fixed soon
+  >       if (Ref.isBroken(s)) { s } else { loop() }
+  >     }
+  >   } else { true }
+  > }.run())
+  ? Ref.fulfillment(r)
+  # value: true

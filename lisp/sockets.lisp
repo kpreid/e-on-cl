@@ -44,10 +44,10 @@
   
   (:|write| (this vector error-ejector start end)
     ;; XXX document
-    (e. (make-fd-ref (socket-file-descriptor this)) |write| vector error-ejector start end))
+    (e. (make-fd-ref (socket-file-descriptor this) :close nil) |write| vector error-ejector start end))
   (:|read| (this max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the socket, and return them as a ConstList."
-    (e. (make-fd-ref (socket-file-descriptor this)) |read| max-octets error-ejector eof-ejector))
+    (e. (make-fd-ref (socket-file-descriptor this) :close nil) |read| max-octets error-ejector eof-ejector))
   
   (:|getFD| (this) (socket-file-descriptor this))
   )
@@ -313,73 +313,78 @@
 #+sbcl
 (defmethod stream-to-fd-ref ((stream sb-sys:fd-stream) direction)
   (declare (ignore direction))
-  (make-fd-ref (sb-sys:fd-stream-fd stream)))
+  (make-fd-ref (sb-sys:fd-stream-fd stream) :close nil))
 
 #+openmcl
 (defmethod stream-to-fd-ref ((stream stream) direction)
-  (make-fd-ref (ccl:stream-device stream direction)))
+  (make-fd-ref (ccl:stream-device stream direction) :close nil))
+;; XXX fd leak: :close nil is wrong for some uses, but so's the other. review uses, figure out a sane policy
 
-; XXX this should not be in sockets but in something more general
-;; XXX need(?) support for automatic closure and for cancelling closure
-(defun make-fd-ref (opt-fd)
+(defun make-fd-ref (opt-fd &key (close (error "must specify whether to close the fd")))
   (check-type opt-fd (integer 0))
-  (e-lambda |FDRef| ()
-    (:|__printOn| ((out +the-text-writer-guard+))
-      (if opt-fd
-        (progn
-          (e. out |write| "<file descriptor ")
-          (e. out |print| opt-fd)
-          (e. out |write| ">"))
-        (e. out |write| "<closed file descriptor>")))
-  
-    (:|getFD| () (or opt-fd (error "this fd-ref has been closed.")))
-
-    (:|shutdown| (direction ejector)
-      ;; XXX embedding the assumption that this is a unidirectional, non-socket fd
-      (when opt-fd
-        #+sbcl (sb-posix:close opt-fd)
-        #-sbcl (warn "leaking fd ~A; XXX need non-SBCL shutdown implementation" opt-fd))
-      (setf opt-fd nil)
-      (values))
-
-    #+sbcl
-    (:|write| ((vector 'vector) error-ejector (start 'integer) (length '(or null integer)))
-      (setf vector (coerce vector '(vector (unsigned-byte 8))))
-      (multiple-value-bind (n errno)
-          ;; This signal handling is unnecessary as of SBCL 0.9.11.27, which ignores SIGPIPE globally. XXX when 0.9.12 is released, remove this code
-          (let ((old (sb-sys:ignore-interrupt sb-unix:SIGPIPE)))
-            (unwind-protect
-              (sb-unix::unix-write (e. |FDRef| |getFD|) vector start (or length (length vector)))
-              (sb-sys:enable-interrupt sb-unix:SIGPIPE old)))
-        (if (zerop errno)
-          n
-          (eject-or-ethrow error-ejector (errno-to-condition errno)))))
-
-    #+sbcl
-    (:|read| ((max-octets '(integer 0)) error-ejector eof-ejector)
-      "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
-      ; XXX be able to avoid allocating the buffer
-      ; thanks to nyef on irc://irc.freenode.net/lisp for this code --
-      ;   http://paste.lisp.org/display/7891
-      ;   http://meme.b9.com/cview.html?utime=3324058742&channel=lisp&start=3324055147&end=3324062347#utime_requested
-      (let ((buf (make-array max-octets :element-type '(unsigned-byte 8)
-                                        :fill-pointer 0
-                                        :adjustable nil)))
-        (multiple-value-bind (n-read errno)
-            ; XXX SBCL internal package. Show me something more appropriate and I'll use it
-            (sb-unix:unix-read (e. |FDRef| |getFD|)
-                               (sb-sys:vector-sap (sb-impl::%array-data-vector buf))
-                               max-octets)
-          (case n-read
-            ((nil)
-              (case errno
-                ((#.sb-posix:ewouldblock)
-                  buf)
-                (otherwise
-                  ; XXX typed error with errno slot
-                  (ejerror error-ejector "file descriptor read error: ~A (~A)" errno (sb-int:strerror errno)))))
-            ((0)
-              (ejerror eof-ejector "socket EOF"))
-            (otherwise
-              (setf (fill-pointer buf) n-read)
-              buf)))))))
+  (let* ((do-close (lambda ()
+                     (when opt-fd
+                       #+sbcl (sb-posix:close opt-fd)
+                       #-sbcl (warn "leaking fd ~A; XXX need non-SBCL shutdown implementation" opt-fd))
+                     (setf opt-fd nil)))
+         (fd-ref 
+           (e-lambda |FDRef| ()
+             (:|__printOn| ((out +the-text-writer-guard+))
+               (if opt-fd
+                 (progn
+                   (e. out |write| "<file descriptor ")
+                   (e. out |print| opt-fd)
+                   (e. out |write| ">"))
+                 (e. out |write| "<closed file descriptor>")))
+       
+             (:|getFD| () (or opt-fd (error "this fd-ref has been closed.")))
+       
+             (:|shutdown| (direction ejector)
+               ;; XXX this is wrong
+               (funcall do-close)
+               nil)
+       
+             #+sbcl
+             (:|write| ((vector 'vector) error-ejector (start 'integer) (length '(or null integer)))
+               (setf vector (coerce vector '(vector (unsigned-byte 8))))
+               (multiple-value-bind (n errno)
+                   ;; This signal handling is unnecessary as of SBCL 0.9.11.27, which ignores SIGPIPE globally. XXX when 0.9.12 is released, remove this code
+                   (let ((old (sb-sys:ignore-interrupt sb-unix:SIGPIPE)))
+                     (unwind-protect
+                       (sb-unix::unix-write (e. |FDRef| |getFD|) vector start (or length (length vector)))
+                       (sb-sys:enable-interrupt sb-unix:SIGPIPE old)))
+                 (if (zerop errno)
+                   n
+                   (eject-or-ethrow error-ejector (errno-to-condition errno)))))
+       
+             #+sbcl
+             (:|read| ((max-octets '(integer 0)) error-ejector eof-ejector)
+               "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."
+               ; XXX be able to avoid allocating the buffer
+               ; thanks to nyef on irc://irc.freenode.net/lisp for this code --
+               ;   http://paste.lisp.org/display/7891
+               ;   http://meme.b9.com/cview.html?utime=3324058742&channel=lisp&start=3324055147&end=3324062347#utime_requested
+               (let ((buf (make-array max-octets :element-type '(unsigned-byte 8)
+                                                 :fill-pointer 0
+                                                 :adjustable nil)))
+                 (multiple-value-bind (n-read errno)
+                     ; XXX SBCL internal package. Show me something more appropriate and I'll use it
+                     (sb-unix:unix-read (e. |FDRef| |getFD|)
+                                        (sb-sys:vector-sap (sb-impl::%array-data-vector buf))
+                                        max-octets)
+                   (case n-read
+                     ((nil)
+                       (case errno
+                         ((#.sb-posix:ewouldblock)
+                           buf)
+                         (otherwise
+                           ; XXX typed error with errno slot
+                           (ejerror error-ejector "file descriptor read error: ~A (~A)" errno (sb-int:strerror errno)))))
+                     ((0)
+                       (ejerror eof-ejector "socket EOF"))
+                     (otherwise
+                       (setf (fill-pointer buf) n-read)
+                       buf))))))))
+    (when close
+      (tg:finalize fd-ref do-close))
+    fd-ref))

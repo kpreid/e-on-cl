@@ -319,12 +319,11 @@
         (with-ejection (ejector) 
           #+sbcl (sb-posix:pipe)
           #-sbcl nil)
-      ;; XXX arrange for finalization of fd-refs to close the fds
       (set-fd-non-blocking-mode read t)
       (set-fd-non-blocking-mode write t)
       (vector
-        (fd-ref-to-eio-in-stream (make-fd-ref read) 
+        (fd-ref-to-eio-in-stream (make-fd-ref read :close t) 
                                  (e-lambda "system pipe" ())
                                  4096)
         (make-fd-out-stream (e-lambda "system pipe" ())
-                            (make-fd-ref write))))))
+                            (make-fd-ref write :close t))))))
