@@ -332,7 +332,8 @@
   (:export
     :~span
     :const-map ; type
-    :+the-make-array+))
+    :+the-make-array+
+    :vector-from-iteratable))
 
 (e.util:defglobals
   e.elib.tables:+the-make-array+)

@@ -52,11 +52,30 @@ Twine that is a String
   ? __makeTwine
   # value: <makeTwine>
 
-  ? def twine := __makeTwine.fromSequence('a'..'z')
+  ? def twine := __makeTwine.fromValuesOf('a'..'z')
   # value: "abcdefghijklmnopqrstuvwxyz"
   
   ? twine.isBare()
   # value: true
+
+Other fromValuesOf
+
+  ? __makeTwine.fromValuesOf("abc")
+  # value: "abc"
+
+  ? __makeTwine.fromValuesOf(['a', 'b', 'c'])
+  # value: "abc"
+
+  ? def f
+  > def twine := __makeTwine.fromValuesOf(def _ { to iterate(bind f) {} })
+  # value: ""
+  
+  ? f(0, '1')
+  # problem: vector accumulation iterator called too late
+  
+  ? twine
+  # value: ""
+
 
 Error cases
 

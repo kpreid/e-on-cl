@@ -8,6 +8,27 @@
 (with-simple-restart (continue "Skip hash function registration.")
   (register-test-designator 'samep #'same-hash #'samep))
 
+;;; --- Vector/ConstList ---
+
+(declaim (inline vector-from-iteratable))
+(defun vector-from-iteratable (accept-type element-type iteratable)
+  "Produce a VECTOR of the given ELEMENT-TYPE by coercing the elements of ITERATABLE (an EIteratable), unless it is an ACCEPT-TYPE in which case it is returned. Used for implementing methods on the twine and ConstList makers."
+  (setf iteratable (ref-shorten iteratable))
+  (if (typep iteratable accept-type)
+    iteratable
+    (if (typep iteratable 'sequence)
+      (map `(vector ,element-type) 
+           (lambda (v) (e-coerce v element-type)) 
+           iteratable)
+      (let ((a (make-array '(1) :element-type element-type
+                                :fill-pointer 0 
+                                :adjustable t)))
+        (e. iteratable |iterate| (efun (k v)
+          (declare (ignore k))
+          (vector-push-extend (e-coerce v element-type)                   
+            (or a (error "vector accumulation iterator called too late")))))
+        (shiftf a nil)))))
+
 ;;; --- Text position algorithms for Twine ---
 
 (defun displaced-subseq (string &optional (start 0) end)
@@ -314,18 +335,11 @@
 
 (defobject +the-make-twine+ "org.erights.e.elib.tables.makeTwine"
     (:stamped +deep-frozen-stamp+)
-  (:|fromSequence| (iteratable) 
-    "Return a Twine composed of the characters in the given sequence (object that implements iterate/1).
-    
-The ConstList version of this is called fromIteratableValues, unfortunately. XXX decide what the right name for this operation is."
-    ; XXX duplicated code with ConstList
-    ;; XXX implement efficiently if the source is a vector
-    (let ((values))
-      (e. iteratable |iterate| (efun (k v)
-        (declare (ignore k))
-        ; out-of-dynamic-extent calls are harmless
-        (push v values)))
-      (coerce (nreverse values) 'string)))
+  (:|fromValuesOf| (iteratable) 
+    "Return a Twine composed of the characters in the given EIteratable (object that provides iterate/1).
+
+If the sequence is a Twine itself, it is returned unchanged (preserving source spans)."
+    (vector-from-iteratable 'twine 'character iteratable))
   (:|fromString| ((string 'string)
                   (span '(or null source-span)))
     (if span

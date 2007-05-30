@@ -22,7 +22,7 @@ def ::"US-ASCII" implements ExitViaHere { # implements DeepFrozen
         for i => octett in inn {
           out[i] := getCharacter(octett :ASCIIRange)
         }
-        return __makeTwine.fromSequence(out)
+        return __makeTwine.fromValuesOf(out)
       }
     })
   }

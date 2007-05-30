@@ -454,14 +454,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defobject +the-make-list+ "org.erights.e.elib.tables.makeConstList"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
-  ; XXX write tests for this
-  (:|fromIteratableValues| (iteratable)
-    (let ((values '()))
-      (e. iteratable |iterate| (efun (k v)
-        (declare (ignore k))
-        ; out-of-dynamic-extent calls are harmless
-        (push v values)))
-      (coerce (nreverse values) 'vector)))
+  (:|fromValuesOf| (iteratable)
+    ; XXX write tests for this
+    (e.elib.tables:vector-from-iteratable '(vector t) 't iteratable))
   (otherwise (mverb &rest args)
     ;; XXX __respondsTo, etc.
     (if (mverb-verb= mverb "run")

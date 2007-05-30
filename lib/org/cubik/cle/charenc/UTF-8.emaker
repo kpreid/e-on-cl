@@ -62,7 +62,7 @@ def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFroze
             octetRange := 0x80..0xBF
           }
         }
-        return __makeTwine.fromSequence(out)
+        return __makeTwine.fromValuesOf(out)
       }
     })
   }

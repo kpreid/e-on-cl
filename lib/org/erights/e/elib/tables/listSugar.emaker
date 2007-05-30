@@ -61,7 +61,7 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
   
   to run(self,start) { return self.run(start, self.size()) } #XXX nonatomic
   to run(self, start :int, endd :int) {
-    return __makeList.fromIteratableValues(
+    return __makeList.fromValuesOf(
       def _ { to iterate(assocFunc) {
         # could use the for-in-.. here but I want to keep options open
         var i := start
@@ -71,7 +71,7 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
   }
   
   to snapshot(self) {
-    return __makeList.fromIteratableValues(self)
+    return __makeList.fromValuesOf(self)
   }
   
   to diverge(self) {

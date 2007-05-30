@@ -58,7 +58,7 @@ def List0 implements EventuallyDeepFrozen, ListGuardStamp, ExitViaHere {
           # Scan the specimen for an element which changes when coerced, and
           # prepare to create a new list.
           #trace("  general guard case")
-          return __makeList.fromIteratableValues(def adapter.iterate(f) {
+          return __makeList.fromValuesOf(def adapter.iterate(f) {
             
             #trace("  inside adapter")
             var building := false
