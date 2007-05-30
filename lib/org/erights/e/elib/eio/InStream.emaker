@@ -18,11 +18,11 @@ interface "org.erights.e.elib.eio.inStream" \
     * 
     * A client should not invoke takeAtMost/1 before the result of a previous invocation has resolved; a stream should throw if this occurs, and must not become terminated.
     */
-  to takeAtMost(maximum :EIO::Range) :vow[any]
+  to takeAtMost(maximum :(EIO.getRange())) :vow[any]
   
   /** Make the stream closed, if it is not already terminated. */
   to close() :void
   
   /** Make the stream failed, if it is not already terminated. */
-  to fail(problem :<type:java.lang.Throwable>) :void # XXX Throwable is Java legacy
+  to fail(problem :(<type:java.lang.Throwable>)) :void # XXX Throwable is Java legacy
 })
