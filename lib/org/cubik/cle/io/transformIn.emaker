@@ -1,0 +1,125 @@
+# Copyright 2004-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def ALL      := EIO.getALL()
+def InStream := any # <import:org.erights.e.elib.eio.InStream> -- XXX doesn't work because InStream isn't DeepFrozen because vow isn't
+
+def defaultEstimator implements DeepFrozen {
+  to estimate(size) { return size }
+}
+
+def whenMaybeNow(ref, reactor) implements DeepFrozen {
+  return if (Ref.isResolved(ref)) {
+    reactor(ref)
+  } else {
+    Ref.whenResolved(ref, reactor)
+  }
+}
+
+# interface ChunkFilter[InChunk, OutChunk] {
+#   to run(chunk :InChunk) :OutChunk
+#   optional to finish() :OutChunk
+#   optional to estimate(_ :SizeFor[OutChunk]) :SizeFor[InChunk]
+# }
+
+/** Transforms an InStream with a stateful function. ... When the source stream becomes closed, chunkFilter.finish() will be invoked to provide a final chunk, if it __respondsTo that message. ... If chunkFilter.estimate/1 never overestimates, then transformIn will never take unneeded elements from the underlying stream. */
+def transformIn implements DeepFrozen {
+  to run(Chunk,
+         chunkFilter,
+         underlying) {
+    def sizeEstimator := 
+      if (chunkFilter.__respondsTo("estimate", 1)) {
+        chunkFilter
+      } else {
+        defaultEstimator
+      }
+    
+    var optBuffer := null
+    var shouldFinish := true
+    def [terminator, tResolver] := Ref.promise()
+
+    def takeFromBuffer(maximum) {
+      if (optBuffer == null) {
+        # only happens when terminated
+        return terminator
+      } else {
+        return if (maximum == ALL || optBuffer.size() <= maximum) {
+          def r := optBuffer
+          optBuffer := null
+          r
+        } else {
+          def r := optBuffer(0, maximum)
+          optBuffer := optBuffer(maximum)
+          r
+        }
+      }
+    }
+    
+    def putBuffer(chunk) {
+      if (chunk == null) {
+        tResolver.resolveRace(chunk)
+        underlying.close()
+      } else if (Ref.isBroken(chunk)) {
+        tResolver.resolveRace(chunk)
+        underlying.fail(Ref.optProblem(chunk))
+      } else {
+        optBuffer := chunk
+      }
+    }
+    
+    Ref.whenResolved(underlying.terminates(), tResolver.resolveRace)
+    
+    return def transformInStream {
+      to __printOn(out :TextWriter) {
+        out.write("<-")
+        out.print(chunkFilter)
+        out.write("-")
+        out.printSame(underlying)
+      }
+      
+      to getChunkType() { return Chunk }
+      to terminates() { return terminator }
+      to fail(p) { underlying.fail(p) }      
+      to close() { underlying.close() }
+      
+      to takeAtMost(maximum) {
+        return if (optBuffer != null) {
+          takeFromBuffer(maximum)
+        } else {
+          def estimate := if (maximum == ALL || maximum.isZero()) { 
+            maximum
+          } else {
+            def estimate := sizeEstimator.estimate(maximum)
+            if (estimate.isZero()) {
+              throw(`$sizeEstimator estimated chunk size $estimate, which cannot be correct`)
+            }
+            estimate
+          }
+          whenMaybeNow(underlying.takeAtMost(estimate),
+                       fn uchunk {
+            switch (uchunk) {
+              match b ? (b == null || Ref.isBroken(b)) { 
+                if (shouldFinish && (shouldFinish := false
+                                     chunkFilter.__respondsTo("finish", 0))) {
+                  putBuffer(chunkFilter.finish())
+                  takeFromBuffer(maximum)
+                } else {
+                  tResolver.resolveRace(b)
+                  b
+                }
+              }
+              match _ {
+                putBuffer(chunkFilter(uchunk))
+                # XXX this might produce a 0-size chunk, which is unoptimal
+                takeFromBuffer(maximum)
+              }
+            }
+          })
+        }
+      }
+    }
+  }
+}
