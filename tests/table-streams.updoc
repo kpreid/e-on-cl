@@ -34,8 +34,8 @@ List stream fail/1
   > s
   # value: "".asStream()
   
-  ? s.takeAtMost(1)
-  # value: <ref broken by problem: foo>
+  ? [s.takeAtMost(1)]
+  # value: [null]
 
 List stream close/0
 

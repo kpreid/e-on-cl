@@ -89,7 +89,7 @@ This can be customized with an estimate/1 method, which should compute the numbe
 
 Overestimation & buffer
 
-If the estimator overestimates, the extra elements will be buffered, and available even if the streams are terminated.
+If the estimator overestimates, the extra elements will be buffered, and available even if the source stream is terminated.
 
   ? def s1 := "abcdef".asStream()
   > def s2 := transformIn(String, 
@@ -102,12 +102,12 @@ If the estimator overestimates, the extra elements will be buffered, and availab
   ? s1
   # value: "def".asStream()
   
-  ? s1.fail("foo")
+  ? s1.close()
   ? s2.takeAtMost(3)
   # value: "bc"
   
-  ? s2.takeAtMost(3)
-  # value: <ref broken by problem: foo>
+  ? [s2.takeAtMost(3)]
+  # value: [null]
 
 Maximal underestimation
 

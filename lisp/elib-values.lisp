@@ -325,9 +325,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "Return a ConstSet with the elements of this list, omitting duplicates."
     (e. (e-import "org.erights.e.elib.tables.makeConstSet") 
         |make| (e. vector |asKeys|)))
-  (:|asStream| (vector
-      &aux (position 0)
-           (termination (multiple-value-list (make-promise))))
+  (:|asStream| (vector &aux (position 0))
     "Return a stream providing the elements of this list."
     (e-lambda "org.erights.e.elib.tables$constListStream" ()
       (:|__printOn| ((out +the-text-writer-guard+))
@@ -350,24 +348,22 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (:|getChunkType| () (observable-type-of vector))
       
       (:|takeAtMost| ((maximum '(or integer null))) ;; XXX should be ANY token
-        (if (< position (length vector))
+        (when (< position (length vector))
           (let ((end (min (+ position (or maximum (length vector)))
                           (length vector))))
             (prog1
               (subseq vector position end)
-              (setf position end)))
-          (progn
-            (e. (second termination) |resolveRace| nil)
-            (first termination))))
+              (setf position end)))))
       
       (:|close| ()
-        (setf position (length vector))
-        (e. (second termination) |resolveRace| nil)
+        (setf position 0
+              vector (subseq vector 0 0))
         nil)
       
       (:|fail| (problem)
-        (setf position (length vector))
-        (e. (second termination) |resolveRace| (make-unconnected-ref (e-coerce problem 'condition)))
+        (declare (ignore problem))
+        (setf position 0
+              vector (subseq vector 0 0))
         nil)))
   (:|size/0| 'length)
   (:|get| (this index)

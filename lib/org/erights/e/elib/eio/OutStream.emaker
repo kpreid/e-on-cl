@@ -8,10 +8,13 @@ def Resolver := any # XXX define properly. Is allowed to be other than a standar
 <import:org.cubik.cle.makeAdvisoryInterface>(
 interface "org.erights.e.elib.eio.outStream" \
   extends <import:org.erights.e.elib.eio.stream> {
-  /** Yields a resolver which should be resolved to the next chunk, or terminator, of this stream. There may be multiple open resolvers at any time, and the stream must deliver the elements in the order of the original reserve messages. */
-  to reserve() :vow[Resolver]
+  /** Returns the stream's terminator if it is terminated; otherwise, a resolver which should be resolved to the next chunk, or terminator, to send out this stream. 
+    *
+    * There may be multiple open resolvers at any time, and the stream must not deliver the elements in an order other than that of the original reserve messages.
+    */
+  to reserve() :vow[nullOk[Resolver]]
   
-  /** Obligates this stream to eventually deliver (i.e. not retain in a buffer) elements up to the end of the chunk provided for the most recent reserve/0 message, and pass on the obligation to any downstream components if possible. */
+  /** Obligates this stream to eventually deliver (i.e. not indefinitely buffer) elements up to the end of the chunk provided for the most recent reserve/0 message, and pass on the obligation to any downstream components if possible. */
   to flush() :void
 
   /** Returns a promise for the stream's terminator. */

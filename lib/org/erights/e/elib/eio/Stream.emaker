@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 <import:org.cubik.cle.makeAdvisoryInterface>(
 /** XXX Finish this documentation
   * 
-  * A stream's 'terminator' is either null, for a closed stream, or broken, for a stream which has failed. A stream may be told to fail, may fail because of a communication problem, or propagate a failure reported at its other end.
+  * A stream's 'terminator' is either null, for a normally closed stream, or broken, for a stream which has failed in some way. Termination might be propagated from the 'other side', be a communication problem, or be caused by the client performing a termination operation. The operations for sending and receiving terminations are different for InStreams and OutStreams.
   * 
   * A chunk must not be null or broken.
   */

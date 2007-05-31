@@ -10,7 +10,7 @@ interface "org.erights.e.elib.eio.inStream" \
   extends <import:org.erights.e.elib.eio.stream> {
   /** Take up to the specified size of chunk from the stream. 
     *
-    * Returns (possibly a promise for) either the taken chunk, or the stream's terminator if the stream has no more elements and is terminated.
+    * Returns (possibly a promise for) either the taken chunk, or the stream's terminator.
     * 
     * takeAtMost(0) must eventually resolve even if no elements are yet available.
     * 
@@ -18,9 +18,9 @@ interface "org.erights.e.elib.eio.inStream" \
     */
   to takeAtMost(maximum :(EIO.getRange())) :vow[any]
   
-  /** Make the stream closed, if it is not already terminated. */
+  /** Communicates closure (null terminator) upstream. Not guaranteed to have any effect on future take operations. */
   to close() :void
   
-  /** Make the stream failed, if it is not already terminated. */
+  /** Communicates failure (broken terminator) upstream. Not guaranteed to have any effect on future take operations. */
   to fail(problem :(<type:java.lang.Throwable>)) :void # XXX Throwable is Java legacy
 })

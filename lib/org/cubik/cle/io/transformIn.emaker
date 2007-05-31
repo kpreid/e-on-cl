@@ -55,11 +55,15 @@ def transformIn implements DeepFrozen {
     def doBuffer(chunk, maximum) {
       require(optBuffer == null)
       
-      return if (chunk == null) {
-        underlying.close()
-        chunk
-      } else if (Ref.isBroken(chunk)) {
-        underlying.fail(Ref.optProblem(chunk))
+      return if (chunk == null || Ref.isBroken(chunk)) {
+        # We could choose to terminate the underlying stream here. We don't,
+        # because the information in the problem shouldn't necessarily be
+        # revealed to upstream, and there might be reason to discard this
+        # transformer and start using the underlying stream directly.
+        # 
+        # XXX There should be an option to change this behavior, because some
+        # clients will want automatic upstream termination of the underlying
+        # stream.
         chunk
       } else {
         optBuffer := chunk
