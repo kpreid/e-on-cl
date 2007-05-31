@@ -1540,7 +1540,6 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (e. tw |print| (if (resolver-opt-promise this)
                      "<Resolver>"
                      "<Closed Resolver>")))
-  ; XXX resolve/2
   (:|resolveRace/1| 'resolve-race)
   (:|resolve| (this target)
     (unless (e-is-true (resolve-race this target))
@@ -1552,7 +1551,11 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
   (:|isDone| (this)
     "Returns whether this resolver's promise has been resolved already."
-    (as-e-boolean (not (resolver-opt-promise this))))) 
+    (as-e-boolean (not (resolver-opt-promise this))))
+  (:|gettingCloser| (this)
+    "Has no visible effect; used by causality tracing. XXX write documentation."
+    (declare (ignore this))
+    nil)) 
 
 ;;; --- functions that might be referenced before they're defined in the elib package ---
 
