@@ -48,7 +48,7 @@ def EIO implements DeepFrozen, ExitViaHere {
         match _ { def l := [].diverge(); [l.append, l.snapshot] }
       }
       def result
-      def loop() :any {
+      def loop() {
         traceln(`takeAll loop`)
         while (!Ref.isResolved(result)) {
           def taken := inStream.takeAtMost(ALL)
