@@ -12,14 +12,8 @@ ConstList streams
   ? def s := text.asStream()
   # value: "Teh quike bruin fax \...".asStream()
   
-  ? def term := s.terminates()
-  # value: <Promise>
-  
   ? s.takeAtMost(10)
   # value: "Teh quike "
-  
-  ? term
-  # value: <Promise>
   
   ? s
   # value: "bruin fax jimp't ova\...".asStream()
@@ -30,17 +24,8 @@ ConstList streams
   ? s
   # value: "".asStream()
     
-  ? [term]
-  # value: [<Promise>]
-  
   ? [s.takeAtMost(1)]
   # value: [null]
-  
-  ? [term]
-  # value: [null]
-  
-  ? s.terminates() == term
-  # value: true
   
 List stream fail/1
 
@@ -48,9 +33,6 @@ List stream fail/1
   > s.fail("foo")
   > s
   # value: "".asStream()
-  
-  ? s.terminates()
-  # value: <ref broken by problem: foo>
   
   ? s.takeAtMost(1)
   # value: <ref broken by problem: foo>
@@ -61,9 +43,6 @@ List stream close/0
   > s.close()
   > s
   # value: "".asStream()
-  
-  ? [s.terminates()]
-  # value: [null]
   
   ? [s.takeAtMost(1)]
   # value: [null]

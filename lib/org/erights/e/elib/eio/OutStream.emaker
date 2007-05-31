@@ -13,4 +13,7 @@ interface "org.erights.e.elib.eio.outStream" \
   
   /** Obligates this stream to eventually deliver (i.e. not retain in a buffer) elements up to the end of the chunk provided for the most recent reserve/0 message, and pass on the obligation to any downstream components if possible. */
   to flush() :void
+
+  /** Returns a promise for the stream's terminator. */
+  to terminates() :vow[any]
 })

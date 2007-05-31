@@ -39,38 +39,33 @@ def transformIn implements DeepFrozen {
     
     var optBuffer := null
     var shouldFinish := true
-    def [terminator, tResolver] := Ref.promise()
 
     def takeFromBuffer(maximum) {
-      if (optBuffer == null) {
-        # only happens when terminated
-        return terminator
+      return if (maximum == ALL || optBuffer.size() <= maximum) {
+        def r := optBuffer
+        optBuffer := null
+        r
       } else {
-        return if (maximum == ALL || optBuffer.size() <= maximum) {
-          def r := optBuffer
-          optBuffer := null
-          r
-        } else {
-          def r := optBuffer(0, maximum)
-          optBuffer := optBuffer(maximum)
-          r
-        }
+        def r := optBuffer(0, maximum)
+        optBuffer := optBuffer(maximum)
+        r
       }
     }
     
-    def putBuffer(chunk) {
-      if (chunk == null) {
-        tResolver.resolveRace(chunk)
+    def doBuffer(chunk, maximum) {
+      require(optBuffer == null)
+      
+      return if (chunk == null) {
         underlying.close()
+        chunk
       } else if (Ref.isBroken(chunk)) {
-        tResolver.resolveRace(chunk)
         underlying.fail(Ref.optProblem(chunk))
+        chunk
       } else {
         optBuffer := chunk
+        takeFromBuffer(maximum)
       }
     }
-    
-    Ref.whenResolved(underlying.terminates(), tResolver.resolveRace)
     
     return def transformInStream {
       to __printOn(out :TextWriter) {
@@ -81,7 +76,6 @@ def transformIn implements DeepFrozen {
       }
       
       to getChunkType() { return Chunk }
-      to terminates() { return terminator }
       to fail(p) { underlying.fail(p) }      
       to close() { underlying.close() }
       
@@ -104,17 +98,13 @@ def transformIn implements DeepFrozen {
               match b ? (b == null || Ref.isBroken(b)) { 
                 if (shouldFinish && (shouldFinish := false
                                      chunkFilter.__respondsTo("finish", 0))) {
-                  putBuffer(chunkFilter.finish())
-                  takeFromBuffer(maximum)
+                  doBuffer(chunkFilter.finish(), maximum)
                 } else {
-                  tResolver.resolveRace(b)
                   b
                 }
               }
               match _ {
-                putBuffer(chunkFilter(uchunk))
-                # XXX this might produce a 0-size chunk, which is unoptimal
-                takeFromBuffer(maximum)
+                doBuffer(chunkFilter(uchunk), maximum)
               }
             }
           })

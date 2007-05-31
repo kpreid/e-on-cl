@@ -15,7 +15,4 @@ interface "org.erights.e.elib.eio.stream" {
   to getChunkType() :Guard
   
   # XXX consider changing getChunkType to getChunkMaker, such that you can make a mutable-buffer for takeAll, and concat and split, with it. If we do this, revise EIO.takeAll and makeSimplePipe's chunk splitting
-  
-  /** Returns a promise for the stream's terminator. */
-  to terminates() :vow[any]
 })

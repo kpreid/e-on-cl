@@ -25,24 +25,18 @@ This is an InStream transformer which, unlike mapStream (XXX naming irregularity
   ? s.getChunkType()
   # value: List
   
-  ? def t := s.terminates()
-  # value: <Promise>
-  
   ? EIO.takeAll(s)
   # value: [1, 2, 2, 4, 5, 5, 7, 8, 8]
-  
-  ? [t]
-  # value: [null]
 
 Upward closure
 
-  ? def p; def s := transformIn(List, fn x {x}, def testStream { to close() { stderr.println("close") } to terminates() { return p }})
+  ? def p; def s := transformIn(List, fn x {x}, def testStream { to close() { stderr.println("close") } })
   # value: <-<_>-<testStream>
   ? s.close()
   # stderr: close
   #         
   
-  ? def p; def s := transformIn(List, fn x {x}, def testStream { to fail(p) { stderr.println(p) } to terminates() { return p }})
+  ? def p; def s := transformIn(List, fn x {x}, def testStream { to fail(p) { stderr.println(p) } })
   # value: <-<_>-<testStream>
   ? s.fail("ding")
   # stderr: ding
@@ -68,9 +62,6 @@ The finish may cause failure; this is used for cases where the input ends in the
   > def c := s.takeAtMost(1)
   # value: <ref broken by problem: foo>
   
-  ? c == s.terminates()
-  # value: true
-
 Estimation
 
 By default, as many input elements are requested as output elements.

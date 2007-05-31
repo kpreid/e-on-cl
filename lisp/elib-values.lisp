@@ -360,8 +360,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
             (e. (second termination) |resolveRace| nil)
             (first termination))))
       
-      (:|terminates| () (first termination))
-      
       (:|close| ()
         (setf position (length vector))
         (e. (second termination) |resolveRace| nil)

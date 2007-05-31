@@ -5,8 +5,6 @@ pragma.syntax("0.9")
 
 <import:org.cubik.cle.makeAdvisoryInterface>(
 /** XXX Finish this documentation
-  * 
-  * Additional elements may be available from a stream even if terminates() has resolved, e.g. if the stream has a buffer.
   */
 interface "org.erights.e.elib.eio.inStream" \
   extends <import:org.erights.e.elib.eio.stream> {
