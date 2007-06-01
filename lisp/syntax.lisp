@@ -809,11 +809,6 @@ XXX make precedence values available as constants"
           (,children-var (nodes-to-list (jcall +ast-first-child+ ,node-var))))
      ,@body))
 
-(defun mn (name &rest elements)
-  (make-instance name :elements elements))
-(defun mnp (name span &rest elements)
-  (make-instance name :source-span span :elements elements))
-
 (defun is-legitimate-toplevel-node (node)
   (if (typep node '(or |EExpr| |Pattern|))
     node

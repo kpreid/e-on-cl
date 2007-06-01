@@ -452,6 +452,8 @@
 
     :+the-make-static-scope+
     
+    :mn :mnp :node-quote
+    
     :node-elements
     :node-visitor-arguments
     :node-arity-error

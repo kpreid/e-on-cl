@@ -400,6 +400,48 @@ List nodes will be assumed to be sequences."
   (unless (or methods (> (length matchers) 0))
       (error "EScript must have methods or at least one matcher")))
 
+;;; --- node creation utilities ---
+
+(declaim (inline mn mnp node-quote)
+         (ftype (function ((or symbol class) &rest t) |ENode|)
+                mn)
+         (ftype (function ((or symbol class) (or null source-span |ENode|) &rest t)
+                          |ENode|)
+                mnp)
+         (ftype (function (t) |ENode|) node-quote))
+
+(defun mn (name &rest elements)
+  (make-instance name :elements elements))
+(defun mnp (name span &rest elements)
+  (make-instance name
+    :elements elements
+    :source-span (etypecase span
+                   (|ENode| (e. span |getOptSpan|))
+                   ((or source-span null) span))))
+
+(defun node-quote (value)
+  (etypecase value
+    ((or string number character) (mn '|LiteralExpr| value))
+    ((eql #.+e-true+)  (mn '|NounExpr| "true"))
+    ((eql #.+e-false+) (mn '|NounExpr| "false"))
+    (null              (mn '|NounExpr| "null"))))
+
+#+sbcl
+(progn
+  ;; declare constant foldability
+  (sb-c:defknown mn
+    ((or symbol class) &rest t)
+    t
+    (sb-c:unsafe sb-c:unwind sb-c:foldable))
+  (sb-c:defknown mnp
+    ((or symbol class) (or null source-span |ENode|) &rest t)
+    t
+    (sb-c:unsafe sb-c:unwind sb-c:foldable))
+  (sb-c:defknown node-quote
+    (t)
+    |ENode|
+    (sb-c:unsafe sb-c:unwind sb-c:foldable)))
+
 ; --- E-level methods ---
 
 (def-vtable |ENode|

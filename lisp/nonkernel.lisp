@@ -194,24 +194,6 @@
 
 ;;; --- conveniences ---
 
-;; XXX look into load-time-value-izing constant mn calls automatically
-;; XXX these functions are duplicated between here and syntax.lisp, e.syntax. consider defining a package to export them
-(defun mn (name &rest elements)
-  (make-instance name :elements elements))
-(defun mnp (name span &rest elements)
-  (make-instance name
-    :elements elements
-    :source-span (typecase span
-                   (|ENode| (e. span |getOptSpan|))
-                   (t span))))
-
-(defun node-quote (value)
-  (etypecase value
-    ((or string number character) (mn '|LiteralExpr| value))
-    ((eql #.+e-true+) (mn '|NounExpr| "true"))
-    ((eql #.+e-false+) (mn '|NounExpr| "false"))
-    (null (mn '|NullExpr|))))
-
 (defmacro defemacro (node-class-name (&rest superclasses) (&rest properties) (&rest options &key ((&whole node) (gensym "NODE")) &allow-other-keys) &body body
     &aux (stop (gensym "STOP")))
   `(progn
