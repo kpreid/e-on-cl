@@ -345,7 +345,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
             (p 5 "[" ", ...]"
                (lambda (v) (e. v |printOn| "" ", " "" out))))))
 
-      (:|getChunkType| () (observable-type-of vector))
+      (:|getChunkType| () (type-specifier-to-guard (observable-type-of vector)))
       
       (:|takeAtMost| ((maximum '(or integer null))) ;; XXX should be ANY token
         (when (< position (length vector))

@@ -12,6 +12,9 @@ ConstList streams
   ? def s := text.asStream()
   # value: "Teh quike bruin fax \...".asStream()
   
+  ? s.getChunkType()
+  # value: String
+  
   ? s.takeAtMost(10)
   # value: "Teh quike "
   
