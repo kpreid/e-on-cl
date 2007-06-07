@@ -131,6 +131,21 @@
       (updating-sequence-expr expr layout rv)
       `(values ,rv ,(delta-extract-outer-scope layout expr outer-scope-form)))))
 
+;;; --- Used by generated code ---
+
+(defmacro robust-block ((op-name) &body body)
+  "Like BLOCK, but tracks dynamic extent so as to better approximate conformance with CLHS 5.2. OP-NAME is bound to a local macro which, if invoked out of scope, will just return."
+  (let ((block-name (gensym "RB"))
+        (valid (gensym "VALID-RB")))
+    `(block ,block-name
+       (let ((,valid t))
+         (unwind-protect
+           (macrolet ((,op-name (&optional value)
+                        `(when ,',valid
+                           (return-from ,',block-name ,value))))
+             (locally ,@body))
+           (setf ,valid nil))))))
+
 ;;; --- Expressions ---
 
 (define-sequence-expr |AssignExpr| (layout result noun-expr value
@@ -165,10 +180,10 @@
          (handler-case
             ,(hide-sequence attempt layout)
             (e-catchable-condition (,condition-var)
-              (block ,pattern-eject-block
+              (robust-block (,pattern-eject-block)
                 ,(with-nested-scope-layout (layout)
                   (sequence-to-form 
-                    (updating-sequence-patt catch-pattern layout `(transform-condition-for-e-catch ,condition-var) `(eject-function "catch-pattern" (lambda (v) (return-from ,pattern-eject-block v))))
+                    (updating-sequence-patt catch-pattern layout `(transform-condition-for-e-catch ,condition-var) `(eject-function "catch-pattern" (lambda (v) (,pattern-eject-block v))))
                     `(return-from ,catch-outer ,(leaf-sequence catch-body layout)))))
               (%catch-expr-resignal ,condition-var))))))
     layout))
@@ -220,16 +235,18 @@
                   (append (updating-sequence-patt 
                             ejector-patt 
                             layout 
-                            `(ejector ',(pattern-opt-noun ejector-patt) (lambda (v) (return-from ,ejector-block v)))
+                            ;; the following is a form, not an ejector-spec
+                            `(ejector ',(pattern-opt-noun ejector-patt) 
+                                      (lambda (v) (,ejector-block v)))
                             nil)
                           (updating-sequence-expr body layout inner-result-var)))
                 inner-result-var)))
       `((,result 
-         (block ,outer-block
+         (robust-block (,outer-block)
            ,(if opt-catch-pattern
              `(let ((,catch-value-var 
-                     (block ,ejector-block
-                       (return-from ,outer-block ,(body-form ejector-block)))))
+                     (robust-block (,ejector-block)
+                       (,outer-block ,(body-form ejector-block)))))
                (declare (ignorable ,catch-value-var))
                ,(sequence-to-form 
                   (with-nested-scope-layout (layout)
@@ -242,7 +259,7 @@
                                                (pattern-opt-noun ejector-patt)) 
                                  (lambda (v) 
                                    (declare (ignore v))
-                                   (return-from ,outer-block ,catch-value-var))))
+                                   (,outer-block ,catch-value-var))))
                             (updating-sequence-expr opt-catch-body layout result)))
                   result))
              (body-form outer-block))))))
@@ -349,11 +366,11 @@
            (result-var (gensym "RESULT"))
            (pair-var (gensym "MATCH-ARG")))
       `(block ,matcher-block
-        (block ,pattern-eject-block
+        (robust-block (,pattern-eject-block)
           ,(sequence-to-form
              (append
                `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector))))
-               (updating-sequence-patt pattern layout pair-var `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (return-from ,pattern-eject-block v))))
+               (updating-sequence-patt pattern layout pair-var `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (,pattern-eject-block v))))
                (updating-sequence-expr body layout result-var :may-inline t))
              `(return-from ,matcher-block ,result-var)))
         ;; if we reach here, the ejector was used

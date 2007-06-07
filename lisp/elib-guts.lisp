@@ -227,20 +227,22 @@
     (break "About to exit via ~W with value ~W" ejector-spec value))
   nil)
 
+(define-condition ejector-extent-error (control-error)
+  ((ejector-label :initarg :ejector-label
+                  :reader ejector-error-ejector-label))
+  (:report (lambda (condition stream)
+             ;; XXX review wording of this error
+             (format stream "ejector ~S no longer in scope"
+               (ejector-error-ejector-label condition)))))
+
+(declaim (inline %ejector-throw))
 (defun %ejector-throw (label function value)
   (ejector-prethrow label value)
-  (handler-case (funcall function value)
-    ;; XXX this is making assumptions about what the function will do out of scope
-    ; xxx should define vtable for cant-throw-error instead of making a new condition?
-    ;     (of course, we must make a new condition if the implementation doesn't have such a distinct condition type)
-    ;; XXX why are we not restricting to control-error in general? some lisp that doesn't signal it when it should?
-    (#+ccl ccl::cant-throw-error 
-     #+(or sbcl allegro) control-error
-     #-(or ccl sbcl) t
-      ()
-      (error "ejector ~S no longer in scope" label))))
+  (funcall function value)
+  (error 'ejector-extent-error :ejector-label label))
 
 (defun ejector (label fn)
+  "Make an ejector object with label LABEL with destination defined by FN. When out of extent, FN should return (without signaling any error)."
   (e-lambda "org.erights.e.elib.base$ejector" ()
     (:|__printOn| ((tw +the-text-writer-guard+))
       (e. tw |print| "<" label " ejector>"))

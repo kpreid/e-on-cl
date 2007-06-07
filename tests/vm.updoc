@@ -172,7 +172,7 @@ EscapeExpr
 
  disabling of ejector, and a non-simple pattern
   ? { def ej; escape bind ej {}; ej("oops"); print("end") }
-  # problem: ejector "ej__1" no longer in scope
+  # problem: <ejector-extent-error: ejector "ej__1" no longer in scope>
   
   ? escape via(def _(_,e):any{throw.eject(e,"biff")}) _ { print("failing ejector pattern test") }
   # problem: biff

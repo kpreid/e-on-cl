@@ -200,6 +200,7 @@
     
     :+the-thrower+
     :ejector
+    :ejector-extent-error
     :ejector-prethrow
     :eject-or-ethrow
     :e-catchable-condition
