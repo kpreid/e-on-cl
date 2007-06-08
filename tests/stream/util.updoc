@@ -1,0 +1,106 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def ALL := EIO.getALL(); null
+
+EIO.takeRange
+
+ Simple
+
+  ? [EIO.takeRange(0, 0, def s := "abcdefghi".asStream()), s]
+  # value: ["", "abcdefghi".asStream()]
+
+  ? [EIO.takeRange(0, 3, def s := "abcdefghi".asStream()), s]
+  # value: ["abc", "defghi".asStream()]
+
+  ? [EIO.takeRange(0, 12, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+
+  ? [EIO.takeRange(0, ALL, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+
+  ? [EIO.takeRange(3, 0, def s := "abcdefghi".asStream()), s]
+  # problem: impossible range for EIO.takeRange, 3..0, requested from "abcdefghi".asStream()
+
+  ? [EIO.takeRange(3, 3, def s := "abcdefghi".asStream()), s]
+  # value: ["abc", "defghi".asStream()]
+
+  ? [EIO.takeRange(3, 12, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+
+  ? [EIO.takeRange(3, ALL, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+
+  ? [EIO.takeRange(12, 0, def s := "abcdefghi".asStream()), s]
+  # problem: impossible range for EIO.takeRange, 12..0, requested from "abcdefghi".asStream()
+
+  ? [EIO.takeRange(12, 3, def s := "abcdefghi".asStream()), s]
+  # problem: impossible range for EIO.takeRange, 12..3, requested from "abcdefghi".asStream()
+
+  ? [EIO.takeRange(12, 12, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+
+  ? [EIO.takeRange(12, ALL, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+
+  ? [EIO.takeRange(ALL, 0, def s := "abcdefghi".asStream()), s]
+  # problem: impossible range for EIO.takeRange, null..0, requested from "abcdefghi".asStream()
+  XXX revealing current, nonoptimal, value of ALL
+
+  ? [EIO.takeRange(ALL, 3, def s := "abcdefghi".asStream()), s]
+  # problem: impossible range for EIO.takeRange, null..3, requested from "abcdefghi".asStream()
+  
+  ? [EIO.takeRange(ALL, 12, def s := "abcdefghi".asStream()), s]
+  # problem: impossible range for EIO.takeRange, null..12, requested from "abcdefghi".asStream()
+  
+  ? [EIO.takeRange(ALL, ALL, def s := "abcdefghi".asStream()), s]
+  # value: ["abcdefghi", "".asStream()]
+  
+ Non-immediate
+ 
+  ? def [o, i] := EIO.pipe([].asMap())
+  > def e := EIO.takeRange(3, 3, i)
+  > e
+  # value: <Promise>
+  
+  ? o.reserve() <- resolve("ab")
+  > interp.waitAtTop(def r := o.reserve())
+  ? e
+  # value: <Promise>
+  
+  ? r.resolve("cd")
+  > interp.waitAtTop(e)
+  ? e
+  # value: "abc"
+  
+ Failed: returns the failure, discards elements
+
+  ? var chunks := ["", "ab", Ref.broken("cd")]
+  > interp.waitAtTop(def e := EIO.takeRange(3, 3, def failedStreamTest {
+  >   to takeAtMost(maximum) {
+  >     if (maximum.isZero()) { return [] }
+  >     def [h] + t := chunks
+  >     chunks := t
+  >     return h
+  >   }
+  > }))
+  ? e
+  # value: <ref broken by problem: cd>
+
+ Failed eventually
+
+  ? var chunks := ["", "ab", Ref.broken("cd")]
+  > interp.waitAtTop(def e := EIO.takeRange(3, 3, def evFailedStreamTest {
+  >   to takeAtMost(maximum) {
+  >     if (maximum.isZero()) { return [] }
+  >     def [h] + t := chunks
+  >     chunks := t
+  >     return when (null) -> { h }
+  >   }
+  > }))
+  ? e
+  # value: <ref broken by problem: cd>
+
+XXX the above tests would be better written using pipes; they are not because there is a lost signal bug in the pipe implementation. I'm doing it this way so I can get this done before starting on the pipe bug. --kpreid 2007-06-07
+
+XXX EIO.takeAll

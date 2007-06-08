@@ -37,30 +37,68 @@ def EIO implements DeepFrozen, ExitViaHere {
     return <import:org.cubik.cle.io.makeSimplePipe>(options)
   }
   
-  /** XXX stream redesign: to be reviewed */
-  to takeAll(inStream) {
-    traceln(`entering takeAll $inStream`)
+  /** Take at least 'minimum' and at most 'maximum' elements from 'inStream' and return them.
+    * 
+    * 'minimum' may not be ALL unless 'maximum' is ALL; this is an implementation limitation. It would mean to read all elements and fail unless there are 'maximum' of them.
+    * 
+    * XXX stream redesign: to be reviewed */
+  to takeRange(minimum :DeepFrozen, maximum :DeepFrozen, inStream) {
+    #traceln(`entering takeRange $minimum, $maximum, $inStream`)
+    
+    
+    
+    if (maximum != ALL && (minimum == ALL || minimum > maximum)) {
+      throw(`impossible range for EIO.takeRange, $minimum..$maximum, requested from $inStream`)
+    }
+    
     return whenMaybeNow(inStream.takeAtMost(0), fn first {
-      traceln(`got first chunk $first`)
+      #traceln(`got first chunk $first`)
       def [append, snapshot] := switch (first) {
         # XXX doesn't work for Twines 
         match =="" { def [tw, sb] := makeTextWriter.makeBufferingPair(); [tw.write, sb.snapshot] }
         match _ { def l := [].diverge(); [l.append, l.snapshot] }
       }
+      
+      def computeWanted := if (maximum == ALL) {
+        fn { ALL }
+      } else {
+        fn { maximum - snapshot().size() }
+      }
+      def isSufficient := if (minimum == ALL) {
+        fn { false }
+      } else {
+        fn { minimum <= snapshot().size() }
+      }
+      
       def result
       def loop() {
-        traceln(`takeAll loop`)
+        #traceln(`takeRange loop`)
         while (!Ref.isResolved(result)) {
-          def taken := inStream.takeAtMost(ALL)
+          #traceln(`takeRange subloop`)
+          def taken := inStream.takeAtMost(computeWanted())
           def handle() {
+            #traceln(`handle() for ${Ref.state(taken)} ${try{taken.__getAllegedType()} catch p {"NV"}}`)
             switch (taken) {
-              match ==null { bind result := snapshot() }
+              match ==null {
+                #if (minimum == ALL || minimum <= snapshot().size()) {
+                  bind result := snapshot()
+                #} else {
+                #  bind result := Ref.broken(`insufficient elements: requested at least $minimum, got only ${snapshot().size()}`)
+                #}
+              }
               match b ? (Ref.isBroken(b)) { bind result := b }
-              match chunk { append(chunk) }
+              match chunk { 
+                append(chunk)
+                if (isSufficient()) {
+                  #traceln(`exiting, got minimum`)
+                  bind result := snapshot()
+                  break
+                }
+              }
             }
           }
           if (!Ref.isResolved(taken)) {
-            when (taken) -> { 
+            when (taken) -> {} finally {
               handle()
               loop()
             }
@@ -73,5 +111,10 @@ def EIO implements DeepFrozen, ExitViaHere {
       loop()
       result
     })
+  }
+  
+  /** XXX stream redesign: to be reviewed */
+  to takeAll(inStream) {
+    return EIO.takeRange(ALL, ALL, inStream)
   }
 }
