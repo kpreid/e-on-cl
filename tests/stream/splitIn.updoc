@@ -1,0 +1,66 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def ALL := EIO.getALL()
+  
+Basic splits, different chunk types.
+
+  ? def splitIn :DeepFrozen := <import:org.cubik.cle.io.splitIn>
+  # value: <splitIn>
+
+  ? def s := splitIn(",", "1,22,333,4444".asStream())
+  # value: <-<split on ",">-"1,22,333,4444".asStream()
+
+  ? EIO.takeAll(s)
+  # value: ["1", "22", "333", "4444"]
+
+  ? def s := splitIn([0], [1,0,2,2,0,3,3,3,0,4,4,4,4].asStream())
+  # value: <-<split on [0]>-[1, 0, 2, 2, 0, ...].asStream()
+
+  ? EIO.takeAll(s)
+  # value: [[1], [2, 2], [3, 3, 3], [4, 4, 4, 4]]
+
+Incremental operation, and separators of other than one element:
+
+  ? def [o, i] := EIO.pipe(["Chunk" => String])
+  > interp.waitAtTop(def s := splitIn("<>", i))
+  ? s
+  # value: <-<split on "<>">-<-"anonymous" pipe
+  
+  ? o.reserve() <- resolve("abc<def<>ghi<><>jkl")
+  > interp.waitAtTop(def r := EIO.takeRange(1, ALL, s))
+  ? r
+  # value: ["abc<def", "ghi", ""]
+  
+  ? o.reserve() <- resolve("mno")
+  > o.reserve() <- resolve("pqr<>s")
+  > interp.waitAtTop(def r := EIO.takeRange(1, ALL, s))
+  ? r
+  # value: ["jklmnopqr"]
+  
+  ? o.reserve() <- resolve(null)
+  > interp.waitAtTop(def r := EIO.takeRange(1, ALL, s))
+  ? r
+  # value: ["s"]
+
+Last-chunk policies. The default is the separatorPolicy; a policy is a function (lastBuffer :Chunk, streamTerminator) :Chunk.
+
+  ? EIO.takeAll(splitIn(",", "1,2,3".asStream()))
+  # value: ["1", "2", "3"]
+
+  ? EIO.takeAll(splitIn(",", "1,2,3,".asStream()))
+  # value: ["1", "2", "3", ""]
+
+  ? EIO.takeAll(splitIn(",", splitIn.separatorPolicy(), "1,2,3".asStream()))
+  # value: ["1", "2", "3"]
+
+  ? EIO.takeAll(splitIn(",", splitIn.separatorPolicy(), "1,2,3,".asStream()))
+  # value: ["1", "2", "3", ""]
+
+  ? EIO.takeAll(splitIn(",", splitIn.strictTerminatorPolicy(), "1,2,3".asStream()))
+  # value: <ref broken by problem: unterminated split-chunk>
+
+  ? EIO.takeAll(splitIn(",", splitIn.strictTerminatorPolicy(), "1,2,3,".asStream()))
+  # value: ["1", "2", "3"]
+  
+  XXX upstream failures vs. policies

@@ -1,0 +1,84 @@
+# Copyright 2004-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def transformIn := <import:org.cubik.cle.io.transformIn>
+
+def k := 0.1
+def ik := 1.0 - k
+
+def csplit(var chunk, separator) implements DeepFrozen {
+  return if (chunk =~ twine :Twine) {
+    chunk.split(separator)
+  } else {
+    def out := [].diverge()
+    while ((def i := chunk.startOf(separator)).atLeastZero()) {
+      out.push(chunk(0, i))
+      chunk := chunk(i + separator.size())
+    }
+    out.push(chunk)
+    return out.snapshot()
+  }
+}
+
+def separatorPolicy(buffer, streamTerminator) implements DeepFrozen {
+  return [buffer]
+}
+
+def strictTerminatorPolicy(buffer, streamTerminator) implements DeepFrozen {
+  return if (buffer.size().isZero()) {
+    []
+  } else {
+    Ref.broken("unterminated split-chunk")
+  }
+}
+
+def splitIn implements DeepFrozen {
+  to separatorPolicy() { return separatorPolicy }
+  to strictTerminatorPolicy() { return strictTerminatorPolicy }
+
+  to run(separator :DeepFrozen, input) {
+    return splitIn(separator, separatorPolicy, input)
+  }
+  
+  to run(separator :DeepFrozen, remainderPolicy :DeepFrozen, input) {
+    def Chunk := input.getChunkType()
+  
+    var groupBuffer := def initGroupBuffer {
+      to add(chunk) { return chunk }
+      to size() { return 0 }
+    }
+  
+    var groupSizeHistory :float64 := 50.0
+
+    return transformIn(List[Chunk], def splitFilter {
+      to __printOn(out :TextWriter) {
+        out.write("<split on ")
+        out.quote(separator)
+        out.write(">")
+      }
+    
+      to run(elements :Chunk) {
+        def groups := csplit(groupBuffer + elements, separator)
+        groupBuffer := groups.last()
+        def wholeGroups := groups(0, groups.size() - 1)
+    
+        for g in wholeGroups {
+          groupSizeHistory := groupSizeHistory * ik + g.size() * k
+        }
+        return wholeGroups
+      }
+    
+      to finish() {
+        # XXX fix transformIn to supply the terminator here
+        return remainderPolicy(groupBuffer, null)
+      }
+    
+      to estimate(groupsWanted) {
+        return (groupsWanted * (groupSizeHistory + separator.size())).floor()
+      }
+    }, input)
+  }
+}
