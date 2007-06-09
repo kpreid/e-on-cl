@@ -37,3 +37,12 @@ Closure
   # value: [null]
 
 XXX closing map stream propagates
+
+Erroneous chunk functions
+
+  ? EIO.takeAll(mapStream.chunked(List[int], [1].asStream(), fn _ { [2, 3] }))
+  # problem: mapStream chunk function <_> produced 2 elements instead of 0, [] to [2, 3]
+  
+  ? EIO.takeAll(mapStream.chunked(List[int], [1].asStream(), fn _ { [] }))
+  # problem: mapStream chunk function <_> produced 0 elements instead of 1, [1] to []
+  

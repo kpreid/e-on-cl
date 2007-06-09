@@ -8,6 +8,14 @@ pragma.enable("function-implements")
 def chunkedMapStream implements DeepFrozen {
   to run(OutChunk :Guard, sourceStream, func, namer) :any {
     
+    def doMap(chunk) {
+      def mapped :OutChunk := func(chunk)
+      if (mapped.size() != chunk.size()) {
+        throw(`mapStream chunk function $func produced ${mapped.size()} elements instead of ${chunk.size()}, ${chunk} to ${mapped}`)
+      }
+      return mapped
+    }
+    
     def mappingStream {
       to __printOn(tw :TextWriter) {
         tw.write("<-")
@@ -22,13 +30,13 @@ def chunkedMapStream implements DeepFrozen {
             when (p) -> {
               switch (p) {
                 match t ? (t == null || Ref.isBroken(t)) { t }
-                match chunk { func(chunk) :OutChunk }
+                match chunk { doMap(chunk) }
               }
             }
           }
           match t ? (t == null || Ref.isBroken(t)) { t }
           # XXX add a restriction that the result list must be the same length
-          match chunk { func(chunk) :OutChunk }
+          match chunk { doMap(chunk) }
         }
       }
       

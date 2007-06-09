@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def mapStream := <import:org.cubik.cle.io.mapStream>
+def transformIn := <import:org.cubik.cle.io.transformIn>
 def getCharacter := <import:org.cubik.cle.prim.getCharacter>
 
 # Unicode Standard, Version 4.0, Chapter 3, Section 3.10, page 78
@@ -27,12 +27,20 @@ def utf8DecodeTable := {
   t.snapshot()
 }
 
+def anyContinuation := 0x80..0xBF
+
+# These would really be better inline; moving them to outer level is optimization. XXX Improve the compiler etc. to be able to hoist/constant fold these, and put them back at their usage sites
+def EncodedBy1 := 0..0x7f
+def EncodedBy2 := 0x80..0x7FF
+def EncodedBy3 := 0x800..0xFFFF
+def EncodedBy4 := 0x10000..0x10FFFF
+
 def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFrozen
   to decode(octetStream, ==([].asMap())) {
     var bits :nullOk[int] := null
     var expect :nullOk[int] := null
     var octetRange := 0..0xFF
-    return mapStream.chunked(String, octetStream, def utf8ChunkDecoder {
+    return transformIn(String, def utf8ChunkDecoder {
       to __printOn(tw :TextWriter) {
         tw.write("from UTF-8")
       }
@@ -52,23 +60,23 @@ def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFroze
             require((octett & 0xC0) == 0x80, "bad continuation")
             require(octetRange(octett), "out-of-range continuation")
             bits := (bits << 6) + (octett & 0x3F)
-            octetRange := 0x80..0xBF
+            octetRange := anyContinuation
             expect -= 1
           }
           if (expect == 0) {
             out.push(getCharacter(bits))
             expect := null
             bits := null
-            octetRange := 0x80..0xBF
+            octetRange := anyContinuation
           }
         }
         return __makeTwine.fromValuesOf(out)
       }
-    })
+    }, octetStream)
   }
   
   to encode(charStream, ==([].asMap())) {
-    return mapStream.chunked(List[int], charStream, def utf8ChunkEncoder {
+    return transformIn(List[int], def utf8ChunkEncoder {
       to __printOn(tw :TextWriter) {
         tw.write("to UTF-8")
       }
@@ -79,16 +87,16 @@ def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFroze
         def out := [].diverge(int) # XXX int8
         for ch in inn {
           switch (ch.getCodepoint()) {
-            match one :(0..0x7F) \
+            match one :EncodedBy1 \
               { out.push(one) }
-            match two :(0x80..0x7FF) \
+            match two :EncodedBy2 \
               { out.push(0xC0 | ( two   >> 6         ))
                 out.push(0x80 | ( two          & 0x3F)) }
-            match three :(0x800..0xFFFF) \
+            match three :EncodedBy3 \
               { out.push(0xE0 | ( three >> 12        ))
                 out.push(0x80 | ((three >> 6 ) & 0x3F))
                 out.push(0x80 | ( three        & 0x3F)) }
-            match four :(0x10000..0x10FFFF) \
+            match four :EncodedBy4 \
               { out.push(0xF0 | ( four  >> 18        ))
                 out.push(0x80 | ((four  >> 12) & 0x3F))
                 out.push(0x80 | ((four  >> 6 ) & 0x3F))
@@ -97,6 +105,6 @@ def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFroze
         }
         return out.snapshot()
       }
-    })
+    }, charStream)
   }
 }
