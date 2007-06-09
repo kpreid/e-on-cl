@@ -201,7 +201,7 @@
     :+the-thrower+
     :ejector
     :ejector-extent-error
-    :ejector-prethrow
+    :ejector-prethrow :%ejector-throw
     :eject-or-ethrow
     :e-catchable-condition
     :transform-condition-for-e-catch

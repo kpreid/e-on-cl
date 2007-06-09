@@ -239,10 +239,10 @@
 (defun %ejector-throw (label function value)
   (ejector-prethrow label value)
   (funcall function value)
-  (error 'ejector-extent-error :ejector-label label))
+  (error "ejector ~S implementation function ~S returned!" label function))
 
 (defun ejector (label fn)
-  "Make an ejector object with label LABEL with destination defined by FN. When out of extent, FN should return (without signaling any error)."
+  "Make an ejector object with label LABEL with destination defined by FN. When out of extent, FN should signal EJECTOR-EXTENT-ERROR."
   (e-lambda "org.erights.e.elib.base$ejector" ()
     (:|__printOn| ((tw +the-text-writer-guard+))
       (e. tw |print| "<" label " ejector>"))

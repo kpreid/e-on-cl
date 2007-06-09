@@ -314,9 +314,7 @@
     ((ejector)   `(eject-or-ethrow ,(second ejector-specifier) ,condition-code))
     ((eject-function)
                  (destructuring-bind (label-form function-form) (rest ejector-specifier)
-                   `(let ((condition ,condition-code))
-                      (elib:ejector-prethrow ,label-form condition)
-                      (funcall ,function-form condition))))
+                   `(elib:%ejector-throw ,label-form ,function-form ,condition-code)))
     ((nil)       `(error ,condition-code))))
 
 (defun opt-ejector-make-code (ejector-specifier)

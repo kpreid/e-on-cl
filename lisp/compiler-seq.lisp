@@ -133,16 +133,18 @@
 
 ;;; --- Used by generated code ---
 
-(defmacro robust-block ((op-name) &body body)
-  "Like BLOCK, but tracks dynamic extent so as to better approximate conformance with CLHS 5.2. OP-NAME is bound to a local macro which, if invoked out of scope, will just return."
+(defmacro robust-block ((op-name ejector-label) &body body)
+  "Like BLOCK, but tracks dynamic extent so as to better approximate conformance with CLHS 5.2. OP-NAME is bound to a local macro which, if invoked out of scope, will signal E.ELIB:EJECTOR-EXTENT-ERROR with (unevaluated) label EJECTOR-LABEL."
   (let ((block-name (gensym "RB"))
         (valid (gensym "VALID-RB")))
     `(block ,block-name
        (let ((,valid t))
          (unwind-protect
            (macrolet ((,op-name (&optional value)
-                        `(when ,',valid
-                           (return-from ,',block-name ,value))))
+                        `(if ,',valid
+                           (return-from ,',block-name ,value)
+                           (error 'ejector-extent-error
+                             :ejector-label ',',ejector-label))))
              (locally ,@body))
            (setf ,valid nil))))))
 
@@ -180,7 +182,7 @@
          (handler-case
             ,(hide-sequence attempt layout)
             (e-catchable-condition (,condition-var)
-              (robust-block (,pattern-eject-block)
+              (robust-block (,pattern-eject-block "catch-pattern")
                 ,(with-nested-scope-layout (layout)
                   (sequence-to-form 
                     (updating-sequence-patt catch-pattern layout `(transform-condition-for-e-catch ,condition-var) `(eject-function "catch-pattern" (lambda (v) (,pattern-eject-block v))))
@@ -242,10 +244,10 @@
                           (updating-sequence-expr body layout inner-result-var)))
                 inner-result-var)))
       `((,result 
-         (robust-block (,outer-block)
+         (robust-block (,outer-block ,(pattern-opt-noun ejector-patt))
            ,(if opt-catch-pattern
              `(let ((,catch-value-var 
-                     (robust-block (,ejector-block)
+                     (robust-block (,ejector-block ,(pattern-opt-noun ejector-patt))
                        (,outer-block ,(body-form ejector-block)))))
                (declare (ignorable ,catch-value-var))
                ,(sequence-to-form 
@@ -364,13 +366,14 @@
     (let* ((pattern-eject-block (gensym "MATCHER-SKIP"))
            (matcher-block (gensym "MATCHERS"))
            (result-var (gensym "RESULT"))
-           (pair-var (gensym "MATCH-ARG")))
+           (pair-var (gensym "MATCH-ARG"))
+           (ej-name (format nil "~A matcher" (scope-layout-fqn-prefix layout))))
       `(block ,matcher-block
-        (robust-block (,pattern-eject-block)
+        (robust-block (,pattern-eject-block ,ej-name)
           ,(sequence-to-form
              (append
                `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector))))
-               (updating-sequence-patt pattern layout pair-var `(eject-function ,(format nil "~A matcher" (scope-layout-fqn-prefix layout)) (lambda (v) (,pattern-eject-block v))))
+               (updating-sequence-patt pattern layout pair-var `(eject-function ,ej-name (lambda (v) (,pattern-eject-block v))))
                (updating-sequence-expr body layout result-var :may-inline t))
              `(return-from ,matcher-block ,result-var)))
         ;; if we reach here, the ejector was used
