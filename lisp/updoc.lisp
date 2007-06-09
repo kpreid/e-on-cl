@@ -505,36 +505,23 @@
        (scope (e. (make-io-scope :stdout *standard-output*
                                  :stderr *error-output*
                                  :interp interp) 
-                  |withPrefix| "__main$")))
+                  |withPrefix| "__main$"))
+       (split-in (e-import "org.cubik.cle.io.splitIn"))
+       (lines (efuncall split-in
+                        (string #\Newline)
+                        (e. split-in |strictTerminatorPolicy|)
+                        (eelt scope "stdin")))
+       (eio (e-import "org.erights.e.elib.eio.EIO")))
     (e. scope-slot |setValue| scope)
-    (multiple-value-let* ((stdin (eelt scope "stdin"))
-                          (buf (make-array 0 :element-type 'character :adjustable t :fill-pointer 0))
-                          (result resolver (make-promise)))
-      ;; XXX this is assortedly bad
-      ;; not least, it should not implement its own line-buffer
-      (labels ((prompt ()
-                 (format t "~&e-on-cl? ")
-                 (force-output))
-               (take ()
-                 (call-when-resolved
-                   (e. stdin |takeAtMost| 1)
-                   (efun (result)
-                     (setf result (ref-shorten result))
-                     (if (or (null result) (eql (ref-state result) 'broken))
-                       (e. resolver |resolve| result)
-                       (let ((ch (aref result 0)))
-                          (if (eql ch #\Newline)
-                            (progn
-                              (call-when-resolved
-                                (funcall stepper (copy-seq buf))
-                                (efun (step-result)
-                                  (declare (ignore step-result))
-                                  (prompt)
-                                  (take)))
-                              (setf (fill-pointer buf) 0))
-                            (progn
-                              (vector-push-extend ch buf)
-                              (take)))))))))
-        (prompt)
-        (take)
-        result))))
+    (labels ((take ()
+               (format t "~&e-on-cl? ")
+               (force-output)
+               (when-resolved (chunk) (e. eio |takeRange| 1 1 lines)
+                 (setf chunk (ref-shorten chunk))
+                 (if (or (null chunk)
+                         (eql (ref-state chunk) 'broken))
+                   chunk
+                   (when-resolved (sr) (funcall stepper (eelt chunk 0))
+                     (declare (ignore sr))
+                     (take))))))
+      (take))))
