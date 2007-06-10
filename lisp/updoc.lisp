@@ -416,9 +416,10 @@
           #+clisp (ignore-errors (cl-fad:directory-exists-p path))
         (cl-fad:walk-directory path #'collect
           :test (lambda (path)
-                  (member (pathname-type path)
-                    '("updoc" "emaker" "e" "e-awt" "e-swt" "caplet" "txt")
-                    :test #'string-equal)))
+                  (and (member (pathname-type path)
+                         '("updoc" "emaker" "e" "e-awt" "e-swt" "caplet" "txt")
+                         :test #'string-equal)
+                       (not (without-prefix (pathname-name path) ".")))))
         (collect path)))
     
     (nreverse-here file-paths)

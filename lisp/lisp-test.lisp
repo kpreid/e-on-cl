@@ -14,14 +14,14 @@
 (defun test-once (system)
   (rem-all-tests)
   (let ((*package* #.*package*))
-    (map nil
-       #'load
-       (directory
-         (merge-pathnames
-           (make-pathname :name :wild 
-                          :type "tlisp" 
-                          :directory '(:relative "ltests"))
-           (asdf:component-pathname system)))))
+    (map nil #'load
+      (remove-if (lambda (p) (e.util:without-prefix (pathname-name p) "."))
+        (directory
+          (merge-pathnames
+            (make-pathname :name :wild 
+                           :type "tlisp" 
+                           :directory '(:relative "ltests"))
+            (asdf:component-pathname system))))))
   (do-tests))
 
 (defun system-test (op system)
