@@ -43,20 +43,18 @@ def EIO implements DeepFrozen, ExitViaHere {
     * 
     * XXX stream redesign: to be reviewed */
   to takeRange(minimum :DeepFrozen, maximum :DeepFrozen, inStream) {
-    #traceln(`entering takeRange $minimum, $maximum, $inStream`)
-    
-    
     
     if (maximum != ALL && (minimum == ALL || minimum > maximum)) {
       throw(`impossible range for EIO.takeRange, $minimum..$maximum, requested from $inStream`)
     }
     
     return whenMaybeNow(inStream.takeAtMost(0), fn first {
-      #traceln(`got first chunk $first`)
+
       def [append, snapshot] := switch (first) {
         # XXX doesn't work for Twines 
         match =="" { def [tw, sb] := makeTextWriter.makeBufferingPair(); [tw.write, sb.snapshot] }
-        match _ { def l := [].diverge(); [l.append, l.snapshot] }
+        match ==[] { def l := [].diverge(); [l.append, l.snapshot] }
+        # XXX support unknown chunk types
       }
       
       def computeWanted := if (maximum == ALL) {
@@ -72,37 +70,35 @@ def EIO implements DeepFrozen, ExitViaHere {
       
       def result
       def loop() {
-        #traceln(`takeRange loop`)
         while (!Ref.isResolved(result)) {
-          #traceln(`takeRange subloop`)
           def taken := inStream.takeAtMost(computeWanted())
+
+          /** handle the chunk once it's resolved */
           def handle() {
-            #traceln(`handle() for ${Ref.state(taken)} ${try{taken.__getAllegedType()} catch p {"NV"}}`)
             switch (taken) {
               match ==null {
-                #if (minimum == ALL || minimum <= snapshot().size()) {
-                  bind result := snapshot()
-                #} else {
-                #  bind result := Ref.broken(`insufficient elements: requested at least $minimum, got only ${snapshot().size()}`)
-                #}
+                # This can produce a result shorter than the requested minimum; this seems better than failure at the moment. This could be changed by checking at this point for (minimum == ALL || minimum <= snapshot().size()), and failing otherwise.
+                bind result := snapshot()
               }
+
               match b ? (Ref.isBroken(b)) { bind result := b }
+
               match chunk { 
                 append(chunk)
                 if (isSufficient()) {
-                  #traceln(`exiting, got minimum`)
                   bind result := snapshot()
-                  break
                 }
               }
             }
           }
+          
+          # Note: this could be simplified by relying on tail-recursion; we would eliminate the while loop, invoke loop() at the end of handle(), and . I (kpreid) don't quite want to write E code that relies on tail-recursion optimization yet, though.
           if (!Ref.isResolved(taken)) {
             when (taken) -> {} finally {
               handle()
-              loop()
+              loop() # reenter while loop
             }
-            return
+            return # exit while loop
           } else {
             handle()
           }
