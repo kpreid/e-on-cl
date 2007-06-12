@@ -156,7 +156,7 @@
     (if (and +compile-emakers+ compile-target)
       (progn
         (let ((*standard-output* *trace-output*))
-          (ensure-directories-exist compile-target :verbose t))
+          (ensure-directories-exist compile-target :verbose nil))
         (when (or (not (probe-file compile-target))
                   ;; XXX fix this interface - exposing CL things not good
                   (> (e. file |_clFileWriteDate|)

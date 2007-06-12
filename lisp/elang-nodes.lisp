@@ -402,8 +402,10 @@ List nodes will be assumed to be sequences."
 
 ;;; --- node creation utilities ---
 
-(declaim (inline mn mnp node-quote)
-         (ftype (function ((or symbol class) &rest t) |ENode|)
+(declaim (inline mn mnp node-quote))
+
+#-sbcl
+(declaim (ftype (function ((or symbol class) &rest t) |ENode|)
                 mn)
          (ftype (function ((or symbol class) (or null source-span |ENode|) &rest t)
                           |ENode|)
@@ -431,11 +433,11 @@ List nodes will be assumed to be sequences."
   ;; declare constant foldability
   (sb-c:defknown mn
     ((or symbol class) &rest t)
-    t
+    |ENode|
     (sb-c:unsafe sb-c:unwind sb-c:foldable))
   (sb-c:defknown mnp
     ((or symbol class) (or null source-span |ENode|) &rest t)
-    t
+    |ENode|
     (sb-c:unsafe sb-c:unwind sb-c:foldable))
   (sb-c:defknown node-quote
     (t)

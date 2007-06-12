@@ -5,16 +5,16 @@
   (:use :cl :asdf))
 (in-package :e.antlr-parser-system)
 
-;; XXX see if we can make antlr-source-file use java-source-file
+;; XXX see if we can make antlr-source-file use antlr-java-source-file
 
-(defclass java-source-file (source-file) 
+(defclass antlr-java-source-file (java-source-file) 
   ())
 
 (defclass antlr-source-file (source-file) 
   ((output-names :initarg :output-names :reader antlr-source-file-output-names)))
 
 (defmethod source-file-type ((c antlr-source-file) (s module)) "g")
-(defmethod source-file-type ((c java-source-file) (s module)) "java")
+(defmethod source-file-type ((c antlr-java-source-file) (s module)) "java")
 
 (defmethod output-files ((operation compile-op) (c antlr-source-file))
   (loop for (name type) in (antlr-source-file-output-names c) 
@@ -30,7 +30,7 @@
                            :type "class"
                            :version nil)))
 
-(defmethod output-files ((operation compile-op) (c java-source-file))
+(defmethod output-files ((operation compile-op) (c antlr-java-source-file))
   (list (make-pathname :defaults (component-pathname c)
                        :type "class"
                        :version nil)))
@@ -79,7 +79,7 @@
            (error 'compile-failed :operation op :component component))))
       ())))
 
-(defmethod perform ((op compile-op) (component java-source-file))
+(defmethod perform ((op compile-op) (component antlr-java-source-file))
   (let* ((code (run-shell-command "javac -classpath ~S:~S ~S"
                                   (namestring e.knot::*antlr-jar*)
                                   (namestring (make-pathname
@@ -100,7 +100,7 @@
   "no-op since the loading isn't done to this process"
   (values))
 
-(defmethod perform ((op load-op) (component java-source-file))
+(defmethod perform ((op load-op) (component antlr-java-source-file))
   "no-op since the loading isn't done to this process"
   (values))
 
@@ -110,11 +110,11 @@
   :depends-on (#+(or) :e-on-cl)
   :pathname (merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
   :components
-    ((:java-source-file "ExtAST")
-     (:java-source-file "ExtToken"
-                        :depends-on ("e"))
-     (:java-source-file "CountingCharBuffer")
-     (:java-source-file "CountingLexerSharedInputState")
+    ((:antlr-java-source-file "ExtAST")
+     (:antlr-java-source-file "ExtToken"
+                              :depends-on ("e"))
+     (:antlr-java-source-file "CountingCharBuffer")
+     (:antlr-java-source-file "CountingLexerSharedInputState")
      (:antlr-source-file "e"
                          :output-names (("EParser" "java") 
                                         ("ETokenTypes" "txt")

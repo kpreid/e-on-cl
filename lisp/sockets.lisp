@@ -47,10 +47,7 @@
     (e. (make-fd-ref (socket-file-descriptor this) :close nil) |write| vector error-ejector start end))
   (:|read| (this max-octets error-ejector eof-ejector)
     "Read up to 'max-octets' currently available octets from the socket, and return them as a ConstList."
-    (e. (make-fd-ref (socket-file-descriptor this) :close nil) |read| max-octets error-ejector eof-ejector))
-  
-  (:|getFD| (this) (socket-file-descriptor this))
-  )
+    (e. (make-fd-ref (socket-file-descriptor this) :close nil) |read| max-octets error-ejector eof-ejector)))
 
 #+sbcl
 (defun errno-to-condition (errno)
@@ -232,7 +229,8 @@
 (defun ip4-number-to-vector (ip4-number)
   (coerce 
     (nreverse 
-      (loop for x = ip4-number then (ash x -8) 
+      (loop repeat 4
+            for x = ip4-number then (ash x -8) 
             collect (logand x #xFF))) 
     'vector))
 
@@ -340,7 +338,8 @@
              (:|getFD| () (or opt-fd (error "this fd-ref has been closed.")))
        
              (:|shutdown| (direction ejector)
-               ;; XXX this is wrong
+               (declare (ignore direction ejector))
+               ;; XXX this is wrong; the clients need to know when to use close vs. shutdown, and this should attempt shutdown and fail
                (funcall do-close)
                nil)
        

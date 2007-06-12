@@ -650,11 +650,6 @@ If there is no current vat at initialization time, captures the current vat at t
            :reader eval-param-desc-form))
     (:documentation "Gimmick so that a CL object's alleged type's parameter guards remain late-bound and don't need to be put into compiled files."))
   
-  ;; We aren't equipped to make eval-param-descs have a different E 
-  ;; selfless-identity, so we make them look just like ordinary param-descs
-  ;; instead.
-  (def-class-opaque param-desc)
-  
   (defmethod param-desc-opt-guard ((this eval-param-desc))
     (let ((guard-specifier (eval (eval-param-desc-form this))))
       (typecase guard-specifier
@@ -697,6 +692,11 @@ If there is no current vat at initialization time, captures the current vat at t
           (setf (first (gethash (message-desc-mverb md) seen)) md)
           (push md out)))
       (coerce (reverse out) 'vector))))
+
+;; We aren't equipped to make eval-param-descs have a different E 
+;; selfless-identity, so we make them look just like ordinary param-descs
+;; instead.
+(def-class-opaque param-desc)
 
 ; --- E objects ---
 
@@ -1389,17 +1389,15 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 ; --- guards ---
 
-(locally
-  (declare (optimize (speed 3) (space 3)))
-  (defglobal +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
-      (:stamped +deep-frozen-stamp+
-       :stamped +thread-sharable-stamp+)
-    (:|__printOn| ((tw +the-text-writer-guard+)) ; XXX move to e.syntax?
-      (e. tw |print| "void"))
-    (:|coerce| (specimen opt-ejector)
-      (declare (ignore specimen opt-ejector))
-      nil))))
-
+(defglobal +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
+    (:stamped +deep-frozen-stamp+
+     :stamped +thread-sharable-stamp+)
+  (:|__printOn| ((tw +the-text-writer-guard+)) ; XXX move to e.syntax?
+    (e. tw |print| "void"))
+  (:|coerce| (specimen opt-ejector)
+    (declare (ignore specimen opt-ejector))
+    nil)))
+ 
 ; Simple native-type Guards
 (defclass cl-type-guard () 
   ((ts :initarg :type-specifier
