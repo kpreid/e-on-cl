@@ -417,7 +417,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     ; optimization
     (subseq this start end))
   (:|with| (vector elem)
-    (concatenate 'vector vector (list elem)))
+    (make-instance 'vector-with-node :base vector :element elem))
   (:|snapshot/0| 'identity) ; optimization
 
   (:|printOn| (this left sep right (tw +the-text-writer-guard+))
@@ -444,6 +444,26 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defmethod e-call-match (fail (rec vector) mverb &rest args)
   (declare (ignore fail))
   (apply #'sugar-cache-call rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
+
+(defclass vector-with-node (with-node)
+  ((element :initarg :element :reader %vector-with-element)))
+
+(def-vtable vector-with-node
+  (:|with| (node elem)
+    (make-instance 'vector-with-node :base node :element elem)))
+
+(defmethod evaluate-lazy-ref ((node vector-with-node))
+  (let* ((size (loop for x = node then (with-node-base x)
+                     for n from 0
+                     while (typep x 'vector-with-node)
+                     finally (return (+ n (length x)))))
+         (vector (make-array size)))
+    (loop for x = node then (with-node-base x)
+          for i downfrom (1- size)
+          while (typep x 'vector-with-node)
+          do (setf (aref vector i) (%vector-with-element x))
+          finally (replace vector x))
+    vector))
 
 (defobject +the-make-list+ "org.erights.e.elib.tables.makeConstList"
     (:stamped +deep-frozen-stamp+

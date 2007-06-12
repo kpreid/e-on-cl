@@ -480,16 +480,10 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
   (:|snapshot/0| 'identity)
   (:|readOnly/0| 'identity)
   
-  ; The folowing are methods equally applicable to non-const maps, but all of them are currently implemented in E.
+  ; The folowing are methods equally applicable to non-const maps, but all such are currently implemented in E, and so can't inherit these.
   
-  ; xxx with is generally used repeatedly: have a special efficiently-accumulating map
   (:|with| (map new-key new-value)
-    (e. +the-make-const-map+ |fromIteratable|
-      (e-lambda "org.cubik.cle.prim.mapWithIterator" () (:|iterate| (f)
-        (e. map |iterate| f)
-        (efuncall f new-key new-value)
-        nil))
-      +e-false+))
+    (make-instance 'const-map-with-node :base map :key new-key :value new-value))
 
   ; xxx using more complicated and slow version to imitate Java-E's ordering behavior
   (:|without| (map key-to-remove)
@@ -592,6 +586,36 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
 (def-class-opaque const-map)
+
+(defclass const-map-with-node (with-node)
+  ;; NOTE: using accumulation nodes for ConstMaps changes the GC semantics,
+  ;; as the old values of overridden keys will be retained until the map is
+  ;; collapsed.
+  ((key :initarg :key :reader %const-map-with-key)
+   (value :initarg :value :reader %const-map-with-value)))
+
+(def-vtable const-map-with-node
+  (:|with| (node key value)
+    (make-instance 'const-map-with-node :base node :key key :value value)))
+
+(defmethod evaluate-lazy-ref ((node const-map-with-node))
+  ;; unlike vector-with-nodes, these can have overlapping keys, and so the
+  ;; result can be smaller than the input, so we don't preallocate the result
+  (multiple-value-bind (original pairs)
+      (loop with pairs = ()
+            for x = node then (with-node-base x)
+            while (typep x 'const-map-with-node)
+            do (push (cons (%const-map-with-key x)
+                           (%const-map-with-value x))
+                     pairs)
+            finally (return (values x pairs)))
+    (e. +the-make-const-map+ |fromIteratable|
+      (e-lambda "org.cubik.cle.prim.mapWithIterator" () (:|iterate| (f)
+        (e. original |iterate| f)
+        (loop for (key . value) in pairs
+              do (efuncall f key value))
+        nil))
+      +e-false+)))
 
 
 (defglobal +the-map-guard+ (type-specifier-to-guard 'const-map))

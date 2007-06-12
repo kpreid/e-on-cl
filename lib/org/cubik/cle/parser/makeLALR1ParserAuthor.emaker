@@ -104,18 +104,18 @@ def makeLALR1ParserAuthor implements ExitViaHere { # implements DeepFrozen
           yaccMakeGrammar(
             <kw:NAME>, makeSymbol(label), 
             <kw:START-SYMBOL>, convertSymbol(startSymbol), 
-            <kw:TERMINALS>, clCoerce(terminalsSet.getElements(), l`cl:list`),
-            <kw:PRECEDENCE>, clCoerce(mapV(convertSymbol, precedence), l`cl:list`),
+            <kw:TERMINALS>, clCoerce(terminalsSet.getElements() :List, l`cl:list`),
+            <kw:PRECEDENCE>, clCoerce(mapV(convertSymbol, precedence) :List, l`cl:list`),
             <kw:PRODUCTIONS>, clCoerce(accum [] for [fs, derives] + actionSection in productions {
               _.with(yaccMakeProduction(
                        convertSymbol(fs),
-                       clCoerce(mapV(convertSymbol, derives), l`cl:list`),
+                       clCoerce(mapV(convertSymbol, derives) :List, l`cl:list`),
                        <kw:ACTION>,
                        switch (actionSection) {
                          match [action] { eToLispFunction(action) }
                          match [] { fdefinition(l`cl:vector`) }
                        }))
-             }, l`cl:list`)))
+             } :List, l`cl:list`)))
         
         def parser implements DeepFrozenStamp {
           to __printOn(tw :TextWriter) {

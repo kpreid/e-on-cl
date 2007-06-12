@@ -44,6 +44,8 @@
             :depends-on ("runner" "queues"))
      (:file "elib"
             :depends-on ("runner" "compile-options" "util" "base" "packages"))
+     (:file "lazy"
+            :depends-on ("elib"))
      (:file "sugar" 
             ; convenience macros for E semantics
             :depends-on ("elib"))
@@ -58,11 +60,12 @@
             ; Equalizer, hashing, etc
             :depends-on ("elib" "sugar"))
      (:file "elib-values"
-            :depends-on ("elib" "sugar"))
+            :depends-on ("elib" "sugar" "lazy"))
      (:file "tables2"
             :depends-on ("sugar" 
                          "same" ; genhash's register-hash-function needs the values #'same-hash #'samep
-                         "guard")) 
+                         "guard"
+                         "lazy")) 
      (:file "print"
             ; TextWriter
             :depends-on ("elib" "sugar"))

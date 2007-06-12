@@ -178,6 +178,10 @@
     :guard-to-type-specifier
     :standard-coerce
     
+    :lazy-ref 
+    :evaluate-lazy-ref
+    :with-node :with-node-base
+    
     :+the-void-guard+
     :+the-any-guard+
     :+the-text-writer-guard+
