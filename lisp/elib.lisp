@@ -400,52 +400,57 @@ If there is no current vat at initialization time, captures the current vat at t
 ;;;; - forwarding-ref -
 
 (defclass forwarding-ref (ref)
-  ((target :accessor forwarding-ref-target))
-  (:documentation "Unconditionally forwards to another reference, whether a REF or not."))
+  ()
+  (:documentation "Unconditionally forwards to another reference (existant or computed), whether a REF or not."))
 
-(defmethod print-object ((ref forwarding-ref) stream)
-  (if *print-readably*
-    (error 'print-not-readable :object ref)
-    (progn
-      (print-unreadable-object (ref stream :type t :identity t))
-      (format stream ":~W" (forwarding-ref-target ref)))))
-
-(defmethod shared-initialize ((ref forwarding-ref) slot-names &key (target nil target-supplied-p) &allow-other-keys)
-  (assert target-supplied-p)
-  (setf (forwarding-ref-target ref) target)
-  (call-next-method))
+(defclass resolved-ref (forwarding-ref)
+  ((target :accessor resolved-ref-target))
+  (:documentation "Forwards to an existing reference."))
 
 (defmethod weak-when-more-resolved ((ref forwarding-ref) weak-reactor action)
   (weak-when-more-resolved (slot-value ref 'target) weak-reactor action))
 
-(defmethod (setf forwarding-ref-target) :after (new-target (ref forwarding-ref))
+(defmethod ref-state ((ref forwarding-ref))
+  (ref-state (ref-shorten ref)))
+
+(defmethod ref-opt-sealed-dispatch ((ref forwarding-ref) brand)
+  (ref-opt-sealed-dispatch (ref-shorten ref) brand))
+
+(defmethod e-call-dispatch ((ref forwarding-ref) mverb &rest args)
+  (apply #'e-call-dispatch (ref-shorten ref) mverb args))
+
+(defmethod e-send-dispatch ((ref forwarding-ref) mverb &rest args)
+  (apply #'e-send-dispatch (ref-shorten ref) mverb args))
+
+(defmethod e-send-only-dispatch ((ref forwarding-ref) mverb &rest args)
+  (apply #'e-send-only-dispatch (ref-shorten ref) mverb args))
+
+;;; - resolved-ref -
+
+(defmethod print-object ((ref resolved-ref) stream)
+  (if *print-readably*
+    (error 'print-not-readable :object ref)
+    (progn
+      (print-unreadable-object (ref stream :type t :identity t))
+      (format stream ":~W" (resolved-ref-target ref)))))
+
+(defmethod shared-initialize ((ref resolved-ref) slot-names &key (target nil target-supplied-p) &allow-other-keys)
+  (assert target-supplied-p)
+  (setf (resolved-ref-target ref) target)
+  (call-next-method))
+
+(defmethod (setf resolved-ref-target) :after (new-target (ref resolved-ref))
   (weak-when-more-resolved
     new-target
     ref
     (lambda (ref)
-      #+(or) (warn "got to forwarding-ref shortener for ~S" ref)
+      #+(or) (warn "got to resolved-ref shortener for ~S" ref)
       (ref-shorten ref))))
 
-; XXX we could eliminate the need for these individual forwarders by having the methods specialized on 'ref forward to the ref-shortening of this ref if it's distinct
-
-(defmethod %ref-shorten ((ref forwarding-ref))
+(defmethod %ref-shorten ((ref resolved-ref))
   ; NOTE: this is also implemented in REF-SHORTEN
-  (setf (forwarding-ref-target ref) 
-        (ref-shorten (forwarding-ref-target ref))))
-
-(defmethod ref-state ((ref forwarding-ref))
-  (ref-state (forwarding-ref-target ref)))
-(defmethod ref-opt-sealed-dispatch ((ref forwarding-ref) brand)
-  (ref-opt-sealed-dispatch (forwarding-ref-target ref) brand))
-
-(defmethod e-call-dispatch ((ref forwarding-ref) mverb &rest args)
-  (apply #'e-call-dispatch (forwarding-ref-target ref) mverb args))
-
-(defmethod e-send-dispatch ((ref forwarding-ref) mverb &rest args)
-  (apply #'e-send-dispatch (forwarding-ref-target ref) mverb args))
-
-(defmethod e-send-only-dispatch ((ref forwarding-ref) mverb &rest args)
-  (apply #'e-send-only-dispatch (forwarding-ref-target ref) mverb args))
+  (setf (resolved-ref-target ref) 
+        (ref-shorten (resolved-ref-target ref))))
 
 ; - vat -
 
@@ -564,7 +569,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defun reffify-args (args)
   "See *EXERCISE-REFFINESS*."
-  (mapcar (lambda (x) (make-instance 'forwarding-ref :target x)) args))
+  (mapcar (lambda (x) (make-instance 'resolved-ref :target x)) args))
 
 (declaim (inline sugar-cache-get))
 (defun sugar-cache-get (eq-key fqn)
@@ -1489,9 +1494,9 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (incf (gethash (class-of x) *instrument-ref-shorten-kinds* 0))
   (typecase x
     ((not ref) x)
-    (forwarding-ref
-      (setf (forwarding-ref-target x) 
-            (ref-shorten (forwarding-ref-target x))))
+    (resolved-ref
+      (setf (resolved-ref-target x) 
+            (ref-shorten (resolved-ref-target x))))
     (t
       (%ref-shorten x))))
 
@@ -1509,7 +1514,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (with-ref-transition-invariants (ref)
     (if (eq new-target ref)
       (change-class ref 'unconnected-ref :problem (make-condition 'vicious-cycle-error))
-      (change-class ref 'forwarding-ref :target new-target)))
+      (change-class ref 'resolved-ref :target new-target)))
   
   ; after change-class, the buffer has been dropped by the ref
   ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet

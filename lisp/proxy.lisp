@@ -111,7 +111,7 @@
 (defmethod weak-when-more-resolved ((ref proxy-ref) weak-reactor action)
   (declare (ignore weak-reactor action))
   ;; XXX implement this to invoke the handler. until then, multivat 
-  ;; tail-recursive loops may leak forwarding-refs.
+  ;; tail-recursive loops may leak resolved-refs.
   (values))
 
 
@@ -135,7 +135,7 @@
 
 (defmethod %resolve-proxy ((proxy remote-promise) resolution)
   "If we're a remote promise, then we can just become a forwarder."
-  (change-class proxy 'forwarding-ref :target resolution))
+  (change-class proxy 'resolved-ref :target resolution))
 
 
 (defmethod ref-opt-sealed-dispatch ((ref disconnected-ref) brand)

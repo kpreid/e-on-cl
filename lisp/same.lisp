@@ -187,7 +187,7 @@
                   (setf left (ref-shorten left))
                   (setf right (ref-shorten right))
                   (when (eql left right)
-                    ; Equality past resolved forwarding refs. At this
+                    ; Equality past resolved refs. At this
                     ; point, we have caught all same Selfish objects.
                     (equalizer-trace "exit opt-same ref-eql")
                     (return +e-true+))

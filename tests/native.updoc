@@ -99,7 +99,7 @@ Conses
   ? cons(1, cons(2, 3))
   # value: <(1, 2 . 3)>
 
-  testing forwarding-ref ignoring
+  testing resolved-ref ignoring
   ? def np; bind np := null
   > cons(1, np)
   # value: <(1)>

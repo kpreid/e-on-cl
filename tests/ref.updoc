@@ -266,7 +266,7 @@ Checking that a chain of promises does not accumulate a chain of resolved forwar
   
   checking our assumption
   ? lisp["CL", "TYPE-OF"].getFunction()(p)
-  # value: FORWARDING-REF
+  # value: RESOLVED-REF
   
   checking the actual desired condition
   ? lisp["CL", "TYPE-OF"].getFunction()(

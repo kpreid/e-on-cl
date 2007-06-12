@@ -21,7 +21,7 @@
 
 (deftest shorten-guard
   (guard-to-type-specifier
-    (make-instance 'e.elib::forwarding-ref :target
+    (make-instance 'e.elib::resolved-ref :target
       (type-specifier-to-guard 'integer)))
   integer)
 
@@ -83,7 +83,7 @@
   '(vector character) "ConstList[char]")
 
 (deftest observable-type-of-ref
-  (observable-type-of (make-instance 'e.elib::forwarding-ref :target 1))
+  (observable-type-of (make-instance 'e.elib::resolved-ref :target 1))
   integer)
 
 (deftest string-error.ok
