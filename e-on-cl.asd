@@ -42,13 +42,20 @@
      (:file "serve-event"
             ; serve-event-based runner (planned to be sbcl/cmucl only)
             :depends-on ("runner" "queues"))
+     (:file "ref"
+            ; ref protocol and basic ref classes
+            :depends-on ("util" "base" "packages"))
      (:file "elib"
-            :depends-on ("runner" "compile-options" "util" "base" "packages"))
+            ; def-vtable, e-lambda, stamps, type-descs, misc.
+            :depends-on ("ref" "compile-options" "util" "base" "packages"))
+     (:file "vat"
+            ; vats, turns, e-send-dispatch on near refs
+            :depends-on ("runner" "ref" "util" "packages"))
      (:file "lazy"
-            :depends-on ("elib"))
+            :depends-on ("ref"))
      (:file "sugar" 
-            ; convenience macros for E semantics
-            :depends-on ("elib"))
+            ; convenience operators for E semantics
+            :depends-on ("ref" "elib" "vat"))
      (:file "guard"
             :depends-on ("elib" "sugar"))
      (:file "elib-guts" 
