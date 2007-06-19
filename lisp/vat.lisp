@@ -41,7 +41,7 @@
    (sugar-cache :initform (make-hash-table)
                 :type hash-table
                 :reader sugar-cache
-                :documentation "Tentative: For looking up objects which are sugar-parents for objects shared between vats.")
+                :documentation "Experimental: For looking up objects which are sugar-delegates for objects shared between vats.")
    (e.rune::incorporated-files :initform nil
                                :type list
                                :accessor e.rune::incorporated-files)
@@ -127,7 +127,7 @@
   (apply #'e-call-dispatch
     (sugar-cache-get key fqn)
     (multiple-value-bind (verb arity) (unmangle-verb mverb)
-      (mangle-verb verb (1+ arity)))
+      (mangle-verb (concatenate 'string "instance_" verb) (1+ arity)))
     rec
     args))
 

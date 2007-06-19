@@ -110,7 +110,7 @@ def makeFlexListShell implements DeepFrozen, ExitViaHere {
         }
       }
       
-      match [v,a] { E.call(listSugar, v, [self] + a) }
+      match [v,a] { E.call(listSugar, "instance_" + v, [self] + a) }
     }
     return flexList
   }

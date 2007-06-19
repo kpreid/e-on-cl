@@ -56,7 +56,7 @@ def makeFlexMapShell implements DeepFrozen, ExitViaHere {
         }
       }
       
-      match [v,a] { E.call(mapSugar, v, [flexMap] + a) }
+      match [v,a] { E.call(mapSugar, "instance_" + v, [flexMap] + a) }
     }
     return flexMap
   }

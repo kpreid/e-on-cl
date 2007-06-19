@@ -31,7 +31,7 @@ def makeReadOnlyMap implements EventuallyDeepFrozen {
       method getKeys() { rwImpl.getKeys() }
       method getValues() { rwImpl.getValues() }
       method snapshot() { rwImpl.snapshot() }
-      match [v,a] { E.call(mapSugar, v, [roMap] + a) }
+      match [v,a] { E.call(mapSugar, "instance_" + v, [roMap] + a) }
     }
   }
 }
@@ -47,24 +47,24 @@ bind mapSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
     }
   }
   
-  method keyType(self) { childResponsibility(self, "keyType/0") }
-  method valueType(self) { childResponsibility(self, "valueType/0")}
+  method instance_keyType(self) { childResponsibility(self, "keyType/0") }
+  method instance_valueType(self) { childResponsibility(self, "valueType/0")}
 
-  method size(self) { childResponsibility(self, "size/0") }
-  method fetch(self, key, absentThunk) { childResponsibility(self, "fetch/2") }
-  method getKeys(self) { childResponsibility(self, "getKeys/0") }
-  method getPair(self) { childResponsibility(self, "getPair/0") }
+  method instance_size(self) { childResponsibility(self, "size/0") }
+  method instance_fetch(self, key, absentThunk) { childResponsibility(self, "fetch/2") }
+  method instance_getKeys(self) { childResponsibility(self, "getKeys/0") }
+  method instance_getPair(self) { childResponsibility(self, "getPair/0") }
 
-  method get(self, key) { self.fetch(key, fn{ throw(E.toQuote(key) + " not found") }) }
-  to maps(self, key) :boolean { self.fetch(key, fn{ return false }); return true }
+  method instance_get(self, key) { self.fetch(key, fn{ throw(E.toQuote(key) + " not found") }) }
+  to instance_maps(self, key) :boolean { self.fetch(key, fn{ return false }); return true }
   
-  to iterate(self, assocFunc) {
+  to instance_iterate(self, assocFunc) {
     for key in self.getKeys() {
       assocFunc(key, self[key])
     }
   }
   
-  to diverge(self, keyGuard, valueGuard) {
+  to instance_diverge(self, keyGuard, valueGuard) {
     def fm := makeFlexMap.fromTypes(keyGuard, valueGuard)
     escape duplicate {
       fm.putAll(self, true, duplicate)
@@ -75,16 +75,16 @@ bind mapSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
     }
     return fm
   }
-  method diverge(self) { self.diverge(any, any) }
-  method snapshot(self) {
+  method instance_diverge(self) { self.diverge(any, any) }
+  method instance_snapshot(self) {
     def [keys, values] := self.getPair()
     __makeMap.fromColumns(keys, values)
   }
-  to readOnly(self) {
+  to instance_readOnly(self) {
     return makeReadOnlyMap(self)
   }
   
-  to printOn(self, openS, mapS, sepS, closeS, out :TextWriter) {
+  to instance_printOn(self, openS, mapS, sepS, closeS, out :TextWriter) {
     out.write(openS)
     var first := true
     for key => value in self {
