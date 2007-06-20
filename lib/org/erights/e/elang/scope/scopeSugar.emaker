@@ -1,0 +1,60 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def sugarRoot := <import:org.cubik.cle.sugarRoot>
+
+def childResponsibility(self, mverb) implements DeepFrozen {
+  throw(E.toQuote(self) + " failed to implement " + mverb)
+}
+
+def scopeSugar extends sugarRoot implements DeepFrozen, ExitViaHere {
+  method instance_fetchSlot(self, _) { childResponsibility(self, "fetchSlot/1") }
+  method instance_getFQNPrefix(self) { childResponsibility(self, "getFQNPrefix/0") }
+  method instance_iterate(self, _) { childResponsibility(self, "iterate/1") }
+  method instance_nestOuter(self) { childResponsibility(self, "nestOuter/0") }
+  method instance_or(self, _) { childResponsibility(self, "or/1") }
+  method instance_withPrefix(self, _) { childResponsibility(self, "withPrefix/1") }
+  method instance_withSlot(self, _, _) { childResponsibility(self, "withSlot/2") }
+  method instance_without(self, _) { childResponsibility(self, "without/1") }
+
+  method instance_fetch(self, noun, absentThunk) {
+    self.fetchSlot(noun, absentThunk).getValue()
+  }
+
+  /** Return the value of this scope's slot for the given noun string, or throw if it has no slot. */
+  method instance_get(self, noun :String) { 
+    self.getSlot(noun).getValue()
+  }
+
+  /** Return this scope's slot for the given noun string, or throw if it has no slot. */
+  method instance_getSlot(self, noun :String) { 
+    self.fetchSlot(noun, fn{ throw("binding not in scope: " + E.toQuote(noun)) })
+  }
+  
+  /** Return a ConstMap containing the bindings in this scope, as \"&\" + noun => slot. */
+  method instance_getState(self) { 
+    __makeMap.fromIteratable(self, true)
+  }
+  
+  /** Return whether this scope has a slot for the given noun string. */
+  to instance_maps(self, noun) :boolean { 
+    self.fetchSlot(noun, fn{ return false })
+    return true
+  }
+  
+  /** Set the value of this scope's slot for the given noun string, or throw if it has no slot. */
+  method instance_put(self, noun, value) {
+    self.getSlot(noun).setValue(value)
+  }
+
+  /** Return a scope which has an immutable slot for 'value' bound to 'noun', and this scope's other bindings and FQN prefix. */
+  method instance_with(self, noun, value) {
+    self.withSlot(noun, __makeFinalSlot(value))
+  }
+}
+
+# XXX this file is in need of tests - it is currently only tested indirectly by its use in the standard maps
+

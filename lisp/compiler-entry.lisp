@@ -149,7 +149,7 @@
                  (lambda (noun)
                    (escape-bind (fail)
                        (let* ((slot (if opt-scope
-                                      (e. opt-scope |getSlot| noun)
+                                      (e. opt-scope |fetchSlot| noun fail)
                                       (efuncall fail)))
                               (value (progn
                                        (unless (typep slot 'e-simple-slot)
@@ -195,7 +195,7 @@
       (load file :verbose nil :print nil))
     (during ("execute ~A" (file-namestring file))
       (destructuring-bind (names function) *efasl-result*
-        (apply function scope (mapcar (lambda (n) (e. scope |getSlot| n)) names))))))
+        (apply function scope (mapcar (lambda (n) (e. scope |fetchSlot| n +the-thrower+)) names))))))
 
 ;;; --- ASDF-integrated compilation ---
 

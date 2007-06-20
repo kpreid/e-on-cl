@@ -163,7 +163,7 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
 (defun e-import (fqn)
   "Retrieve an object for the given FQN in the current vat's importer; in E notation, <import>[fqn]."
   (e-coercef fqn 'string)
-  (eelt (eelt (vat-safe-scope *vat*) "import__uriGetter")
+  (eelt (e. (vat-safe-scope *vat*) |fetch| "import__uriGetter" +the-thrower+)
         fqn))
 
 ()

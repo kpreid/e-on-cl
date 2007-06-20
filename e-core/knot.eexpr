@@ -45,7 +45,7 @@ def makePathLoader implements DeepFrozenStamp {
       to fetch(fqn :String, absentThunk) {
         return \
           if (fqn.run(fqn.size() - 2, fqn.size()) == ".*") {
-            getSafeScope()["import__uriGetter"] \
+            getSafeScope().fetch("import__uriGetter", throw) \
               ["org.erights.e.elang.interp.makePackageLoader"] \
                 .run(loader, name + ":", fqn)
           } else {

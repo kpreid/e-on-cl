@@ -85,8 +85,6 @@
                       for value across values
                       collect (list (e-coerce key 'string) value)))))
 
-; XXX reduce code duplication among get/fetch methods
-
 (declaim (inline copy-hash-table-entries))
 (defun copy-hash-table-entries (source destination &key (test (constantly t)))
   (loop for noun being each hash-key of source using (hash-value slot) 
@@ -133,30 +131,20 @@
       :fqn-prefix        (scope-fqn-prefix inner)
       :slot-table        (overlay 'slot-table)
       :local-definitions (overlay 'local-definitions))))
-  (:|maps| (this (noun 'string))
-    "Return whether this scope has a slot for the given noun string."
-    (as-e-boolean (nth-value 1 (gethash noun (slot-table this)))))
-  (:|get| (scope noun)
-    "Return the value of this scope's slot for the given noun string, or throw if it has no slot."
-    (e. (e. scope |getSlot| noun) |getValue|))
-  (:|getSlot| (this (noun 'string))
-    "Return this scope's slot for the given noun string, or throw if it has no slot."
+  (:|fetchSlot| (this (noun 'string) absent-thunk)
+    "Return this scope's slot for the given noun string, or the result of absent-thunk if it has no slot."
     (multiple-value-bind (slot present) (gethash noun (slot-table this))
       (if present
         slot
-        (error "binding not in scope: ~A" (e-quote noun)))))
-  (:|fetch| (this (noun 'string) absent-thunk)
-    "Return the value of this scope's slot for the given noun string, or the result of absent-thunk if it has no slot."
-    (multiple-value-bind (slot present) (gethash noun (slot-table this))
-      (if present
-        (e. slot |getValue|)
         (efuncall absent-thunk))))
-  (:|put| (this noun value)
-    "Set the value of this scope's slot for the given noun string, or throw if it has no slot."
-    (e. (e. this |getSlot| noun) |setValue| value))
-  (:|getState| (this)
-    "Return a ConstMap containing the bindings in this scope, as \"&\" + noun => slot."
-    (e. +the-make-const-map+ |fromIteratable| this +e-true+))
+  (:|fetch| (scope (noun 'string) absent-thunk)
+    ;; nonprimitive; could be sugar, except that it's used by the knot's
+    ;; loader setup before there is a vat for sugar-cache-call to use
+    "Return this scope's slot for the given noun string, or throw if it has no slot."
+    (block nil
+      (e. (e. scope |fetchSlot| noun 
+            (efun () (return (efuncall absent-thunk))))
+          |getValue|)))
   (:|iterate| (scope afunc)
     "Iterate over the bindings in this scope, as \"&\" + noun => slot."
     (let ((slot-table (slot-table scope)))
@@ -169,9 +157,6 @@
       :fqn-prefix (scope-fqn-prefix scope)
       :slot-table (slot-table scope)
       :local-definitions (make-hash-table :test #'equal)))
-  (:|with| (scope noun value)
-    "Return a scope which has an immutable slot for 'value' bound to 'noun', and this scope's other bindings and FQN prefix."
-    (e. scope |withSlot| noun (make-instance 'e-simple-slot :value value)))
   (:|withSlot| (scope (new-noun 'string) new-slot)
     "Return a scope which has 'new-slot' bound to 'new-noun', and this scope's other bindings and FQN prefix."
     (when (gethash new-noun (local-definitions scope))
@@ -218,6 +203,10 @@
               :test (lambda (noun) (string/= noun removed-noun)))
             new-table)))))
 
+(defmethod e-call-match (fail (rec scope) mverb &rest args)
+  (declare (ignore fail))
+  (apply #'sugar-cache-call rec mverb 'scope "org.erights.e.elang.scope.scopeSugar" args))
+
 ;;; --- ENode/scope consistency verification ---
 
 ;; XXX once we have explicit Kernel-E verification, it should check for *internal* var/:= consistency, which this can't catch.
@@ -226,12 +215,13 @@
 (defun require-node-fits-scope (node scope ejector)
   (let ((ss (e. node |staticScope|)))
     (e. (e. ss |namesUsed|) |iterate| (efun (k v)
-      (unless (e-is-true (e. scope |maps| k))
+      (e. scope |fetchSlot| k (efun ()
         ;; XXX message to be revised
-        (ejerror ejector "undefined variable: ~A~/e.tables:~span/" k (e. v |getOptSpan|)))))
+        (ejerror ejector "undefined variable: ~A~/e.tables:~span/" k (e. v |getOptSpan|))))
+      nil))
     (e. (e. ss |namesSet|) |iterate| (efun (k v)
       ;; XXX isFinal is possibly too loose a check. review.
-      (when (e-is-true (e. (e. scope |getSlot| k) |isFinal|))
+      (when (e-is-true (e. (e. scope |fetchSlot| k +the-thrower+) |isFinal|))
         ;; XXX message to be revised
         (ejerror ejector "~A is not an assignable variable~/e.tables:~span/" k (e. v |getOptSpan|)))))))
 

@@ -137,11 +137,11 @@
 (defconstant +compile-emakers+ #+clisp nil #-clisp t)
 
 (defun scope-for-fqn (scope fqn)
-  (let* ((trace (make-tracer :label fqn))
+  (let* ((&trace (make-instance 'e-simple-slot :value (make-tracer :label fqn)))
          (scope (e. scope |nestOuter|))
          (scope (e. scope |withPrefix| (concatenate 'string fqn "$")))
-         (scope (e. scope |with| "trace" trace))
-         (scope (e. scope |with| "traceln" trace))
+         (scope (e. scope |withSlot| "trace" &trace))
+         (scope (e. scope |withSlot| "traceln" &trace))
          (scope (e. scope |nestOuter|)))
     scope))
 
@@ -524,12 +524,12 @@
             (let* ((exit-stamp (e-lambda "org.cubik.cle.prim.ExitViaHereStamp"
                                    (:stamped +deep-frozen-stamp+)
                                  (:|audit/1| (constantly +e-true+))))
-                   (scope (e. (vat-safe-scope *vat*) |with| "ExitViaHere" exit-stamp))
+                   (scope (e. (vat-safe-scope *vat*) |withSlot| "ExitViaHere" (make-instance 'e-simple-slot :value exit-stamp)))
                    (result (loop for f in load-functions
                                  do (block continue
                                        (return (funcall f fqn (efun () (return-from continue)) scope)))
                                  finally (efuncall absent-thunk))))
-              (when (e-is-true (e. (eelt (vat-safe-scope *vat*) "DeepFrozen") |isDeepFrozen| result))
+              (when (e-is-true (e. (e. (vat-safe-scope *vat*) |fetch| "DeepFrozen" +the-thrower+) |isDeepFrozen| result))
                 (setf (gethash fqn deep-frozen-cache) result)
                 (when (and (approvedp exit-stamp result)
                            (sameness-is-eq-p result))
@@ -576,7 +576,7 @@
     (as-e-boolean (approvedp +standard-graph-exit-stamp+ ref))))
 
 (defglobal +shared-safe-scope+
-  (labels ((prim (name) (e. +shared-safe-loader+ |get| name)))
+  (labels ((prim (name) (e. +shared-safe-loader+ |fetch| name +the-thrower+)))
     (make-scope "__shared"
       `(("shared__uriGetter"  ,+sharable-importer+)
       
@@ -636,7 +636,7 @@
   (e. (make-scope prefix desc) |or| base))
 
 (defun make-safe-scope (&optional (fqn-prefix "__safe$") (roots (default-safe-scope-roots))
-    &aux (&<import> (e. roots |getSlot| "import__uriGetter")))
+    &aux (&<import> (e. roots |fetchSlot| "import__uriGetter" +the-thrower+)))
   (with-result-promise (safe-scope-vow)
     (labels ((typical-lazy (source)
                (make-lazy-eval-slot safe-scope-vow source))
