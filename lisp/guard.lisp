@@ -70,26 +70,12 @@
   (lambda (a)   (sxhash (guard-to-type-specifier a))))
 
 (defmethod e-call-match (fail (rec cl-type-guard) mverb &rest args)
-  (let ((ts (guard-to-type-specifier rec)))
-    (if (eql ts 't) ; XXX bad OO
-      (cond
-        ((and (not (eql mverb :|get/0|))
-              (eql mverb (e-util:mangle-verb "get" (length args))))
-          (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (coerce args 'vector)))
-        ((eql mverb :|of/1|)
-          (efuncall (e-import "org.erights.e.elib.slot.makeUnionGuard") (first args)))
-        ((eql mverb :|match__of/1/2|)
-          (e. (e-import "org.erights.e.elib.slot.makeUnionGuard")
-              |match__run/1|
-              (first args)
-              (second args)))
-        ((and (eql mverb :|__respondsTo/2|) 
-              (or (string= (elt args 0) "get")
-                  (samep args '("of" 1))
-                  (samep args '("match__of/1" 1))))
-          +e-true+)
-        (t (call-next-method)))
-      (call-next-method))))
+  (apply #'sugar-cache-call
+    fail rec mverb
+    ;; hmm, unnecessary recomputation?
+    `(cl-type-guard ,(type-specifier-root (guard-to-type-specifier rec)))
+    (format nil "~AGuardSugar" (e. rec |getFQName|))
+    args))
 
 (defun type-specifier-root (type-specifier)
   (typecase type-specifier

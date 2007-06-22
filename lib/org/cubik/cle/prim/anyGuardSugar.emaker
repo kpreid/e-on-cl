@@ -1,0 +1,22 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def makeUnionGuard := <elib:slot.makeUnionGuard>
+
+def anyGuardSugar extends <import:org.cubik.cle.sugarRoot> implements DeepFrozen, ExitViaHere {
+  to "instance_match__of/1"(self, specimen, ejector) {
+    return makeUnionGuard."match__run/1"(specimen, ejector)
+  }
+
+  to instance_of(self, options) { return makeUnionGuard(options) }
+  
+  match [=="instance_get", [self] + options ? options.size().aboveZero()] {
+    makeUnionGuard(options)
+  }
+  
+  match [=="__respondsTo", [=="instance_get", n :int ? n.aboveZero()]] {
+    true
+  }
+}
