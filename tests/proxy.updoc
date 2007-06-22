@@ -164,11 +164,11 @@ The current implementation checks for the resolution promise becoming resolved e
   
   unresolved one
   ? makeProxy(stubHandler, stubResolution, false) == makeProxy(stubHandler, stubResolution, true)
-  # problem: <InsufficientlySettledException: not sufficiently settled: <Promise> == <Far ref>>
+  # problem: <insufficientlySettledException: not sufficiently settled: <Promise> == <Far ref>>
 
   unresolved both
   ? makeProxy(stubHandler, stubResolution, false) == makeProxy(stubHandler, stubResolution, false)
-  # problem: <InsufficientlySettledException: not sufficiently settled: <Promise> == <Promise>>
+  # problem: <insufficientlySettledException: not sufficiently settled: <Promise> == <Promise>>
 
   unresolved-but-same
   ? (def pr := makeProxy(stubHandler, stubResolution, false)) == pr
@@ -220,7 +220,7 @@ Becoming-same resolutions: A Far ref must not change its identity, as it is reso
 Unsettled handler
 
   ? makeProxy(Ref.promise(), Ref.promise()[0], false)
-  # problem: <NotSettledException: not settled: proxy handler [<Promise>, <Resolver>]>
+  # problem: <notSettledException: not settled: proxy handler [<Promise>, <Resolver>]>
 
 Bad resolution box
   

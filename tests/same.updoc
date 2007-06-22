@@ -82,10 +82,10 @@ sameEver
   # value: false
   
   ? 1 == unresolved
-  # problem: <InsufficientlySettledException: not sufficiently settled: 1 == <Promise>>
+  # problem: <insufficientlySettledException: not sufficiently settled: 1 == <Promise>>
   
   ? a == unresolved
-  # problem: <InsufficientlySettledException: not sufficiently settled: <a> == <Promise>>
+  # problem: <insufficientlySettledException: not sufficiently settled: <a> == <Promise>>
 
 sameYet
   
@@ -197,7 +197,7 @@ Making sure that the sameness algorithm doesn't fail for lack of settledness if 
   
  -- but if they're the same, do fail '
   ? al == [p, 2, 3]
-  # problem: <InsufficientlySettledException: not sufficiently settled: [1, 2, 3] == [<Promise>, 2, 3]>
+  # problem: <insufficientlySettledException: not sufficiently settled: [1, 2, 3] == [<Promise>, 2, 3]>
 
 
 sameness of UnconnectedRefs

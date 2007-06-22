@@ -43,7 +43,7 @@
                   ()
       "nok"))))
   ; XXX we really need better e-print syntax for cons cells
-  ("null" "problem: no such method: org.cubik.cle.prim.Null#size/0"))
+  ("null" "problem: no such method: org.cubik.cle.prim.null#size/0"))
 
 (deftest mapping-bind.various
   (let ((x 0))

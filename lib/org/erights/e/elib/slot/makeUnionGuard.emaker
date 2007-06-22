@@ -17,7 +17,8 @@ def makeUnionGuard implements DeepFrozen, ExitViaHere {
       }
 
       to __printOn(out :TextWriter) {
-        out.print("any")
+        out.print(any)
+        # XXX list syntax pun
         out.quote(subGuards)
       }
       

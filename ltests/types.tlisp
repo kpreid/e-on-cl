@@ -34,7 +34,7 @@
   (find-class 'integer) "int")
 
 (define-type-specifier-print-test type-print.uncustomized
-  'readtable "readtable")
+  'readtable "Readtable")
 
 (define-type-specifier-print-test type-print.and.0
   '(and) "all[]")
@@ -43,7 +43,7 @@
   '(and integer) "all[int]")
 
 (define-type-specifier-print-test type-print.and.2
-  '(and integer number) "all[int, number]")
+  '(and integer number) "all[int, Number]")
 
 (define-type-specifier-print-test type-print.or.0
   '(or) "any[]")
@@ -67,10 +67,10 @@
   '(vector * 10) "ConstList[any, 10]")
 
 (define-type-specifier-print-test type-print.vector.specialized
-  '(vector bit) "ConstList[bit]")
+  '(vector bit) "ConstList[Bit]")
 
 (define-type-specifier-print-test type-print.vector.specialized.length
-  '(vector bit 10) "ConstList[bit, 10]")
+  '(vector bit 10) "ConstList[Bit, 10]")
 
 (define-type-specifier-print-test type-print.vector.upgrade
   '(vector readtable) "ConstList")

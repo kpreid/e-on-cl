@@ -52,7 +52,11 @@ def makeTermAuthor(SelflessStamp) {
     def tag := term.getTag()
     def data := term.getData()
     def args := term.getArgs()
-    if (tag.getTagName() != `.${data.__getAllegedType().getFQName().split(".").last().split("$").last()}.`) {
+    
+    def dataTypeName := data.__getAllegedType().getFQName().split(".").last().split("$").last()
+    
+    if (tag.getTagName() != `.$dataTypeName.` && 
+          tag.getTagName() != `.${dataTypeName(0,1).toUpperCase() + dataTypeName(1)}.`) {
       # XXX ask *something* about whether this tag is the canonical tag (in what context?) for the data so that it may be printed if it isn't
       tw.print(tag.getTagName())
     }

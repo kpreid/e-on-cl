@@ -675,7 +675,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (deftype string-error ()
   '(and simple-error (satisfies simple-condition-string-only-p)))
-(def-fqn string-error "org.cubik.cle.fail.StringException")
+(def-fqn string-error "org.cubik.cle.fail.stringException")
 
 (defmethod observable-type-of ((this simple-error))
   (if (typep this 'string-error)
@@ -709,7 +709,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     :datum specimen
     :expected-type (guard-to-type-specifier guard)))
 
-(def-fqn type-error "org.cubik.cle.fail.CoercionFailure")
+(def-fqn type-error "org.cubik.cle.fail.coercionFailure")
 
 (def-vtable type-error
   (audited-by-magic-verb (this auditor)

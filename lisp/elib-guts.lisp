@@ -169,9 +169,9 @@
       (ignore-errors (guarded-slot-guard slot)))))
 
 ;; XXX this is duplicated with information in the maker functions
-(def-fqn e-simple-slot  "org.erights.e.elib.slot.FinalSlot")
-(def-fqn e-var-slot     "org.erights.e.elib.slot.VarSlot")
-(def-fqn e-guarded-slot "org.erights.e.elib.slot.GuardedSlot")
+(def-fqn e-simple-slot  "org.erights.e.elib.slot.finalSlot")
+(def-fqn e-var-slot     "org.erights.e.elib.slot.varSlot")
+(def-fqn e-guarded-slot "org.erights.e.elib.slot.guardedSlot")
 
 ;;; --- e-boolean ---
 
@@ -312,22 +312,22 @@
 (def-fqn and "org.cubik.cle.prim.types.all")
 (def-fqn or "org.cubik.cle.prim.types.any")
 
-(def-fqn vicious-cycle-error "org.erights.e.elib.ref.ViciousCycleException")
-(def-fqn insufficiently-settled-error "org.erights.e.elib.tables.InsufficientlySettledException")
-(def-fqn not-settled-error "org.erights.e.elib.tables.NotSettledException")
+(def-fqn vicious-cycle-error "org.erights.e.elib.ref.viciousCycleException")
+(def-fqn insufficiently-settled-error "org.erights.e.elib.tables.insufficientlySettledException")
+(def-fqn not-settled-error "org.erights.e.elib.tables.notSettledException")
 
-(def-fqn string "org.erights.e.elib.tables.String")
+(def-fqn string "org.erights.e.elib.tables.string")
 (def-fqn float64 "org.cubik.cle.prim.float64")
 (def-fqn float32 "org.cubik.cle.prim.float32")
-(def-fqn condition "org.cubik.cle.native.Throwable") ; xxx Java name
+(def-fqn condition "org.cubik.cle.native.throwable") ; xxx Java name
 (def-fqn e-boolean "org.cubik.cle.native.boolean")
-(def-fqn null "org.cubik.cle.prim.Null")
+(def-fqn null "org.cubik.cle.prim.null")
 (def-fqn character "org.cubik.cle.prim.char")
-(def-fqn vector "org.erights.e.elib.tables.ConstList")
-(def-fqn type-desc "org.erights.e.elib.base.TypeDesc")
-(def-fqn message-desc "org.erights.e.elib.base.MessageDesc")
-(def-fqn param-desc "org.erights.e.elib.base.ParamDesc")
-(def-fqn local-throw-sealed-box "org.cubik.cle.prim.LocalThrowSealedBox")
+(def-fqn vector "org.erights.e.elib.tables.constList")
+(def-fqn type-desc "org.erights.e.elib.base.typeDesc")
+(def-fqn message-desc "org.erights.e.elib.base.messageDesc")
+(def-fqn param-desc "org.erights.e.elib.base.paramDesc")
+(def-fqn local-throw-sealed-box "org.cubik.cle.prim.localThrowSealedBox")
 
 (loop for group-type in '(and or) do
   (defmethod cl-type-parameters ((type (eql group-type)) parameters)
@@ -355,7 +355,11 @@
 
 (defun cl-type-simple-expr (type)
   (concatenate 'string
-    (simplify-fq-name (cl-type-fq-name type)) 
+    (let ((name (simplify-fq-name (cl-type-fq-name type))))
+      ;; XXX legacy type namings. todo: switch to never capitalizing; see also __printOn of cl-type-guard
+      (if (member name '("any" "all" "float64" "int" "char" "boolean") :test #'string=)
+        name
+        (convention-capitalize name)))
     (cl-type-parameters type nil)))
 
 ; --- priority queue ---

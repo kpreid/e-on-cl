@@ -124,6 +124,16 @@
              verb
              :end1 (position #\/ mv-string :from-end t))))
     
+(defun convention-capitalize (string)
+  (string-upcase string :end (min 1 (length string))))
+
+(defun convention-uncapitalize (string)
+  (if (and (plusp (length string))
+           (string/= string (string-upcase string)))
+    (concatenate 'string (string (char-downcase (aref string 0))) 
+                         (subseq string 1))
+    string))
+
 (declaim (inline without-suffix)
          (ftype (function (string string) (or null string)) without-suffix))
 (defun without-suffix (string suffix

@@ -78,7 +78,7 @@
    (start-col  :initarg :start-col  :type (integer 0) :reader span-start-col)
    (end-col    :initarg :end-col    :type (integer 0) :reader span-end-col)))
 
-(def-fqn source-span "org.erights.e.elib.base.SourceSpan")
+(def-fqn source-span "org.erights.e.elib.base.sourceSpan")
 
 (def-vtable source-span
   (audited-by-magic-verb (this auditor)
@@ -209,7 +209,7 @@
 (deftype twine ()
   '(or string %twine))
   
-(def-fqn twine "org.erights.e.elib.tables.Twine")
+(def-fqn twine "org.erights.e.elib.tables.twine")
 
 
 (defun coalesce (t1 t2)

@@ -40,6 +40,7 @@
   (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (guard-to-type-specifier guard) opt-ejector guard))
   (:|__printOn| (this (tw +the-text-writer-guard+))
+    ;; XXX once we remove the capitalization from cl-type-simple-expr, insert it here (without the legacy lowercase case)
     (e. tw |print| (cl-type-simple-expr (guard-to-type-specifier this))))
   
   (:|getFQName| (this)

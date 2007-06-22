@@ -59,7 +59,7 @@ An exception may be explicitly thrown unsealed. This is used for mechanisms usin
   XXX fqn
   XXX leaf method shouldn't exist? '
   ? help(sealedProblem)
-  # value: interface "org.cubik.cle.prim.LocalThrowSealedBox" {
+  # value: interface "org.cubik.cle.prim.localThrowSealedBox" {
   #            /** Java-E compatibility; currently just returns self. */
   #            to leaf()
   #        }
@@ -111,7 +111,7 @@ XXX should the repl unseal problem-in-broken-ref before printing?
   # value: <ref broken by <sealed problem>>
   
   ? r.foo()
-  # problem: the String "2" doesn't coerce to a number
+  # problem: the String "2" doesn't coerce to a Number
 
 XXX "NUMBER" will/should be changed.
 

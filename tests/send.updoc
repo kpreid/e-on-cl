@@ -14,7 +14,7 @@
 # value: 3
 
 ? def x := x
-# value: <ref broken by problem: <ViciousCycleException: Ref loop>>
+# value: <ref broken by problem: <viciousCycleException: Ref loop>>
 
 ? def r := 1 <- add(2) <- add(3)
 # value: <Promise>

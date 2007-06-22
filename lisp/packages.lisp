@@ -47,6 +47,8 @@
     :without-prefix
     :popping-equal-case
     :nreverse-here
+    :convention-capitalize
+    :convention-uncapitalize
     
     :queue
     :priority-queue

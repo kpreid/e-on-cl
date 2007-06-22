@@ -21,7 +21,7 @@
                       :initform (error "local-definitions unspecified")
                       :reader local-definitions)))
 
-(def-fqn scope "org.erights.e.elang.scope.Scope") ; XXX should we have a non-elang fqn?
+(def-fqn scope "org.erights.e.elang.scope.scope") ; XXX should we have a non-elang fqn?
 
 (defun scope-slot-ordering (scope)
   (with-accessors ((slot-table slot-table) (slot-ordering-cache slot-ordering-cache)) scope

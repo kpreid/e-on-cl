@@ -28,7 +28,7 @@
   # value: ParseError
   
   ? "foo" :ParseError
-  # problem: the String "foo" doesn't coerce to an e-structure-exception
+  # problem: the String "foo" doesn't coerce to an E-structure-exception
   XXX possible error change later
   
   ? e :ParseError

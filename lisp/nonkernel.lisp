@@ -1328,11 +1328,6 @@
     (declare (ignore node))
     "run"))
 
-;; XXX bring together this, convention-uncapitalize, and makeDefaultPropertySlot
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun convention-capitalize (string)
-    (string-upcase string :end (min 1 (length string)))))
-
 (defmacro e-prop-bind ((&rest props) object &body body)
   "Using conventional property access, retrieve the properties of OBJECT named by the names of the symbols PROPS and bind them to those symbols."
   (let ((object-temp (gensym "PROPS-FROM")))

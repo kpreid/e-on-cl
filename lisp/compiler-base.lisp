@@ -392,7 +392,7 @@
       :fqn-prefix fqn-prefix
       :opt-object-source opt-object-source)))
 
-(def-fqn static-context "org.erights.e.elang.scope.StaticContext")
+(def-fqn static-context "org.erights.e.elang.scope.staticContext")
 
 ;; XXX static contexts must be selfless or fresh, or they break equivalence of separate evaluation
 (def-vtable static-context

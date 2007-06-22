@@ -16,13 +16,6 @@
   (or (string= text "")
       (not (digit-char-p (aref text 0)))))
 
-(defun convention-uncapitalize (string)
-  (if (and (plusp (length string))
-           (string/= string (string-upcase string)))
-    (concatenate 'string (string (char-downcase (aref string 0))) 
-                         (subseq string 1))
-    string))
-
 ; --- Printing ---
 
 (defun print-escaped (tw chars specials
