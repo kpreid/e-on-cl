@@ -72,7 +72,7 @@
     ; XXX should this coercion be in the condition guard instead?
     (cond
       ((and (typep guard 'cl-type-guard)
-            (subtypep 'simple-error (cl-type-specifier guard)))
+            (subtypep 'simple-error (guard-to-type-specifier guard)))
         (make-condition 'simple-error
           :format-control (format-control-quote this) 
           :format-arguments '()))

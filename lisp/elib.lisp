@@ -865,6 +865,9 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 
 ; --- guards ---
 
+(defgeneric guard-to-type-specifier (guard))
+;; see guard.lisp for methods
+
 (defglobal +the-void-guard+ (e-lambda "org.erights.e.elib.slot.VoidGuard"
     (:stamped +deep-frozen-stamp+
      :stamped +thread-sharable-stamp+)
@@ -877,7 +880,7 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
 ; Simple native-type Guards
 (defclass cl-type-guard () 
   ((ts :initarg :type-specifier
-       :reader cl-type-specifier)))
+       :reader guard-to-type-specifier)))
 
 (declaim (inline standard-coerce))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))

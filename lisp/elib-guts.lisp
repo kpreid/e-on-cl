@@ -401,9 +401,9 @@
           (when (sb-c::constant-lvar-p guardl)
             (let ((guard (sb-c::lvar-value guardl)))
               (when (typep guard 'cl-type-guard)
-                #+(or) (efuncall e.knot:+sys-trace+ (format nil "~&deriving guard call type ~S~%" (cl-type-specifier guard)))
+                #+(or) (efuncall e.knot:+sys-trace+ (format nil "~&deriving guard call type ~S~%" (guard-to-type-specifier guard)))
                 (sb-c::ir1-transform-specifier-type 
-                  (cl-type-specifier guard))))))))))
+                  (guard-to-type-specifier guard))))))))))
 
 #+sbcl 
 (sb-c:defknown e-call-dispatch (t t &rest t) t
