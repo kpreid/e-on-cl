@@ -38,7 +38,7 @@
           :initform nil
           :type (or null string)
           :reader label)
-   (sugar-cache :initform (make-hash-table)
+   (sugar-cache :initform (make-hash-table :test #'equal)
                 :type hash-table
                 :reader sugar-cache
                 :documentation "Experimental: For looking up objects which are sugar-delegates for objects shared between vats.")
@@ -114,20 +114,4 @@
   (assert (null *runner*))
   (setf *runner* (make-runner-for-this-thread :label label))
   (setf *vat* (apply #'make-instance 'vat :runner *runner* initargs)))
-
-(declaim (inline sugar-cache-get))
-(defun sugar-cache-get (eq-key fqn)
-  (let ((cache (sugar-cache *vat*)))
-    (gethash eq-key cache
-      (setf (gethash eq-key cache)
-        (e-import fqn)))))
-
-(declaim (inline sugar-cache-call))
-(defun sugar-cache-call (rec mverb key fqn &rest args)
-  (apply #'e-call-dispatch
-    (sugar-cache-get key fqn)
-    (multiple-value-bind (verb arity) (unmangle-verb mverb)
-      (mangle-verb (concatenate 'string "instance_" verb) (1+ arity)))
-    rec
-    args))
 

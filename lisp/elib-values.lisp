@@ -442,8 +442,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                  (lambda (a b) (e-is-true (e. (efuncall comparer a b) |belowZero|))))))
 
 (defmethod e-call-match (fail (rec vector) mverb &rest args)
-  (declare (ignore fail))
-  (apply #'sugar-cache-call rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
+  (apply #'sugar-cache-call fail rec mverb 'vector "org.erights.e.elib.tables.listSugar" args))
 
 (defclass vector-with-node (with-node)
   ((element :initarg :element :reader %vector-with-element)))

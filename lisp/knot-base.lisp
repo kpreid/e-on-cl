@@ -204,8 +204,7 @@
             new-table)))))
 
 (defmethod e-call-match (fail (rec scope) mverb &rest args)
-  (declare (ignore fail))
-  (apply #'sugar-cache-call rec mverb 'scope "org.erights.e.elang.scope.scopeSugar" args))
+  (apply #'sugar-cache-call fail rec mverb 'scope "org.erights.e.elang.scope.scopeSugar" args))
 
 ;;; --- ENode/scope consistency verification ---
 

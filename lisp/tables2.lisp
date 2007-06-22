@@ -581,8 +581,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
       nil)))
 
 (defmethod e-call-match (fail (rec const-map) mverb &rest args)
-  (declare (ignore fail))
-  (apply #'sugar-cache-call rec mverb 'const-map "org.erights.e.elib.tables.mapSugar" args))
+  (apply #'sugar-cache-call fail rec mverb 'const-map "org.erights.e.elib.tables.mapSugar" args))
 
 (def-fqn const-map "org.erights.e.elib.tables.ConstMap")
 (def-class-opaque const-map)

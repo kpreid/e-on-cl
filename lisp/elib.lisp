@@ -1039,6 +1039,36 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (declare (ignore this))
     nil)) 
 
+;;; --- sugar cache ---
+
+;; XXX used to be in vat.lisp, but moved here now that the implementation contains an e-lambda. sufficient justification?
+
+(declaim (inline sugar-cache-get))
+(defun sugar-cache-get (key fqn fail)
+  (let ((cache (sugar-cache *vat*)))
+    (or (gethash key cache)
+        (setf (gethash key cache)
+          (e. (e. (vat-safe-scope *vat*) |fetch| "import__uriGetter" +the-thrower+) 
+              |fetch| fqn fail)))))
+
+(declaim (inline sugar-cache-call))
+(defun sugar-cache-call (fail rec mverb key fqn &rest args)
+  (let ((sugar (sugar-cache-get key fqn
+                 (efun ()
+                   (return-from sugar-cache-call (funcall fail))))))
+    (case mverb
+      (:|__respondsTo/2|
+        (e. sugar |__respondsTo| 
+          (concatenate 'string "instance_" (e-coerce (first args) 'string))
+          (1+ (e-coerce (second args) '(integer 0)))))
+      ;; XXX __getAllegedType/0
+      (otherwise
+        (apply #'e-call-dispatch sugar
+          (multiple-value-bind (verb arity) (unmangle-verb mverb)
+            (mangle-verb (concatenate 'string "instance_" verb) (1+ arity)))
+          rec
+          args)))))
+
 ;;; --- functions that might be referenced before they're defined in the elib package ---
 
 (declaim (ftype (function (t) t) type-specifier-to-guard))

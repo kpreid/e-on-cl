@@ -1,0 +1,5 @@
+def testSugar {
+  to instance_foo(self, bar) {
+    return [E.toQuote(self), "baz", bar]
+  }
+}

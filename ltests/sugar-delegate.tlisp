@@ -1,0 +1,48 @@
+; Copyright 2007 Kevin Reid, under the terms of the MIT X license
+; found at http://www.opensource.org/licenses/mit-license.html ................
+
+(cl:in-package :e.lisp-test)
+
+(defmacro with-vat-1 (&body b)
+  `(block nil
+     (with-vat ()
+       (return (progn ,@b)))))
+
+(defclass sugar-call-test () ())
+(defclass sugar-fail-test () ())
+
+(defmethod e-call-match (fail (rec sugar-call-test) mverb &rest args)
+  (apply #'sugar-cache-call fail rec mverb 'sugar-call-test "org.cubik.cle.test.testSugar" args))
+
+(defmethod e-call-match (fail (rec sugar-fail-test) mverb &rest args)
+  (apply #'sugar-cache-call fail rec mverb 'sugar-fail-test "org.cubik.cle.test.nonexistentSugar" args))
+
+(deftest sugar-call.simple
+  (with-vat-1 (e. (make-instance 'sugar-call-test) |foo| "bar"))
+  #("<a sugar-call-test>" "baz" "bar"))
+
+(deftest sugar-call.responds.true
+  (with-vat-1 (e. (make-instance 'sugar-call-test) |__respondsTo| "foo" 1))
+  #.+e-true+)
+
+(deftest sugar-call.responds.false
+  (with-vat-1 (e. (make-instance 'sugar-call-test) |__respondsTo| "bar" 1))
+  #.+e-false+)
+
+;; XXX test existant sugar __getAllegedType
+
+(deftest sugar-call.fail.simple
+  (with-vat-1 
+    (handler-case
+      (e. (make-instance 'sugar-fail-test) |foo| "bar")
+      (no-such-method-error () 'no-such-method)))
+  no-such-method)
+
+(deftest sugar-call.fail.responds
+  (with-vat-1 (e. (make-instance 'sugar-fail-test) |__respondsTo| "foo" 1))
+  #.+e-false+)
+
+(deftest sugar-call.fail.alleged
+  (with-vat-1 (remove-if (lambda (x) (e.util:without-prefix x "__")) (e. (e. (e. (make-instance 'sugar-fail-test) |__getAllegedType|) |getMessageTypes|) |getKeys|)))
+  #())
+
