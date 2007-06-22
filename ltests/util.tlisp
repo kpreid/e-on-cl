@@ -74,3 +74,8 @@
                     (intern (format nil "~A/~A" "foo" n) "KEYWORD")))
             '(0 1 2 3 4 5 6 7 8 9 10 11 12 98 99 100 101 102 1234)))
   ())
+
+(deftest unmangle-verb.slashed
+  (e.util:unmangle-verb :|foo/bar/123|)
+  "foo/bar"
+  123)

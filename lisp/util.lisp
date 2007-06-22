@@ -108,7 +108,7 @@
          (ftype (function (keyword) (values string (integer 0))) unmangle-verb))
 (defun unmangle-verb (mverb
     &aux (mv-string (symbol-name mverb))
-         (slash     (position #\/ mv-string)))
+         (slash     (position #\/ mv-string :from-end t)))
   (declare (optimize (safety 3)))
   (assert slash)
   (values
