@@ -1,0 +1,42 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def finalSlotGuardSugarAuthor(SelflessStamp) {
+  interface FinalSlotPGuard guards FinalSlotPGuardStamp { # confused yet?
+    to getValueGuard()
+  }
+
+  return def finalSlotGuardSugar extends <import:org.cubik.cle.sugarRoot> implements DeepFrozen, ExitViaHere {
+
+    to getValueGuard() { return any }
+
+    to "instance_match__get/1"(self, specimen, ejector) {
+      return [FinalSlotPGuard.coerce(specimen, ejector).getValueGuard()]
+    }
+
+    to instance_get(self, valueGuard) {
+      return def FinalSlotP implements DeepFrozen."optionally"(), FinalSlotPGuardStamp, SelflessStamp {
+        to __optUncall() {
+          return [<elib:slot.makeFinalSlot>.asType(), "get", [valueGuard]]
+        }
+        
+        to __printOn(out :TextWriter) {
+          out.quote(self)
+          out.print("[")
+          out.quote(valueGuard)
+          out.print("]")
+        }
+
+        to getValueGuard() { return valueGuard }
+      
+        to coerce(specimen, ejector) {
+          return __makeFinalSlot(valueGuard.coerce(
+                                   self.coerce(specimen, ejector).getValue(),
+                                   ejector))
+        }
+      }
+    }
+  }
+}

@@ -18,6 +18,30 @@ Final
   
   ? (makeFinalSlot(safeScope) :FinalSlot) == &safeScope
   # value: true
+  
+  ? 1 :FinalSlot
+  # problem: the int 1 doesn't coerce to a FinalSlot
+  
+  ? FinalSlot[int]
+  # value: FinalSlot[int]
+  
+  ? FinalSlot[int] == E.call(E, "call", FinalSlot[int].__optUncall())
+  # value: true
+  
+  ? makeFinalSlot(3) :FinalSlot[int]
+  # value: <& 3>
+  
+  ? makeFinalSlot("") :FinalSlot[int]
+  # problem: the String "" doesn't coerce to an int
+  
+  ? pragma.enable("call-pattern")
+  ? def FinalSlot[x] := FinalSlot[int]; x
+  # value: int
+  
+  ? def FinalSlot[x] := 1; x
+  # problem: Not stamped by org.erights.e.elib.slot.finalSlotGuardSugarAuthor$finalSlotGuardSugarAuthor$FinalSlotPGuard__T
+
+XXX test coercion by FinalSlot guard and guard call pattern
 
 makeVarSlot
 

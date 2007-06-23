@@ -317,6 +317,7 @@
 
 (defglobal +selfless-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"
+    "org.erights.e.elib.slot.finalSlotGuardSugar"
     "org.quasiliteral.astro.makeAstroTag"
     "org.quasiliteral.term.makeTerm"))
 
