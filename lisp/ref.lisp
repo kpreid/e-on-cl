@@ -43,6 +43,14 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 (defgeneric same-hash-dispatch (a))
 (defgeneric samep-dispatch (left right))
 
+(defmacro def-atomic-sameness (type eq-func-form hash-func-form
+    &aux (left (gensym)) (right (gensym)))
+  `(progn 
+    (defmethod samep-dispatch ((,left ,type) (,right ,type))
+      (,eq-func-form ,left ,right))
+    (defmethod same-hash-dispatch ((,left ,type))
+      (,hash-func-form ,left))))
+
 ;; XXX move implementation to elib-guts? inline?
 (declaim (ftype (function (t t) boolean) approvedp))
 (defun approvedp (auditor specimen)

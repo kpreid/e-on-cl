@@ -21,6 +21,12 @@
 
 ;; type-specifier-to-guard is defined earlier, in elib.lisp
 
+(defun message-pairs-to-map-including-miranda-messages (pairs)
+  (e. (e. +the-make-const-map+ |fromPairs| 
+        (coerce pairs 'vector))
+      |or|
+      (message-types-to-map +miranda-message-descs+)))
+
 (defglobal +the-any-guard+    (type-specifier-to-guard 't))
 (defglobal +the-nullok-guard+ (type-specifier-to-guard 'null))
 (defglobal +the-exception-guard+ (type-specifier-to-guard 'condition))

@@ -45,9 +45,11 @@
      (:file "ref"
             ; ref protocol and basic ref classes
             :depends-on ("util" "base" "packages"))
+     (:file "type-desc-early"
+            :depends-on ("util"))
      (:file "elib"
-            ; def-vtable, e-lambda, stamps, type-descs, misc.
-            :depends-on ("ref" "compile-options" "util" "base" "packages"))
+            ; def-vtable, e-lambda, stamps, misc.
+            :depends-on ("type-desc-early" "ref" "compile-options" "util" "base" "packages"))
      (:file "vat"
             ; vats, turns, e-send-dispatch on near refs
             :depends-on ("runner" "ref" "util" "packages"))
@@ -57,7 +59,7 @@
             ; convenience operators for E semantics
             :depends-on ("ref" "elib" "vat"))
      (:file "guard"
-            :depends-on ("elib" "sugar"))
+            :depends-on ("elib" "sugar" "type-desc-early"))
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
             :depends-on ("elib" "sugar" "queues"))
