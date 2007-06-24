@@ -541,7 +541,6 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
     (:|__getAllegedType| ()
       ; FUNCTION-based E-objects must always implement their own __getAllegedType/1.
       (assert (not (typep self 'function)))
-      (scan-example-for-vtable-message-types self)
       (type-specifier-to-guard (observable-type-of self)))
 
     (:|__respondsTo| ((verb 'string) (arity '(integer 0)))
@@ -600,59 +599,16 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
       (assert (not (gethash class *non-vtable-leaf-classes*)) (class))
       (apply function args))))
 
-#+(or e.vtable-collect.use-example e.vtable-collect.use-mop)
-(progn
-  (defgeneric vtable-local-message-types (specializer)
-    (:documentation "Returns a list of #(mverb message-desc) tuples for the given class, but not its superclasses."))
-
-  (defmethod vtable-local-message-types ((specializer t))
+(defgeneric vtable-local-message-types (specializer)
+  (:documentation "Returns a list of #(mverb message-desc) tuples for the given class, but not its superclasses.")
+  (:method ((specializer t))
     (declare (ignore specializer))
     '()))
 
-#+e.vtable-collect.use-example
-(progn
-  (defgeneric vtable-collect-message-types (instance narrowest-type)
-    (:documentation "Returns a list of #(mverb message-desc) tuples for the given instance, except those for <xxx explain narrowest-type>"))
-
-  (defmethod vtable-collect-message-types ((instance t) narrowest-type)
-    (declare (ignore instance narrowest-type))
-    '()))
-
-#+e.vtable-collect.use-typelist 
-(defvar *types-with-vtables* '())
-
-#+(or e.vtable-collect.use-example e.vtable-collect.use-typelist)
-(defvar *vtable-message-types-cache* (make-hash-table :test #'equal)
-  "Since Common Lisp specifies no way to get the superclasses (or class prededence list) of a class, this hash table stores, for a given class-name, the result of vtable-collect-message-types on the first instance of that class.")
-
-#+(or e.vtable-collect.use-example e.vtable-collect.use-typelist)
-(defun vtable-message-types (type)
-  (or (gethash type *vtable-message-types-cache*)
-      #-e.vtable-collect.use-typelist 
-      (error "oops: no example of ~S seen yet for alleged type purposes" type)
-      #+e.vtable-collect.use-typelist 
-      (setf (gethash type *vtable-message-types-cache*)
-        ; xxx this is wrong: it doesn't necessarily return smethods in precedence-list order
-        (loop for vtype in *types-with-vtables*
-              when (subtypep type vtype)
-              append (vtable-local-message-types type)))))
-
-#+e.vtable-collect.use-mop
 (defun vtable-message-types (type)
   ; Note that we reverse the class precedence list, because the caller of this stuffs it into non-strict ConstMap construction, and so takes the *last* seen smethod as the overriding one. xxx perhaps this subtle dependency should be made more robust/explicit?
   (loop for superclass in (reverse (e-util:class-precedence-list (find-class type)))
     append (vtable-local-message-types (class-name superclass))))
-
-#-e.vtable-collect.use-example
-(defun scan-example-for-vtable-message-types (instance)
-  (declare (ignore instance)))
-
-#+e.vtable-collect.use-example
-(defun scan-example-for-vtable-message-types (instance
-    &aux (type (observable-type-of instance)))
-  (unless (gethash type *vtable-message-types-cache*)
-    (setf (gethash type *vtable-message-types-cache*)
-      (vtable-collect-message-types instance type))))
 
 (defmacro def-vtable (type-spec &body smethods
     &aux (is-eql (and (consp type-spec) (eql (first type-spec) 'eql)))
@@ -670,23 +626,10 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
         `((let ((class (find-class ',type-spec)))
             (unless (class-finalized-p class)
               (finalize-inheritance class)))))
-    
-    #+(or e.vtable-collect.use-example e.vtable-collect.use-typelist)
-    (assert (not (gethash ',type-spec *vtable-message-types-cache*)))
-    #+e.vtable-collect.use-typelist 
-    (pushnew ',type-spec *types-with-vtables*)
   
-    #+(or e.vtable-collect.use-example e.vtable-collect.use-mop)
     (defmethod vtable-local-message-types ((type-sym (eql ',type-spec)))
       (list ,@(loop for smethod in smethods append
         (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1))))
-    
-    #+e.vtable-collect.use-example
-    (defmethod vtable-collect-message-types ((specimen ,evaluated-specializer) narrowest-type)
-      (if (subtypep ',evaluated-specializer narrowest-type)
-        (list* ,@(mapcan #'(lambda (smethod) (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1)) smethods)
-          (call-next-method))
-        (call-next-method)))
     
     (loop 
       for superclass in 
