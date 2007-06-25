@@ -134,6 +134,11 @@
                          (subseq string 1))
     string))
 
+(defun guess-lowercase-string (string)
+  (if (notany #'lower-case-p string)
+    (string-downcase string)
+    string))
+
 (declaim (inline without-suffix)
          (ftype (function (string string) (or null string)) without-suffix))
 (defun without-suffix (string suffix

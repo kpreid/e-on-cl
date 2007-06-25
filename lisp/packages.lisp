@@ -49,6 +49,7 @@
     :nreverse-here
     :convention-capitalize
     :convention-uncapitalize
+    :guess-lowercase-string
     
     :queue
     :priority-queue

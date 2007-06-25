@@ -47,9 +47,15 @@
             :depends-on ("util" "base" "packages"))
      (:file "type-desc-early"
             :depends-on ("util"))
+     (:file "smethod"
+            :depends-on ("compile-options" "ref" "type-desc-early"))
+     (:file "e-lambda"
+            :depends-on ("smethod"))
+     (:file "miranda"
+            :depends-on ("compile-options" "ref" "smethod"))
      (:file "elib"
-            ; def-vtable, e-lambda, stamps, misc.
-            :depends-on ("type-desc-early" "ref" "compile-options" "util" "base" "packages"))
+            ; def-vtable, stamps, misc.
+            :depends-on ("ref" "smethod" "e-lambda" "compile-options" "util" "base" "packages"))
      (:file "vat"
             ; vats, turns, e-send-dispatch on near refs
             :depends-on ("runner" "ref" "util" "packages"))
@@ -59,7 +65,7 @@
             ; convenience operators for E semantics
             :depends-on ("ref" "elib" "vat"))
      (:file "guard"
-            :depends-on ("elib" "sugar" "type-desc-early"))
+            :depends-on ("elib" "sugar" "type-desc-early" "miranda"))
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
             :depends-on ("elib" "sugar" "queues"))
