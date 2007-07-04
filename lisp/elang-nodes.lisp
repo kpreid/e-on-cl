@@ -6,7 +6,7 @@
 ; --- base ---
 
 (defgeneric node-elements (node))
-(defgeneric walk-node-scopes (node builder))
+(defgeneric walk-node-scopes (node builder environment))
 (defgeneric opt-node-property-getter (node field-keyword))
 (defgeneric node-visitor-arguments (node))
 (defgeneric node-class-arity (node-class))
@@ -445,6 +445,8 @@ List nodes will be assumed to be sequences."
 
 ; --- E-level methods ---
 
+(defglobals +empty-static-scope+)
+
 (def-vtable |ENode|
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
@@ -475,7 +477,7 @@ List nodes will be assumed to be sequences."
       (or static-scope
           ;; by releasing the lock here, we avoid blocking other threads. the
           ;; computation might harmlessly happen twice, though.
-          (let ((new (walk-node-scopes this +the-make-static-scope+)))
+          (let ((new (walk-node-scopes this +the-make-static-scope+ +empty-static-scope+)))
             (with-lock-held ((static-scope-lock this)) 
               (setf (node-computed-static-scope this) new))))))
   (:|getOptSpan/0| 'node-source-span)
@@ -763,14 +765,14 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
     (:|getEmptyScope| () +empty-static-scope+)
-    (:|subnode| (key node)
+    (:|subnode| (key node prev)
       ;; exists for walk-node-scopes
       (declare (ignore key))
-      (e. node |staticScope|))
-    (:|subnodeIndex| (key index node)
+      (e. prev |add| (e. node |staticScope|)))
+    (:|subnodeIndex| (key index node prev)
       ;; exists for walk-node-scopes
       (declare (ignore key index))
-      (e. node |staticScope|))))
+      (e. prev |add| (e. node |staticScope|)))))
 
 ; --- static scope computation ---
 
@@ -789,41 +791,42 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (labels ((transform (expr)
             (cond
               ((null expr)
-                `(e. builder |getEmptyScope|))
+                `environment)
               ((atom expr)
-                `(get-scope ',expr))
+                `(let ((v (:get ,expr)))
+                  (if v
+                    (e. builder |subnode| ',(symbol-name expr) v environment)
+                    environment)))
               ((eql (first expr) 'hide)
                 (assert (= (length expr) 2))
-                `(e. ,(transform (second expr)) |hide|))
+                `(e. environment |add| (e. ,(transform (second expr)) |hide|)))
               ((eql (first expr) 'script)
                 (assert (= (length expr) 2))
-                `(e. ,(transform (second expr)) |script|))
+                `(e. environment |add| (e. ,(transform (second expr)) |script|)))
               ((eql (first expr) 'seq)
-                (reduce #'(lambda (a b) `(e. ,a |add| ,b)) 
+                (reduce (lambda (env-form rule)
+                          `(let ((environment ,env-form))
+                             ,(transform rule)))
                         (rest expr)
-                        :key #'transform
-                        :initial-value `(e. builder |getEmptyScope|)))
+                        :initial-value `environment))
               ((eql (first expr) '!)
-                `(progn ,@(rest expr)))
+                `(e. environment |add| (progn ,@(rest expr))))
               ((eql (first expr) 'flatten)
                 (assert (= (length expr) 2))
-                `(sum-node-scopes 
-                   (or (:get ',(second expr)) #()) 
-                   (lambda (i node) (e. builder |subnodeIndex|
-                                      (symbol-name ',(second expr))
+                `(loop with env = environment
+                       for node across (or (:get ',(second expr)) #())
+                       for i from 0
+                       do (setf env (e. builder |subnodeIndex| 
+                                      ',(symbol-name (second expr))
                                       i
-                                      node))
-                   (e. builder |getEmptyScope|)))
+                                      node
+                                      env))
+                       finally (return env)))
               (t
                 (error "Unknown scope-rule expression: ~S" expr)))))
-    `(defmethod walk-node-scopes ((node ,specializer) builder)
-       (labels ((:get (keyword) (funcall (opt-node-property-getter node keyword)))
-                (get-scope (key-keyword)
-                  (let ((v (:get key-keyword)))
-                    (if v
-                      (e. builder |subnode| (symbol-name key-keyword) v)
-                      (e. builder |getEmptyScope|)))))
-         (declare (ignorable #':get #'get-scope))
+    `(defmethod walk-node-scopes ((node ,specializer) builder environment)
+       (labels ((:get (keyword) (funcall (opt-node-property-getter node keyword))))
+         (declare (ignorable #':get))
          ,(transform scope-expr)))))
 
 (defun sum-node-scopes (nodes getter empty)
@@ -998,9 +1001,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defun require-kernel-e (node ejector)
   "Verify that the node is a valid Kernel-E tree."
-  (walk-node-scopes node (make-scope-checker ejector))
-  (require-kernel-e-recursive node ejector)
-  (values))
+  (let ((c (make-scope-checker ejector)))
+    (walk-node-scopes node c (e. c |getEmptyScope|))
+    (require-kernel-e-recursive node ejector)
+    (values)))
 
 (defun make-scope-checker (ejector) 
   (labels ((make (finals assigns)
@@ -1032,12 +1036,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         (make nil nil))
       (:|scopeMeta| () (make nil nil))
       (:|getEmptyScope| () (make nil nil))
-      (:|subnode| (key node)
+      (:|subnode| (key node prev)
         (declare (ignore key))
-        (walk-node-scopes node |kernelScopeChecker|))
-      (:|subnodeIndex| (key index node)
+        (walk-node-scopes node |kernelScopeChecker| prev))
+      (:|subnodeIndex| (key index node prev)
         (declare (ignore key index))
-        (walk-node-scopes node |kernelScopeChecker|)))))
+        (walk-node-scopes node |kernelScopeChecker| prev)))))
 
 (defgeneric require-kernel-e-recursive (node ejector)
   (:method-combination progn))
