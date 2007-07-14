@@ -1,0 +1,791 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def vm__uriGetter := <elang:evm.*>
+  # value: <import:org.erights.e.elang.evm.*>
+
+  ? def makeNounExpr := <vm:makeNounExpr>
+  # value: <makeNounExpr>
+
+  ? def makeViaPattern := <vm:makeViaPattern>
+  # value: <makeViaPattern>
+
+  ? def makeFinalPattern := <vm:makeFinalPattern>
+  # value: <makeFinalPattern>
+
+  ? def makeIgnorePattern := <vm:makeIgnorePattern>
+  # value: <makeIgnorePattern>
+
+  ? def makeLiteralExpr := <vm:makeLiteralExpr>
+  # value: <makeLiteralExpr>
+
+--- Node-specific tests ---
+  
+LiteralExpr
+
+  ? def oneExpr := makeLiteralExpr(null, 1, null)
+  # value: e`1`
+  
+  ? oneExpr.staticScope()
+  # value: <[] := [] =~ [] + var []>
+
+  Bug test: print of char
+  ? makeLiteralExpr(null, 'a', null)
+  # value: e`'a'`
+  
+  XXX other value types
+  XXX Data requirement
+  XXX methods
+
+AssignExpr
+
+  ? def makeAssignExpr := <import:org.erights.e.elang.evm.makeAssignExpr>
+  # value: <makeAssignExpr>
+
+  ? def expr := makeAssignExpr(null, makeNounExpr(null, "pi", null), makeLiteralExpr(null, 3.14159, null), null)
+  # value: e`pi := 3.14159`
+  
+  ? expr.getRValue()
+  # value: e`3.14159`
+  
+  ? expr.getNoun()
+  # value: e`pi`
+
+  Kernel-E check
+  x ? e`a[] := b`.eval(safeScope)
+  x # problem: e`$<GetExpr [e`a`]>$ := b` must have "noun" of type NounExpr, but had GetExpr
+  XXX this test can't work until e`` is made to generate nonkernel expressions
+
+DefineExpr
+
+  ? def makeDefineExpr := <vm:makeDefineExpr>
+  # value: <makeDefineExpr>
+
+  ? def expr := makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), null, makeLiteralExpr(null, 1, null), null)
+  # value: e`def a := 1`
+  
+  print of trinary
+  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), makeNounExpr(null, "ej", null), makeLiteralExpr(null, 1, null), null)
+  # value: e`def a exit ej := 1`
+  
+  ? expr.getRValue()
+  # value: e`1`
+  
+  ? expr.getPattern()
+  # value: epatt`a`
+  
+  ? makeDefineExpr(null, makeFinalPattern(null, makeNounExpr(null, "a", null), null, null), null, makeLiteralExpr(null, 1, null), null).staticScope()
+  # value: <[] := [] =~ ["a"] + var []>
+  
+  ? makeDefineExpr(null, 1, 2, 3, null)
+  # problem: the int 1 doesn't coerce to a Pattern
+
+  XXX trinary-define scope
+
+ Reject pseudo-self-reference
+ 
+  ? def nounA := makeNounExpr(null, "a", null); null
+  ? def nounB := makeNounExpr(null, "b", null); null
+  
+  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounA, null)}.eval(safeScope)
+  # problem: <misleading-apparent-usage-error: a DefineExpr's rValue (e`a`) may not appear to use definitions from its pattern (epatt`a`)>
+
+  ? {makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), nounA, makeNounExpr(null, "null", null), null)}.eval(safeScope)
+  # problem: <misleading-apparent-usage-error: a DefineExpr's optEjectorExpr (e`a`) may not appear to use definitions from its pattern (epatt`a`)>
+
+  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), null, makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null), null)}.eval(safeScope)
+  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`via (a) _`) may not use definitions from its rValue (e`def a := b`)>
+
+  ? {makeDefineExpr(null, makeViaPattern(null, nounA, makeIgnorePattern(null, null), null), makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null), nounB, null)}.eval(safeScope)
+  # problem: <misleading-actual-usage-error: a DefineExpr's pattern (epatt`via (a) _`) may not use definitions from its optEjectorExpr (e`def a := b`)>
+
+  XXX more specifically test what part of the system does this check rather than just 'somewhere in the eval process'
+
+FinalPattern
+
+  ? makeFinalPattern(null, makeNounExpr(null, "timer", null), null, null)
+  # value: epatt`timer`
+
+  ? makeFinalPattern(null, makeNounExpr(null, "items", null), makeNounExpr(null, "List", null), null)
+  # value: epatt`items :List`
+
+  ? makeFinalPattern(null, makeNounExpr(null, "*bip*", null), null, null)
+  # value: epatt`::"*bip*"`
+
+  ? makeFinalPattern(null, def n := makeNounExpr(null, "a", null), null, null).getNoun() == n
+  # value: true
+
+  ? makeFinalPattern(null, makeNounExpr(null, "a", null), null, null).staticScope()
+  # value: <[] := [] =~ ["a"] + var []>
+  
+  XXX scope with guard expr
+  XXX methods
+
+CallExpr
+
+  ? def makeCallExpr := <vm:makeCallExpr>
+  # value: <makeCallExpr>
+  
+  ? def sumExpr := makeCallExpr(null, oneExpr, "add", [oneExpr], null)
+  # value: e`1.add(1)`
+  
+  ? sumExpr.staticScope()
+  # value: <[] := [] =~ [] + var []>
+
+  ? sumExpr.getRecipient()
+  # value: e`1`
+
+  ? sumExpr.getVerb()
+  # value: "add"
+
+  ? sumExpr.getArgs()
+  # value: [e`1`]
+
+  print test - XXX move this to syntax tests
+  ? makeCallExpr(null, oneExpr, "%%", [oneExpr], null)
+  # value: e`1."%%"(1)`
+
+CatchExpr
+
+  ? def expr := <elang:evm.makeCatchExpr>(null, oneExpr, makeIgnorePattern(null, null), makeNounExpr(null, "fail", null), null)
+  # value: e`try {
+  #            1
+  #        } catch _ {
+  #            fail
+  #        }`
+  
+  ? expr.getAttempt()
+  # value: e`1`
+
+  ? expr.getPattern()
+  # value: epatt`_`
+  
+  ? expr.getCatcher()
+  # value: e`fail`
+  
+  XXX incomplete?, written just for checking getter methods
+
+HideExpr
+
+  ? <vm:makeHideExpr>
+  # value: <makeHideExpr>
+  
+  ? def expr := <vm:makeHideExpr>(null, <vm:makeNounExpr>(null, "a", null), null)
+  # value: e`{
+  #            a
+  #        }`
+  
+  ? expr.getBlock()
+  # value: e`a`
+
+IfExpr
+
+  ? def expr := <elang:evm.makeIfExpr>(null, makeNounExpr(null, "a", null), makeNounExpr(null, "b", null), makeNounExpr(null, "c", null), null)
+  # value: e`if (a) {
+  #            b
+  #        } else {
+  #            c
+  #        }`
+
+  ? expr.getTest()
+  # value: e`a`
+
+  ? expr.getThen()
+  # value: e`b`
+  
+  ? expr.getElse()
+  # value: e`c`
+  
+NounExpr
+
+  ? makeNounExpr(null, "xy", null)
+  # value: e`xy`
+
+  ? makeNounExpr(null, "a", null).getName()
+  # value: "a"
+
+  ? makeNounExpr(null, "b", null).staticScope()
+  # value: <[] := ["b"] =~ [] + var []>
+
+  non-identifier
+  ? makeNounExpr(null, "wasn't", null)
+  # value: e`::"wasn't"`
+
+EMethod
+
+  ? def makeEMethod := <import:org.erights.e.elang.evm.makeEMethod>
+  # value: <makeEMethod>
+  
+  ? makeEMethod(null, "egf", "rhg", [], null, makeLiteralExpr(null, 1, null), null)
+  # value: e??`
+  #        /** egf */
+  #        method rhg() {
+  #            1
+  #        }`
+
+  ? def methd := makeEMethod(null, "egf", "rhg", [], makeNounExpr(null, "void", null), makeLiteralExpr(null, 1, null), null)
+  # value: e??`
+  #        /** egf */
+  #        method rhg() :void {
+  #            1
+  #        }`
+  
+  ? methd.getDocComment()
+  # value: "egf"
+  
+  ? methd.getVerb()
+  # value: "rhg"
+  
+  ? methd.getPatterns()
+  # value: []
+  
+  ? methd.getOptResultGuard()
+  # value: e`void`
+  
+  ? methd.getBody()
+  # value: e`1`
+  
+  ? makeEMethod(null, "", "+", [], makeNounExpr(null, "any", null), makeLiteralExpr(null, 1, null), null)
+  # value: e??`
+  #        method "+"() :any {
+  #            1
+  #        }`
+
+  ? makeEMethod(null, "egf", "rhg", [], null, makeNounExpr(null, "tjh", null), null).staticScope()
+  # value: <[] := ["tjh"] =~ [] + var []>
+  
+  XXX other methods of EMethod
+  XXX separate out print tests
+
+ObjectExpr, EScript
+
+  ? def makeObjectExpr := <import:org.erights.e.elang.evm.makeObjectExpr>
+  # value: <makeObjectExpr>
+
+  ? def makeEScript := <import:org.erights.e.elang.evm.makeEScript>
+  # value: <makeEScript>
+
+  ? def makeEMatcher := <import:org.erights.e.elang.evm.makeEMatcher>
+  # value: <makeEMatcher>
+
+  ? def emptyObject := makeObjectExpr(null, "foo", makeFinalPattern(null, makeNounExpr(null, "bar", null), null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
+  # value: e`/** foo */
+  #        def bar {
+  #        }`
+  
+  ? emptyObject.getDocComment()
+  # value: "foo"
+  
+  ? emptyObject.getPattern()
+  # value: epatt`bar`
+  
+  ? emptyObject.getAuditorExprs()
+  # value: []
+  
+  ? emptyObject.getScript()
+  # value: e??` {
+  #        }`
+  
+  ? emptyObject.asTypeDesc(safeScope.getFQNPrefix()) == emptyObject.eval(safeScope).__getAllegedType()
+  # value: true
+  
+  ? emptyObject.staticScope()
+  # value: <[] := [] =~ ["bar"] + var []>
+  
+  Implements expression is not visible
+  ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null)], emptyScript, null).staticScope()
+  # value: <[] := ["b"] =~ [] + var []>
+  
+  ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
+  # value: e??` {
+  #            
+  #            method run() {
+  #                foo
+  #            }
+  #        }`
+  
+  XXX check all arrangemets of null subnodes
+  ? thunkScript.staticScope()
+  # value: <[] := ["foo"] =~ [] + var []>
+  
+  ? def fooThunk := makeObjectExpr(null, "", makeFinalPattern(null, makeNounExpr(null, "fooThunk", null), null, null), [], thunkScript, null)
+  # value: e`def fooThunk {
+  #            
+  #            method run() {
+  #                foo
+  #            }
+  #        }`
+  
+  ? fooThunk.staticScope()
+  # value: <[] := ["foo"] =~ ["fooThunk"] + var []>
+
+  ? fooThunk.getScript() == thunkScript
+  # value: true
+
+  ? fooThunk.asTypeDesc(safeScope.getFQNPrefix()) == fooThunk.eval(safeScope.with("foo", 1)).__getAllegedType()
+  # value: true
+
+  printing implements
+  ? makeObjectExpr(null, "", makeFinalPattern(null, makeNounExpr(null, "audited", null), null, null), [makeNounExpr(null, "auditor", null)], emptyScript, null)
+  # value: e`def audited implements auditor {
+  #        }`
+  
+  printing _
+  ? makeObjectExpr(null, "", makeIgnorePattern(null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
+  # value: e`def _ {
+  #        }`
+
+ script printing with matchers
+ 
+  XXX standalone IgnorePattern tests
+  
+  ? makeEScript(null, null, [], null)
+  # problem: EScript must have methods or at least one matcher
+  
+  ? def bothScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
+  # value: e??` {
+  #            
+  #            method run() {
+  #                foo
+  #            }
+  #            match _ {
+  #                1
+  #            }
+  #        }`
+  
+  ? bothScript.getOptMethods()
+  # value: [e??`
+  #        method run() {
+  #            foo
+  #        }`]
+  
+  ? bothScript.getMatchers()
+  # value: [e??`match _ {
+  #            1
+  #        }`]
+  
+  ? makeEScript(null, null, [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
+  # value: e??` match _ {
+  #            1
+  #        }`
+  
+  XXX multiple-matcher printing tests
+
+SeqExpr
+
+  ? def makeSeqExpr := <import:org.erights.e.elang.evm.makeSeqExpr>
+  # value: <makeSeqExpr>
+  
+  ? makeSeqExpr(null, [], null)
+  # problem: SeqExpr must have at least one subexpression
+
+  ? makeSeqExpr(null, [sumExpr], null)
+  # value: e`1.add(1)`
+
+  ? def expr := makeSeqExpr(null, [sumExpr, oneExpr], null)
+  # value: e`1.add(1)
+  #        1`
+  
+  ? expr.getSubs()
+  # value: [e`1.add(1)`, e`1`]
+
+EscapeExpr
+
+  ? def makeEscapeExpr := <elang:evm.makeEscapeExpr>
+  # value: <makeEscapeExpr>
+  
+  ? makeEscapeExpr(null, makeFinalPattern(null, makeNounExpr(null, "foo", null), null, null), makeLiteralExpr(null, 1, null), null, null, null)
+  # value: e`escape foo {
+  #            1
+  #        }`
+  
+  ? makeEscapeExpr(null, makeFinalPattern(null, makeNounExpr(null, "foo", null), null, null), makeSeqExpr(null, [makeNounExpr(null, "foo", null), makeNounExpr(null, "baz", null)], null), null, null, null).staticScope()
+  # value: <[] := ["baz"] =~ [] + var []>
+
+VarPattern
+
+  ? def makeVarPattern := <elang:evm.makeVarPattern>
+  # value: <makeVarPattern>
+
+  ? makeVarPattern(null, makeNounExpr(null, "foo", null), null, null)
+  # value: epatt`var foo`
+
+  ? makeVarPattern(null, makeNounExpr(null, "i", null), makeNounExpr(null, "int", null), null)
+  # value: epatt`var i :int`
+
+  ? makeVarPattern(null, makeNounExpr(null, "*bip*", null), null, null)
+  # value: epatt`var ::"*bip*"`
+
+
+SlotPattern
+
+  ? def makeSlotPattern := <elang:evm.makeSlotPattern>
+  # value: <makeSlotPattern>
+
+  ? makeSlotPattern(null, makeNounExpr(null, "foo", null), null, null)
+  # value: epatt`&foo`
+
+  ? makeSlotPattern(null, makeNounExpr(null, "state", null), makeNounExpr(null, "Lamport", null), null)
+  # value: epatt`&state :Lamport`
+
+--- node scope computation ---
+
+  assign
+  ? e`a := (def bb := b)`.staticScope()
+  # value: <["a"] := ["b"] =~ ["bb"] + var []>
+  
+  call
+  ? e`a.b(def cc := c, d)`.staticScope()
+  # value: <[] := ["d", "c", "a"] =~ ["cc"] + var []>
+
+  catch
+  ? e`try { def aa := a } catch via (c) b { def dd := d }`.staticScope()
+  # value: <[] := ["d", "c", "a"] =~ [] + var []>
+
+  define
+  ? e`def a := (def bb := b)`.staticScope()
+  # value: <[] := ["b"] =~ ["bb", "a"] + var []>
+
+  escape
+  ? e`escape via (b) a { def cc := c }`.staticScope()
+  # value: <[] := ["c", "b"] =~ [] + var []>
+
+  XXX escape with catch
+
+  finally
+  ? e`try { def aa := a } finally { def bb := b }`.staticScope()
+  # value: <[] := ["b", "a"] =~ [] + var []>
+
+  hide
+  ? e`{ def aa := a }`.staticScope()
+  # value: <[] := ["a"] =~ [] + var []>
+
+  if
+  ? e`if (def aa := a) { def bb := b } else { def cc := c }`.staticScope()
+  # value: <[] := ["c", "b", "a"] =~ [] + var []>
+  XXX if with no else
+  
+  literal
+  ? e`"hi"`.staticScope()
+  # value: <[] := [] =~ [] + var []>
+  
+  meta-context
+  ? e`meta.context()`.staticScope()
+  # value: <[] := [] =~ [] + var []>
+  
+  meta-state
+
+  ? e`meta.getState()`.staticScope()
+  # value: <[] := [] =~ [] + var [], meta.getState()>
+
+  ? def mSSS := e`fn { meta.getState() }`.staticScope()
+  # value: <[] := [] =~ [] + var [], { meta.getState() }>
+  
+  ? [mSSS.hasMetaStateExpr(),
+  >  mSSS.hasOuterMetaStateExpr(),
+  >  mSSS."uses"("x")]
+  # value: [true, false, false]
+
+  noun
+  ? e`boolean`.staticScope()
+  # value: <[] := ["boolean"] =~ [] + var []>
+  
+  object
+  ? e`def x implements a, b {
+  >   method y(c) :d { e }
+  >   match f { g }
+  > }`.staticScope()
+  # value: <[] := ["g", "e", "d", "b", "a"] =~ ["x"] + var []>
+
+  plumbing
+  ? e`def x implements a match b { c }`.staticScope()
+  # value: <[] := ["c", "a"] =~ ["x"] + var []>
+  
+  seq
+  ? e`(def aa := a); (def bb := b)`.staticScope()
+  # value: <[] := ["b", "a"] =~ ["bb", "aa"] + var []>
+  
+  slot
+  ? e`&any`.staticScope()
+  # value: <[] := ["any"] =~ [] + var []>
+  
+  final
+  ? epatt`a`.staticScope()
+  # value: <[] := [] =~ ["a"] + var []>
+  ? epatt`a :b`.staticScope()
+  # value: <[] := ["b"] =~ ["a"] + var []>
+
+  ignore
+  ? epatt`_`.staticScope()
+  # value: <[] := [] =~ [] + var []>
+  
+  list
+  ? epatt`[a, b, c]`.staticScope()
+  # value: <[] := [] =~ ["c", "b", "a"] + var []>
+  
+  slot
+  ? epatt`&a`.staticScope()
+  # value: <[] := [] =~ [] + var ["a"]>
+  ? epatt`&a :b`.staticScope()
+  # value: <[] := ["b"] =~ [] + var ["a"]>
+  
+  via
+  ? epatt`via (def aa := a) b`.staticScope()
+  # value: <[] := ["a"] =~ ["b", "aa"] + var []>
+  ? epatt`via (def aa := a) via (aa) b`.staticScope()
+  # value: <[] := ["a"] =~ ["b", "aa"] + var []>
+
+  var
+  ? epatt`var a`.staticScope()
+  # value: <[] := [] =~ [] + var ["a"]>
+  ? epatt`var a :b`.staticScope()
+  # value: <[] := ["b"] =~ [] + var ["a"]>
+
+--- Visitors ---
+
+These tests check the arguments which nodes give to visitors.
+
+  ? def makeVisitor(depth) :any {
+  >   return def spamVisitor {
+  >     match [`visit@name`, [optOriginal] + elements] {
+  >       println(`${"  " * depth}$name ${E.toQuote(optOriginal).split("\n")[0]}...`)
+  >       for element in elements {
+  >         if (element.__respondsTo("welcome", 1)) { element.welcome(makeVisitor(depth + 1)) 
+  >         } else if (element =~ l :List ? (l !~ s :String)) { E.call(makeVisitor(depth + 1), "visit_list", [null] + l) 
+  >         } else {
+  >           println(`${"  " * (depth + 1)}$element`)
+  >         }
+  >       }
+  >     }
+  >   }
+  > }
+  # value: <makeVisitor>
+  
+  ? e`target := value`.welcome(makeVisitor(0))
+  # stdout: AssignExpr e`target := value`...
+  #           NounExpr e`target`...
+  #             target
+  #           NounExpr e`value`...
+  #             value
+  #         
+  
+  ? e`1 + 1`.welcome(makeVisitor(0))
+  # stdout: CallExpr e`1.add(1)`...
+  #           LiteralExpr e`1`...
+  #             1
+  #           add
+  #           _list null...
+  #             LiteralExpr e`1`...
+  #               1
+  #         
+  
+  ? e`try { attempt } catch cpatt { catcher }`.welcome(makeVisitor(0))
+  # stdout: CatchExpr e`try {...
+  #           NounExpr e`attempt`...
+  #             attempt
+  #           FinalPattern epatt`cpatt`...
+  #             NounExpr e`cpatt`...
+  #               cpatt
+  #             null
+  #           NounExpr e`catcher`...
+  #             catcher
+  #         
+  
+  ? e`def a := b`.welcome(makeVisitor(0))
+  # stdout: DefineExpr e`def a := b`...
+  #           FinalPattern epatt`a`...
+  #             NounExpr e`a`...
+  #               a
+  #             null
+  #           null
+  #           NounExpr e`b`...
+  #             b
+  #         
+  
+  ? e`escape patt { body } catch cpatt { catcher }`.welcome(makeVisitor(0))
+  # stdout: EscapeExpr e`escape patt {...
+  #           FinalPattern epatt`patt`...
+  #             NounExpr e`patt`...
+  #               patt
+  #             null
+  #           NounExpr e`body`...
+  #             body
+  #           FinalPattern epatt`cpatt`...
+  #             NounExpr e`cpatt`...
+  #               cpatt
+  #             null
+  #           NounExpr e`catcher`...
+  #             catcher
+  #         
+  
+  ? e`try { attempt } finally { cleanup }`.welcome(makeVisitor(0))
+  # stdout: FinallyExpr e`try {...
+  #           NounExpr e`attempt`...
+  #             attempt
+  #           NounExpr e`cleanup`...
+  #             cleanup
+  #         
+  
+  ? e`{ body }`.welcome(makeVisitor(0))
+  # stdout: HideExpr e`{...
+  #           NounExpr e`body`...
+  #             body
+  #         
+  
+  ? e`if (cond) { true } else { false }`.welcome(makeVisitor(0))
+  # stdout: IfExpr e`if (cond) {...
+  #           NounExpr e`cond`...
+  #             cond
+  #           NounExpr e`true`...
+  #             true
+  #           NounExpr e`false`...
+  #             false
+  #         
+  
+  ? e`"abc"`.welcome(makeVisitor(0))
+  # stdout: LiteralExpr e`"abc"`...
+  #           abc
+  #         
+  
+  ? e`meta.context()`.welcome(makeVisitor(0))
+  # stdout: MetaContextExpr e`meta.context()`...
+  #         
+  
+  ? e`meta.getState()`.welcome(makeVisitor(0))
+  # stdout: MetaStateExpr e`meta.getState()`...
+  #         
+  
+  ? e`noun`.welcome(makeVisitor(0))
+  # stdout: NounExpr e`noun`...
+  #           noun
+  #         
+  
+  ? e`def obj1 implements auditor {
+  >   method aMethod(param) :resultGuard { methodBody }
+  >   match matcherPatt { matcherBody }
+  > }`.welcome(makeVisitor(0))
+  # stdout: ObjectExpr e`def obj1 implements auditor {...
+  #           
+  #           FinalPattern epatt`obj1`...
+  #             NounExpr e`obj1`...
+  #               obj1
+  #             null
+  #           _list null...
+  #             NounExpr e`auditor`...
+  #               auditor
+  #           EScript e??` {...
+  #             _list null...
+  #               EMethod e??`...
+  #                 
+  #                 aMethod
+  #                 _list null...
+  #                   FinalPattern epatt`param`...
+  #                     NounExpr e`param`...
+  #                       param
+  #                     null
+  #                 NounExpr e`resultGuard`...
+  #                   resultGuard
+  #                 NounExpr e`methodBody`...
+  #                   methodBody
+  #             _list null...
+  #               EMatcher e??`match matcherPatt {...
+  #                 FinalPattern epatt`matcherPatt`...
+  #                   NounExpr e`matcherPatt`...
+  #                     matcherPatt
+  #                   null
+  #                 NounExpr e`matcherBody`...
+  #                   matcherBody
+  #         
+  
+  ? e`def obj2 match plumbingPatt { plumbingBody }`.welcome(makeVisitor(0))
+  # stdout: ObjectExpr e`def obj2 match plumbingPatt {...
+  #           
+  #           FinalPattern epatt`obj2`...
+  #             NounExpr e`obj2`...
+  #               obj2
+  #             null
+  #           _list null...
+  #           EScript e??` match plumbingPatt {...
+  #             null
+  #             _list null...
+  #               EMatcher e??`match plumbingPatt {...
+  #                 FinalPattern epatt`plumbingPatt`...
+  #                   NounExpr e`plumbingPatt`...
+  #                     plumbingPatt
+  #                   null
+  #                 NounExpr e`plumbingBody`...
+  #                   plumbingBody
+  #         
+  
+  ? e`first; second`.welcome(makeVisitor(0))
+  # stdout: SeqExpr e`first...
+  #           _list null...
+  #             NounExpr e`first`...
+  #               first
+  #             NounExpr e`second`...
+  #               second
+  #         
+  
+  ? e`&slotNoun`.welcome(makeVisitor(0))
+  # stdout: SlotExpr e`&slotNoun`...
+  #           NounExpr e`slotNoun`...
+  #             slotNoun
+  #         
+  
+  ? epatt`_`.welcome(makeVisitor(0))
+  # stdout: IgnorePattern epatt`_`...
+  #         
+  
+  ? epatt`[listelem]`.welcome(makeVisitor(0))
+  # stdout: ListPattern epatt`[listelem]`...
+  #           _list null...
+  #             FinalPattern epatt`listelem`...
+  #               NounExpr e`listelem`...
+  #                 listelem
+  #               null
+  #         
+  
+  ? epatt`finalNoun :guard`.welcome(makeVisitor(0))
+  # stdout: FinalPattern epatt`finalNoun :guard`...
+  #           NounExpr e`finalNoun`...
+  #             finalNoun
+  #           NounExpr e`guard`...
+  #             guard
+  #         
+  
+  ? epatt`var varNoun :guard`.welcome(makeVisitor(0))
+  # stdout: VarPattern epatt`var varNoun :guard`...
+  #           NounExpr e`varNoun`...
+  #             varNoun
+  #           NounExpr e`guard`...
+  #             guard
+  #         
+  
+  ? epatt`&slotNoun :guard`.welcome(makeVisitor(0))
+  # stdout: SlotPattern epatt`&slotNoun :guard`...
+  #           NounExpr e`slotNoun`...
+  #             slotNoun
+  #           NounExpr e`guard`...
+  #             guard
+  #         
+
+--- getOptPrincipalNoun ---
+
+  ? (def simplest := <vm:makeFinalPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null)).getOptPrincipalNoun()
+  # value: "foo"
+
+  ? <vm:makeVarPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  # value: "foo"
+
+  ? <vm:makeSlotPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  # value: "foo"
+  XXX should be &foo?
+  
+  ? (def listPatt := <vm:makeListPattern>(null, [simplest], null)).getOptPrincipalNoun()
+
+  ? <vm:makeIgnorePattern>(null, null).getOptPrincipalNoun()
+
+XXX well-formedness constraints tested before eval, but not at construction so we can build conveniently
+      no shadowing without an intervening HideExpr
+      no recursive definitions in DefineExpr (evaluator constraint?)
+XXX test quasi features (quasi expr/pattern allowed everywhere it should be)
