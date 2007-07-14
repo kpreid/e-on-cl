@@ -55,6 +55,14 @@ sort
 
 XXX consider how to test all the same methods on Strings (or, for String-specific quirks, coercions, etc.)
 
+last
+
+  ? ["a", "b", "c"].last()
+  # value: "c"
+
+  ? [].last()
+  # problem: [] has no last element
+
 makeList
 
   ? def makeConstList :DeepFrozen := <elib:tables.makeConstList>

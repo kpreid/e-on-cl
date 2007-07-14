@@ -369,9 +369,6 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|get| (this index)
     "Return the 'index'th element of this list."
     (aref this (e-coerce index 'integer)))
-  (:|last| (v) 
-    "Return the last element of this list, or throw if it is empty."
-    (aref v (1- (length v))))
   (:|add| (this (other 'vector))
     "Return the concatenation of both lists."
     (concatenate `(vector (or ,(array-element-type this)

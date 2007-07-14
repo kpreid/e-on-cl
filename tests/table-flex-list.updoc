@@ -314,6 +314,14 @@ sort
   ? floatList.sort(def reverseCompare(a, b) :any { return -(a.op__cmp(b)) })
   # value: [50.0, 40.0, 3.0]
 
+last
+
+  ? floatList.last()
+  # value: 50.0
+
+  ? [].diverge().last()
+  # problem: [].diverge() has no last element
+
 
 Regression test: push works on trivial-value-less typed lists:
 

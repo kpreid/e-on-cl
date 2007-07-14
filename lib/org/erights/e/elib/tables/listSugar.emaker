@@ -48,7 +48,15 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
   to instance_valueType(self) { childResponsibility(self, "valueType/0") }
 
   # XXX nonatomic
-  to instance_last(self) { return self.get(self.size().prev()) }
+  to instance_last(self) { 
+    def size := self.size()
+    return try { 
+      self.get(size.previous())
+    } catch _ ? size.isZero() {
+      # XXX unnecessary printing
+      throw(E.toQuote(self) + " has no last element")
+    }
+  }
 
   to instance_iterate(self, assocFunc) {
     var i := 0
