@@ -2,7 +2,6 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
-pragma.enable("dot-props")
 pragma.enable("accumulator")
 pragma.enable("function-implements")
 
@@ -31,8 +30,8 @@ def makeLALR1ParserAuthor implements ExitViaHere { # implements DeepFrozen
   to run(lisp) {
 
     # XXX duplicated code from IPAuthor.emaker
-    def intern := lisp["CL", "INTERN"]::"function"
-    def read := lisp["CL", "READ-FROM-STRING"]::"function"
+    def intern := lisp["CL", "INTERN"].getFunction()
+    def read := lisp["CL", "READ-FROM-STRING"].getFunction()
     def l__quasiParser {
       to valueMaker(t :String) {
         return def vm {
@@ -42,31 +41,31 @@ def makeLALR1ParserAuthor implements ExitViaHere { # implements DeepFrozen
     }
     def <kw> { to get(k :String) { return intern(k, "KEYWORD") }}
     
-    { def asdfOperate := lisp["ASDF", "OPERATE"]::"function"
+    { def asdfOperate := lisp["ASDF", "OPERATE"].getFunction()
       def load_op := intern("LOAD-OP", "ASDF")
       
       # XXX :verbose nil for asdf loads
       asdfOperate(load_op, intern("YACC", "KEYWORD"))
     }
     
-    def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
+    def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"][]
 
-    def clCoerce := lisp["CL", "COERCE"]::"function"
-    def makeSymbol := lisp["CL", "MAKE-SYMBOL"]::"function"
-    def fdefinition := lisp["CL", "FDEFINITION"]::"function"
-    def symbolValue := lisp["CL", "SYMBOL-VALUE"]::"function"
-    def set := lisp["CL", "SET"]::"function"
-    def eToLispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"]::"function"
-    def eToLispMVFunction := lisp["E.KNOT", "E-TO-LISP-MV-FUNCTION"]::"function"
+    def clCoerce := lisp["CL", "COERCE"].getFunction()
+    def makeSymbol := lisp["CL", "MAKE-SYMBOL"].getFunction()
+    def fdefinition := lisp["CL", "FDEFINITION"].getFunction()
+    def symbolValue := lisp["CL", "SYMBOL-VALUE"].getFunction()
+    def set := lisp["CL", "SET"].getFunction()
+    def eToLispFunction := lisp["E.KNOT", "E-TO-LISP-FUNCTION"].getFunction()
+    def eToLispMVFunction := lisp["E.KNOT", "E-TO-LISP-MV-FUNCTION"].getFunction()
 
-    def yaccMakeParser := lisp["YACC", "MAKE-PARSER"]::"function"
-    def yaccMakeGrammar := lisp["YACC", "MAKE-GRAMMAR"]::"function"
-    def yaccMakeProduction := lisp["YACC", "MAKE-PRODUCTION"]::"function"
-    def yaccParseWithLexer := lisp["YACC", "PARSE-WITH-LEXER"]::"function"
+    def yaccMakeParser := lisp["YACC", "MAKE-PARSER"].getFunction()
+    def yaccMakeGrammar := lisp["YACC", "MAKE-GRAMMAR"].getFunction()
+    def yaccMakeProduction := lisp["YACC", "MAKE-PRODUCTION"].getFunction()
+    def yaccParseWithLexer := lisp["YACC", "PARSE-WITH-LEXER"].getFunction()
     def YaccParseErrorT := lisp.unsealingConditionGuard(l`yacc:yacc-parse-error`)
        
-    def ypeTerminal := lisp["YACC", "YACC-PARSE-ERROR-TERMINAL"]::"function"
-    def ypeExpectedTerminals := lisp["YACC", "YACC-PARSE-ERROR-EXPECTED-TERMINALS"]::"function"
+    def ypeTerminal := lisp["YACC", "YACC-PARSE-ERROR-TERMINAL"].getFunction()
+    def ypeExpectedTerminals := lisp["YACC", "YACC-PARSE-ERROR-EXPECTED-TERMINALS"].getFunction()
     def EOF := l`yacc:yacc-eof-symbol` # XXX internal symbol
 
     def unmapSymbol(sym) {

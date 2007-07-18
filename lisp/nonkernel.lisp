@@ -858,7 +858,7 @@
 (defemacro |PropertyExpr| (|EExpr|) ((|recipient| t |EExpr|) 
                                      (|key| nil string))
                                     ()
-  (mn '|CallExpr| (mn '|PropertySlotExpr| |recipient| |key|) "getValue"))
+  (mn '|CallExpr| (mn '|PropertySlotExpr| |recipient| |key|) "get"))
 
 (defemacro |PropertySlotExpr| (|EExpr|) ((|recipient| t |EExpr|) 
                                          (|key| nil string))

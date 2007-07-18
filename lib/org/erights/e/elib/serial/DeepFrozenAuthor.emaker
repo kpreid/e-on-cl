@@ -82,9 +82,9 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
     kit
   }
   
-  def &peekSealer := def _{to getValue() { return getPeekBrandKit().getSealer() } }
-  def &peekUnsealer := def _{ to getValue() { return getPeekBrandKit().getUnsealer() } }
-  def &peekBrand := def _{ to getValue() { return getPeekBrandKit().getBrand() } }
+  def &peekSealer := def _{to get() { return getPeekBrandKit().getSealer() } }
+  def &peekUnsealer := def _{ to get() { return getPeekBrandKit().getUnsealer() } }
+  def &peekBrand := def _{ to get() { return getPeekBrandKit().getBrand() } }
 
   def rtrace(msgThunk) {
     #traceln(if (msgThunk =~ msg :String) {msg} else {msgThunk()})

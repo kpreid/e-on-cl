@@ -21,12 +21,12 @@ def scopeSugar extends sugarRoot implements DeepFrozen, ExitViaHere {
   method instance_without(self, _) { childResponsibility(self, "without/1") }
 
   method instance_fetch(self, noun, absentThunk) {
-    self.fetchSlot(noun, absentThunk).getValue()
+    self.fetchSlot(noun, absentThunk).get()
   }
 
   /** Return the value of this scope's slot for the given noun string, or throw if it has no slot. */
   method instance_get(self, noun :String) { 
-    self.getSlot(noun).getValue()
+    self.getSlot(noun).get()
   }
 
   /** Return this scope's slot for the given noun string, or throw if it has no slot. */
@@ -47,7 +47,7 @@ def scopeSugar extends sugarRoot implements DeepFrozen, ExitViaHere {
   
   /** Set the value of this scope's slot for the given noun string, or throw if it has no slot. */
   method instance_put(self, noun, value) {
-    self.getSlot(noun).setValue(value)
+    self.getSlot(noun).put(value)
   }
 
   /** Return a scope which has an immutable slot for 'value' bound to 'noun', and this scope's other bindings and FQN prefix. */

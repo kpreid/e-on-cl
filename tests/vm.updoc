@@ -118,7 +118,7 @@ More AssignExpr:
   # value: [3, 1]
   
   outer shadowed binding doesn't cause rejection (slot)
-  ? { def sbt := 1; [{ def &sbt := def _ {to setValue(_){} to getValue(){}}; { sbt := 3 }; sbt}, sbt] }
+  ? { def sbt := 1; [{ def &sbt := def _ {to put(_){} to get(){}}; { sbt := 3 }; sbt}, sbt] }
   # value: [null, 1]
   
   bug test: recognize the end of a scope box as ending shadowing
@@ -665,7 +665,7 @@ SlotExpr, SlotPattern, AssignExpr
   ? &pi
   # value: <& 3.14159>
   
-  ? (&pi).getValue()
+  ? (&pi).get()
   # value: 3.14159
   
   ? (&pi).isFinal()
@@ -674,12 +674,12 @@ SlotExpr, SlotPattern, AssignExpr
   ? (&pi).__optUncall()
   # value: [<makeFinalSlot>, "run", [3.14159]]
   
-  Since this is not an AssignExpr but a SlotExpr and call, the error is that which results from FinalSlot#setValue, and is not statically caught.
+  Since this is not an AssignExpr but a SlotExpr and call, the error is that which results from FinalSlot#put, and is not statically caught.
   
-  ? [(&pi).setValue(3)]
+  ? [(&pi).put(3)]
   # problem: not an assignable slot: <& 3.14159>
   
-  ? if (false) { [(&pi).setValue(3)] }
+  ? if (false) { [(&pi).put(3)] }
   
  outer normal slot
  
@@ -689,7 +689,7 @@ SlotExpr, SlotPattern, AssignExpr
   ? (&any) :all[DeepFrozen, PassByCopy]
   # value: <& any>
   
-  ? (&any).getValue()
+  ? (&any).get()
   # value: any
   
   ? (&any).isFinal()
@@ -698,7 +698,7 @@ SlotExpr, SlotPattern, AssignExpr
   ? (&any).__optUncall()
   # value: [<makeFinalSlot>, "run", [any]]
   
-  ? [(&any).setValue(3)]
+  ? [(&any).put(3)]
   # problem: not an assignable slot: <& any>
   
  outer lazy slot
@@ -709,7 +709,7 @@ SlotExpr, SlotPattern, AssignExpr
   ? (&require) :DeepFrozen
   # value: <lazyApplySlot>
   
-  ? (&require).getValue()
+  ? (&require).get()
   # value: <require>
   
   ? (&require).isFinal()
@@ -718,8 +718,8 @@ SlotExpr, SlotPattern, AssignExpr
   ? [(&require).__optUncall()]
   # value: [null]
   
-  ? [(&require).setValue(3)]
-  # problem: no such method: lazyApplySlot#setValue/1
+  ? [(&require).put(3)]
+  # problem: no such method: lazyApplySlot#put/1
   
  var slots, slot patterns, assignment
 
@@ -729,7 +729,7 @@ SlotExpr, SlotPattern, AssignExpr
   ? &slottest_a
   # value: <var 3.14>
   
-  ? (&slottest_a).getValue()
+  ? (&slottest_a).get()
   # value: 3.14
   
   ? (&slottest_a).isFinal()
@@ -738,7 +738,7 @@ SlotExpr, SlotPattern, AssignExpr
   x ? (&slottest_a).__optUncall()
   x # value: [<makeVarSlot>, "run", [3.14]]
   
-  ? [(&slottest_a).setValue(3)]
+  ? [(&slottest_a).put(3)]
   # value: [null]
   
   ? def slottest_slot := &slottest_a
@@ -781,8 +781,8 @@ SlotExpr, SlotPattern, AssignExpr
   ? def &perverse := { 
   >   var v := 0
   >   def perverseSlot {
-  >     to getValue() :any { return v += 1 }
-  >     to setValue(new :tint) :void { v += new * 100 }
+  >     to get() :any { return v += 1 }
+  >     to put(new :tint) :void { v += new * 100 }
   >     to isFinal() :any { return false }
   >   }
   > }

@@ -17,15 +17,15 @@ interface "org.erights.e.elib.slot.Slot" {
   /**
    * Get the current value of the variable.
    */
-  to getValue() :any
+  to get() :any
   /**
    * Sets the current value of the variable to be a coercion of specimen to
    * a value that meets the constraints represented by this slot.
    * <p/>
-   * getValue() will then return this value. If the variable is final
+   * get() will then return this value. If the variable is final
    * (immutable), then throw an informative exception instead.
    */
-  to setValue(newValue :any) :void
+  to put(newValue :any) :void
   /**
    * Says whether the Slot acts like a {@link FinalSlot}.
    */

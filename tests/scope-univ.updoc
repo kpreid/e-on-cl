@@ -369,11 +369,11 @@ __makeVerbFacet
   ? rr :DeepFrozen
   # value: <calling "isResolved" facet>
   
-  ? {var x := 1; (&x).setValue} :DeepFrozen
-  # problem: <calling "setValue" facet> is not DeepFrozen because <calling "setValue" facet> contains references that are unsettled or not DeepFrozen
+  ? {var x := 1; (&x).put} :DeepFrozen
+  # problem: <calling "put" facet> is not DeepFrozen because <calling "put" facet> contains references that are unsettled or not DeepFrozen
 
-  ? var x := 1; def u := ((&x) <- setValue)
-  # value: <sending "setValue" facet>
+  ? var x := 1; def u := ((&x) <- put)
+  # value: <sending "put" facet>
   
   ? [x, u(2), x]
   # value: [1, <Promise>, 1]
@@ -382,7 +382,7 @@ __makeVerbFacet
   # value: 2
   
   ? u :DeepFrozen
-  # problem: <sending "setValue" facet> is not DeepFrozen because <sending "setValue" facet> contains references that are unsettled or not DeepFrozen
+  # problem: <sending "put" facet> is not DeepFrozen because <sending "put" facet> contains references that are unsettled or not DeepFrozen
   
   ? (1 <- add) :DeepFrozen
   # value: <sending "add" facet>

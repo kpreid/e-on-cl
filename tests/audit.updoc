@@ -139,7 +139,7 @@ audition.getSlot
   ? def slotCheckingAuditor {
   >   to audit(audition) :boolean {
   >     # NOTE: In a similar auditor attempting to actually prove security properties, we would check if x is a true FinalSlot or itself DeepFrozen.
-  >     if (audition.getSlot("x").getValue() == 2) {
+  >     if (audition.getSlot("x").get() == 2) {
   >       return true
   >     } else {
   >       throw("Bad!")

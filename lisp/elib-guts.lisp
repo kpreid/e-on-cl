@@ -73,10 +73,10 @@
     (e. tw |quote| (simple-slot-value this))
     (e. tw |print| ">")
     nil)
-  (:|getValue| (this)
+  (:|get| (this)
     "Returns the constant value of this slot."
     (simple-slot-value this))
-  (:|setValue| (this new-value)
+  (:|put| (this new-value)
     "Always fails."
     (declare (ignore new-value))
     (error "not an assignable slot: ~A" (e-quote this)))
@@ -97,7 +97,7 @@
            :accessor closure-slot-setter)))
 
 (def-vtable base-closure-slot
-  (:|getValue| (this)
+  (:|get| (this)
     (funcall (closure-slot-getter this)))
   (:|isFinal| (this)
     (declare (ignore this))
@@ -121,17 +121,17 @@
 (def-vtable e-var-slot
   (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
     (e. tw |print| "<var ")
-    (e. tw |quote| (e. this |getValue|))
+    (e. tw |quote| (e. this |get|))
     (e. tw |print| ">"))
   (:|__optUncall| (this)
-    `#(,+the-make-var-slot+ "run" #(,(e. this |getValue|))))
-  (:|setValue| (this new-value)
+    `#(,+the-make-var-slot+ "run" #(,(e. this |get|))))
+  (:|put| (this new-value)
     (funcall (closure-slot-setter this) new-value)
     nil))
 
 (defmethod print-object ((slot e-var-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "var & ~W" (e. slot |getValue|))))
+    (format stream "var & ~W" (e. slot |get|))))
 
 (defclass e-guarded-slot (base-closure-slot) 
   ((guard :initarg :guard :reader guarded-slot-guard)))
@@ -155,7 +155,7 @@
       (e. tw |print| " :")
       (e. tw |quote| guard)
       (e. tw |print| ">")))
-  (:|setValue| (this new-value)
+  (:|put| (this new-value)
     (funcall (closure-slot-setter this) 
       (e. (guarded-slot-guard this) |coerce| new-value nil))
     nil))
@@ -164,7 +164,7 @@
   (print-unreadable-object (slot stream :type nil :identity nil)
     (format stream "var & ~W :~W" 
       (if (slot-boundp slot 'getter) 
-        (e. slot |getValue|)
+        (e. slot |get|)
         '#:<unbound-getter>)
       (ignore-errors (guarded-slot-guard slot)))))
 

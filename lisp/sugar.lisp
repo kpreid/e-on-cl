@@ -30,19 +30,19 @@
       (get-setf-expansion place environment)
     `(let* (,@(mapcar #'list vars vals))
       (e-lambda "org.cubik.cle.prim.PlaceSlot" ()
-        (:|getValue| ()             ,reader-form)
-        (:|setValue| (,@store-vars) ,writer-form nil)
+        (:|get| ()             ,reader-form)
+        (:|put| (,@store-vars) ,writer-form nil)
         (:|readOnly| ()
           (e-lambda "org.cubik.cle.prim.ReadOnlyPlaceSlot" ()
-            (:|getValue| ()         ,reader-form)))))))
+            (:|get| ()         ,reader-form)))))))
 
 
 (defun e-slot-value (slot)
   "Together with (setf e-slot-value), this function allows accessing an E Slot as a CL place."
-  (e. slot |getValue|))
+  (e. slot |get|))
 
 (defun (setf e-slot-value) (new slot)
-  (e. slot |setValue| new))
+  (e. slot |put| new))
 
 
 (defmacro def-shorten-methods (gf-name arity)

@@ -30,7 +30,7 @@ XXX non-external symbols
 
 symbol-value
 
-  ? [def v := timerSym.getValue(), v == timer]
+  ? [def v := timerSym.get(), v == timer]
   # value: [<a Timer>, true]
   
 symbol-function
@@ -48,7 +48,7 @@ symbol-function
   # value: HELLO-WORLD
   
   returned values are *not* altered - XXX function-is-object-or-function issue?
-  ? freshSymbol.__respondsTo("getValue", 0)
+  ? freshSymbol.__respondsTo("get", 0)
   # value: false
   
   for multiple-value functions - XXX write a test that shows this

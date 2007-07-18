@@ -78,4 +78,4 @@ def makePathLoader implements DeepFrozenStamp {
   }
 }
 
-lisp["E.KNOT", "+THE-MAKE-PATH-LOADER+"].setValue(makePathLoader)
+lisp["E.KNOT", "+THE-MAKE-PATH-LOADER+"].put(makePathLoader)

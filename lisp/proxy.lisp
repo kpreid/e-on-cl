@@ -48,7 +48,7 @@
     (progn
       (setf box (ref-shorten box))
       (check-type box e-simple-slot)
-      (e. box |getValue|))
+      (e. box |get|))
     (error ()
       (bogus-resolution "Resolution promise of a proxy handled by ~A didn't resolve to a simple slot, but ~A."
         (e-quote (%proxy-ref-handler ref))

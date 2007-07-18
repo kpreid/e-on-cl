@@ -108,7 +108,7 @@
                 (lambda (noun &aux (slot (gethash noun slot-table)))
                   (if (and (typep slot 'e-simple-slot) 
                            (not (e-is-true (e. noun |startsWith| "&"))))
-                    (vector noun (e. slot |getValue|))
+                    (vector noun (e. slot |get|))
                     (vector (concatenate 'string "&" noun) slot)))
                 (scope-slot-ordering this)))
            ,(scope-fqn-prefix this)
@@ -144,7 +144,7 @@
     (block nil
       (e. (e. scope |fetchSlot| noun 
             (efun () (return (efuncall absent-thunk))))
-          |getValue|)))
+          |get|)))
   (:|iterate| (scope afunc)
     "Iterate over the bindings in this scope, as \"&\" + noun => slot."
     (let ((slot-table (slot-table scope)))

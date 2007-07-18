@@ -197,13 +197,13 @@
 ; slot bindings - represented as symbols for historical reasons - xxx change that?
 
 (defmethod binding-get-code ((binding symbol))
-  `(e. ,binding |getValue|))
+  `(e. ,binding |get|))
 
 (defmethod binding-get-slot-code ((binding symbol))
   binding)
 
 (defmethod binding-set-code ((binding symbol) value-form)
-  `(e. ,binding |setValue| ,value-form))
+  `(e. ,binding |put| ,value-form))
 
 
 
@@ -289,13 +289,13 @@
          :reader %slot-binding-variable)))
   
 (defmethod binding-get-code ((binding slot-binding))
-  `(e. ',(%slot-binding-variable binding) |getValue|))
+  `(e. ',(%slot-binding-variable binding) |get|))
 
 (defmethod binding-get-slot-code ((binding slot-binding))
   `',(%slot-binding-variable binding))
 
 (defmethod binding-set-code ((binding slot-binding) value-form)
-  `(e. ,(%slot-binding-variable binding) |setValue| ,value-form))
+  `(e. ,(%slot-binding-variable binding) |put| ,value-form))
 
 
 (defgeneric binding-for-slot (slot))
@@ -305,7 +305,7 @@
 
 (defmethod binding-for-slot ((slot elib:e-simple-slot))
   ; could be extended to cover any DeepFrozen slot
-  (make-instance 'value-binding :value (e. slot |getValue|)))
+  (make-instance 'value-binding :value (e. slot |get|)))
 
 ;;; --- ejector-specifier utilities ---
 

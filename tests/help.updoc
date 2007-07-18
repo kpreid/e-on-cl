@@ -408,9 +408,9 @@ help
   # value: /** A normal immutable slot. */
   #        interface "org.erights.e.elib.slot.finalSlot" {
   #            /** Returns the constant value of this slot. */
-  #            to getValue()
+  #            to get()
   #            /** Always fails. */
-  #            to setValue(::"new-value")
+  #            to put(::"new-value")
   #            /** Returns true. */
   #            to isFinal()
   #        }

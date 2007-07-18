@@ -154,7 +154,7 @@
                               (value (progn
                                        (unless (typep slot 'e-simple-slot)
                                          (efuncall fail))
-                                       (ref-shorten (e. slot |getValue|)))))
+                                       (ref-shorten (e. slot |get|)))))
                          (unless (typep value 'externalizable-for-efasl)
                            ;; xxx in principle, this can be extended to any externalizable value 
                            (efuncall fail))

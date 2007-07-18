@@ -276,9 +276,9 @@
           (:|gc| () (e. e.extern:+gc+ |run|) nil)
           (:|getProps| () props)
           ;; XXX other interp methods
-          (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |getValue|)))
+          (:|waitAtTop| (ref &aux (old-wait (e. wait-hook-slot |get|)))
             "Unlike E-on-Java, always returns null, and not the ref it's passed."
-            (e. wait-hook-slot |setValue|
+            (e. wait-hook-slot |put|
               (call-when-resolved ref
                 (efun (ref)
                   (declare (ignore ref))
@@ -339,7 +339,7 @@
                         |withPrefix| "__main$")))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope
            )
-      (e. scope-slot |setValue| scope)
+      (e. scope-slot |put| scope)
       (format t "~&~A" (enough-namestring file))
       (let ((starting-time (get-internal-run-time)))
         (chain #'result+
@@ -513,7 +513,7 @@
                         (e. split-in |strictTerminatorPolicy|)
                         (eelt scope "stdin")))
        (eio (e-import "org.erights.e.elib.eio.EIO")))
-    (e. scope-slot |setValue| scope)
+    (e. scope-slot |put| scope)
     (labels ((take ()
                (format t "~&e-on-cl? ")
                (force-output)

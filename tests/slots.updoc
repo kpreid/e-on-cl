@@ -60,8 +60,8 @@ makeVarSlot
   ? v.isFinal()
   # value: false
   
-  ? v.setValue(2)
-  ? v.getValue()
+  ? v.put(2)
+  ? v.get()
   # value: 2
   
   ? v
@@ -91,11 +91,11 @@ Guarded
   ? v.isFinal()
   # value: false
   
-  ? v.setValue(2)
-  ? v.getValue()
+  ? v.put(2)
+  ? v.get()
   # value: 2
   
-  ? v.setValue(null)
+  ? v.put(null)
   # problem: the Null null doesn't coerce to an int
   
   ? v

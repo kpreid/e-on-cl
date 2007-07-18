@@ -2,11 +2,10 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
-pragma.enable("dot-props")
 pragma.enable("accumulator")
 
-def Range := EIO::Range
-def ALL := EIO::ALL
+def Range := EIO.getRange()
+def ALL := EIO.getALL()
 
 def Element := int # XXX should be int8 (0..255)
 
@@ -14,9 +13,9 @@ def makeFDInStreamAuthor implements ExitViaHere {
   to run(lisp) {
     # XXX reduce the amount of lisp stuff this emaker uses
 
-    def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"]::value
-    def read := lisp["CL", "READ-FROM-STRING"]::"function"
-    def intern := lisp["CL", "INTERN"]::"function"
+    def DeepFrozenStamp := lisp["E.ELIB", "+DEEP-FROZEN-STAMP+"][]
+    def read := lisp["CL", "READ-FROM-STRING"].getFunction()
+    def intern := lisp["CL", "INTERN"].getFunction()
     def l__quasiParser {
       to valueMaker(t :String) {
         return def vm {
@@ -25,8 +24,8 @@ def makeFDInStreamAuthor implements ExitViaHere {
       }
     }
 
-    def fooAddReceiveHandler := lisp["E.STREAMS", "FOO-ADD-RECEIVE-HANDLER"]::"function"
-    def fooRemoveReceiveHandler := lisp["E.STREAMS", "FOO-REMOVE-RECEIVE-HANDLER"]::"function"
+    def fooAddReceiveHandler := lisp["E.STREAMS", "FOO-ADD-RECEIVE-HANDLER"].getFunction()
+    def fooRemoveReceiveHandler := lisp["E.STREAMS", "FOO-REMOVE-RECEIVE-HANDLER"].getFunction()
 
     /** Make an InStream that reads from a non-blocking-POSIX-read()-style data source. */
     def makeFDInStream implements DeepFrozenStamp {

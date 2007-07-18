@@ -19,11 +19,11 @@ def makeDefaultPropertySlot(object, propertyName :String) implements DeepFrozen 
       ePrinter.printPropertySlot(out, propertyName)
     }
     /** E.call(target, `get$Property`, []) */
-    to getValue() {
+    to get() {
       return E.call(object, getVerb, [])
     }
     /** E.call(target, `set$Property`, [new]); null */
-    to setValue(new) {
+    to put(new) {
       E.call(object, setVerb, [new])
       null
     }

@@ -8,7 +8,7 @@
 (deftest lazy.1
   (let ((slot (e.knot::make-lazy-apply-slot (lambda () (error "biff")))))
     (flet ((foo () (handler-case
-                       (e. slot |getValue|)
+                       (e. slot |get|)
                      (error (c)
                        (princ-to-string c)))))
       (values (foo)

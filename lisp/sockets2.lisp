@@ -130,7 +130,7 @@
   "For lazy making that can fail and be retried later."
   (e-lambda "$retriableLazyApplySlot"
       ()
-    (:|getValue| ()
+    (:|get| ()
       (first (or value-box (setf value-box (list (funcall maker))))))))
 
 (defun make-socket-wrapper (impl-socket domain type &key did-bind-visible did-connect-visible)
@@ -224,8 +224,8 @@
             (push (lambda () (foo-remove-receive-handler handler)) cleanups))
           nil)
         
-        (:|getOut| () (e. out-stream-slot |getValue|))
-        (:|getIn|  () (e. in-stream-slot  |getValue|))
+        (:|getOut| () (e. out-stream-slot |get|))
+        (:|getIn|  () (e. in-stream-slot  |get|))
         
         (:|setSockoptSendBuffer| ((new '(integer 0)))
           (setf (foo-sockopt-send-buffer impl-socket) new))

@@ -7,7 +7,7 @@ The stamp applies only to the parts of the object which are not exposed via its 
 
 This file tests whether objects which should be marked sharable are.
 
-  ? def TSS := lisp["E.ELIB", "+THREAD-SHARABLE-STAMP+"].getValue()
+  ? def TSS := lisp["E.ELIB", "+THREAD-SHARABLE-STAMP+"].get()
   # value: <ThreadSharableStamp>
   
   ? for specimen in [

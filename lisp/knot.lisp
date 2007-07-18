@@ -58,14 +58,14 @@
     (:|asSymbol| ()
       "The symbol object itself."
       symbol)
-    (:|getValue| ()
+    (:|get| ()
       "CL:SYMBOL-VALUE"
       (symbol-value symbol))
     ;; XXX a useful additional feature would be a version of getFunction which ref-shortens any arguments to the function; when we add this, review where it should be used
     (:|getFunction| ()
       "CL:SYMBOL-FUNCTION with a wrapper"
       (wrap-function (symbol-function symbol)))
-    (:|setValue| (new)
+    (:|put| (new)
       "(SETF CL:SYMBOL-VALUE)"
       (setf (symbol-value symbol) new)
       nil)))
@@ -297,7 +297,7 @@
 ; xxx review which of these ought to be moved to safe-extern-scope
 (defun make-primitive-loader ()
   (lazy-prefix-scope ("org.cubik.cle.prim.primLoader" "org.cubik.cle.prim.")
-    (:|Ref|              (e. +e-ref-kit-slot+ |getValue|)) ; XXX reduce indirection
+    (:|Ref|              (e. +e-ref-kit-slot+ |get|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
       (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
@@ -419,7 +419,7 @@
 (defun make-lazy-eval-slot (scope source &aux value this)
   (setf this (e-lambda "LazyEvalSlot"
       (:stamped +deep-frozen-stamp+) ; XXX this stamp is only appropriate when the resulting value is also DeepFrozen, so this maker is not safe
-    (:|getValue| ()
+    (:|get| ()
       (when source
         (let ((source-here source))
           (multiple-value-bind (promise resolver) (make-promise)
@@ -430,7 +430,7 @@
                 (setf value (elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|))))))
               (efun () (format nil "knot lazy eval of ~S" source)))))))
       value)
-    (:|setValue| (new)
+    (:|put| (new)
       (declare (ignore new))
       (error "not an assignable slot: ~A" (e-quote this)))
     (:|isFinal| () elib:+e-true+))))
@@ -438,7 +438,7 @@
 (defun make-lazy-apply-slot (maker &aux value-box)
   (e-lambda "lazyApplySlot"
       (:stamped +deep-frozen-stamp+)
-    (:|getValue| ()
+    (:|get| ()
       (unless value-box
         (multiple-value-bind (promise resolver) (make-promise)
           ; XXX doesn't handle failure
@@ -642,7 +642,7 @@
     (labels ((typical-lazy (source)
                (make-lazy-eval-slot safe-scope-vow source))
              (lazy-import (fqn)
-               (make-lazy-apply-slot (lambda () (eelt (e. &<import> |getValue|) fqn)))))
+               (make-lazy-apply-slot (lambda () (eelt (e. &<import> |get|) fqn)))))
       (make-union-scope fqn-prefix +shared-safe-scope+
       
         `(; --- self-referential / root ---

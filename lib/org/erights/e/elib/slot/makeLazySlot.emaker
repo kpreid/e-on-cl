@@ -32,8 +32,8 @@ def makeLazySlot implements DeepFrozen, ExitViaHere {
         getter := firstGetter
     
         def lazySlot implements Slot {
-            to getValue()    :any { return getter() }
-            to setValue(_)  :void { throw("this lazy Slot may not be changed") }
+            to get()    :any { return getter() }
+            to put(_)  :void { throw("this lazy Slot may not be changed") }
             to isFinal() :boolean { return true }
         }
         return lazySlot

@@ -33,7 +33,7 @@ def finalSlotGuardSugarAuthor(SelflessStamp) {
       
         to coerce(specimen, ejector) {
           return __makeFinalSlot(valueGuard.coerce(
-                                   self.coerce(specimen, ejector).getValue(),
+                                   self.coerce(specimen, ejector).get(),
                                    ejector))
         }
       }

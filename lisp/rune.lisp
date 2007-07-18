@@ -243,7 +243,7 @@
   
   (e. (vat-safe-scope *vat*) |iterate| (efun (k s)
     (e. e.knot:+sys-trace+ |doing| (format nil "preloading ~A" k) (efun ()
-      (let ((v (e. s |getValue|)))
+      (let ((v (e. s |get|)))
         (ignore-errors (e. v |__getAllegedType|)))))))
   
   (e.syntax::sub-save-flush)

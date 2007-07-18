@@ -14,7 +14,7 @@
   ? (&foo).isFinal()
   # value: true
   
-  ? (&foo).setValue("mood")
+  ? (&foo).put("mood")
   # problem: this lazy Slot may not be changed
   
   ? foo
@@ -40,8 +40,8 @@
   # problem: bare
   
   ? # Ejecting by maker
-  > def baz; escape out { bind baz := makeLazySlot(fn { out("bass") }); baz.getValue() }
+  > def baz; escape out { bind baz := makeLazySlot(fn { out("bass") }); baz.get() }
   # value: "bass"
   
-  ? baz.getValue()
+  ? baz.get()
   # problem: nonlocal exit by lazy slot's maker

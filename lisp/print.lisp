@@ -130,7 +130,7 @@
                                :in-error-printing in-error-printing
                                :open-flags open-flags))
                        (assert-open ()
-                         (assert (every #'(lambda (s) (e. s |getValue|)) open-flags) () "closed TextWriter")))
+                         (assert (every #'(lambda (s) (e. s |get|)) open-flags) () "closed TextWriter")))
                 (e-lambda "org.erights.e.elib.print.TextWriter"
                     (:stamped +text-writer-stamp+
                      :stamped +pass-by-construction+)
@@ -146,7 +146,7 @@
                     (assert-open)
                     (when should-close
                       (e. delegate |close|))
-                    (e. (first open-flags) |setValue| nil)
+                    (e. (first open-flags) |put| nil)
                     (setf delegate nil)
                     nil)
                   (:|flush| ()
