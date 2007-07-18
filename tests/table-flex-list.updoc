@@ -91,6 +91,16 @@ Making another type of list, for the immediate purpose of generalizing the null-
 ? listList
 # value: [[]].diverge()
 
+Bad indexes
+
+  ? def indexTest := ["a", "b", "c"].diverge(); null
+  ? indexTest[-1]
+  # problem: the int -1 doesn't coerce to an int[0]
+  XXX visible CL-style range type
+
+  ? indexTest[3]
+  # problem: list index 3 is out of range for size 3 list ["a", "b", "c"].diverge()
+
 test failure case of setSize (no trivial value)
   
   ? def plainList := [].diverge(TextWriter)

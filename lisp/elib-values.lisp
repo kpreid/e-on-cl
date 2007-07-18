@@ -366,9 +366,11 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
               vector (subseq vector 0 0))
         nil)))
   (:|size/0| 'length)
-  (:|get| (this index)
+  (:|get| (this (index '(integer 0)))
     "Return the 'index'th element of this list."
-    (aref this (e-coerce index 'integer)))
+    (if (< index (length this))
+      (aref this index)
+      (e. (sugar-cache-get 'vector "org.erights.e.elib.tables.listSugar" nil) |listIndexError| this index)))
   (:|add| (this (other 'vector))
     "Return the concatenation of both lists."
     (concatenate `(vector (or ,(array-element-type this)

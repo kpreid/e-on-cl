@@ -6,6 +6,7 @@ pragma.syntax("0.9")
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 def makeArray := <import:org.cubik.cle.prim.makeArray>
 def makeFlexListShell := <import:org.erights.e.elib.tables.makeFlexListShell>
+def listSugar := <import:org.erights.e.elib.tables.listSugar>
 
 interface FlexList guards FlexListStamp {} # XXX methods?
 
@@ -25,10 +26,19 @@ def makeFlexList implements EventuallyDeepFrozen, ExitViaHere {
   /** Make a FlexList from a one-dimensional array, which must have a fill pointer and be adjustable. */
   to _fromArray(array, valueGuard) {
     require(array.getAdjustable(), fn{`$array must be adjustable`})
+    def flexList
     def impl {
-      method get(i) { 
-        # elt is specified to provide range checking against the fill pointer
-        array.elt(i)
+      method get(i :int) { 
+        try {
+          # elt is specified to provide range checking against the fill pointer
+          array.elt(i)
+        } catch p {
+          if (i >= array.getFillPointer()) {
+            listSugar.listIndexError(flexList, i)
+          } else {
+            throw(p)
+          }
+        }
       }
       method put(i, new :valueGuard) :void {
         def size := array.getFillPointer()
@@ -97,7 +107,7 @@ def makeFlexList implements EventuallyDeepFrozen, ExitViaHere {
         array.snapshotVector()
       }
     }
-    def flexList extends makeFlexListShell(flexList, impl, valueGuard) implements FlexListStamp {
+    bind flexList extends makeFlexListShell(flexList, impl, valueGuard) implements FlexListStamp {
       to __printOn(out :TextWriter) {
         # XXX call to printer's syntax
         flexList.printOn("[", ", ", "].diverge()", out)

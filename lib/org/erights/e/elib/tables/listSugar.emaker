@@ -114,5 +114,9 @@ bind listSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
     out.write(closeS)
   }
 
-  
+  /** Not a sugar method; to be used by get/1 implementations for too-high indexes. */
+  to listIndexError(self, index) {
+    # XXX printing exception
+    throw("list index " + E.toString(index) + " is out of range for size " + E.toString(self.size()) + " list " + E.toQuote(self))
+  }
 }

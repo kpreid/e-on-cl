@@ -368,7 +368,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
       (if (eql brand +the-flex-array-array-brand+)
         (make-instance 'flex-array-array-sealed-box :array array)))
   
-    (:|elt| ((i 'integer))
+    (:|elt| ((i '(integer 0)))
       (elt array i))
     (:|setElt| ((i 'integer) new)
       (setf new (ref-shorten new))
