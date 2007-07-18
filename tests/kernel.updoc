@@ -430,50 +430,201 @@ SlotPattern
 
 --- node scope computation ---
 
-  assign
+  ? def StaticWalkEnvironment := <elang:evm.StaticWalkEnvironment>
+  # value: StaticWalkEnvironment
+
+  ? def makeReporter() {
+  >   var i := 0
+  >   var outs := [stdout].diverge()
+  >   def submake() {
+  >     def label := i += 1
+  >     return def reporter implements StaticWalkEnvironment {
+  >       to __printOn(out :TextWriter) { out.print("<", label, ">") }
+  >       to withHide(f) {
+  >         def subRep := submake()
+  >         outs.last().print("\n", reporter, ".withHide(", f, ") => f(", subRep, ")")
+  >         outs.push(outs.last().indent())
+  >         def res := f(subRep)
+  >         outs.pop()
+  >         def answer := submake()
+  >         outs.last().print("\n=> ", res, " => ", answer)
+  >         return answer
+  >       }
+  >       to withScript(f) {
+  >         def subRep := submake()
+  >         outs.last().print("\n", reporter, ".withScript(", f, ") => f(", subRep, ")")
+  >         outs.push(outs.last().indent())
+  >         def res := f(subRep)
+  >         outs.pop()
+  >         def answer := submake()
+  >         outs.last().print("\n=> ", res, " => ", answer)
+  >         return answer
+  >       }
+  >       match msg {
+  >         def answer := submake()
+  >         outs.last().print("\n", reporter, ".", msg[0], msg[1], " => ", answer)
+  >         answer
+  >       }
+  >     }
+  >   }
+  >   return submake()
+  > }
+  # value: <makeReporter>
+
+AssignExpr
+
   ? e`a := (def bb := b)`.staticScope()
   # value: <["a"] := ["b"] =~ ["bb"] + var []>
   
-  call
+  ? e`a := b`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withAssignment[e`a`] => <2>
+  #         <2>.withSubnode["rValue", e`b`] => <3>
+  
+  # value: <3>
+  
+CallExpr
+
   ? e`a.b(def cc := c, d)`.staticScope()
   # value: <[] := ["d", "c", "a"] =~ ["cc"] + var []>
+  
+  ? e`a.b(c, d)`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["recipient", e`a`] => <2>
+  #         <2>.withSubnodeIndex["args", 0, e`c`] => <3>
+  #         <3>.withSubnodeIndex["args", 1, e`d`] => <4>
+  
+  # value: <4>
 
-  catch
+CatchExpr
+
   ? e`try { def aa := a } catch via (c) b { def dd := d }`.staticScope()
   # value: <[] := ["d", "c", "a"] =~ [] + var []>
+  
+  ? e`try { a } catch b { c }`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["attempt", e`a`] => <3>
+  #         => <3> => <4>
+  #         <4>.withHide(<_>) => f(<5>)
+  #             <5>.withSubnode["pattern", epatt`b`] => <6>
+  #             <6>.withSubnode["catcher", e`c`] => <7>
+  #         => <7> => <8>
+  
+  # value: <8>
 
-  define
+DefineExpr
+
   ? e`def a := (def bb := b)`.staticScope()
   # value: <[] := ["b"] =~ ["bb", "a"] + var []>
 
-  escape
+  ? e`def a := b`.asKernelE().walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["pattern", epatt`a`] => <2>
+  #         <2>.withSubnode["rValue", e`b`] => <3>
+  
+  # value: <3>
+
+  ? e`def a exit b := c`.asKernelE().walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["pattern", epatt`a`] => <2>
+  #         <2>.withSubnode["optEjectorExpr", e`b`] => <3>
+  #         <3>.withSubnode["rValue", e`c`] => <4>
+  
+  # value: <4>
+
+EscapeExpr
+
   ? e`escape via (b) a { def cc := c }`.staticScope()
   # value: <[] := ["c", "b"] =~ [] + var []>
 
-  XXX escape with catch
+  ? e`escape a { b }`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["ejectorPattern", epatt`a`] => <3>
+  #             <3>.withSubnode["body", e`b`] => <4>
+  #         => <4> => <5>
+  #         <5>.withHide(<_>) => f(<6>)
+  #         => <6> => <7>
+  
+  # value: <7>
 
-  finally
+  ? e`escape a { b } catch c { d }`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["ejectorPattern", epatt`a`] => <3>
+  #             <3>.withSubnode["body", e`b`] => <4>
+  #         => <4> => <5>
+  #         <5>.withHide(<_>) => f(<6>)
+  #             <6>.withSubnode["optCatchPattern", epatt`c`] => <7>
+  #             <7>.withSubnode["optCatchBody", e`d`] => <8>
+  #         => <8> => <9>
+  
+  # value: <9>
+
+FinallyExpr
+
   ? e`try { def aa := a } finally { def bb := b }`.staticScope()
   # value: <[] := ["b", "a"] =~ [] + var []>
 
-  hide
+  ? e`try { a } finally { b }`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["attempt", e`a`] => <3>
+  #         => <3> => <4>
+  #         <4>.withHide(<_>) => f(<5>)
+  #             <5>.withSubnode["unwinder", e`b`] => <6>
+  #         => <6> => <7>
+  
+  # value: <7>
+
+HideExpr
+
   ? e`{ def aa := a }`.staticScope()
   # value: <[] := ["a"] =~ [] + var []>
 
-  if
+  ? e`{ a }`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["block", e`a`] => <3>
+  #         => <3> => <4>
+  
+  # value: <4>
+
+IfExpr
+
   ? e`if (def aa := a) { def bb := b } else { def cc := c }`.staticScope()
   # value: <[] := ["c", "b", "a"] =~ [] + var []>
-  XXX if with no else
+
+  ? e`if (a) { b } else { c }`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["test", e`a`] => <3>
+  #             <3>.withSubnode["then", e`b`] => <4>
+  #         => <4> => <5>
+  #         <5>.withHide(<_>) => f(<6>)
+  #             <6>.withSubnode["else", e`c`] => <7>
+  #         => <7> => <8>
   
-  literal
+  # value: <8>
+
+LiteralExpr
+
   ? e`"hi"`.staticScope()
   # value: <[] := [] =~ [] + var []>
+
+  ? e`"hi"`.walkScopes(makeReporter())
+  # value: <1>
   
-  meta-context
+MetaContextExpr
+
   ? e`meta.context()`.staticScope()
   # value: <[] := [] =~ [] + var []>
+
+  ? e`meta.context()`.walkScopes(makeReporter())
+  # value: <1>
   
-  meta-state
+MetaStateExpr
 
   ? e`meta.getState()`.staticScope()
   # value: <[] := [] =~ [] + var [], meta.getState()>
@@ -486,60 +637,244 @@ SlotPattern
   >  mSSS."uses"("x")]
   # value: [true, false, false]
 
-  noun
+  ? e`meta.getState()`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withMetaState[] => <2>
+  
+  # value: <2>
+
+NounExpr
+
   ? e`boolean`.staticScope()
   # value: <[] := ["boolean"] =~ [] + var []>
+
+  ? e`a`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withNounUse[e`a`] => <2>
   
-  object
+  # value: <2>
+  
+ObjectExpr
+
   ? e`def x implements a, b {
   >   method y(c) :d { e }
   >   match f { g }
   > }`.staticScope()
   # value: <[] := ["g", "e", "d", "b", "a"] =~ ["x"] + var []>
+  
+  ? e`def x implements a, b {}`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["pattern", epatt`x`] => <2>
+  #         <2>.withHide(<_>) => f(<3>)
+  #             <3>.withSubnodeIndex["auditorExprs", 0, e`a`] => <4>
+  #             <4>.withSubnodeIndex["auditorExprs", 1, e`b`] => <5>
+  #         => <5> => <6>
+  #         <6>.withHide(<_>) => f(<7>)
+  #             <7>.withSubnode["script", e??` {
+  #             }`] => <8>
+  #         => <8> => <9>
+  
+  # value: <9>
+  
+Plumbing ObjectExpr
 
-  plumbing
   ? e`def x implements a match b { c }`.staticScope()
   # value: <[] := ["c", "a"] =~ ["x"] + var []>
+
+  There is no walkScopes test for this case since it's an EScript variation.
+
+EScript
+
+  ? def script := e`def _ {
+  >   method y(c) :(def dd := d) { c; dd; def ee := e }
+  >   match f { f; def gg := g }
+  > }`.getScript(); null
   
-  seq
+  ? script.staticScope()
+  # value: <[] := ["g", "e", "d"] =~ [] + var []>
+  
+  ? script.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withScript(<_>) => f(<2>)
+  #             <2>.withSubnodeIndex["optMethods", 0, e??`
+  #             method y(c) :(def dd := d) {
+  #                 c
+  #                 dd
+  #                 def ee := e
+  #             }`] => <3>
+  #             <3>.withSubnodeIndex["matchers", 0, e??`match f {
+  #                 f
+  #                 def gg := g
+  #             }`] => <4>
+  #         => <4> => <5>
+  
+  # value: <5>
+
+  ? def plumbingScript := e`def _ match a { b }`.getScript(); null
+  
+  ? plumbingScript.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withScript(<_>) => f(<2>)
+  #             <2>.withSubnodeIndex["matchers", 0, e??`match a {
+  #                 b
+  #             }`] => <3>
+  #         => <3> => <4>
+  
+  # value: <4>
+
+EMethod
+
+  ? def ::"method" := script.getOptMethods()[0]; null
+  
+  ? ::"method".staticScope()
+  # value: <[] := ["e", "d"] =~ [] + var []>
+  
+  ? ::"method".walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnodeIndex["patterns", 0, epatt`c`] => <3>
+  #             <3>.withSubnode["optResultGuard", e`def dd := d`] => <4>
+  #             <4>.withSubnode["body", e`c
+  #             dd
+  #             def ee := e`] => <5>
+  #         => <5> => <6>
+  
+  # value: <6>
+
+EMatcher
+
+  ? def matcher := script.getMatchers()[0]; null
+  
+  ? matcher.staticScope()
+  # value: <[] := ["g"] =~ [] + var []>
+  
+  ? matcher.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withHide(<_>) => f(<2>)
+  #             <2>.withSubnode["pattern", epatt`f`] => <3>
+  #             <3>.withSubnode["body", e`f
+  #             def gg := g`] => <4>
+  #         => <4> => <5>
+  
+  # value: <5>
+
+SeqExpr
+
   ? e`(def aa := a); (def bb := b)`.staticScope()
   # value: <[] := ["b", "a"] =~ ["bb", "aa"] + var []>
+
+  ? e`a; b`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnodeIndex["subs", 0, e`a`] => <2>
+  #         <2>.withSubnodeIndex["subs", 1, e`b`] => <3>
   
-  slot
+  # value: <3>
+
+SlotExpr
+
   ? e`&any`.staticScope()
   # value: <[] := ["any"] =~ [] + var []>
+
+  ? e`&a`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withNounUse[e`a`] => <2>
   
-  final
+  # value: <2>
+  
+FinalPattern
+
   ? epatt`a`.staticScope()
   # value: <[] := [] =~ ["a"] + var []>
   ? epatt`a :b`.staticScope()
   # value: <[] := ["b"] =~ ["a"] + var []>
 
-  ignore
+  ? epatt`a`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withFinalPattern[epatt`a`] => <2>
+  
+  # value: <2>
+
+  ? epatt`a :b`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["optGuardExpr", e`b`] => <2>
+  #         <2>.withFinalPattern[epatt`a :b`] => <3>
+  
+  # value: <3>
+
+IgnorePattern
+
   ? epatt`_`.staticScope()
   # value: <[] := [] =~ [] + var []>
   
-  list
+  ? epatt`_`.walkScopes(makeReporter())
+  # value: <1>
+
+ListPattern
+
   ? epatt`[a, b, c]`.staticScope()
   # value: <[] := [] =~ ["c", "b", "a"] + var []>
+
+  ? epatt`[a, b]`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnodeIndex["subs", 0, epatt`a`] => <2>
+  #         <2>.withSubnodeIndex["subs", 1, epatt`b`] => <3>
   
-  slot
+  # value: <3>
+  
+SlotPattern
+
   ? epatt`&a`.staticScope()
   # value: <[] := [] =~ [] + var ["a"]>
   ? epatt`&a :b`.staticScope()
   # value: <[] := ["b"] =~ [] + var ["a"]>
   
-  via
+  ? epatt`&a`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSlotPattern[epatt`&a`] => <2>
+  
+  # value: <2>
+
+  ? epatt`&a :b`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["optGuardExpr", e`b`] => <2>
+  #         <2>.withSlotPattern[epatt`&a :b`] => <3>
+  
+  # value: <3>
+
+ViaPattern
+
   ? epatt`via (def aa := a) b`.staticScope()
   # value: <[] := ["a"] =~ ["b", "aa"] + var []>
   ? epatt`via (def aa := a) via (aa) b`.staticScope()
   # value: <[] := ["a"] =~ ["b", "aa"] + var []>
 
-  var
+  ? epatt`via (a) b`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["function", e`a`] => <2>
+  #         <2>.withSubnode["pattern", epatt`b`] => <3>
+  
+  # value: <3>
+
+VarPattern
+
   ? epatt`var a`.staticScope()
   # value: <[] := [] =~ [] + var ["a"]>
   ? epatt`var a :b`.staticScope()
   # value: <[] := ["b"] =~ [] + var ["a"]>
+
+  ? epatt`var a`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withVarPattern[epatt`var a`] => <2>
+  
+  # value: <2>
+
+  ? epatt`var a :b`.walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withSubnode["optGuardExpr", e`b`] => <2>
+  #         <2>.withVarPattern[epatt`var a :b`] => <3>
+  
+  # value: <3>
+
 
 --- Visitors ---
 

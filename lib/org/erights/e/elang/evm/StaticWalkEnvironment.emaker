@@ -1,0 +1,27 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def <vm> := <import:org.erights.e.elang.evm.type.*> # XXX shouldn't be .type.
+
+# XXX document this interface
+
+<import:org.cubik.cle.makeAdvisoryInterface>(
+interface StaticWalkEnvironment {
+  to withNounUse(_ :any[<vm:NounExpr>, <vm:SlotExpr>]) :StaticWalkEnvironment
+
+  to withFinalPattern(_ :(<vm:FinalPattern>)) :StaticWalkEnvironment
+  to withVarPattern(_ :(<vm:VarPattern>)) :StaticWalkEnvironment
+  to withSlotPattern(_ :(<vm:SlotPattern>)) :StaticWalkEnvironment
+
+  to withAssignment(_ :(<vm:NounExpr>)) :StaticWalkEnvironment
+
+  to withMetaState() :StaticWalkEnvironment
+
+  to withHide(_) :StaticWalkEnvironment
+  to withScript(_) :StaticWalkEnvironment
+
+  to withSubnode(key :String, subnode :(<vm:ENode>)) :StaticWalkEnvironment
+  to withSubnodeIndex(key :String, subnode :(<vm:ENode>)) :StaticWalkEnvironment
+})

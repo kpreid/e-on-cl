@@ -6,7 +6,7 @@
 ; --- base ---
 
 (defgeneric node-elements (node))
-(defgeneric walk-node-scopes (node builder environment))
+(defgeneric walk-node-scopes (node environment))
 (defgeneric opt-node-property-getter (node field-keyword))
 (defgeneric node-visitor-arguments (node))
 (defgeneric node-class-arity (node-class))
@@ -445,7 +445,7 @@ List nodes will be assumed to be sequences."
 
 ; --- E-level methods ---
 
-(defglobals +empty-static-scope+)
+(defglobals +empty-static-scope+ +has-meta-static-scope+)
 
 (def-vtable |ENode|
   (audited-by-magic-verb (this auditor)
@@ -477,7 +477,7 @@ List nodes will be assumed to be sequences."
       (or static-scope
           ;; by releasing the lock here, we avoid blocking other threads. the
           ;; computation might harmlessly happen twice, though.
-          (let ((new (walk-node-scopes this +the-make-static-scope+ +empty-static-scope+)))
+          (let ((new (walk-node-scopes this +empty-static-scope+)))
             (with-lock-held ((static-scope-lock this)) 
               (setf (node-computed-static-scope this) new))))))
   (:|getOptSpan/0| 'node-source-span)
@@ -499,6 +499,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       ; xxx should we use our alleged type method instead of observable-type-of?
       (concatenate 'string "visit" (symbol-name (observable-type-of this))) 
       (cons this (node-visitor-arguments this))))
+  (:|walkScopes| (this environment)
+    "Traverse the scope structure of this node. See the org.erights.e.elang.evm.StaticWalkEnvironment interface."
+    (walk-node-scopes this environment))
   (:|lnPrintOn| (this tw precedence)
     "Java-E compatibility"
     (e. tw |println|)
@@ -632,6 +635,15 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 ; --- static scopes ---
 
+(defun extend-ss (ss node kind label)
+  ;; muffle non-constant keyword argument warning
+  (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+  ;; xxx constructs useless intermediate scope -- review later
+  (e. ss |add|
+    (make-static-scope kind
+      (e. +the-make-const-map+ |fromPairs|
+        `#(#(,label ,node))))))
+
 (defun make-static-scope (&key
     (has-meta-state-expr +e-false+)
     (has-outer-meta-state-expr +e-false+)
@@ -710,6 +722,38 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
           :read-names read-names
           :set-names set-names
           :has-meta-state-expr has-meta-state-expr))
+      (:|withAssignment| ((node '|ENode|))
+        "Experimental: for ENode#walkScopes"
+        (extend-ss self node :set-names (e. node |getName|)))
+      (:|withFinalPattern| ((node '|ENode|))
+        "Experimental: for ENode#walkScopes"
+        (extend-ss self node :def-names (e. (e. node |getNoun|) |getName|)))
+      (:|withNounUse| ((node '|ENode|))
+        "Experimental: for ENode#walkScopes"
+        (extend-ss self node :read-names (e. node |getName|)))
+      (:|withVarPattern| ((node '|ENode|))
+        "Experimental: for ENode#walkScopes"
+        (extend-ss self node :var-names (e. (e. node |getNoun|) |getName|)))
+      (:|withSlotPattern| ((node '|ENode|))
+        "Experimental: for ENode#walkScopes"
+        (extend-ss self node :var-names (e. (e. node |getNoun|) |getName|)))
+      (:|withMetaState| ()
+        "Experimental: for ENode#walkScopes"
+        (e. self |add| +has-meta-static-scope+))
+      (:|withSubnode| (key node)
+        "Experimental: for ENode#walkScopes"
+        (declare (ignore key))
+        (e. self |add| (e. node |staticScope|)))
+      (:|withSubnodeIndex| (key index node)
+        "Experimental: for ENode#walkScopes"
+        (declare (ignore key index))
+        (e. self |add| (e. node |staticScope|)))
+      (:|withHide| (sub-function)
+        "Experimental: for ENode#walkScopes"
+        (e. self |add| (e. (efuncall sub-function +empty-static-scope+) |hide|)))
+      (:|withScript| (sub-function)
+        "Experimental: for ENode#walkScopes"
+        (e. self |add| (e. (efuncall sub-function +empty-static-scope+) |script|)))
       
       ;; convenience
       (:|uses| (name)
@@ -730,7 +774,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
         (make-static-scope kind
           (e. +the-make-const-map+ |fromPairs|
             `#(#(,label ,node))))))
-  (defobject +the-make-static-scope+ "org.erights.e.evm.makeStaticScope" ()
+  (defobject +the-make-static-scope+ "org.erights.e.evm.makeStaticScope" 
+      (:stamped +deep-frozen-stamp+)
     (:|run| (sn rn dn vn (hms 'e-boolean))
       "General StaticScope constructor. Currently provided only to make StaticScopes selfless."
       (let ((map-guard (e. (e-import "org.erights.e.elib.slot.Map")
@@ -764,15 +809,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (:|scopeSlot| ((node '|ENode|))
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
-    (:|getEmptyScope| () +empty-static-scope+)
-    (:|subnode| (key node prev)
-      ;; exists for walk-node-scopes
-      (declare (ignore key))
-      (e. prev |add| (e. node |staticScope|)))
-    (:|subnodeIndex| (key index node prev)
-      ;; exists for walk-node-scopes
-      (declare (ignore key index))
-      (e. prev |add| (e. node |staticScope|)))))
+    (:|getEmptyScope| () +empty-static-scope+)))
 
 ; --- static scope computation ---
 
@@ -787,7 +824,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (flatten :|foo|) -- the sequencing of the list property foo of this node
     (! <CL-form>) -- CL code to return a static scope
     
-    Within a ! form, elang::node is bound to this node, elang::builder is bound to the scope builder, and (:get <keyword>) is bound to a property-fetching function."
+    Within a ! form, elang::node is bound to this node, elang::environment is bound to the preceding/enclosing environment, and (:get <keyword>) is bound to a property-fetching function."
   (labels ((transform (expr)
             (cond
               ((null expr)
@@ -795,14 +832,14 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
               ((atom expr)
                 `(let ((v (:get ,expr)))
                   (if v
-                    (e. builder |subnode| ',(symbol-name expr) v environment)
+                    (e. environment |withSubnode| ',(symbol-name expr) v)
                     environment)))
               ((eql (first expr) 'hide)
                 (assert (= (length expr) 2))
-                `(e. environment |add| (e. ,(transform (second expr)) |hide|)))
+                `(e. environment |withHide| (efun (environment) ,(transform (second expr)))))
               ((eql (first expr) 'script)
                 (assert (= (length expr) 2))
-                `(e. environment |add| (e. ,(transform (second expr)) |script|)))
+                `(e. environment |withScript| (efun (environment) ,(transform (second expr)))))
               ((eql (first expr) 'seq)
                 (reduce (lambda (env-form rule)
                           `(let ((environment ,env-form))
@@ -810,21 +847,20 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                         (rest expr)
                         :initial-value `environment))
               ((eql (first expr) '!)
-                `(e. environment |add| (progn ,@(rest expr))))
+                `(progn ,@(rest expr)))
               ((eql (first expr) 'flatten)
                 (assert (= (length expr) 2))
                 `(loop with env = environment
                        for node across (or (:get ',(second expr)) #())
                        for i from 0
-                       do (setf env (e. builder |subnodeIndex| 
+                       do (setf env (e. env |withSubnodeIndex| 
                                       ',(symbol-name (second expr))
                                       i
-                                      node
-                                      env))
+                                      node))
                        finally (return env)))
               (t
                 (error "Unknown scope-rule expression: ~S" expr)))))
-    `(defmethod walk-node-scopes ((node ,specializer) builder environment)
+    `(defmethod walk-node-scopes ((node ,specializer) environment)
        (labels ((:get (keyword) (funcall (opt-node-property-getter node keyword))))
          (declare (ignorable #':get))
          ,(transform scope-expr)))))
@@ -843,16 +879,16 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                    +empty-static-scope+))
 
 (def-scope-rule |AssignExpr|
-  (seq (! (e. builder |scopeAssign| (:get :|noun|)))
+  (seq (! (e. environment |withAssignment| (:get :|noun|)))
        :|rValue|))
 
 (def-scope-rule |CallExpr|
   (seq :|recipient| (flatten :|args|)))
 
 (def-scope-rule |CatchExpr|
-  (hide (seq (hide :|attempt|)
-             :|pattern|
-             :|catcher|)))
+  (seq (hide :|attempt|)
+       (hide (seq :|pattern|
+                  :|catcher|))))
 
 (def-scope-rule |DefineExpr|
   (seq :|pattern|
@@ -860,19 +896,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
        :|rValue|))
 
 (def-scope-rule |EscapeExpr|
-  (hide (seq (hide (seq :|ejectorPattern| :|body|))
-             :|optCatchPattern|
-             :|optCatchBody|)))
+  (seq (hide (seq :|ejectorPattern|  :|body|))
+       (hide (seq :|optCatchPattern| :|optCatchBody|))))
 
 (def-scope-rule |FinallyExpr|
-  (hide (seq (hide :|attempt|)
-             :|unwinder|)))
-      
+  (seq (hide :|attempt|)
+       (hide :|unwinder|)))
+    
 (def-scope-rule |HideExpr|
   (hide :|block|))
 
 (def-scope-rule |IfExpr|
-  (seq (hide (seq :|test| :|then|)) (hide :|else|)))
+  (seq (hide (seq :|test| :|then|))
+       (hide :|else|)))
 
 (def-scope-rule |LiteralExpr|
   nil)
@@ -881,10 +917,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   nil)
 
 (def-scope-rule |MetaStateExpr|
-  (! (e. builder |scopeMeta|)))
+  (! (e. environment |withMetaState|)))
 
 (def-scope-rule |NounExpr|
-  (! (e. builder |scopeRead| node)))
+  (! (e. environment |withNounUse| node)))
 
 (def-scope-rule |ObjectExpr|
   (seq :|pattern|
@@ -895,12 +931,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (flatten :|subs|))
 
 (def-scope-rule |SlotExpr|
-  (! (e. builder |scopeRead| (:get :|noun|))))
+  (! (e. environment |withNounUse| (:get :|noun|))))
 
 
 (def-scope-rule |FinalPattern|
   (seq :|optGuardExpr|
-       (! (e. builder |scopeDef| node))))
+       (! (e. environment |withFinalPattern| node))))
 
 (def-scope-rule |IgnorePattern|
   nil)
@@ -910,11 +946,11 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |SlotPattern|
   (seq :|optGuardExpr|
-       (! (e. builder |scopeSlot| node))))
+       (! (e. environment |withSlotPattern| node))))
 
 (def-scope-rule |VarPattern|
   (seq :|optGuardExpr|
-       (! (e. builder |scopeVar| node))))
+       (! (e. environment |withVarPattern| node))))
 
 (def-scope-rule |ViaPattern|
   (seq :|function| :|pattern|))
@@ -1001,47 +1037,48 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defun require-kernel-e (node ejector)
   "Verify that the node is a valid Kernel-E tree."
-  (let ((c (make-scope-checker ejector)))
-    (walk-node-scopes node c (e. c |getEmptyScope|))
-    (require-kernel-e-recursive node ejector)
-    (values)))
+  (walk-node-scopes node (make-scope-checker ejector))
+  (require-kernel-e-recursive node ejector)
+  (values))
 
 (defun make-scope-checker (ejector) 
-  (labels ((make (finals assigns)
+  (labels ((make (finals)
              ;; XXX use hash tables?
-             (e-lambda "$kernelScopeCheckerValue" ()
-               (:|_getFinals| () finals)
-               (:|_getAssigns| () assigns)
-               (:|hide| () (make nil nil))
-               (:|script| () (make nil nil))
-               (:|add| (other &aux (bad (intersection finals (e. other |_getAssigns|) :test #'string=)))
-                 (if bad
-                   ;; XXX message could use some improvement
-                   (ejerror ejector "~A is not an assignable variable" (first bad))
-                   (make (append finals (e. other |_getFinals|))
-                         (append assigns (e. other |_getAssigns|))))))))
-    (e-lambda |kernelScopeChecker| ()
-      (:|scopeAssign| (node)
-        (make nil (list (e. node |getName|))))
-      (:|scopeDef| (node)
-        (make (list (e. (e. node |getNoun|) |getName|)) nil))
-      (:|scopeRead| (node)
-        (declare (ignore node))
-        (make nil nil))
-      (:|scopeVar| (node)
-        (declare (ignore node))
-        (make nil nil))
-      (:|scopeSlot| (node)
-        (declare (ignore node))
-        (make nil nil))
-      (:|scopeMeta| () (make nil nil))
-      (:|getEmptyScope| () (make nil nil))
-      (:|subnode| (key node prev)
-        (declare (ignore key))
-        (walk-node-scopes node |kernelScopeChecker| prev))
-      (:|subnodeIndex| (key index node prev)
-        (declare (ignore key index))
-        (walk-node-scopes node |kernelScopeChecker| prev)))))
+             (e-lambda |kernelScopeChecker| ()
+               ;; XXX report implements StaticWalkEnvironment
+               (:|withHide| (subf) 
+                 (efuncall subf |kernelScopeChecker|)
+                 |kernelScopeChecker|)
+               (:|withScript| (subf) 
+                 (efuncall subf |kernelScopeChecker|)
+                 |kernelScopeChecker|)
+               (:|withAssignment| (node)
+                 (check-type node |NounExpr|)
+                 (let ((noun (e. node |getName|)))
+                   (if (member noun finals :test #'string=)
+                     ;; XXX message could use some improvement
+                     (ejerror ejector "~A is not an assignable variable" noun))
+                     |kernelScopeChecker|))
+               (:|withFinalPattern| (node)
+                 (check-type node |FinalPattern|)
+                 (make (cons (e. (e. node |getNoun|) |getName|) finals)))
+               (:|withNounUse| (node)
+                 (declare (ignore node))
+                 |kernelScopeChecker|)
+               (:|withVarPattern| (node)
+                 (check-type node |VarPattern|)
+                 (make (remove (e. (e. node |getNoun|) |getName|) finals :test #'string=)))
+               (:|withSlotPattern| (node)
+                 (check-type node |SlotPattern|)
+                 (make (remove (e. (e. node |getNoun|) |getName|) finals :test #'string=)))
+               (:|withMetaState| () |kernelScopeChecker|)
+               (:|withSubnode| (key node)
+                 (declare (ignore key))
+                 (walk-node-scopes node |kernelScopeChecker|))
+               (:|withSubnodeIndex| (key index node)
+                 (declare (ignore key index))
+                 (walk-node-scopes node |kernelScopeChecker|)))))
+    (make nil)))
 
 (defgeneric require-kernel-e-recursive (node ejector)
   (:method-combination progn))

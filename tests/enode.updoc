@@ -79,6 +79,8 @@ Check that the special loaders handle the nonexistent cases:
   #            to substitute(args :ConstList)
   #            to asKernelE()
   #            to welcome(visitor)
+  #            /** Traverse the scope structure of this node. See the org.erights.e.elang.evm.StaticWalkEnvironment interface. */
+  #            to walkScopes(environment)
   #            /** Java-E compatibility */
   #            to lnPrintOn(tw, precedence)
   #            /** Java-E compatibility */

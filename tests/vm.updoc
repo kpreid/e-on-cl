@@ -113,6 +113,18 @@ More AssignExpr:
   ? if (false) { y := 3 }
   # problem: y is not an assignable variable
   
+  outer shadowed binding doesn't cause rejection (var)
+  ? { def sbt := 1; [{ var sbt := 2; { sbt := 3 }; sbt}, sbt] }
+  # value: [3, 1]
+  
+  outer shadowed binding doesn't cause rejection (slot)
+  ? { def sbt := 1; [{ def &sbt := def _ {to setValue(_){} to getValue(){}}; { sbt := 3 }; sbt}, sbt] }
+  # value: [null, 1]
+  
+  bug test: recognize the end of a scope box as ending shadowing
+  ? { var sbt := 1; [{ def sbt := 2 }, sbt := 3; sbt] }  
+  # value: [2, 3]
+  
   ? x := (x + 3)
   # value: 3
   ? x
