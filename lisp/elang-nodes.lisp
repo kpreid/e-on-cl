@@ -516,7 +516,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (when (keywordp mverb)
     (let* ((name (symbol-name mverb))
            (length (length name)))
-      (when (and (>= length 5)
+      (when (and (>= length #.(length "getX/0"))
                  (string= name "get" :end1 3)
                  (string= name "/0" :start1 (- length 2)))
         (concatenate 'string

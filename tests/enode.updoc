@@ -46,6 +46,9 @@ Check that the special loaders handle the nonexistent cases:
   ? makeNounExpr(null, "foo", null).getNonexistentProperty()
   # problem: no such method: org.erights.e.elang.evm.NounExpr#getNonexistentProperty/0
   
+  ? makeNounExpr(null, "foo", null).get()
+  # problem: no such method: org.erights.e.elang.evm.NounExpr#get/0
+  
   ? makeNounExpr(null, "foo", null).getName("extraArg")
   # problem: no such method: org.erights.e.elang.evm.NounExpr#getName/1
   
@@ -59,6 +62,9 @@ Check that the special loaders handle the nonexistent cases:
   # value: false
 
   ? makeNounExpr(null, "foo", null).__respondsTo("getNonexistentProperty", 0)
+  # value: false
+
+  ? makeNounExpr(null, "foo", null).__respondsTo("get", 0)
   # value: false
 
   ? makeNounExpr(null, "foo", null).__respondsTo("unrecognizedMethod", 0)
