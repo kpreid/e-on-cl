@@ -33,6 +33,12 @@ Big features:
   - more complete file IO
   - finish term-tree system (matching, etc.)
   - threaded vats
+
+  - Try multi-process runner communication
+    Threading is error-prone and not universally available; memory images and process creation are *more* available and much safer;
+    - Try removing multi-vat-per-process support: if a vat = a process, then we can make more things global/compiled-in.
+    - Disadvantages: interprocess serialization overhead; less shared resources
+
   - Audited Selfless for E-objects
   - Pluribus
 
