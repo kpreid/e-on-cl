@@ -110,8 +110,6 @@
     :synchronous-call-error
     :no-such-method-error :no-such-method
   
-    :+the-e+
-    
     :runner *runner*
     :make-runner-for-this-thread
     :runner-loop :top-loop
@@ -305,8 +303,6 @@
   elib:+the-make-int+
   elib:+the-make-priority-queue+
 
-  elib:+the-e+
-
   elib:+the-audit-checker+
   elib:+deep-frozen-stamp+
   
@@ -365,12 +361,14 @@
     :found-e-on-java-home
     :*emaker-search-list*
     
+    :+the-e+
     :+lisp+
     :+trace+
     :+sys-trace+))
   
 (e.util:defglobals
   e.knot:+sharable-importer+
+  e.knot:+the-e+
   e.knot:+lisp+
   e.knot:+trace+
   e.knot:+sys-trace+

@@ -969,21 +969,3 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     #+clisp (ext:weak-pointer-value (weak-ref-inner this))
     #+allegro (aref (weak-ref-inner this) 0)
     ))
-
-; --- "E" object ---
-
-; XXX 'E' should probably be in knot.lisp
-
-(defobject +the-e+ "org.erights.e.elib.prim.E"
-    (:stamped +deep-frozen-stamp+)
-  (:|call| (r (v 'string) (a 'vector))
-    (e-call r v a))
-  (:|callWithPair| (rec (verb-args '(vector * 2)))
-    (e-call rec (aref verb-args 0) (aref verb-args 1)))
-  (:|send| (r (v 'string) (a 'vector))
-    (e-send r v a))
-  (:|sendOnly| (r (v 'string) (a 'vector))
-    (apply #'e-send-only-dispatch r (mangle-verb v (length a)) (coerce a 'list)))
-  (:|toQuote/1| 'e-quote)
-  (:|toString/1| 'e-print))
-

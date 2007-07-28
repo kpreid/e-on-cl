@@ -292,6 +292,19 @@
 
 ; --- standard scope definitions ---
 
+(defobject +the-e+ "org.erights.e.elib.prim.E"
+    (:stamped +deep-frozen-stamp+)
+  (:|call| (r (v 'string) (a 'vector))
+    (e-call r v a))
+  (:|callWithPair| (rec (verb-args '(vector * 2)))
+    (e-call rec (aref verb-args 0) (aref verb-args 1)))
+  (:|send| (r (v 'string) (a 'vector))
+    (e-send r v a))
+  (:|sendOnly| (r (v 'string) (a 'vector))
+    (apply #'e-send-only-dispatch r (mangle-verb v (length a)) (coerce a 'list)))
+  (:|toQuote/1| 'e-quote)
+  (:|toString/1| 'e-print))
+
 (defobject +the-looper+ "org.erights.e.elang.interp.loop" 
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| ((tw +the-text-writer-guard+))

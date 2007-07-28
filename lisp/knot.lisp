@@ -239,7 +239,7 @@
   (prefix-scope ("org.cubik.cle.prim.sharedPrimLoader" "org.cubik.cle.prim.")
     ;; control/primitives
     (:|equalizer|        (make-equalizer)) ;; yes, equalizers are thread safe
-    (:|E|                elib:+the-e+)
+    (:|E|                +the-e+)
     (:|gc|               e.extern:+gc+)
     (:|loop|             +the-looper+)
     (:|throw|            +the-thrower+)
