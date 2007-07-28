@@ -223,3 +223,43 @@ Float comparison
 
   ? (-0.0).op__cmp(0.0)
   # value: 0.0
+
+signum
+
+  ? 1.signum()
+  # value: 1
+  ? 2.signum()
+  # value: 1
+  ? 23984092348790.signum()
+  # value: 1
+  ? (-1).signum()
+  # value: -1
+  ? (-2).signum()
+  # value: -1
+  ? (-23984092348790).signum()
+  # value: -1
+  ? 0.signum()
+  # value: 0
+
+XXX EoJ does not have floating-point signum -- why?
+
+  ? 0.0.signum()
+  # value: 0.0
+  ? (-0.0).signum()
+  # value: -0.0
+  ? 0.1412.signum()
+  # value: 1.0
+  ? 1.0.signum()
+  # value: 1.0
+  ? 2.0.signum()
+  # value: 1.0
+  ? 23984092348790.0.signum()
+  # value: 1.0
+  ? (-0.1412).signum()
+  # value: -1.0
+  ? (-1.0).signum()
+  # value: -1.0
+  ? (-2.0).signum()
+  # value: -1.0
+  ? (-23984092348790.0).signum()
+  # value: -1.0

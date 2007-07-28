@@ -521,6 +521,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|pow| (a (b 'number))
     (expt a b))
   
+  (:|signum/0| 'signum)
   (:|aboveZero| (this)
     (as-e-boolean (> this 0)))
   (:|belowZero| (this)
@@ -579,7 +580,24 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|and| (a (b 'integer))
     (logand a b))
   (:|or| (a (b 'integer))
-    (logior a b)))
+    (logior a b))
+  
+  (:|cryptoHash| (this)
+    "Unsigned integer interpretation of the SHA-1 hash of the smallest possible octet array holding the big-endian two's complement representation of this integer."
+    (octets-to-unsigned-integer 1 
+      (ironclad:digest-sequence :sha1
+        (twos-complement-integer-to-octets this)))))
+
+(defun octets-to-unsigned-integer (signum octets)
+  (* signum (reduce (lambda (n o) (+ (ash n 8) o)) octets :initial-value 0)))
+  
+(defun twos-complement-integer-to-octets (integer)
+  (let ((octets (make-array (ceiling (1+ (integer-length integer)) 8)
+                            :element-type '(unsigned-byte 8))))
+    (loop for i from (1- (length octets)) downto 0
+          do (setf (aref octets i) (ldb (byte 8 0) integer)
+                   integer         (ash integer -8)))
+    octets))
 
 (def-fqn integer "org.cubik.cle.native.int")
 (def-class-opaque integer)

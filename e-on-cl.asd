@@ -19,6 +19,7 @@
                :cl-ppcre
                :genhash
                :trivial-garbage
+               :ironclad
                #+sbcl :sb-bsd-sockets)
   :components
   ((:module "lisp" :components
