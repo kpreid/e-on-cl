@@ -3,6 +3,8 @@
 
 pragma.syntax("0.9")
 
+def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
+
 <import:org.cubik.cle.makeAdvisoryInterface>(
 # XXX what is a ValueGuardTemplate?
 /**
@@ -23,17 +25,13 @@ interface "org.erights.e.elib.slot.Guard" {
      * If specimen coerces to a value that matches the condition represented
      * by this guard, return that value; other fail (according to optEjector)
      * with a problem explaining why not.
-     * <p/>
+     * 
      * If optEjector is null, then throw the problem.
      * Otherwise, call optEjector with the problem.  optEjector should
      * perform a non-local exit, and so should not return.
      * If optEjector returns anyway, then throw the problem after all.
-     * <p/>
-     * A note to Java implementors of this method: You almost certainly want
-     * to start your method with
-     * <pre>    specimen = Ref.resultion(specimen);</pre>
      */
-    to coerce(specimen :any, optEjector :any) :any # XXX OneArgFunc
+    to coerce(specimen :any, ejector :OneArgFunc) :any
     
     /** XXX document this */
     to getTheTrivialValue() :any

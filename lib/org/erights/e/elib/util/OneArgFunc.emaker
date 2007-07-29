@@ -1,0 +1,9 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+<import:org.cubik.cle.makeAdvisoryInterface>(
+interface OneArgFunc {
+  to run(_ :any) :any
+})

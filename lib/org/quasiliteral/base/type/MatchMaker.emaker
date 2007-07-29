@@ -3,7 +3,9 @@
 
 pragma.syntax("0.9")
 
+def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
+
 <import:org.cubik.cle.makeAdvisoryInterface>(
 interface "org.quasiliteral.base.MatchMaker" {
-  to matchBind(args :List, specimen :any, optEjector :any) :List
+  to matchBind(args :List, specimen :any, ejector :OneArgFunc) :List
 })
