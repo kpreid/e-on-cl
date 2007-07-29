@@ -10,6 +10,7 @@
   >   to run(a) :any { return a + 1 }
   >   to __optSealedDispatch(brand) :any { return if (brand == 43) { 42 } else { null } }
   >   to __optUncall() :any { return [__identityFunc, "run", [nearThing]] }
+  >   to only() { print("only") }
   > }
   # value: <nearThing>
   
@@ -25,6 +26,12 @@
   ? interp.waitAtTop(x)
   ? x
   # value: 3
+
+Verifying sendOnly support
+
+  ? E.sendOnly(pf, "only", [])
+  ? 
+  # stdout: only
   
 Checking for leakage of the near ref
 
@@ -80,3 +87,11 @@ Checking for leakage of the near ref
   > interp.waitAtTop(def x := pf <- __whenMoreResolved((def y).resolve))
   ? [x, y, y == pf]
   # value: [null, <Far ref>, true]
+  
+Checking that the WMR reactor is invoked sendOnly.
+
+  ? pf <- __whenMoreResolved(
+  >   <elib:ref.makeProxy>(def handler match msg { print(msg) },
+  >                        Ref.promise()[0], false)); null
+  ? 
+  # stdout: ["handleSendOnly", ["run", [<Far ref>]]]

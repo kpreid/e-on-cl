@@ -61,7 +61,7 @@
     (:|__optUncall| () nil)
 
     (:|__whenMoreResolved| (reactor)
-      (e<- reactor |run| self)
+      (e-send-only-dispatch reactor :|run/1| self)
       nil)
 
     (:|__whenBroken| (reactor)

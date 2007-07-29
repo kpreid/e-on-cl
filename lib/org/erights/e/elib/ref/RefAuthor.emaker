@@ -79,7 +79,7 @@ def RefAuthor {
             #traceln(`  finished`)
           } else {
             #traceln(`  not-resolved branch`)
-            ref <- __whenMoreResolved(safeWhenResolvedReactor)
+            E.sendOnly(ref, "__whenMoreResolved", [safeWhenResolvedReactor])
             #traceln(`  sent next __whenMoreResolved to $ref`)
           }
         }

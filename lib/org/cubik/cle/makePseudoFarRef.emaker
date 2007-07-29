@@ -33,7 +33,7 @@ def makePseudoFarRef implements DeepFrozen, ExitViaHere {
           match [=="__conformTo", [_]] { proxy }
           match [=="__whenBroken", [_]] { null }
           match [=="__whenMoreResolved", [reactor]] { 
-            E.send(reactor, "run", [proxy])
+            E.sendOnly(reactor, "run", [proxy])
             null
           }
           match _ ? nonPassedMiranda.contains(def pairName := [verb, args.size()]) {
@@ -41,6 +41,11 @@ def makePseudoFarRef implements DeepFrozen, ExitViaHere {
           }
           match _ { E.send(nearRef, verb, args) }
         }
+      }
+      
+      method handleSendOnly(verb, args) {
+        # XXX passed-on sendOnlys will unnecessarily become sends (but this is not too bad since our target is usually near)
+        farHandler.handleSend(verb, args)
       }
     }
 

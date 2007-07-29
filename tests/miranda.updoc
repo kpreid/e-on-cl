@@ -62,6 +62,13 @@ whenMoreResolved
   XXX we should waitAtTop on something resolved by the reactor here, to make the updoc script reliable
   ? gotWMR
   # value: 44.0
+
+  Checking that the WMR reactor is invoked sendOnly.
+  ? specimen <- __whenMoreResolved(
+  >   <elib:ref.makeProxy>(def handler match msg { print(msg) },
+  >                        Ref.promise()[0], false)); null
+  ?
+  # stdout: ["handleSendOnly", ["run", [44.0]]]
   
 whenBroken
   

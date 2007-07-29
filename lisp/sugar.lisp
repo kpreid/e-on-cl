@@ -122,7 +122,7 @@
                (if (ref-is-resolved ref)
                  (unless (e-is-true (e. result-resolver |isDone|))
                    (e. result-resolver |resolve| (e<- ereactor |run| ref)))
-                 (e<- ref |__whenMoreResolved| safe-reactor))))))
+                 (e-send-only-dispatch ref :|__whenMoreResolved/1| safe-reactor))))))
       (efuncall safe-reactor nil)
       result)))
 

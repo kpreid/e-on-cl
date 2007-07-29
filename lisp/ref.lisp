@@ -315,7 +315,7 @@ If there is no current vat at initialization time, captures the current vat at t
 (declaim (inline broken-ref-magic))
 (defun broken-ref-magic (ref mverb args)
   (when (member mverb '(:|__whenMoreResolved/1| :|__whenBroken/1|))
-    (e<- (first args) |run| ref))
+    (e-send-only-dispatch (first args) :|run/1| ref))
   nil)
 
 (defmethod e-call-dispatch ((ref broken-ref) mverb &rest args)
@@ -325,6 +325,10 @@ If there is no current vat at initialization time, captures the current vat at t
 (defmethod e-send-dispatch ((ref broken-ref) mverb &rest args)
   (broken-ref-magic ref mverb args)
   ref)
+
+(defmethod e-send-only-dispatch ((ref broken-ref) mverb &rest args)
+  (broken-ref-magic ref mverb args)
+  nil)
 
 (defmethod weak-when-more-resolved ((ref broken-ref) weak-reactor action)
   (declare (ignore weak-reactor action))

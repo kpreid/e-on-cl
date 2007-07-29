@@ -246,6 +246,15 @@ Ref
   ? [Ref.optSealedDispatch(Ref.promise()[0], 1)]
   # value: [null]
   
+ whenResolved
+ 
+  Checking that __whenMoreResolved is sent send-only.
+  ? Ref.whenResolved(
+  >   <elib:ref.makeProxy>(def handler match msg { print(msg) },
+  >                        Ref.promise()[0], false),
+  >   fn _ {})
+  > null
+  # stdout: ["handleSendOnly", ["__whenMoreResolved", [<safeWhenResolvedReactor>]]]
 
 Bugfix test: promise ref not propagating opt-problem correctly
 
@@ -282,6 +291,17 @@ Broken reference details
   # value: <ref broken by problem: biff>
   
   # stdout: <ref broken by problem: biff>
+
+  Checking that the WMR reactor is invoked sendOnly.
+  ? Ref.broken("biff") <- __whenMoreResolved(
+  >   <elib:ref.makeProxy>(def handler match msg { print(msg) },
+  >                        Ref.promise()[0], false)); null
+  # stdout: ["handleSendOnly", ["run", [<ref broken by problem: biff>]]]
+  
+  Checking that sendOnly on a broken reference works.
+  ? E.sendOnly(Ref.broken("biff"), "__whenBroken", [print])
+  # stdout: <ref broken by problem: biff>
+  
 
 Checking that a chain of promises does not accumulate a chain of resolved forwarders.
 
