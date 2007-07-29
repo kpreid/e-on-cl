@@ -291,17 +291,24 @@
        (multiple-value-let* ,(rest bindings) ,@body))
     `(locally ,@body)))
 
+(defun make-capturing-stream (print-steps ordinary-destination)
+  (let ((capture (make-string-output-stream)))
+    (if print-steps
+      (values capture
+              (make-broadcast-stream capture ordinary-destination))
+      (values capture capture))))
+
 (defun updoc-file (file &key print-steps confine)
   (with-open-file (s file
       :external-format e.extern:+standard-external-format+)
     (multiple-value-let* 
           ((script (read-updoc s))
-           (eval-out-stream (make-string-output-stream))
-           (eval-err-stream (make-string-output-stream))
+           (capture-out eval-out-stream (make-capturing-stream print-steps *standard-output*))
+           (capture-err eval-err-stream (make-capturing-stream print-steps *error-output*))
            (stepper scope-slot base-interp 
              (make-stepper :props e.knot::+eprops+ ;; XXX internal
-                           :handler (make-updoc-handler :out eval-out-stream 
-                                                        :err eval-err-stream
+                           :handler (make-updoc-handler :out capture-out 
+                                                        :err capture-err
                                                         :print-steps print-steps
                                                         :file file)))
            (updoc-interp (e-lambda "org.cubik.cle.updoc.$updocInterp" ()
