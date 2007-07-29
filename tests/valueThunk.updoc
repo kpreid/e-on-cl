@@ -1,0 +1,46 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+
+org.erights.e.elib.base.makeValueThunk provides thunks which evaluate to an existing value, and are pass-by-construction.
+
+  ? def makeValueThunk := <elib:base.makeValueThunk>
+  # value: makeValueThunk
+  
+  ? def th := makeValueThunk(21489)
+  # value: makeValueThunk(21489)
+  
+  ? th.run()
+  # value: 21489
+  
+  ? th :pbc == th
+  # value: true
+  
+  XXX should be Selfless but isn't yet
+  x ? th :PassByCopy == th
+  x # value: true
+  
+  ? th.__optUncall()
+  # value: [makeValueThunk, "run", [21489]]
+  
+  ? <import>.optUncall(makeValueThunk)
+  # value: [<import:*>, "get", ["org.erights.e.elib.base.makeValueThunk"]]
+
+  ? def ValueThunk := makeValueThunk.asType()
+  # value: ValueThunk
+  
+  ? th :ValueThunk == th
+  # value: true
+  
+  ? 21489 :ValueThunk
+  # problem: Not stamped by org.erights.e.elib.base.makeValueThunk$ValueThunk__T
+  
+  XXX E-on-Java compatibility; ought to be renamed, if provided at all
+  XXX once Selfless, compare directly rather than by uncall
+  ? makeValueThunk.getNULL_THUNK().__optUncall() == makeValueThunk(null).__optUncall()
+  # value: true
+  
+  XXX these should be the same
+  x ? makeValueThunk.getNULL_THUNK() == makeValueThunk.getNULL_THUNK()
+  x # value: true

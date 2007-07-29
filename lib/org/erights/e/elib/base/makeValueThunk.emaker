@@ -1,0 +1,36 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+interface ValueThunk guards ValueThunkStamp {
+  to run() :any
+}
+
+/** Makes a thunk which returns a preexisting reference, and is pass-by-construction. */
+def makeValueThunk implements DeepFrozen, ExitViaHere { # , SelflessMaker
+  to asType() { return ValueThunk }
+  to run(value) {
+    def valueThunk implements ValueThunkStamp, pbc { # , Selfless
+      /** Always returns the same, preexisting, reference. */
+      to run() { return value }
+      to __optUncall() { return [makeValueThunk, "run", [value]] }
+      to __printOn(out :TextWriter) { 
+        out.quote(makeValueThunk)
+        out.write("(")
+        out.quote(value)
+        out.write(")")
+      }
+    }
+    return valueThunk
+  }
+  /** Equivalent to makeValueThunk(null), except that it should (but does not yet) return the same thunk every time. */
+  to getNULL_THUNK() {
+    # XXX should be memoized or preconstructed
+    return makeValueThunk(null)
+  }
+  to __printOn(out :TextWriter) { 
+    out.write(makeValueThunk.__getAllegedType().getFQName().split("$").last())
+  }
+}
