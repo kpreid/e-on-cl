@@ -11,7 +11,7 @@ def makeException := <import:org.cubik.cle.prim.makeException>
 def RefAuthor {
   # XXX map args?
   # Stamped rather than audited deep-frozen since DeepFrozen is nonprimitive and uses Ref itself in the course of auditing. XXX have DeepFrozenAuthor use primitives?
-  to run(makePromise, refState, refIsResolved, makeUnconnectedRef, refOptProblem, refOptSealedDispatch, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
+  to run(makePromise, refShorten, refState, refIsResolved, makeUnconnectedRef, refOptProblem, refOptSealedDispatch, sElibBroken, sElibNear, sElibEventual, DeepFrozenStamp) :any {
 
     def nbmPrinter(out :TextWriter, ex) implements DeepFrozenStamp {
       out.quote(ex.getSpecimen())
@@ -49,12 +49,19 @@ def RefAuthor {
         }
       }
       
+      /** XXX doesn't belong here, recommend using the PassByCopy guard instead? */
       to isPassByCopy(r) :any { 
         if (__equalizer.isSelfless(r)) { Ref.isPBC(r) } else { false }
       }
+      /** XXX doesn't belong here, recommend using the pbc guard instead? */
       to isPBC(r) :any { 
         return (escape fail { pbc.coerce(r, fail) == r } catch _ { false })
       }
+      /** XXX doesn't belong here, recommend using Equalizer#isSelfless/1 instead? */
+      to isSelfish(r) :any {
+        if (Ref.isNear(r)) { !__equalizer.isSelfless(r) } else { false }
+      }
+      
       to whenResolved(ref, reactor) :any {
         # XXX does this match the semantics of the standard E whenResolved?
         #traceln(`entering whenResolved`)
@@ -80,6 +87,8 @@ def RefAuthor {
         resultPromise
       }
       
+      to resolution(r) :any { refShorten(r) }
+
       to fulfillment(r) :any {
         def p := refOptProblem(r)
         if (p != null) {

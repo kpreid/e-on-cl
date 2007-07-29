@@ -487,6 +487,8 @@
         (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
     (wrap-function (f+ #'vector #'make-promise)
                    :stamps (list +deep-frozen-stamp+))
+    (wrap-function #'ref-shorten
+                   :stamps (list +deep-frozen-stamp+))
     (wrap-function #'ref-state
                    :stamps (list +deep-frozen-stamp+))
     (wrap-function (f+ #'as-e-boolean #'ref-is-resolved)

@@ -75,6 +75,17 @@ Ref
   ? Ref :DeepFrozen
   # value: <Ref>
   
+ resolution (shortens references; transparent.)
+ 
+  ? Ref.resolution("null")
+  # value: "null"
+ 
+  ? Ref.resolution(Ref.broken("bang"))
+  # value: <ref broken by problem: bang>
+ 
+  ? Ref.resolution(def p := Ref.promise()[0]) == p
+  # value: true
+ 
  broken
   
   ? Ref.broken("bang")
@@ -198,7 +209,27 @@ Ref
 
   ? Ref.isEventual(Ref.promise()[0])
   # value: true
+
+ isSelfish
+ 
+  ? Ref.isSelfish("a")
+  # value: false
   
+  ? Ref.isSelfish('a')
+  # value: false
+  
+  ? Ref.isSelfish(['a'])
+  # value: false
+  
+  ? Ref.isSelfish(def _ {})
+  # value: true
+  
+  ? Ref.isSelfish(Ref)
+  # value: true
+  
+  ? Ref.isSelfish(interp)
+  # value: true
+
  optSealedDispatch
  
   For near refs, Ref#optSealedDispatch acts exactly like calling optSealedDispatch on the ref. For non-near refs, it may provide sealed-dispatch communication with the underlying implementation of that ref; see proxy.updoc for tests of this behavior.
