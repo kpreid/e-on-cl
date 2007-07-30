@@ -1,0 +1,139 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def Vine := <import:net.captp.tables.makeVine>.asType()
+
+def CapTPMgr := def SwissTable := def PromiseGiftTable := def NearGiftTable := any # XXX restrict or interface or something
+
+/**
+ * Made magically available at incoming position 0.
+ * <p/>
+ * Used to resolve 3-vat live Granovetter introductions, and to log tracing
+ * info sent from the other vat.
+ *
+ * @author Mark S. Miller
+ */
+def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
+                     myNGifts :NearGiftTable,
+                     myOwnID :String,
+                     myCapTPMgr :CapTPMgr,
+                     mySwissTable :SwissTable) \
+      implements ExitViaHere, DeepFrozen {
+
+    def nonceLocator {
+
+        /**
+         *
+         */
+        to provideFor(gift :any, recipID :String, nonce :int) :Vine {
+            return myPGifts.provideFor(gift, recipID, nonce);
+        }
+
+        /**
+         *
+         */
+        to provideFor(gift :any,
+                      recipID :String,
+                      nonce :int,
+                      swissHash :int) :Vine {
+            require(Ref.isNear(gift), fn { "Must be Near: " + E.toString(gift) })
+            #If gift isn't Selfish, this will throw an exception,
+            #which is as it should be.
+            def giftSwiss := mySwissTable.getIdentity(gift);
+            def giftHash := giftSwiss.cryptoHash();
+            require(giftHash.equals(swissHash), fn { "wrong hash: " + E.toString(swissHash) });
+            return myNGifts.provideFor(gift, recipID, nonce, swissHash)
+        }
+
+        /**
+         * @param donorID    The vatID of the vat (Alice, the gift giver) that
+         *                   provided the gift we're picking up.
+         * @param nonce      Identifies (together with myOwnID) the gift in the
+         *                   donor's table.
+         * @param optFarVine Justs hold onto it until the request is done, to
+         *                   prevent it from being gced.
+         */
+        to acceptFrom(donorPath :List, # XXX document
+                      donorID :String,
+                      nonce :int,
+                      optFarVine :any) :any {
+            def optDonorConn :=
+              myCapTPMgr.getOrMakeProxyConnection(donorPath, donorID);
+            if (null == optDonorConn) {
+                return Ref.broken("The donor is gone")
+            }
+            def donorTable := optDonorConn.getPromiseGiftTable()
+            return donorTable.acceptFor(myOwnID, nonce);
+        }
+
+        /**
+         * @param donorID    The vatID of the vat (Alice, the gift giver) that
+         *                   provided the gift we're picking up.
+         * @param nonce      Identifies (together with myOwnID) the gift in the
+         *                   donor's table.
+         * @param swissHash  The gift should only be returned if it has this
+         *                   identity. Otherwise the recipient should get a
+         *                   DisconnectedRef. This isn't yet fully implemented.
+         * @param optFarVine Justs hold onto it until the request is done, to
+         *                   prevent it from being gced.
+         */
+        to acceptFrom(donorPath :List,
+                      donorID :String,
+                      nonce :int,
+                      swissHash :int,
+                      optFarVine :any) :any {
+            def optDonorConn :=
+              myCapTPMgr.getOrMakeProxyConnection(donorPath, donorID);
+            if (null == optDonorConn) {
+                return Ref.broken("The donor is gone");
+            }
+            def donorTable := optDonorConn.getNearGiftTable();
+            def result := donorTable.acceptFor(myOwnID, nonce, swissHash);
+            if (!Ref.isNear(result)) {
+                throw("internal: non-near gift for " + E.toString(swissHash));
+            }
+            #If result isn't Selfish, this will throw an exception,
+            #which is as it should be.
+            def id := mySwissTable.getIdentity(result);
+            def idHash := id.cryptoHash();
+            if (!swissHash.equals(idHash)) {
+                throw("internal: hash mismatch: " + E.toString(swissHash));
+            }
+            return result;
+        }
+
+        /**
+         * Do nothing, letting the argument become garbage. <p>
+         * <p/>
+         * The purpose of the message is to ensure that the argument isn't garbage
+         * until the message is delivered.
+         */
+        to ignore(optFarVine :any) :void {
+        }
+
+        /**
+         *
+         */
+        to lookupSwiss(swissNum :int, optFarVine :any) :any {
+            return mySwissTable.lookupSwiss(swissNum);
+        }
+
+        /**
+         * Enables our counterparty to log a message to our tracing system.
+         * <p/>
+         * These messages are tagged with the vatID of our counterparty. They are
+         * logged at debug level, and currently to the "captp" subsystem. These
+         * should probably instead have their own subsystem.
+         */
+        to traceRemote(message :String) :void {
+            #if (Trace.captp.debug && Trace.ON) {
+                #Trace.captp.debugm(myOwnID + ": " + message);
+                traceln(myOwnID + ": " + message)
+            #}
+        }
+    }
+    return nonceLocator
+}

@@ -1,0 +1,326 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ...............
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def makeTextWriter := <import:org.erights.e.elib.oldeio.makeTextWriter>
+def makeFlexList := <elib:tables.makeFlexList>
+
+# Default initial capacity
+def INIT_CAPACITY := 16
+
+def GROWTH_FACTOR := 2
+
+def Index := int > 0
+
+/**
+ * Just some common mechanism made available to the CommTable implementations.
+ * <p/>
+ * <p/>
+ * CommTables are defined in terms of indices (always positive), not position.
+ * At a higher level, positions use positive or negative to encode choice of
+ * table (questions vs imports, answers vs exports). This can be a bit
+ * confusing because CommTable internally uses negated indices for free list
+ * entries, and these two uses of negation are completely independent.
+ * <p/>
+ * The rest of CapTP depends on the tables, but for the sake of unit testing,
+ * each table stands alone to the greatest reasonable degree. Since
+ * AnswersTable adds almost nothing to CommTable, you can unit test CommTable
+ * by testing AnswersTable.
+ *
+ * @author Mark S. Miller
+ */
+def makeCommTable(self) implements DeepFrozen {
+    /**
+     * Used to indicate the absence of any other object
+     */
+    def ThePumpkin {}
+
+    # How many allocated entries do I have?
+    var mySize :int := 0
+
+    # What is the size of my parallel arrays?
+    var myCapacity :int := INIT_CAPACITY
+
+    # Keeps track of the allocation of my indices. <p>
+    # <p/>
+    # myFreeList[0] is unused and always has the value 0. For all i >= 1, if
+    # myFreeList[i] >= 1, it's an allocation count. Otherwise, let next :=
+    # (-myFreeList[i]). If next >= 1, it's the index of the next free entry in
+    # myFreeList. If next == 0, we're at the end of the list.
+    #
+    def myFreeList := makeFlexList.diverge([0] * INIT_CAPACITY, int)
+    for i in 1..!myCapacity {
+        #each entry points at the next
+        myFreeList[i] := -(i + 1)
+    }
+    #overwrite the last entry
+    myFreeList[myCapacity - 1] := 0
+
+    # Let first = -myFreeHead; If first >= 1, it's the index of the first free
+    # entry in myFreeList. If first == 0, the list is empty.
+    #
+    # point at the first allocatable entry
+    var myFreeHead :int := -1
+
+    # The actual contents of the table.
+    #
+    # XXX E library design: more evidence for a make-with-initial-value? cf. cl:make-array
+    def myStuff := makeFlexList.diverge([null] + [ThePumpkin] * (myCapacity - 1), any)
+
+    /**
+     * What the next capacity big enough to represent index?
+     */
+    def bigEnough(index :Index) {
+        if (0 >= index) {
+            throw("bad index: " + E.toString(index))
+        }
+        var result := myCapacity
+        while (index >= result) {
+            #XXX it's stupid to have an iterative algorithm. How do I
+            #calculate the smallest power of 2 > index?
+            result += GROWTH_FACTOR
+        }
+        return result
+    }
+
+    /**
+     * Become big enough to hold index. <p>
+     * <p/>
+     * Newly added elements are on the (newly grown) free list.
+     */
+    def growToHold(index :int) :void {
+        def oldCapacity := myCapacity
+        myCapacity := bigEnough(index)
+        if (oldCapacity == myCapacity) {
+            return;
+        }
+        myFreeList.setSize(myCapacity)
+        myStuff.setSize(myCapacity)
+        for i in oldCapacity..!myCapacity {
+            #each entry points at the next
+            myFreeList[i] := -(i + 1)
+            myStuff[i] := ThePumpkin
+        }
+        #overwrite the last entry
+        myFreeList[myCapacity - 1] := myFreeHead
+        myFreeHead := -oldCapacity
+    }
+
+    def commTable {
+        /** For inheritors' use. XXX is this information okay to reveal? */
+        to _getCapacity() { return myCapacity }
+
+        /**
+         * Drop all state and make sure nothing ever works again.
+         */
+        to smash(problemThrowable) :void {
+            mySize := -1
+            myCapacity := -1
+            myFreeList.run(0) := []
+            myFreeHead := 1
+            myStuff.run(0) := []
+        }
+
+        /**
+         * How many allocated entries?
+         */
+        to size() {
+            return mySize
+        }
+
+        /**
+         * Is this index free?  If it's past the end, yes. If it's before the
+         * beginning, it's not valid, so no.
+         */
+        to isFree(index :Index) :boolean {
+            return index >= myCapacity || 0 >= myFreeList[index]
+        }
+
+        /**
+         * Complain if not free
+         */
+        to mustBeFree(index :Index) {
+            if (!self.isFree(index)) {
+                throw(`$index not free in ${self.__getAllegedType()}`)
+            }
+        }
+
+        /**
+         * Complain if not allocated
+         */
+        to mustBeAlloced(index :Index) :void {
+            if (self.isFree(index)) {
+                throw(`$index not alloced in ${self.__getAllegedType()}`)
+            }
+        }
+
+        /**
+         * Deallocates an allocated index. <p>
+         * <p/>
+         * Subclasses may override and send-super in order to clear their parallel
+         * arrays.
+         */
+        to free(index :Index) :void {
+            self.mustBeAlloced(index)
+            myFreeList[index] := myFreeHead
+            myFreeHead := -index
+            myStuff[index] := ThePumpkin
+            mySize -= 1
+        }
+
+        /**
+         * Increment index's allocation count. <p>
+         * <p/>
+         * index must already be allocated
+         */
+        to incr(index :Index) :void {
+            self.mustBeAlloced(index)
+            myFreeList[index] += 1
+        }
+
+        /**
+         * Decrement index's allocation count delta, and free it if it reaches
+         * zero.
+         * <p/>
+         * On entry, index must be allocated.
+         *
+         * @return whether the entry got freed
+         */
+        to decr(index :Index, delta :int) :boolean {
+            self.mustBeAlloced(index)
+            def newCount := myFreeList[index] - delta
+            if (0 >= newCount) {
+                self.free(index)
+                return true
+            } else {
+                myFreeList[index] := newCount
+                return false;
+            }
+        }
+
+        /**
+         * Allocate a particular index. <p>
+         * <p/>
+         * On entry, index must be free. <p>
+         * <p/>
+         * Since the free list is singly linked, we can't generally do this in
+         * constant time. However, by far the typical case is for the requested
+         * index to be the same as the one that zero-argument alloc would have
+         * allocated, so we need merely assure that this case is constant time.
+         */
+        to alloc(index :Index) :void {
+            self.mustBeFree(index)
+            growToHold(index)
+            if (index == -myFreeHead) {
+                #we win
+                myFreeHead := myFreeList[index]
+                myFreeList[index] := 1
+                mySize += 1
+                return;
+            }
+            #we lose. Search the free list for -index
+            var i := -myFreeHead;
+            while (0 != i) {
+                def next := -(myFreeList[i])
+                if (index == next) {
+                    myFreeList[i] := myFreeList[index]
+                    myFreeList[index] := 1
+                    mySize += 1
+                    return
+                }
+                i := next
+            }
+            throw("internal: broken free list")
+        }
+
+
+        /**
+         * Gets the object at the allocated index.
+         */
+        to get(index :Index) {
+            self.mustBeAlloced(index)
+            def result := myStuff[index]
+            if (ThePumpkin == result) {
+                throw("export: " + E.toString(index) + " is a pumpkin")
+            }
+            return result
+        }
+
+        /**
+         *
+         */
+        to put(index :Index, value :any) {
+            commTable.put(index, value, false)
+        }
+
+        /**
+         *
+         */
+        to put(index :Index, value :any, strict :boolean) :void {
+            if (self.isFree(index)) {
+                self.alloc(index)
+                myStuff[index] := value
+            } else if (strict) {
+                throw("not free: " + E.toString(index))
+            } else {
+                myStuff[index] := value
+            }
+        }
+
+        /**
+         * Allocates a free index, put value there, and returns that index.
+         * <p/>
+         * Subclasses may override and send-super to initialize their parallel
+         * arrays.
+         * <p/>
+         * The wireCount is initialized to one
+         */
+        to "bind"(value :any) :int {
+            if (myCapacity == -1) {
+                throw("cannot bind in " + E.toQuote(self))
+            }
+            if (0 == myFreeHead) {
+                growToHold(myCapacity);
+            }
+            def result := -myFreeHead
+            self.mustBeFree(result)
+            myFreeHead := myFreeList[result]
+            myFreeList[result] := 1
+            myStuff[result] := value
+            mySize += 1
+            return result
+        }
+
+        /**
+         *
+         */
+        to printStateOn(out :TextWriter) {
+            if (myCapacity == -1) {
+                out.print("(smashed)")
+                return
+            }
+            out.print("[")
+            for i in 1..!myCapacity {
+                if (!self.isFree(i)) {
+                    out.print("\n  ", i, ":", myStuff[i])
+                }
+            }
+            out.print("\n], free: [")
+            var i := -myFreeHead
+            while (0 != i) {
+                out.print(" ", i)
+                i := -(myFreeList[i])
+            }
+            out.print("]");
+        }
+
+        to __printOn(out :TextWriter) {
+            out.print("<commTable ")
+            self.printStateOn(out)
+            out.print(">")
+        }
+    }
+    return commTable
+}

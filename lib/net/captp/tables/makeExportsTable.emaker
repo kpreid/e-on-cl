@@ -1,0 +1,68 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ...............
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def makeCommTable := <import:net.captp.tables.makeCommTable>
+def PassByProxy := <import:org.erights.e.elib.serial.PassByProxy>
+def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
+def Throwable := <type:java.lang.Throwable>
+
+/**
+ *
+ */
+def makeExportsTable() implements DeepFrozen {
+    
+    # Gets the index for a near export.
+    var myPBPMap := makeFlexMap.fromTypes(any, int)
+    
+    def exportsTable extends makeCommTable(exportsTable) {
+
+        to smash(problem :Throwable) :void {
+            for i in 1..!(super._getCapacity()) {
+                if (!exportsTable.isFree(i)) {
+                    E.sendOnly(exportsTable[i], "__reactToLostClient", problem);
+                }
+            }
+            super.smash(problem);
+            myPBPMap := null;
+        }
+
+        /**
+         * Frees the index, including its entry, if any, in the pbp map.
+         */
+        to free(index :int) :void {
+            myPBPMap.removeKey(exportsTable[index]);
+            super.free(index);
+        }
+
+        /**
+         *
+         */
+        to indexFor(obj :any) :int {
+            return myPBPMap.fetch(obj, fn { -1 });
+        }
+
+        /**
+         * Allocates and returns the index of a newly exported local PassByProxy
+         * object.
+         * <p/>
+         * The wireCount is initialized to one
+         *
+         * @param pbp The local PassByProxy object to be exported
+         * @return The index of the FarRef to be created-imported on the other
+         *         end.
+         */
+        to newFarPos(var pbp :any) :int {
+            # XXX kpreid wonders whether this should be an override of "bind"/1 instead
+            
+            # XXX kpreid wonders whether allowing coercion is correct here, and also about the consequences of failing at this point
+            pbp := PassByProxy.coerce(pbp, throw)
+            def index := exportsTable."bind"(pbp)
+            myPBPMap.put(pbp, index, true)
+            return index
+        }
+    }
+    return exportsTable
+}

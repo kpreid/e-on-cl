@@ -1,0 +1,25 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def fakeUnsealToken implements DeepFrozen {}
+
+interface Vine guards VineStamp {
+  to run() :void
+}
+
+# XXX document this
+def makeVine implements DeepFrozen {
+  to asType() { return Vine }
+  to run(target) {
+    def vine implements VineStamp {
+      to __optSealedDispatch(brand) {
+        if (brand == fakeUnsealToken) { return target }
+      }
+      to run() {}
+    }
+    return vine
+  }
+}

@@ -1,0 +1,23 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def PassByProxy implements DeepFrozen, ExitViaHere {
+  to __printOn(out :TextWriter) :void {
+    out.print("PassByProxy")
+  }
+  
+  to coerce(specimen, optEjector) :any {
+    # XXX make BaseGuard provide this coercion pattern
+    return \
+      if (!Ref.isPBC(specimen)) {
+        specimen
+      } else if (!Ref.isPBC(
+                   def coerced := specimen.__conformTo(PassByProxy))) {
+        coerced
+      } else {
+        throw.eject(optEjector, `not PassByProxy: $specimen`)
+      }
+  }
+}

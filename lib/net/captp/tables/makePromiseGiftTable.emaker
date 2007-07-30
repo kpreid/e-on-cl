@@ -1,0 +1,144 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ...............
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def makeValueThunk := <import:org.erights.e.elib.base.makeValueThunk>
+def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
+def makeVine := <import:net.captp.tables.makeVine>
+def Vine := makeVine.asType()
+def Throwable := <type:java.lang.Throwable>
+
+/**
+ * Rendezvous point for 3-vat live Granovetter introductions of Unresolved
+ * remote references (RemotePromises).
+ * <p/>
+ * Where we normally speak of Alice giving Bob a reference to Carol, we here
+ * speak of the Donor (VatA) giving to the Recipient (VatB) a reference to the
+ * Gift (Carol) residing on the Host (VatC). There is one PromiseGiftTable in
+ * the Host per Donor. The Donor associates the gift with a Nonce and the
+ * Recipient's ID, and she tells the Nonce to the Recipient. The Recipient asks
+ * the Host "What gift has Donor (identified by DonorID) deposited for me at
+ * this Nonce?".
+ * <p/>
+ * A Nonce is a use once unique number. It only needs to be "impossible" to
+ * collide under benevolent assumptions; it doesn't need to be unguessable, so
+ * we just use a 64 bit 'long'.
+ * <p/>
+ * Two interesting complexities: 1) The Recipient's lookup request may arrive
+ * at the Host before the Donors donation request does. 2) A partition could
+ * prevent the operation from completing, in which case the Recipient cannot be
+ * left hanging, and the association must be cleaned up.
+ * <p/>
+ * For 3-vat live Granovetter introductions of Resolved remote references
+ * (FarRefs), see the NearGiftTable.
+ *
+ * @param nonceLocatorPromise A RemotePromise for the Donor's NonceLocator.
+ *                            The ignore(vine) message is sent to it, so
+ *                            that it can ignore it.
+ * 
+ * @author Mark S. Miller.
+ */
+def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen {
+    # Maps from [recipID, Nonce] to [referent, optResolver]
+    var myStuff := makeFlexMap.fromTypes(Tuple[any, int], Tuple[any, any])
+
+    def promiseGiftTable {
+        /**
+         * Smash all untaken promises for undonated gifts, and then disable this
+         * table.
+         */
+        to smash(problem :Throwable) :void {
+            for box in myStuff.getValues() {
+                def [optResolver] := box
+                if (null != optResolver) {
+                    optResolver.smash(problem);
+                }
+            }
+            myStuff := null;
+        }
+
+        /**
+         * Make the gift available to the recipient so long as the Vine is held
+         * onto (isn't garbage).
+         */
+        to provideFor(gift :any, recipID :String, nonce :int) :Vine {
+            def keyPair := [recipID, nonce]
+            def optValuePair :=
+              myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK());
+            def result := makeVine(null)
+            if (null == optValuePair) {
+                #donation happened first.
+                def valuePair := [gift, null];
+                myStuff.put(keyPair, valuePair);
+                #XXX do we need to hold onto the weakPtr in order for it to be
+                #finalized?  If so, then we must.
+                makeWeakPtr(result, promiseGiftTable, "drop", keyPair);
+            } else {
+                #resolve the promise for a gift already looked up. Done.
+                def resolver := optValuePair[1];
+                resolver.resolve(gift);
+                myStuff.removeKey(keyPair);
+            }
+            return result;
+        }
+
+        /**
+         * Lookup the gift. <p>
+         * <p/>
+         * If absent, return a promise for what will be given, and sends an
+         * ignore(vine) to the nonceLocatorPromise. The promise is good as long as
+         * the vine is held. <p>
+         * <p/>
+         * Note that this message is named "acceptFor" whereas the corresponding
+         * NonceLocator message is named "acceptFrom". In acceptFor, the recipient
+         * is explicit and the donor implicit. In acceptFrom, the donor is explicit
+         * and the recipient implicit.
+         *
+         * @param recipID The vatID of the vat (Bob, the gift recipient) that the
+         *                gift is being picked up for.
+         * @param nonce   Identifies (together with the recipID) the gift.
+         */
+        to acceptFor(recipID :String, nonce :int) :any {
+            def keyPair := [recipID, nonce];
+            var optValuePair := myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK())
+            if (null == optValuePair) {
+                #lookup happened first, promise a gift to be donated.
+                optValuePair := Ref.promise();
+                myStuff.put(keyPair, optValuePair);
+                def vine := makeVine(null);
+                #XXX do we need to hold onto the weakPtr in order for it to be
+                #finalized?  If so, then we must.
+                makeWeakPtr(vine, promiseGiftTable, "drop", keyPair);
+                E.sendOnly(nonceLocatorPromise, "ignore", vine)
+            } else {
+                #Done.
+                myStuff.removeKey(keyPair);
+            }
+            return optValuePair[0];
+        }
+
+        /**
+         * Automagically called when the vine is dropped. <p> The Donor is able to
+         * call this as well, which isn't appropriate, but isn't dangerous, so what
+         * the hell.
+         * 
+         * XXX E translation note: we can and therefore should now make this private
+         */
+        to drop(recipID :String, nonce :int) :void {
+            def keyPair := [recipID, nonce];
+            def optValuePair :=
+              myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK());
+            if (null == optValuePair) {
+                return;
+            }
+            def optResolver := optValuePair[1];
+            if (null != optResolver) {
+                optResolver.smash(E.asRTE("The vine was dropped: " + nonce));
+            }
+            myStuff.removeKey(keyPair);
+        }
+    }
+    return promiseGiftTable
+}

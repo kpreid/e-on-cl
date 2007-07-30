@@ -1,0 +1,28 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+This is a placeholder. We *should* have tests for the operation of each of these tables, but they haven't been written yet; so we just check that they instantiate successfully.
+
+  ? <import:net.captp.tables.makeExportsTable>()
+  # value: <exportsTable__1>
+
+  ? <import:net.captp.tables.makeProxiesTable>()
+  # value: <proxiesTable__1>
+
+  ? <import:net.captp.tables.makeNearGiftTable>(def makeWeakPtr {})
+  # value: <nearGiftTable>
+
+  ? <import:net.captp.tables.makePromiseGiftTable>(def makeWeakPtr {}, def nonceLocatorPromise {})
+  # value: <promiseGiftTable>
+
+  args 2 and 3 standing in for makeWeakKeyMap and makeWeakValueMap
+  ? <import:net.captp.tables.makeSwissTable>(def entropy {}, <elib:tables.makeFlexMap>, <elib:tables.makeFlexMap>)
+  # value: <swissTable>
+
+  ? <import:net.captp.comm.makeNonceLocator>(def pgt {},
+  >                                          def ngt {},
+  >                                          "fake-id",
+  >                                          def capTPMgr {},
+  >                                          def swissTable {})
+  # value: <nonceLocator>
+

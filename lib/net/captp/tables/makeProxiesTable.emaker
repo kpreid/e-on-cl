@@ -1,0 +1,47 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ...............
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def makeCommTable := <import:net.captp.tables.makeCommTable>
+def EProxyHandler := any # XXX specific
+def makeProxy := <elib:ref.makeProxy>
+def Throwable := <type:java.lang.Throwable>
+
+/**
+ *
+ */
+def makeProxiesTable() implements DeepFrozen {
+    def proxiesTable extends makeCommTable(proxiesTable) {
+        /**
+         *
+         */
+        to smash(problem :Throwable) :void {
+            def resolutionSlot := __makeFinalSlot(Ref.broken(problem))
+            for i in 1..!(super._getCapacity()) {
+                if (!proxiesTable.isFree(i)) {
+                    proxiesTable.getProxyResolver(i).resolve(resolutionSlot)
+                }
+            }
+            super.smash(problem);
+        }
+
+        /**
+         *
+         */
+        to getProxyResolver(index :int) :any {
+            def [_, _, resolver, _] := proxiesTable[index]
+            return resolver;
+        }
+
+        /**
+         *
+         */
+        to getProxy(index :int) :any {
+          def [handler, resolution, _, far] := proxiesTable[index]
+          return makeProxy(handler, resolution, far)
+        }
+    }
+    return proxiesTable
+}

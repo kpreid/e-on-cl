@@ -1,0 +1,311 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def makeVine := <import:net.captp.tables.makeVine>; null
+  ? def makeFlexMap := <elib:tables.makeFlexMap>; null
+  ? def deSubgraphKit := <elib:serial.deSubgraphKit>; null
+  ? def makeCycleBreaker := <elib:tables.makeCycleBreaker>; null
+
+In this file, we test the implementation of the CapTP operations and associated state.
+
+  ? def makeCapTPConnection := <import:net.captp.comm.makeCapTPConnection>
+  # value: <makeCapTPConnection>
+  
+  ? def nonceLocatorIndex := 0; null
+  ? def nullSwissNumber := 0; null
+  
+Setting up half of a CapTP connection with mock authorities.
+  
+  ? var i := 10000000
+  > def pseudoEntropy {
+  >   to nextSwiss() { return (i += 1) }
+  > }; null
+  
+  ? def swissTable := <import:net.captp.tables.makeSwissTable>(pseudoEntropy, makeFlexMap, makeFlexMap); null
+  
+  ? def descs {
+  >   match [v, a] { 
+  >     def generic {
+  >       to __printOn(out :TextWriter) { 
+  >         out.print(v, "Desc")
+  >         a.printOn("(", ", ", ")", out)
+  >       }
+  >       to __optUncall() { return [descs, v, a] }
+  >     }
+  >   }
+  > }; null
+  
+  ? def [receiver, makeIncomingBuilder, remoteNonceLocator] := makeCapTPConnection(def outgoing { match msg { println(msg) }}, fn { deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) }, swissTable)
+  # value: [<capTPReceiver>, <capTPBuilderMaker>, <Far ref>]
+  
+  ? def unscopeForTestIncoming := {
+  >   def u := deSubgraphKit.getDefaultUnscope().diverge()
+  >   u[descs] := "CapTP_1_descs"
+  >   u.snapshot()
+  > }
+  > def buildIn(obj) {
+  >   return deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(obj, makeIncomingBuilder())
+  > }; null
+
+--- Incoming DeliverOp ---
+
+At this point, the only thing the remote side can possibly do is close the connection or talk to the NonceLocator, which is at the well-known position 0. We'll ask it for null, which has the well-known swiss number 0.
+
+The index provided is negative because it is chosen by the remote side. <http://www.erights.org/elib/distrib/captp/4tables.html>
+
+The 2-cycle delay on the redirector reports is because there is first a send of answer <- __whenMoreResolved(redirector) followed by the __whenMoreResolved's response send.
+
+
+  ? receiver.Deliver(-1, 
+  >                  fn r { println(`Redirector invoked: $r`) },
+  >                  nonceLocatorIndex, 
+  >                  "lookupSwiss",
+  >                  [nullSwissNumber, makeVine("irrelevant")])
+  ?
+  # stdout: Redirector invoked: null
+  #         
+
+null should now be present in the connection's answers table at -1.
+
+  ? receiver.Deliver(-2,
+  >                  fn r { println(`Redirector invoked: $r`) },
+  >                  -1,
+  >                  "__getAllegedType",
+  >                  [])
+  ?
+  # stdout: Redirector invoked: Null
+  #         
+  
+  ? receiver.Deliver(-3,
+  >                  fn r { println(`Redirector invoked: $r`) },
+  >                  -2,
+  >                  "getFQName",
+  >                  [])
+  ?
+  # stdout: Redirector invoked: org.cubik.cle.prim.null
+  #         
+
+Positive/zero answer index is an error:
+
+  ? receiver.Deliver(0, fn _ {}, -2, "getFQName", [])
+  # problem: 0 is not in the region -2147483648..!0
+
+  ? receiver.Deliver(1, fn _ {}, -2, "getFQName", [])
+  # problem: 1 is not in the region -2147483648..!0
+
+Missing recipient:
+
+  ? receiver.Deliver(-1, fn _ {}, -999, "getFQName", [])
+  # problem: 999 not alloced in AnswersTable__1
+
+--- Incoming DeliverOnlyOp ---
+
+2-cycle delay on this test because the reactor invocation is itself a send.
+
+  ? receiver.DeliverOnly(-3,
+  >                      "__whenMoreResolved",
+  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  ?
+  # stdout: WMR reactor invoked: org.cubik.cle.prim.null
+  #         
+
+--- Incoming GCExportOp ---
+
+XXX We don't have exports yet.
+
+--- Incoming GCAnswerOp ---
+
+Dropping the entry containing the FQN of null.
+
+  ? receiver.GCAnswer(-3)
+  ? receiver.DeliverOnly(-3,
+  >                      "__whenMoreResolved",
+  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  # problem: 3 not alloced in AnswersTable__1
+
+--- Incoming ShutdownOp ---
+
+XXX do this (shut down connection iff no more messages than the specified count have been sent by the recipient). Must not be visible to code. Note that 
+
+(IRC log from July 28, 2007)
+<markmiller> The funny case is messages to be sent to zero when a shutdown might happen
+<markmiller> These need to be buffered, so that if a shutdown does happen, that can be resent transparently on a newly formed connection.
+<kpreid> ow
+<markmiller> This is much of why it was never fully implemented.
+<kpreid> whereas in the current impls, it's essentially a connection-specific always-live-ref, yes?
+<markmiller> GCing connections seems to be hard
+<markmiller> yes
+
+--- Incoming TerminatedOp ---
+
+XXX do this -- Unconditional shutdown. Break references.
+
+--- Incoming WormholeOp ---
+
+XXX we don't have VatID processing yet
+
+------ Incoming descriptors ------
+
+--- Incoming NewFarDesc ---
+
+  ? receiver.DeliverOnly(0, "__whenMoreResolved", def nfdL := buildIn([descs.NewFar(1, 13904808385)]))
+  ?
+  # stdout: ["DeliverOnly", [1, "run", [ImportDesc(0)]]]
+  #         
+
+--- Incoming NewRemotePromiseDesc ---
+
+XXX
+
+--- Incoming ImportDesc ---
+
+This test depends on the above NewFarDesc test having allocated index 1.
+
+  ? buildIn([descs.Import(1)])
+  # value: [<Far ref>]
+  
+  ? buildIn([descs.Import(1)]) == nfdL
+  # value: true
+
+  ? buildIn([descs.Import(999)])
+  # problem: 999 not alloced in ProxiesTable__1
+
+An ImportDesc cannot have a negative index (receiver's questions table) because that would conflict with the receiver being able to GC its questions table entries.
+
+--- Incoming IncomingDesc ---
+
+Restore the FQN-of-null answer entry for testing:
+
+  ? receiver.Deliver(-3, fn r {}, -2, "getFQName", [])
+
+  ? receiver.Deliver(-4, println, -3, "add", buildIn([descs.Incoming(-3)]) )
+  ?
+  # stdout: org.cubik.cle.prim.nullorg.cubik.cle.prim.null
+  #         
+
+--- Incoming Promise3Desc ---
+
+XXX
+
+--- Incoming Far3Desc ---
+
+XXX
+
+--- Incoming LocatorUnumDesc ---
+
+XXX
+
+------ Outgoing operations ------
+
+--- Outgoing DeliverOnlyOp ---
+XXX write this
+
+--- Outgoing DeliverOp ---
+
+  ? def outgoingFar := remoteNonceLocator <- lookupSwiss(12345, null)
+  # value: <Promise>
+  ?
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [12345, null]]]
+  #         
+
+(382064925828890872342377433413917253333972024416 == 10000001.cryptoHash())
+
+The above is a delivery to the NonceLocator, which is a bit of an unusual case; so we will also test a Far ref.
+
+The remote side invokes the redirector for 'r', resolving it to a Far ref with import index 1.
+
+  ? receiver.DeliverOnly(1, "run", buildIn([descs.NewFar(1, 2398478938902)]))
+  ? outgoingFar
+  # value: <Far ref>
+
+Here's a normal message to that Far ref.
+
+  ? outgoingFar <- foo()
+  # value: <Promise>
+  ? 
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 1, "foo", []]]
+  #         
+
+(1033912670282953026478972818820010722176128073325 == 10000002.cryptoHash())
+
+--- Outgoing GCExportOp ---
+XXX write this
+--- Outgoing GCAnswerOp ---
+XXX write this
+--- Outgoing ShutdownOp ---
+XXX write this
+--- Outgoing TerminatedOp ---
+XXX write this
+--- Outgoing WormholeOp ---
+XXX write this
+
+------ Outgoing descriptors ------
+
+--- Outgoing NewFarDesc ---
+
+  ? E.sendOnly(outgoingFar, "newFarDescTest", [def newSelfish {}])
+  ?
+  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(3, 47255196895205160731987244561159478631887357377)]]]
+  #         
+
+After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:
+
+  ? E.sendOnly(outgoingFar, "sameFarTest", [newSelfish])
+  ?
+  # stdout: ["DeliverOnly", [1, "sameFarTest", [ImportDesc(3)]]]
+  #         
+
+--- Outgoing NewRemotePromiseDesc ---
+XXX
+--- Outgoing ImportDesc ---
+
+See NewFarDesc above for testing of ordinary imports; this is the special NonceLocator case.
+
+  XXX write this test
+
+--- Outgoing IncomingDesc ---
+
+  ? E.sendOnly(outgoingFar, "nonceLocatorSendIncomingTest", [remoteNonceLocator])
+  ?
+  # stdout: ["DeliverOnly", [1, "nonceLocatorSendIncomingTest", [IncomingDesc(0)]]]
+  #         
+  
+  ? E.sendOnly(outgoingFar, "farSendIncomingTest", [outgoingFar])
+  ?
+  # stdout: ["DeliverOnly", [1, "farSendIncomingTest", [IncomingDesc(1)]]]
+  #         
+
+--- Outgoing Promise3Desc ---
+XXX
+--- Outgoing Far3Desc ---
+XXX
+--- Outgoing LocatorUnumDesc ---
+XXX
+
+------ Other ------
+
+--- remoteNonceLocator ref ---
+
+  ? E.sendOnly(remoteNonceLocator, "foo", [])
+  ?
+  # stdout: ["DeliverOnly", [0, "foo", []]]
+  #         
+
+--- Outgoing nontrivial serialization ---
+
+XXX this doesn't actually test anything interesting, because println isn't a CapTP proxy.
+
+  ? def swiss :int := swissTable.getNewSwiss(["a"]); null
+  ? swissTable.lookupSwiss(swiss) == ["a"]
+  # value: true
+  
+  ? receiver.Deliver(-5, println, nonceLocatorIndex, "lookupSwiss", [swiss, makeVine("irrelevant")])
+  ?
+  # stdout: ["a"]
+  #         
+
+  ?
+  ?
+  ?
+  ?
+  
