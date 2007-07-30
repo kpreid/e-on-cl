@@ -3,6 +3,8 @@
 
 pragma.syntax("0.9")
 
+def setSugar := <import:org.erights.e.elib.tables.setSugar>
+
 def makeConstSetAuthor(SelflessStamp) {
   def ConstSetStamp implements DeepFrozen { 
     to audit(_) { return true }
@@ -81,18 +83,11 @@ def makeConstSetAuthor(SelflessStamp) {
       /** Return whether this set contains the given element. */
       to contains(element) :boolean { return itemMap.maps(element) }
 
-      /** this.getElements().iterate */
-      to iterate(f) { itemMap.getKeys().iterate(f) }
-
       /** Return self, since this is already an immutable set. */
       to snapshot() { return constSet }
       /** Return self, since this is already an immutable set. */
       to readOnly() { return constSet }
 
-      to printOn(left, sep, right, out) { 
-        itemMap.getKeys().printOn(left, sep, right, out)
-      }
-      
       /** Return a new set with the element added if it is not already present. */
       to with(element) {
         # NOTE: I had to remove the "return original set if the member is already present" optimization, because it breaks the underlying map's with-accumulation optimization by looking at the map.
@@ -120,11 +115,6 @@ def makeConstSetAuthor(SelflessStamp) {
         return makeConstSet.make(itemMap &! __makeMap.fromColumns(other.getElements(), [null] * other.size()))
       }
       
-      /** this.or(other, false) */
-      to or(other :ConstSet) :ConstSet {
-        return constSet.or(other, false)
-      }
-      
       # xxx or/3 with optEjector
 
       /** Return the union of two sets. The returned set has this set's elements followed by those of the other which are not already present. */
@@ -138,6 +128,8 @@ def makeConstSetAuthor(SelflessStamp) {
           throw(`both sets contain ${E.toQuote(member)}, in strict union of ${E.toQuote(constSet)} and ${E.toQuote(other)}`)
         }
       }
+      
+      match [v,a] { E.call(setSugar, "instance_" + v, [constSet] + a) }
     }
   }
  

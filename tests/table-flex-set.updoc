@@ -1,0 +1,166 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+statics
+
+  ? def makeFlexSet :DeepFrozen := <import:org.erights.e.elib.tables.makeFlexSet>
+  # value: <makeFlexSet>
+  
+  ? def FlexSet := makeFlexSet.asType()
+  # value: FlexSet
+
+Creation
+
+  ? makeFlexSet.make()
+  # value: [].asSet().diverge()
+  
+  ? makeFlexSet.make().__optUncall() == [].asSet().diverge().__optUncall()
+  # value: true
+  
+  ? def fs := makeFlexSet.fromType(float64)
+  # value: [].asSet().diverge(float64)
+  
+  ? makeFlexSet.fromType(float64).__optUncall() == [].asSet().diverge(float64).__optUncall()
+  # value: true
+  
+Access
+
+  ? fs.elementType()
+  # value: float64
+
+  ? def rofs := fs.readOnly()
+  # value: [].asSet().diverge(float64).readOnly()
+  
+  ? fs.getElements()
+  # value: []
+  
+  ? fs.contains(1)
+  # value: false
+  
+  XXX discuss renaming this.
+  ? fs.addElement(1)
+  ? fs
+  # value: [1.0].asSet().diverge(float64)
+
+  ? fs.getElements()
+  # value: [1.0]
+
+  ? rofs
+  # value: [1.0].asSet().diverge(float64).readOnly()
+
+The membership test coerces the value. XXX is this a good idea?
+  
+  ? fs.contains(1)
+  # value: true
+
+Adding an element again has no effect,
+
+  ? fs.addElement(1)
+  ? fs
+  # value: [1.0].asSet().diverge(float64)
+
+unless the strictness argument is used.
+
+  ? fs.addElement(1)
+  ? fs.addElement(1, true)
+  # problem: 1.0 already in map
+
+A set may be iterated over, but does not have indexed access.
+
+  ? for k => v in fs { println(`$k $v`) }
+  # stdout: 0 1.0
+  #         
+
+  ? fs.__optUncall()
+  # value: [[1.0].asSet(), "diverge", [float64]]
+  
+snapshot
+
+  ? fs.snapshot()
+  # value: [1.0].asSet()
+  
+  ? rofs.snapshot()
+  # value: [1.0].asSet()
+  
+  ? fs.snapshot() == rofs.snapshot()
+  # value: true
+
+  ? fs.snapshot() == [1.0].asSet()
+  # value: true
+
+Removals
+
+  ? fs.remove(1)
+  ? fs
+  # value: [].asSet().diverge(float64)
+
+  ? fs.remove(1)
+  ? fs
+  # value: [].asSet().diverge(float64)
+
+  ? fs.remove(1, true)
+  # problem: 1.0 not in map
+  
+  ? fs.remove(1, false)
+
+addAll/1
+
+  ? fs.addAll([2.0, 3], false, throw)
+  ? fs.getElements()
+  # value: [2.0, 3.0]
+  
+  ? fs.addAll(-2..-1, true, throw)
+  ? fs.getElements()
+  # value: [2.0, 3.0, -2.0, -1.0]
+
+  ? fs.addAll([4, 3], false, throw)
+  ? fs.getElements()
+  # value: [2.0, 3.0, -2.0, -1.0, 4.0]
+
+If one item is a duplicate, the preceding items are added anyway. XXX is this too bad?
+
+  ? fs.addAll([5, 4], true, throw)
+  # problem: 4.0 already in map
+  ? fs.getElements()
+  # value: [2.0, 3.0, -2.0, -1.0, 4.0, 5.0]
+
+  addAll(e) = addAll(e, false, throw)
+  ? fs.addAll([6, 5])
+  ? fs.getElements()
+  # value: [2.0, 3.0, -2.0, -1.0, 4.0, 5.0, 6.0]
+  
+  addAll(e, s) = addAll(e, s, throw)
+  ? fs.addAll([7, 6], false)
+  ? fs.getElements()
+  # value: [2.0, 3.0, -2.0, -1.0, 4.0, 5.0, 6.0, 7.0]
+  
+  ? fs.addAll([7], true)
+  # problem: 7.0 already in map
+
+removeAll/0
+
+  ? fs.removeAll()
+  ? fs.getElements()
+  # value: []
+
+removeAll/1
+
+  ? fs.addAll(1..6)
+  ? fs.removeAll(4..9)
+  ? fs.getElements()
+  # value: [1.0, 2.0, 3.0]
+  
+removeAll/2
+
+  ? fs.addAll(1..6)
+  ? fs.removeAll(4..9, false)
+  ? fs.getElements()
+  # value: [1.0, 2.0, 3.0]
+  
+  ? fs.addAll(1..6)
+  ? fs.removeAll(4..9, true)
+  # problem: 7.0 not in map
+  ? fs.getElements()
+  # value: [1.0, 2.0, 3.0]
+  
+XXX test general ESet operations

@@ -1,0 +1,87 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("one-method-object")
+
+def setSugar := <import:org.erights.e.elib.tables.setSugar>
+
+interface FlexSet guards FlexSetStamp {
+  # XXX methods
+}
+
+def unsafeMakeFlexSet(itemMap) implements DeepFrozen {
+  return def flexSet implements FlexSetStamp {
+    to __printOn(tw :TextWriter) {
+      tw.quote(flexSet.snapshot())
+      tw.write(".diverge(")
+      if ((def t := itemMap.keyType()) != any) { tw.quote(t) }
+      tw.write(")")
+    }
+    
+    to __optUncall() {
+      #XXX it has been proposed that Const* have less connection to Flex*: return [<elib:tables.makeFlexSet>, "diverge", [flexSet.snapshot(), itemMap.keyType()]]
+      return [flexSet.snapshot(), "diverge", [itemMap.keyType()]]
+    }
+    
+    to addElement(new) { # not strictly primitive
+      itemMap.put(new, null)
+    }
+    to addElement(new, strict :boolean) {
+      itemMap.put(new, null, strict)
+    }
+    to remove(old) { # not strictly primitive
+      itemMap.removeKey(old)
+    }
+    to remove(old, strict :boolean) {
+      itemMap.removeKey(old, strict)
+    }
+    
+    to addAll(iteratable) { flexSet.addAll(iteratable, false, throw) }
+    to addAll(iteratable, strict :boolean) { flexSet.addAll(iteratable, strict, throw) }
+    to addAll(iteratable, strict :boolean, alreadyPresentEjector) {
+      itemMap.putAll(def transformer.iterate(f) {
+        iteratable.iterate(fn _, v { f(v, null) })
+      }, strict, alreadyPresentEjector)
+    }
+    
+    to removeAll() {
+      itemMap.removeAll()
+    }
+    to removeAll(iteratable) { flexSet.removeAll(iteratable, false) }
+    to removeAll(iteratable, strict :boolean) {
+      # NOTE: can't use the underlying map's removeKeys because that operates on keys
+      for x in iteratable {
+        itemMap.removeKey(x, strict)
+      }
+    }
+    
+    /** Return the number of elements in this set. */
+    to size() { return itemMap.size() }
+    /** Return the elements in this set as a ConstList. */
+    to getElements() { return itemMap.getKeys() }
+    to elementType() { return itemMap.keyType() }
+    
+    /** Return whether this set contains the given element. */
+    to contains(element) :boolean { return itemMap.maps(element) }
+
+    match [v,a] { E.call(setSugar, "instance_" + v, [flexSet] + a) }
+  }
+}
+
+/** Makes FlexSets. A FlexSet is a mutable collection with settled, non-recurring elements, and an efficient membership test. */
+def makeFlexSet implements DeepFrozen, ExitViaHere {
+  
+  to asType() { return FlexSet }
+  
+  /** A fresh empty FlexSet with elements coerced by the specified guard. */
+  to fromType(type) {
+    return unsafeMakeFlexSet([].asMap().diverge(type, void))
+  }
+  
+  /** A fresh empty FlexSet with no type restriction. */
+  to make() {
+    return unsafeMakeFlexSet([].asMap().diverge())
+  }
+}

@@ -1,0 +1,93 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+pragma.enable("function-implements")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def sugarRoot := <import:org.cubik.cle.sugarRoot>
+
+def setSugar
+
+# XXX I expect to move this to a separate emaker.
+def makeReadOnlySet implements EventuallyDeepFrozen {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+
+  to run(rwImpl) {
+    return def roSet {
+      to __printOn(out :TextWriter) :void {
+        out.printSame(rwImpl)
+        out.write(".readOnly()")
+      }
+      
+      to elementType() { return rwImpl.elementType() }
+      to getElements() { return rwImpl.getElements() }
+      to size() { return rwImpl.size() }
+      to contains(element) { return rwImpl.contains(element) }
+      
+      # ... XXX methods
+      match [v,a] { E.call(setSugar, "instance_" + v, [roSet] + a) }
+    }
+  }
+}
+
+def childResponsibility(self, mverb) implements DeepFrozen {
+  throw(E.toQuote(self) + " failed to implement " + mverb)
+}
+
+bind setSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
+  method __optSealedDispatch(brand) :any {
+    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+    }
+  }
+  
+  method instance_elementType(self) { childResponsibility(self, "elementType/0") }
+
+  method instance_size(self) { childResponsibility(self, "size/0") }
+  method instance_getElements(self) { childResponsibility(self, "getElements/0") }
+  method instance_contains(self, _) { childResponsibility(self, "contains/1") }
+
+  /** this.getElements().iterate */
+  to instance_iterate(self, assocFunc) {
+    self.getElements().iterate(assocFunc)
+  }
+  
+  to instance_diverge(self, elementGuard) {
+    def fs := <import:org.erights.e.elib.tables.makeFlexSet>.fromType(elementGuard)
+    escape duplicate {
+      fs.addAll(self, true, duplicate)
+    } catch dupException {
+      # XXX dupException should tell us what key it was, but doesn't yet
+      # XXX quote, not print
+      throw(`duplicate elements in $self under $elementGuard coercion`) # ` while attempting to make a FlexSet`
+    }
+    return fs
+  }
+  method instance_diverge(self) { self.diverge(any) }
+  method instance_snapshot(self) {
+    self.getElements().asSet()
+  }
+  to instance_readOnly(self) {
+    return makeReadOnlySet(self)
+  }
+
+  /** this.or(other, false) */
+  to instance_or(self, other) {
+    return self.or(other, false)
+  }
+  
+  to instance_printOn(self, left, sep, right, out) { 
+    self.getElements().printOn(left, sep, right, out)
+  }
+  
+  # XXX missing: and/1, butNot/1, intersects/1, or/2, sort/0, sort/1, with/1, without/1
+}
+
+# XXX this file is in need of tests -- it is only used by FlexSet (which doesn't have tests for all of these methods) and ConstSet (which overrides many of them)
+
