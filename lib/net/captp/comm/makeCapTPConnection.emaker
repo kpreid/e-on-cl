@@ -40,7 +40,7 @@ def makeProxiesTable := <import:net.captp.tables.makeProxiesTable>
 def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
-  to run(outgoingReceiver, outArgBuilderMaker, swissTable) { # ...
+  to run(outgoingReceiver, outArgBuilderMaker, swissTable, whenGarbage) {
     def nonceLocator := makeNonceLocator(null,
                                          null,
                                          "fake-id-ctc",
@@ -58,6 +58,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
 
     def deSubgraphKit := <elib:serial.deSubgraphKit> # XXX unnecessarily not DeepFrozen
     def makeCycleBreaker := <elib:tables.makeCycleBreaker> # ditto
+    def once := <import:org.erights.e.facet.once> # ditto
     
     def unscope := {
       def u := deSubgraphKit.getDefaultUnscope().diverge()
@@ -178,7 +179,15 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
 
           E.sendOnly(outgoingReceiver, "Deliver", [-questionPos, outEncode(redirector), position, verb, outEncode(args)])
           
-          return questions.getProxy(questionPos)
+          # XXX this smells funny: if something else does questions.getProxy, the index could be GC'd too early by *this* finalizer. There's nothing that does that yet, though. Should we be using the table's allocation counter?
+          def proxy := questions.getProxy(questionPos)
+          whenGarbage(proxy, once(fn {
+            #traceln(`GCAnswer finalizer invoked for -$questionPos`)
+            E.sendOnly(outgoingReceiver, "GCAnswer", [-questionPos])
+            questions.free(questionPos)
+          }))
+          
+          return proxy
         }
         to handleSendOnly(verb, args) {
           E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])

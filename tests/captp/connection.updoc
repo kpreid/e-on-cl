@@ -16,6 +16,22 @@ In this file, we test the implementation of the CapTP operations and associated 
   
 Setting up half of a CapTP connection with mock authorities.
   
+  ? def finalizers := [].asMap().diverge()
+  > var fIndex := 0
+  > def pseudoWhenGarbage(ref, reactor) {
+  >   #traceln(`Adding finalizer for $ref -> $reactor`)
+  >   finalizers[fIndex += 1] := [ref, reactor]
+  > }
+  > def clearFinalizers() { finalizers.removeAll() }
+  > def runFinalizers() {
+  >   for i => [_, reactor] in finalizers {
+  >     #traceln(`Running $reactor`)
+  >     reactor <- ()
+  >     finalizers.removeKey(i)
+  >   }
+  > }
+  > null
+  
   ? var i := 10000000
   > def pseudoEntropy {
   >   to nextSwiss() { return (i += 1) }
@@ -35,7 +51,12 @@ Setting up half of a CapTP connection with mock authorities.
   >   }
   > }; null
   
-  ? def [receiver, makeIncomingBuilder, remoteNonceLocator] := makeCapTPConnection(def outgoing { match msg { println(msg) }}, fn { deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) }, swissTable)
+  ? def [receiver, makeIncomingBuilder, remoteNonceLocator] :=
+  >   makeCapTPConnection(
+  >     def outgoing { match msg { println(msg) }},
+  >     fn { deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) },
+  >     swissTable,
+  >     pseudoWhenGarbage)
   # value: [<capTPReceiver>, <capTPBuilderMaker>, <Far ref>]
   
   ? def unscopeForTestIncoming := {
@@ -231,7 +252,35 @@ Here's a normal message to that Far ref.
 --- Outgoing GCExportOp ---
 XXX write this
 --- Outgoing GCAnswerOp ---
-XXX write this
+
+We create a remote promise for an answer and tell the connection that it has been GCed.
+
+  ? clearFinalizers()
+  > E.send(remoteNonceLocator, "lookupSwiss", [93478934, null])
+  > null
+  ?
+  # stdout: ["Deliver", [-3, NewFarDesc(3, 47255196895205160731987244561159478631887357377), 0, "lookupSwiss", [93478934, null]]]
+  #         
+  
+  ? runFinalizers()
+  ?
+  # stdout: ["GCAnswer", [-3]]
+  #
+
+After GC, the question table entry is free and will be reused.
+
+  ? E.send(remoteNonceLocator, "lookupSwiss", [23948931413532, null])
+  > null
+  ?
+  # stdout: ["Deliver", [-3, NewFarDesc(4, 412897248500657771667886264468852369692723684603), 0, "lookupSwiss", [23948931413532, null]]]
+  #         
+  
+  ? runFinalizers()
+  ?
+  # stdout: ["GCAnswer", [-3]]
+  #
+
+
 --- Outgoing ShutdownOp ---
 XXX write this
 --- Outgoing TerminatedOp ---
@@ -245,14 +294,14 @@ XXX write this
 
   ? E.sendOnly(outgoingFar, "newFarDescTest", [def newSelfish {}])
   ?
-  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(3, 47255196895205160731987244561159478631887357377)]]]
+  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(5, 82190111274176756684133692948252028599388244870)]]]
   #         
 
 After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:
 
   ? E.sendOnly(outgoingFar, "sameFarTest", [newSelfish])
   ?
-  # stdout: ["DeliverOnly", [1, "sameFarTest", [ImportDesc(3)]]]
+  # stdout: ["DeliverOnly", [1, "sameFarTest", [ImportDesc(5)]]]
   #         
 
 --- Outgoing NewRemotePromiseDesc ---
@@ -308,4 +357,3 @@ XXX this doesn't actually test anything interesting, because println isn't a Cap
   ?
   ?
   ?
-  

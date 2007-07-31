@@ -18,7 +18,9 @@ In this file, we test that two linked CapTPConnections communicate successfully.
   > /** Deterministic source of pseudo-SwissNumbers so that our tracing output is deterministic. */
   > def pseudoEntropy {
   >   to nextSwiss() { return (i += 1) }
-  > }; null
+  > }
+  > def pseudoWhenGarbage(_, _) {}
+  > null
 
 This is a mechanism for tracing communication between the CapTPConnections.
 
@@ -73,10 +75,12 @@ Now we can make the SwissTables and connections.
   ? def [[receiverL, mbL, rnlL], [receiverR, mbR, rnlR]] := 
   >   [makeCapTPConnection(traceReceiver("Right", receiverR),
   >                        traceBuilderMaker(mbR),
-  >                        swissTableL),
+  >                        swissTableL,
+  >                        pseudoWhenGarbage),
   >    makeCapTPConnection(traceReceiver("Left", receiverL), 
   >                        traceBuilderMaker(mbL),
-  >                        swissTableR)]
+  >                        swissTableR,
+  >                        pseudoWhenGarbage)]
   # value: [[<capTPReceiver>, <capTPBuilderMaker>, <Far ref>], [<capTPReceiver>, <capTPBuilderMaker>, <Far ref>]]
   
 --- 
