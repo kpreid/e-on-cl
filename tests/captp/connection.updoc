@@ -11,6 +11,9 @@ In this file, we test the implementation of the CapTP operations and associated 
   ? def makeCapTPConnection := <import:net.captp.comm.makeCapTPConnection>
   # value: <makeCapTPConnection>
   
+  ? def makeSwissTable := <import:net.captp.tables.makeSwissTable>
+  # value: <makeSwissTable>
+  
   ? def nonceLocatorIndex := 0; null
   ? def nullSwissNumber := 0; null
   
@@ -32,13 +35,6 @@ Setting up half of a CapTP connection with mock authorities.
   > }
   > null
   
-  ? var i := 10000000
-  > def pseudoEntropy {
-  >   to nextSwiss() { return (i += 1) }
-  > }; null
-  
-  ? def swissTable := <import:net.captp.tables.makeSwissTable>(pseudoEntropy, makeFlexMap, makeFlexMap); null
-  
   ? def descs {
   >   match [v, a] { 
   >     def generic {
@@ -51,22 +47,40 @@ Setting up half of a CapTP connection with mock authorities.
   >   }
   > }; null
   
-  ? def [receiver, makeIncomingBuilder, remoteNonceLocator] :=
-  >   makeCapTPConnection(
+  ? def testGraphRecognizer := {
+  >   def u := deSubgraphKit.getDefaultUnscope().diverge()
+  >   u[descs] := "CapTP_1_descs"
+  >   u.snapshot()
+  >   deSubgraphKit.makeRecognizer(null, u.snapshot())
+  > }
+  > def makeTestConnection() {
+    
+In order to make the test output deterministic, we use a fake RNG.
+
+  >   var i := 10000000
+  >   def pseudoEntropy {
+  >     to nextSwiss() { return (i += 1) }
+  >   }
+  >
+  >   def swissTable := makeSwissTable(pseudoEntropy, makeFlexMap, makeFlexMap)
+  >     
+  >   def [r, makeIncomingBuilder, rnl] := makeCapTPConnection(
   >     def outgoing { match msg { println(msg) }},
   >     fn { deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) },
   >     swissTable,
   >     pseudoWhenGarbage)
-  # value: [<capTPReceiver>, <capTPBuilderMaker>, <Far ref>]
-  
-  ? def unscopeForTestIncoming := {
-  >   def u := deSubgraphKit.getDefaultUnscope().diverge()
-  >   u[descs] := "CapTP_1_descs"
-  >   u.snapshot()
-  > }
-  > def buildIn(obj) {
-  >   return deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(obj, makeIncomingBuilder())
+
+buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
+
+  >   def buildIn(obj) {
+  >     return testGraphRecognizer.recognize(obj, makeIncomingBuilder())
+  >   }; null
+  >   return [swissTable, r, rnl, buildIn]
   > }; null
+  
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  
 
 --- Incoming DeliverOp ---
 
