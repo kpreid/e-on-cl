@@ -132,7 +132,57 @@ Missing recipient:
 
 --- Incoming GCExportOp ---
 
-XXX We don't have exports yet.
+To test GCExportOp, we must first export something.
+
+  ? E.sendOnly(remoteNonceLocator, "exportTest", [def exported(x) {println(x)}])
+  ?
+  # stdout: ["DeliverOnly", [0, "exportTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  #         
+
+(382064925828890872342377433413917253333972024416 == 10000001.cryptoHash())
+
+wireDelta of 0 should have no effect.
+
+  ? receiver.GCExport(1, 0)
+  ? receiver.DeliverOnly(1, "run", ["still here"])
+  # stdout: still here
+  #         
+  
+wireDelta of 1 should delete the export.
+
+  ? receiver.GCExport(1, 1)
+  ? receiver.DeliverOnly(1, "run", ["gone"])
+  # problem: 1 not alloced in ExportsTable__1
+
+A reference is collected once the sum of wireDeltas in all received GCExport messages exceeds the number of times it is exported. Here's a multiple export:
+
+  ? E.sendOnly(remoteNonceLocator, "exportTest2a", [exported])
+  ?
+  # stdout: ["DeliverOnly", [0, "exportTest2a", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  #         
+
+(The NewFarDesc's index is the same because 1 is at the head of the exports table's free list, not because of any deliberate relationship.)
+
+  ? E.sendOnly(remoteNonceLocator, "exportTest2b", [exported])
+  > E.sendOnly(remoteNonceLocator, "exportTest2c", [exported])
+  ?
+  # stdout: ["DeliverOnly", [0, "exportTest2b", [ImportDesc(1)]]]
+  #         ["DeliverOnly", [0, "exportTest2c", [ImportDesc(1)]]]
+  #         
+
+wireDelta of 1 should have no effect (export count now 2).
+
+  ? receiver.GCExport(1, 1)
+  ? receiver.DeliverOnly(1, "run", ["still here #2"])
+  # stdout: still here #2
+  #         
+  
+Additional wireDelta of 2 should balance the three previous references.
+
+  ? receiver.GCExport(1, 2)
+  ? receiver.DeliverOnly(1, "run", ["gone #2"])
+  # problem: 1 not alloced in ExportsTable__1
+
 
 --- Incoming GCAnswerOp ---
 
@@ -226,10 +276,10 @@ XXX write this
   ? def outgoingFar := remoteNonceLocator <- lookupSwiss(12345, null)
   # value: <Promise>
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [12345, null]]]
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [12345, null]]]
   #         
 
-(382064925828890872342377433413917253333972024416 == 10000001.cryptoHash())
+(1033912670282953026478972818820010722176128073325 == 10000002.cryptoHash())
 
 The above is a delivery to the NonceLocator, which is a bit of an unusual case; so we will also test a Far ref.
 
@@ -244,10 +294,10 @@ Here's a normal message to that Far ref.
   ? outgoingFar <- foo()
   # value: <Promise>
   ? 
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 1, "foo", []]]
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 47255196895205160731987244561159478631887357377), 1, "foo", []]]
   #         
 
-(1033912670282953026478972818820010722176128073325 == 10000002.cryptoHash())
+(47255196895205160731987244561159478631887357377 == 10000003.cryptoHash())
 
 --- Outgoing GCExportOp ---
 
@@ -279,7 +329,7 @@ We create a remote promise for an answer and tell the connection that it has bee
   > E.send(remoteNonceLocator, "lookupSwiss", [93478934, null])
   > null
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(3, 47255196895205160731987244561159478631887357377), 0, "lookupSwiss", [93478934, null]]]
+  # stdout: ["Deliver", [-3, NewFarDesc(3, 412897248500657771667886264468852369692723684603), 0, "lookupSwiss", [93478934, null]]]
   #         
   
   ? runFinalizers()
@@ -292,7 +342,7 @@ After GC, the question table entry is free and will be reused.
   ? E.send(remoteNonceLocator, "lookupSwiss", [23948931413532, null])
   > null
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(4, 412897248500657771667886264468852369692723684603), 0, "lookupSwiss", [23948931413532, null]]]
+  # stdout: ["Deliver", [-3, NewFarDesc(4, 82190111274176756684133692948252028599388244870), 0, "lookupSwiss", [23948931413532, null]]]
   #         
   
   ? runFinalizers()
@@ -314,7 +364,7 @@ XXX write this
 
   ? E.sendOnly(outgoingFar, "newFarDescTest", [def newSelfish {}])
   ?
-  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(5, 82190111274176756684133692948252028599388244870)]]]
+  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(5, 682009956380579499771617381148460370106090083063)]]]
   #         
 
 After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:

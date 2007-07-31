@@ -159,6 +159,12 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         E.sendOnly(answer, "__whenMoreResolved", [rdr])
       }
       
+      to GCExport(exportPos :ExportPos,
+                  wireDelta :WireDelta) {
+        exports.decr(exportPos, wireDelta)
+        # XXX do we need to do something upon reaching 0?
+      }
+      
       to GCAnswer(answerPos :AnswerPos) {
         answers.free(-answerPos)
       }
