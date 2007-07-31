@@ -250,7 +250,27 @@ Here's a normal message to that Far ref.
 (1033912670282953026478972818820010722176128073325 == 10000002.cryptoHash())
 
 --- Outgoing GCExportOp ---
-XXX write this
+
+GCExportOp is sent when a proxy for an import-table entry has gone away; so to test it, we simulate an arriving import which is discarded.
+
+  ? clearFinalizers()
+  > receiver.DeliverOnly(0, "__optSealedDispatch", buildIn([descs.NewFar(2, 38249328)]))
+  ? runFinalizers()
+  ?
+  # stdout: ["GCExport", [2, 1]]
+  #         
+
+Note that the sender of GCExportOp does not know whether the index was actually freed by the remote side; if it was, the index will be overwritten by a New*Desc; otherwise, an ImportDesc will arrive causing the creation of a new proxy for the existing table entry.
+
+  ? clearFinalizers()
+  > receiver.DeliverOnly(0, "__optSealedDispatch", buildIn([descs.NewFar(2, 38249328)]))
+  > receiver.DeliverOnly(0, "__optSealedDispatch", buildIn([descs.Import(2)]))
+  ? runFinalizers()
+  ?
+  # stdout: ["GCExport", [2, 2]]
+  #         
+
+
 --- Outgoing GCAnswerOp ---
 
 We create a remote promise for an answer and tell the connection that it has been GCed.

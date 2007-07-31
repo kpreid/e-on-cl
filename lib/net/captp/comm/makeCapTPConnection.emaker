@@ -164,30 +164,53 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
+    def makeProxyRecord(handler, far, sendGC) {
+      var wireCount := 0
+      var localCount := 0
+      def [resolutionSlot, proxySlotResolver] := Ref.promise()
+
+      return def proxyRecord {
+        to resolver() { return proxySlotResolver }
+        
+        /** make a local reference, and increment the wireCount (number of received descriptors for this local entry) */
+        to reference() {
+          wireCount += 1
+          def proxy := makeProxy(handler, resolutionSlot, far)
+          localCount += 1
+          
+          whenGarbage(proxy, once(fn {
+            # XXX not correct wrt ImportDesc reconstituting proxies -- the proxy making point should do this
+            localCount -= 1
+            if (localCount.atMostZero()) {
+              sendGC <- (wireCount)
+              wireCount := 0
+            }
+          }))
+          return proxy
+        }
+      }
+    }
+    
     def makeEventualHandler(position :vow[IncomingPos]) {
       return def capTPEventualHandler {
         to handleSend(verb, args) {
 
-          def [proxyResolutionSlot, proxySlotResolver] := Ref.promise()
+          def questionPos := questions."bind"(def record := makeProxyRecord(
+            makeEventualHandler(questionPos <- negate()),
+            false,
+            fn wireCount {
+              E.sendOnly(outgoingReceiver, "GCAnswer", [-questionPos])
+              questions.free(questionPos)
+            }))
 
           def redirector(resolution) :void {
             #traceln(`Redirector for $position $verb $args got resolution $resolution`)
-            proxySlotResolver.resolveRace(&resolution)
+            record.resolver().resolveRace(&resolution)
           }
-
-          def questionPos := questions."bind"([makeEventualHandler(questionPos <- negate()), proxyResolutionSlot, proxySlotResolver, false])
 
           E.sendOnly(outgoingReceiver, "Deliver", [-questionPos, outEncode(redirector), position, verb, outEncode(args)])
           
-          # XXX this smells funny: if something else does questions.getProxy, the index could be GC'd too early by *this* finalizer. There's nothing that does that yet, though. Should we be using the table's allocation counter?
-          def proxy := questions.getProxy(questionPos)
-          whenGarbage(proxy, once(fn {
-            #traceln(`GCAnswer finalizer invoked for -$questionPos`)
-            E.sendOnly(outgoingReceiver, "GCAnswer", [-questionPos])
-            questions.free(questionPos)
-          }))
-          
-          return proxy
+          return questions.getProxy(questionPos)
         }
         to handleSendOnly(verb, args) {
           E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
@@ -207,9 +230,14 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def incomingDescMaker {
       to NewFar(importPos :ImportPos,
                    swissHash :SwissHash) {
-        # XXX reuse proxies for same swissHash
-        def [resolutionSlot, proxySlotResolver] := Ref.promise()
-        imports.put(importPos, [makeEventualHandler(importPos), resolutionSlot, proxySlotResolver, true])
+
+        imports.put(importPos, makeProxyRecord(
+          makeEventualHandler(importPos),
+          true,
+          fn wireCount {
+            E.sendOnly(outgoingReceiver, "GCExport", [importPos, wireCount])
+          }))
+        
         return imports.getProxy(importPos)
       }
       

@@ -31,16 +31,14 @@ def makeProxiesTable() implements DeepFrozen {
          *
          */
         to getProxyResolver(index :int) :any {
-            def [_, _, resolver, _] := proxiesTable[index]
-            return resolver;
+            return proxiesTable[index].resolver()
         }
 
         /**
          *
          */
         to getProxy(index :int) :any {
-          def [handler, resolution, _, far] := proxiesTable[index]
-          return makeProxy(handler, resolution, far)
+          return proxiesTable[index].reference()
         }
     }
     return proxiesTable
