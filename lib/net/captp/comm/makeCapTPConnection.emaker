@@ -31,6 +31,7 @@ def DESCS_EXIT := "CapTP_1_descs"
 
 def makeProxy := <elib:ref.makeProxy>
 def makeBrand := <elib:sealing.makeBrand>
+def Throwable := <type:java.lang.Throwable>
 
 def makeNonceLocator := <import:net.captp.comm.makeNonceLocator>
 def makeAnswersTable := <import:net.captp.tables.makeAnswersTable>
@@ -40,7 +41,7 @@ def makeProxiesTable := <import:net.captp.tables.makeProxiesTable>
 def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
-  to run(outgoingReceiver, outArgBuilderMaker, swissTable, whenGarbage) {
+  to run(var outgoingReceiver, var outArgBuilderMaker, swissTable, whenGarbage) {
     def nonceLocator := makeNonceLocator(null,
                                          null,
                                          "fake-id-ctc",
@@ -51,6 +52,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def exports := makeExportsTable()
     def imports := makeProxiesTable()
     def questions := makeProxiesTable()
+    
+    def termination # resolved when connection is dead
+    def remoteNonceLocatorResolutionSlot
     
     def [remoteIncomingPosSealer, remoteIncomingPosUnsealer] := 
       makeBrand("CapTP far ref's remote incomingPos")
@@ -142,10 +146,17 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       return encRecognizer.recognize(object, outArgBuilderMaker())
     }
     
+    def requireLive() {
+      if (Ref.isResolved(termination)) {
+        throw(`this CapTP connection has been terminated (${Ref.optProblem(termination)})`)
+      }
+    }
+    
     def capTPReceiver {
       to DeliverOnly(recipPos :IncomingPos,
                      verb :MsgName,
                      args :List[any]) :void {
+        requireLive()
         E.sendOnly(lookupIncoming(recipPos), verb, args)
       }
 
@@ -154,6 +165,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
                  recipPos :IncomingPos,
                  verb :MsgName,
                  args :List[any]) :void {
+        requireLive()
         def answer := E.send(lookupIncoming(recipPos), verb, args)
         answers.put(-answerPos, answer, true)
         E.sendOnly(answer, "__whenMoreResolved", [rdr])
@@ -161,12 +173,32 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       
       to GCExport(exportPos :ExportPos,
                   wireDelta :WireDelta) {
+        requireLive()
         exports.decr(exportPos, wireDelta)
         # XXX do we need to do something upon reaching 0?
       }
       
       to GCAnswer(answerPos :AnswerPos) {
+        requireLive()
         answers.free(-answerPos)
+      }
+
+      to Terminated(problem :Throwable) {
+        requireLive()
+        
+        bind termination := Ref.broken(problem)
+        
+        # Discard our local references, break our proxies
+        exports.smash(problem)
+        imports.smash(problem)
+        answers.smash(problem)
+        questions.smash(problem)
+        bind remoteNonceLocatorResolutionSlot := __makeFinalSlot(termination)
+        
+        # Discard our outgoing references, since we will no longer use them
+        outgoingReceiver := null
+        outArgBuilderMaker := null
+        # XXX review for additional cleanup needed/useful
       }
     }
     
@@ -232,10 +264,11 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         }
       }
     }
-    
+
     def incomingDescMaker {
       to NewFar(importPos :ImportPos,
                    swissHash :SwissHash) {
+        requireLive()
 
         imports.put(importPos, makeProxyRecord(
           makeEventualHandler(importPos),
@@ -248,10 +281,12 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
       
       to Import(importPos :ImportPos) {
+        requireLive()
         return lookupImport(importPos)
       }
   
       to Incoming(incomingPos :IncomingPos) {
+        requireLive()
         return lookupIncoming(incomingPos)
       }
     }
@@ -259,12 +294,13 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def buildScope := deSubgraphKit.getDefaultScope().with(DESCS_EXIT, incomingDescMaker)
     
     def capTPBuilderMaker() {
+      requireLive()
       return deSubgraphKit.makeBuilder(buildScope)
     }
     
     # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
-    def remoteNonceLocator := makeProxy(makeEventualHandler(0), Ref.promise()[0], true)
-
+    def remoteNonceLocator := makeProxy(makeEventualHandler(0), remoteNonceLocatorResolutionSlot, true)
+    
     return [capTPReceiver, capTPBuilderMaker, remoteNonceLocator]
   }
 }

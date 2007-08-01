@@ -22,7 +22,7 @@ def makeExportsTable() implements DeepFrozen {
         to smash(problem :Throwable) :void {
             for i in 1..!(super._getCapacity()) {
                 if (!exportsTable.isFree(i)) {
-                    E.sendOnly(exportsTable[i], "__reactToLostClient", problem);
+                    E.sendOnly(exportsTable[i], "__reactToLostClient", [problem]);
                 }
             }
             super.smash(problem);

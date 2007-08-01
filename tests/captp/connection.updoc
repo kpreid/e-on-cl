@@ -5,6 +5,7 @@
   ? def makeFlexMap := <elib:tables.makeFlexMap>; null
   ? def deSubgraphKit := <elib:serial.deSubgraphKit>; null
   ? def makeCycleBreaker := <elib:tables.makeCycleBreaker>; null
+  ? def Throwable := <type:java.lang.Throwable>; null
 
 In this file, we test the implementation of the CapTP operations and associated state.
 
@@ -223,7 +224,84 @@ XXX do this (shut down connection iff no more messages than the specified count 
 
 --- Incoming TerminatedOp ---
 
-XXX do this -- Unconditional shutdown. Break references.
+  ? def [_, ttReceiver, ttRemoteNonceLocator, ttBuildIn] := makeTestConnection(); null
+
+There are several cases to check the behavior of:
+
+Imported far ref:
+  
+  ? def outgoingFar := ttRemoteNonceLocator <- getTerminatedTestRef1()
+  # value: <Promise>
+  
+  ?
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "getTerminatedTestRef1", []]]
+  #         
+  
+  ? ttReceiver.DeliverOnly(1, "run", ttBuildIn([descs.NewFar(1, 1234)]))
+
+Question (promise resulting from DeliverOp):
+
+  ? def outgoingQuestion := ttRemoteNonceLocator <- getTerminatedTestRef2()
+  # value: <Promise>
+  
+  ?
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "getTerminatedTestRef2", []]]
+  #         
+  
+Imported remote promise:
+
+  XXX write test once importing remote promises works
+  
+Export, which should receive a __reactToLostClient:
+
+  ? E.sendOnly(ttRemoteNonceLocator, "TerminatedExportTest", [
+  >   def ttReactReceiver {to __reactToLostClient(p) { print(`rTLC expecter got $p`) }}])
+  ?
+  # stdout: ["DeliverOnly", [0, "TerminatedExportTest", [NewFarDesc(3, 47255196895205160731987244561159478631887357377)]]]
+  #         
+
+The termination:
+
+  ? ttReceiver.Terminated("foo" :Throwable)
+  # stdout: rTLC expecter got problem: foo
+
+Consequences:
+
+  ? [outgoingFar, outgoingQuestion, ttRemoteNonceLocator]
+  # value: [<ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>]
+  
+  ? Ref.optProblem(outgoingFar) == Ref.optProblem(outgoingQuestion)
+  # value: true
+
+Checking for robust termination:
+
+We don't need to test anything but the receiver and builder-maker, because every other access is an eventual ref that gets broken, as tested above.
+
+  ? ttReceiver.DeliverOnly(0, "", [])
+  # problem: this CapTP connection has been terminated (problem: foo)
+
+  ? ttReceiver.Deliver(-1, null, 0, "", [])
+  # problem: this CapTP connection has been terminated (problem: foo)
+
+  ? ttReceiver.GCAnswer(-1)
+  # problem: this CapTP connection has been terminated (problem: foo)
+
+  ? ttReceiver.GCExport(1, 0)
+  # problem: this CapTP connection has been terminated (problem: foo)
+
+  x ? ttReceiver.Shutdown(0)
+  x # problem: this CapTP connection has been terminated (problem: foo)
+
+  ? ttReceiver.Terminated("bar")
+  # problem: this CapTP connection has been terminated (problem: foo)
+
+  x ? ttReceiver.Wormhole(-1, null, 0, "", [])
+  x # problem: this CapTP connection has been terminated (problem: foo)
+
+  ? ttBuildIn(descs.Incoming(0))
+  # problem: this CapTP connection has been terminated (problem: foo)
+
+XXX test operations on builders gotten from the maker before the termination
 
 --- Incoming WormholeOp ---
 

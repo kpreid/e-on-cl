@@ -21,7 +21,7 @@ def makeProxiesTable() implements DeepFrozen {
             def resolutionSlot := __makeFinalSlot(Ref.broken(problem))
             for i in 1..!(super._getCapacity()) {
                 if (!proxiesTable.isFree(i)) {
-                    proxiesTable.getProxyResolver(i).resolve(resolutionSlot)
+                    proxiesTable.getProxyResolver(i).resolveRace(resolutionSlot)
                 }
             }
             super.smash(problem);
