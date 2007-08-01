@@ -467,7 +467,22 @@ After an outgoing NewFarDesc, the object should be present in the exports table,
   #         
 
 --- Outgoing NewRemotePromiseDesc ---
-XXX
+
+  ? def exportedPromise
+  > E.sendOnly(outgoingFar, "newRemotePromiseDescTest", [exportedPromise])
+  ?
+  # stdout: ["DeliverOnly", [1, "newRemotePromiseDescTest", [NewRemotePromiseDesc(6, -3, 10000007)]]]
+  #         
+  
+  ? bind exportedPromise := 1; null
+  ?
+  # stdout: ["DeliverOnly", [-3, "run", [1]]]
+  #         
+
+(Yes, it is correct that the third argument isn't a hash. It's direct from entropy.nextSwiss(), and is a SwissBase, the authority to *be* an object (as seen from outside some vat).)
+
+XXX test properties of the identity of the redirector passed to exportedPromise <- __whenMoreResolved, and that if re-imported it is still good
+
 --- Outgoing ImportDesc ---
 
 See NewFarDesc above for testing of ordinary imports; this is the special NonceLocator case.

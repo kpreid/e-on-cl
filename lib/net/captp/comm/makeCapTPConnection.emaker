@@ -56,6 +56,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def termination # resolved when connection is dead
     def remoteNonceLocatorResolutionSlot
     
+    def prepareQuestion
+    
     def [remoteIncomingPosSealer, remoteIncomingPosUnsealer] := 
       makeBrand("CapTP far ref's remote incomingPos")
     def remoteIncomingPosBrand := remoteIncomingPosSealer.getBrand()
@@ -110,11 +112,29 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
+    /** Uncalls promises, assuming that they are either local or from a foreign comm system; that is, they are not subject to 3-vat introduction. */
+    def localPromiseUncaller {
+      to optUncall(r) {
+        if (Ref.isEventual(r) && !Ref.isResolved(r)) {
+          def rdrSwissBase := swissTable.nextSwiss()
+          def [rdrAnswerPos, rdrRecord] := prepareQuestion(true)
+          # XXX we're not using rdrSwissBase for anything; it *should* be extractible from the question proxy so that we can pass it to another vat
+
+          Ref.whenResolvedOnly(r, rdrRecord.reference())          
+          return [descMakerStandin, "NewRemotePromise", [
+                   exports."bind"(r),
+                   rdrAnswerPos,
+                   rdrSwissBase]]
+        }
+      }
+    }
+    
     # XXX document exit table used
     def encRecognizer := deSubgraphKit.makeRecognizer(
       [goingHomeUncaller,
        nonceLocatorUncaller,
        pbcUncaller,
+       localPromiseUncaller,
        proxyUncaller],
       unscope)
     
@@ -233,22 +253,16 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       return def capTPEventualHandler {
         to handleSend(verb, args) {
 
-          def questionPos := questions."bind"(def record := makeProxyRecord(
-            makeEventualHandler(questionPos <- negate()),
-            false,
-            fn wireCount {
-              E.sendOnly(outgoingReceiver, "GCAnswer", [-questionPos])
-              questions.free(questionPos)
-            }))
+          def [answerPos, questionRecord] := prepareQuestion(false)
 
           def redirector(resolution) :void {
             #traceln(`Redirector for $position $verb $args got resolution $resolution`)
-            record.resolver().resolveRace(&resolution)
+            questionRecord.resolver().resolveRace(&resolution)
           }
 
-          E.sendOnly(outgoingReceiver, "Deliver", [-questionPos, outEncode(redirector), position, verb, outEncode(args)])
+          E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
           
-          return questions.getProxy(questionPos)
+          return questionRecord.reference()
         }
         to handleSendOnly(verb, args) {
           E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
@@ -265,6 +279,17 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
 
+    bind prepareQuestion(resolved :boolean) {
+      def questionPos := questions."bind"(def record := makeProxyRecord(
+        makeEventualHandler(questionPos <- negate()),
+        resolved,
+        fn wireCount {
+          E.sendOnly(outgoingReceiver, "GCAnswer", [-questionPos])
+          questions.free(questionPos)
+        }))
+      return [-questionPos, record]
+    }
+    
     def incomingDescMaker {
       to NewFar(importPos :ImportPos,
                    swissHash :SwissHash) {
