@@ -86,6 +86,22 @@ def RefAuthor {
         safeWhenResolvedReactor(null)
         resultPromise
       }
+
+      to whenResolvedOnly(ref, reactor) :any {
+        var active := true
+        def safeWhenResolvedOnlyReactor(_) :void {
+          if (refIsResolved(ref)) {
+            if (active) {
+              active := false
+              E.sendOnly(reactor, "run", [ref])
+            }
+          } else {
+            E.sendOnly(ref, "__whenMoreResolved", [safeWhenResolvedOnlyReactor])
+          }
+        }
+        safeWhenResolvedOnlyReactor(null)
+        null
+      }
       
       to resolution(r) :any { refShorten(r) }
 

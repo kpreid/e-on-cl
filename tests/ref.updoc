@@ -256,6 +256,18 @@ Ref
   > null
   # stdout: ["handleSendOnly", ["__whenMoreResolved", [<safeWhenResolvedReactor>]]]
 
+ whenResolvedOnly
+ 
+  whenResolvedOnly, unlike whenResolved, does not collect the result of the reactor, and so can sendOnly to it.
+
+  ? Ref.whenResolvedOnly(
+  >   1,
+  >   <elib:ref.makeProxy>(def handler match msg { print(msg) },
+  >                        Ref.promise()[0], true))
+  # stdout: ["handleSendOnly", ["run", [1]]]
+  
+  XXX write tests for waiting behavior
+
 Bugfix test: promise ref not propagating opt-problem correctly
 
   ? def [p, r] := Ref.promise()
