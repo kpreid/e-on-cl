@@ -242,7 +242,7 @@ def makeCommTable(self) implements DeepFrozen {
         to get(index :Index) {
             self.mustBeAlloced(index)
             def result := myStuff[index]
-            if (ThePumpkin == result) {
+            if (__equalizer.sameYet(ThePumpkin, result)) {
                 throw("export: " + E.toString(index) + " is a pumpkin")
             }
             return result

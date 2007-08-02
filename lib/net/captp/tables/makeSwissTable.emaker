@@ -174,7 +174,7 @@ def makeSwissTable(entropy, makeWeakKeyMap, makeWeakValueMap) implements DeepFro
                          E.toQuote(result) })
             def oldSwiss :=
               mySelfishToSwiss.fetch(obj, makeValueThunk(result));
-            require(oldSwiss.equals(result),
+            require(oldSwiss == result,
                     fn { "Object already has a different identity: " +
                          E.toQuote(oldSwiss) + " vs " + E.toQuote(result) })
             mySelfishToSwiss.put(obj, result);

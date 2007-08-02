@@ -222,13 +222,23 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
-    def makeProxyRecord(handler, far, sendGC) {
+    def makeEventualHandler
+    
+    def makeProxyRecord(far, position) {
       var wireCount := 0
       var localCount := 0
       def [resolutionSlot, proxySlotResolver] := Ref.promise()
+      def handler := makeEventualHandler(position)
 
       return def proxyRecord {
         to resolver() { return proxySlotResolver }
+        
+        to makeRedirector() {
+          return def redirector(resolution) :void {
+            # XXX review: Where's our equivalent, if applicable, of DelayedRedirector?
+            proxySlotResolver.resolveRace(&resolution)
+          }
+        }
         
         /** make a local reference, and increment the wireCount (number of received descriptors for this local entry) */
         to reference() {
@@ -237,10 +247,17 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
           localCount += 1
           
           whenGarbage(proxy, once(fn {
-            # XXX not correct wrt ImportDesc reconstituting proxies -- the proxy making point should do this
             localCount -= 1
             if (localCount.atMostZero()) {
-              sendGC <- (wireCount)
+              if (position.belowZero()) {
+                # question
+                E.sendOnly(outgoingReceiver, "GCAnswer", [position])
+                questions.free(-position)
+              } else if (position.aboveZero()) {
+                # import
+                E.sendOnly(outgoingReceiver, "GCExport", [position, wireCount])
+                # no imports.free(...) because the other side might reuse this entry
+              }
               wireCount := 0
             }
           }))
@@ -249,16 +266,12 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
-    def makeEventualHandler(position :vow[IncomingPos]) {
+    bind makeEventualHandler(position :vow[IncomingPos]) {
       return def capTPEventualHandler {
         to handleSend(verb, args) {
 
           def [answerPos, questionRecord] := prepareQuestion(false)
-
-          def redirector(resolution) :void {
-            #traceln(`Redirector for $position $verb $args got resolution $resolution`)
-            questionRecord.resolver().resolveRace(&resolution)
-          }
+          def redirector := questionRecord.makeRedirector()
 
           E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
           
@@ -280,29 +293,40 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     }
 
     bind prepareQuestion(resolved :boolean) {
-      def questionPos := questions."bind"(def record := makeProxyRecord(
-        makeEventualHandler(questionPos <- negate()),
+      def position := -(questions."bind"(def record := makeProxyRecord(
         resolved,
-        fn wireCount {
-          E.sendOnly(outgoingReceiver, "GCAnswer", [-questionPos])
-          questions.free(questionPos)
-        }))
-      return [-questionPos, record]
+        position)))
+      return [position, record]
     }
     
     def incomingDescMaker {
       to NewFar(importPos :ImportPos,
-                   swissHash :SwissHash) {
+                swissHash :SwissHash) {
         requireLive()
 
         imports.put(importPos, makeProxyRecord(
-          makeEventualHandler(importPos),
           true,
-          fn wireCount {
-            E.sendOnly(outgoingReceiver, "GCExport", [importPos, wireCount])
-          }))
+          importPos))
         
         return imports.getProxy(importPos)
+      }
+      
+      to NewRemotePromise(importPos :ImportPos,
+                          rdrPos    :AnswerPos,
+                          rdrBase   :SwissBase) {
+        requireLive()
+        
+        # XXX it is suspicious that this record isn't stored anywhere
+        def record := makeProxyRecord(
+          false,
+          importPos)
+        
+        def redirector := record.makeRedirector()
+
+        swissTable.registerIdentity(redirector, rdrBase)
+        answers.put(-rdrPos, redirector, true)
+        
+        return record.reference()
       }
       
       to Import(importPos :ImportPos) {

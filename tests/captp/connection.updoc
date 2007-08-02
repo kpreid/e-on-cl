@@ -56,7 +56,10 @@ Setting up half of a CapTP connection with mock authorities.
   > }
   > def makeTestConnection() {
     
-In order to make the test output deterministic, we use a fake RNG.
+In order to make the test output deterministic, we use a fake RNG. Its output will mostly appear in these tests hashed:
+  10000001.cryptoHash() == 382064925828890872342377433413917253333972024416
+  10000002.cryptoHash() == 1033912670282953026478972818820010722176128073325
+  10000003.cryptoHash() == 47255196895205160731987244561159478631887357377
 
   >   var i := 10000000
   >   def pseudoEntropy {
@@ -153,8 +156,6 @@ To test GCExportOp, we must first export something.
   ?
   # stdout: ["DeliverOnly", [0, "exportTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
-
-(382064925828890872342377433413917253333972024416 == 10000001.cryptoHash())
 
 wireDelta of 0 should have no effect.
 
@@ -318,7 +319,69 @@ XXX we don't have VatID processing yet
 
 --- Incoming NewRemotePromiseDesc ---
 
-XXX
+First we set up an incoming reference to an object to catch the remote promise.
+
+  ? clearFinalizers()
+  > def remotePromise
+  > def promiseReceiver(p) {
+  >   println(`got $p`)
+  >   bind remotePromise := p
+  > }
+  > def swiss :int := swissTable.getNewSwiss(promiseReceiver); null
+  > receiver.Deliver(-3, buildIn(descs.NewFar(2, 928)), 0, "lookupSwiss", [swiss, null])
+  > receiver.GCAnswer(-3)
+  ?
+  # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 1033912670282953026478972818820010722176128073325)]]]
+  #         
+
+Then we deliver a message containing the promise.
+
+  ? receiver.DeliverOnly(1, "run", buildIn([descs.NewRemotePromise(3, -4, def remotePromiseRdrBase := 4290823709)]))
+  > receiver.GCExport(1, 1)
+  # stdout: got <Promise>
+  #         
+
+Testing sends to the promise:
+
+  ? E.sendOnly(remotePromise, "hello eventual", [])
+  ?
+  # stdout: ["DeliverOnly", [3, "hello eventual", []]]
+  #         
+
+The redirector should be accessible by our provided SwissBase:
+
+  ? receiver.Deliver(-3, buildIn(descs.Import(2)), 0, "lookupSwiss", [remotePromiseRdrBase.cryptoHash(), null])
+  ?
+  # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 216307466466887903142951307717254789854244528344)]]]
+  #         
+
+(remotePromiseRdrBase.cryptoHash().cryptoHash() == 216307466466887903142951307717254789854244528344)
+
+Invoking the redirector causes the remote promise to resolve:
+
+  ? receiver.DeliverOnly(-4, "run", [56])
+  ? remotePromise
+  # value: 56
+  
+The remote promise proxy is now garbage, so CapTP should send GCExportOp:
+
+  ? runFinalizers()
+  ?
+  # stdout: ["GCExport", [3, 1]]
+  #         ["GCExport", [2, 2]]
+  #         
+
+Index 3 is the remote promise, and index 2 is the twice-used fake redirector for incoming deliveries.
+
+Export index 2 now holds the redirector.
+
+Cleaning up:
+
+  ? receiver.GCExport(1, 1) # the redirector retrieved by lookupSwiss
+  > receiver.GCAnswer(-3) # the answer index of the lookupSwiss response
+  > receiver.GCAnswer(-4) # the answer index of the redirector 
+
+  XXX further tests
 
 --- Incoming ImportDesc ---
 
@@ -368,10 +431,8 @@ XXX write this
   ? def outgoingFar := remoteNonceLocator <- lookupSwiss(12345, null)
   # value: <Promise>
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [12345, null]]]
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 47255196895205160731987244561159478631887357377), 0, "lookupSwiss", [12345, null]]]
   #         
-
-(1033912670282953026478972818820010722176128073325 == 10000002.cryptoHash())
 
 The above is a delivery to the NonceLocator, which is a bit of an unusual case; so we will also test a Far ref.
 
@@ -386,10 +447,9 @@ Here's a normal message to that Far ref.
   ? outgoingFar <- foo()
   # value: <Promise>
   ? 
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 47255196895205160731987244561159478631887357377), 1, "foo", []]]
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 412897248500657771667886264468852369692723684603), 1, "foo", []]]
   #         
 
-(47255196895205160731987244561159478631887357377 == 10000003.cryptoHash())
 
 --- Outgoing GCExportOp ---
 
@@ -421,7 +481,7 @@ We create a remote promise for an answer and tell the connection that it has bee
   > E.send(remoteNonceLocator, "lookupSwiss", [93478934, null])
   > null
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(3, 412897248500657771667886264468852369692723684603), 0, "lookupSwiss", [93478934, null]]]
+  # stdout: ["Deliver", [-3, NewFarDesc(3, 82190111274176756684133692948252028599388244870), 0, "lookupSwiss", [93478934, null]]]
   #         
   
   ? runFinalizers()
@@ -434,7 +494,7 @@ After GC, the question table entry is free and will be reused.
   ? E.send(remoteNonceLocator, "lookupSwiss", [23948931413532, null])
   > null
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(4, 82190111274176756684133692948252028599388244870), 0, "lookupSwiss", [23948931413532, null]]]
+  # stdout: ["Deliver", [-3, NewFarDesc(4, 682009956380579499771617381148460370106090083063), 0, "lookupSwiss", [23948931413532, null]]]
   #         
   
   ? runFinalizers()
@@ -456,7 +516,7 @@ XXX write this
 
   ? E.sendOnly(outgoingFar, "newFarDescTest", [def newSelfish {}])
   ?
-  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(5, 682009956380579499771617381148460370106090083063)]]]
+  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(5, 1194597571256310373217679255844280815354866957945)]]]
   #         
 
 After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:
@@ -471,7 +531,7 @@ After an outgoing NewFarDesc, the object should be present in the exports table,
   ? def exportedPromise
   > E.sendOnly(outgoingFar, "newRemotePromiseDescTest", [exportedPromise])
   ?
-  # stdout: ["DeliverOnly", [1, "newRemotePromiseDescTest", [NewRemotePromiseDesc(6, -3, 10000007)]]]
+  # stdout: ["DeliverOnly", [1, "newRemotePromiseDescTest", [NewRemotePromiseDesc(6, -3, 10000008)]]]
   #         
   
   ? bind exportedPromise := 1; null
@@ -534,3 +594,6 @@ XXX this doesn't actually test anything interesting, because println isn't a Cap
   ?
   ?
   ?
+
+XXX write real outgoing and incoming serialization tests; in particular:
+  -- outgoing broken references don't work
