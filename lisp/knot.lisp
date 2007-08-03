@@ -541,6 +541,8 @@
                     (setf (gethash result unget-table) fqn))))
               result)))))))
 
+(defglobals +scope-to-right-invertible-loader+) ; defined in knot.eexpr
+
 (defun default-safe-scope-roots ()
   (let* ((emaker-importer (make-caching-emaker-loader *emaker-search-list*)))
     (make-scope "__defaultSafeScopeRoots.thisShouldNotBeVisible$"
@@ -548,7 +550,7 @@
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles
           (let ((real-loader 
                   (efuncall +the-make-path-loader+ "import" (vector 
-                    +shared-safe-loader+
+                    (efuncall +scope-to-right-invertible-loader+ +shared-safe-loader+) ; XXX unnecessarily repeating work
                     +sharable-importer+ ;; first so that anything the sharable importer contains is agreed upon by this
                     (make-primitive-loader)
                     (make-safe-extern-loader)

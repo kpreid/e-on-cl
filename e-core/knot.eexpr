@@ -2,6 +2,8 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("one-method-object")
 
 /** Converts an optional unget value into an optional uncall value. Currently does not check whether 'name' is a string. */
 def ungetToUncall(loader, name) {
@@ -35,6 +37,24 @@ def uncallToUnget (loader, portrayal) {
   return name
 }
 
+def scopeToRightInvertibleLoader(scope) implements DeepFrozenStamp {
+  def inversion := __makeMap.fromIteratable(def _.iterate(f) {
+    for ampNoun => slot in scope {
+      f(slot[], ampNoun.run(1, ampNoun.size()))
+    }
+  }, false)
+  return def invertibleScopeLoader {
+    to fetch(key :String, absentThunk) {
+      return scope.fetch(key, absentThunk)
+    }
+    to optUnget(specimen) {
+      return inversion.fetch(specimen, fn {null})
+    }
+    to optUncall(specimen) {
+      return ungetToUncall(invertibleScopeLoader, invertibleScopeLoader.optUnget(specimen))
+    }
+  }
+}
 
 def makePathLoader implements DeepFrozenStamp {
   to run(name :String, fetchpath :ConstList) {
@@ -79,3 +99,4 @@ def makePathLoader implements DeepFrozenStamp {
 }
 
 lisp["E.KNOT", "+THE-MAKE-PATH-LOADER+"].put(makePathLoader)
+lisp["E.KNOT", "+SCOPE-TO-RIGHT-INVERTIBLE-LOADER+"].put(scopeToRightInvertibleLoader)
