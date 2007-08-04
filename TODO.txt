@@ -22,7 +22,6 @@ Internal bugs:
 
 
 Little features:
-  - FlexSet
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
   - Investigate what SourceSpan#isOneToOne really means (as it is it seems to be ambiguous between "mixed-up" and "multiline")
   - __getAllegedType merging at the miranda-and-matcher interface
@@ -32,15 +31,23 @@ Big features:
   - more complete socket IO
   - more complete file IO
   - finish term-tree system (matching, etc.)
-  - threaded vats
+
+  - Pluribus
+    - This is (as of revision 864, 2007-08-03) partially done, in that the CapTP message protocol is almost complete. Still needed are serialization for those messages, and an encrypted wire protocol (TLS?).
 
   - Try multi-process runner communication
     Threading is error-prone and not universally available; memory images and process creation are *more* available and much safer;
     - Try removing multi-vat-per-process support: if a vat = a process, then we can make more things global/compiled-in.
     - Disadvantages: interprocess serialization overhead; less shared resources
 
+  - Threaded runners, if the multi-process version doesn't turn out sufficient.
+
   - Audited Selfless for E-objects
-  - Pluribus
+  
+  - Implicit parallelism (requires thread-safety):
+    - If the send queue has at the head several sends whose target and arguments are DeepFrozen and thread-safe, and at most one which isn't, then they may be run simultaneously. Looking at the result ref for such a send must wait for the thread to finish.
+    - Map/filter/etc -- anything which invokes a callback repeatedly and independently -- could be parallelized; however, this can't be done for 'for' loops since the standard iteration protocol depends on external side-effects to produce results.
+    - Lazy refs could be evaluated on idle processors. This is not that interesting unless lazy refs are exposed to the user (requiring the thunk to be DeepFrozen), in which case evaluation should also be controllable.
 
 Code cleanups not marked in the code:
   - See if makeSharedRefLink.emaker is improved by not using deSubgraphKit. We'd have to reimplement object graph walking, but wouldn't have to contort to fit Data-E.
