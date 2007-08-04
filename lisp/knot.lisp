@@ -558,9 +558,13 @@
                     emaker-importer
                     +vm-node-type-importer+
                     +vm-node-maker-importer+))))
-            (e-lambda "org.cubik.cle.prim.ImportLoaderMagic"
+            (e-lambda |importLoaderMagic|
                 (:stamped +deep-frozen-stamp+)
               (:|__printOn| (tw) (e. real-loader |__printOn| tw))
+              (:|optUncall| (specimen)
+                (substitute |importLoaderMagic| real-loader 
+                            (ref-shorten (e. real-loader |optUncall| specimen)) 
+                            :test #'samep))
               (otherwise (mverb &rest args)
                 (apply #'e-call-dispatch real-loader mverb args)))))))))))
 

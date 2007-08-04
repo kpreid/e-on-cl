@@ -34,16 +34,21 @@
   # value: true
   ? stringEx.__optUncall()
   # value: [<makeStringException>, "run", ["a"]]
-  ? <import>.optUncall(stringEx.__optUncall()[0])
+  ? stringEx.__optUncall()[0] == makeStringException
+  # value: true
+  ? stringEx == E.call(E, "call", stringEx.__optUncall())
+  # value: true
+
+XXX the following are really testing <import>; should be moved elsewhere
+
+  ? def muc := <import>.optUncall(stringEx.__optUncall()[0])
   # value: [<import:*>, "get", ["org.cubik.cle.prim.makeStringException"]]
 XXX should return .fail. FQN
   ? <import:org.cubik.cle.prim.makeStringException> == stringEx.__optUncall()[0]
   # value: true
   ? <import:org.cubik.cle.fail.makeStringException> == stringEx.__optUncall()[0]
   # value: true
-  ? stringEx.__optUncall()[0] == makeStringException
-  # value: true
-  ? stringEx == E.call(E, "call", stringEx.__optUncall())
+  ? muc[0] == <import>
   # value: true
 
 
