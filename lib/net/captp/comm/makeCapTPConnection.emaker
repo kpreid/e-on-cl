@@ -4,6 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 pragma.enable("accumulator")
+pragma.enable("call-pattern")
 
 def map implements DeepFrozen {
   to v(f, coll) {
@@ -66,8 +67,14 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def makeCycleBreaker := <elib:tables.makeCycleBreaker> # ditto
     def once := <import:org.erights.e.facet.once> # ditto
     
+    def scopeWithoutDescs := {
+      def s := deSubgraphKit.getDefaultScope().diverge()
+      s["Ref"] := Ref
+      s.snapshot()
+    }
+    
     def unscope := {
-      def u := deSubgraphKit.getDefaultUnscope().diverge()
+      def u := makeCycleBreaker.byInverting(scopeWithoutDescs).diverge()
       u[descMakerStandin] := DESCS_EXIT
       u.snapshot()
     }
@@ -85,6 +92,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to optUncall(r) {
         if (r =~ p :pbc && r == p) {
           return p.__optUncall()
+        } else if (r =~ Ref.broken(problem)) {
+          # XXX this discards the identities of unconnected refs -- OK?
+          return [Ref, "broken", [problem]]
         }
       }
     }
@@ -101,6 +111,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def proxyUncaller {
       to optUncall(r) {
         if (Ref.isSelfish(r)) {
+          #traceln(`exporting $r`)
           if ((def index := exports.indexFor(r)) != -1) {
             exports.incr(index)
             return [descMakerStandin, "Import", [index]]
@@ -133,8 +144,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def encRecognizer := deSubgraphKit.makeRecognizer(
       [goingHomeUncaller,
        nonceLocatorUncaller,
-       pbcUncaller,
        localPromiseUncaller,
+       pbcUncaller,
+       <import>,
        proxyUncaller],
       unscope)
     
@@ -340,7 +352,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
-    def buildScope := deSubgraphKit.getDefaultScope().with(DESCS_EXIT, incomingDescMaker)
+    def buildScope := scopeWithoutDescs.with(DESCS_EXIT, incomingDescMaker)
     
     def capTPBuilderMaker() {
       requireLive()

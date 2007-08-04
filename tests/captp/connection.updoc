@@ -48,11 +48,13 @@ Setting up half of a CapTP connection with mock authorities.
   >   }
   > }; null
   
-  ? def testGraphRecognizer := {
-  >   def u := deSubgraphKit.getDefaultUnscope().diverge()
-  >   u[descs] := "CapTP_1_descs"
-  >   u.snapshot()
-  >   deSubgraphKit.makeRecognizer(null, u.snapshot())
+  ? def [testGraphRecognizer, testBuilderMaker] := {
+  >   def scope := deSubgraphKit.getDefaultScope() | [
+  >     "CapTP_1_descs" => descs,
+  >     => Ref,
+  >     => <import>]
+  >   [deSubgraphKit.makeRecognizer(null, makeCycleBreaker.byInverting(scope)),
+  >    fn { deSubgraphKit.makeBuilder(scope) }]
   > }
   > def makeTestConnection() {
     
@@ -70,7 +72,7 @@ In order to make the test output deterministic, we use a fake RNG. Its output wi
   >     
   >   def [r, makeIncomingBuilder, rnl] := makeCapTPConnection(
   >     def outgoing { match msg { println(msg) }},
-  >     fn { deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) },
+  >     testBuilderMaker,
   >     swissTable,
   >     pseudoWhenGarbage)
 
@@ -568,6 +570,26 @@ XXX
 --- Outgoing LocatorUnumDesc ---
 XXX
 
+------ Serialization ------
+
+  ? E.sendOnly(outgoingFar, "setupIncoming", [println])
+  ?
+  # stdout: ["DeliverOnly", [1, "setupIncoming", [NewFarDesc(7, 676259857959289598128720760374698425339633638932)]]]
+  #         
+
+--- Disconnected ref ---
+
+  ? E.sendOnly(outgoingFar, "s", [Ref.broken("b")])
+  ?
+  # stdout: ["DeliverOnly", [1, "s", [<ref broken by problem: b>]]]
+  #         
+
+  ? receiver.DeliverOnly(7, "run", buildIn([Ref.broken("b")]))
+  # stdout: <ref broken by problem: b>
+  #         
+
+XXX write more serialization tests
+
 ------ Other ------
 
 --- remoteNonceLocator ref ---
@@ -576,24 +598,3 @@ XXX
   ?
   # stdout: ["DeliverOnly", [0, "foo", []]]
   #         
-
---- Outgoing nontrivial serialization ---
-
-XXX this doesn't actually test anything interesting, because println isn't a CapTP proxy.
-
-  ? def swiss :int := swissTable.getNewSwiss(["a"]); null
-  ? swissTable.lookupSwiss(swiss) == ["a"]
-  # value: true
-  
-  ? receiver.Deliver(-5, println, nonceLocatorIndex, "lookupSwiss", [swiss, makeVine("irrelevant")])
-  ?
-  # stdout: ["a"]
-  #         
-
-  ?
-  ?
-  ?
-  ?
-
-XXX write real outgoing and incoming serialization tests; in particular:
-  -- outgoing broken references don't work
