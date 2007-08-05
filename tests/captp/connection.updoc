@@ -18,7 +18,9 @@ In this file, we test the implementation of the CapTP operations and associated 
   ? def nonceLocatorIndex := 0; null
   ? def nullSwissNumber := 0; null
   
-Setting up half of a CapTP connection with mock authorities.
+Test framework:
+
+An mock finalization interface, with operations to trigger finalization of obects created in a particular time period:
   
   ? def finalizers := [].asMap().diverge()
   > var fIndex := 0
@@ -35,7 +37,9 @@ Setting up half of a CapTP connection with mock authorities.
   >   }
   > }
   > null
-  
+
+Objects to represent the descriptors used by CapTP for connection-spanning references:
+
   ? def descs {
   >   match [v, a] { 
   >     def generic {
@@ -47,6 +51,8 @@ Setting up half of a CapTP connection with mock authorities.
   >     }
   >   }
   > }; null
+
+Data-E setup:
   
   ? def [testGraphRecognizer, testBuilderMaker] := {
   >   def scope := deSubgraphKit.getDefaultScope() | [
@@ -55,10 +61,13 @@ Setting up half of a CapTP connection with mock authorities.
   >     => <import>]
   >   [deSubgraphKit.makeRecognizer(null, makeCycleBreaker.byInverting(scope)),
   >    fn { deSubgraphKit.makeBuilder(scope) }]
-  > }
+  > }; null
+  
+To make the tests' use of indexes and swiss numbers independent of each other, we set up a new connection repeatedly using this function.
+
   > def makeTestConnection() {
     
-In order to make the test output deterministic, we use a fake RNG. Its output will mostly appear in these tests hashed:
+Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   10000001.cryptoHash() == 382064925828890872342377433413917253333972024416
   10000002.cryptoHash() == 1033912670282953026478972818820010722176128073325
   10000003.cryptoHash() == 47255196895205160731987244561159478631887357377
@@ -84,11 +93,10 @@ buildIn takes an object in our test environment, containing objects made by 'des
   >   return [swissTable, r, rnl, buildIn]
   > }; null
   
+--- Incoming DeliverOp ---
+
   ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
-  
-
---- Incoming DeliverOp ---
 
 At this point, the only thing the remote side can possibly do is close the connection or talk to the NonceLocator, which is at the well-known position 0. We'll ask it for null, which has the well-known swiss number 0.
 
@@ -141,16 +149,32 @@ Missing recipient:
 
 --- Incoming DeliverOnlyOp ---
 
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
 2-cycle delay on this test because the reactor invocation is itself a send.
 
-  ? receiver.DeliverOnly(-3,
+  ? receiver.DeliverOnly(0,
   >                      "__whenMoreResolved",
   >                      [fn r { println(`WMR reactor invoked: $r` )}])
   ?
-  # stdout: WMR reactor invoked: org.cubik.cle.prim.null
+  # stdout: WMR reactor invoked: <nonceLocator>
   #         
 
+  ? receiver.Deliver(-1, fn _ {}, 0, "__getAllegedType", [])
+  ? receiver.DeliverOnly(-1,
+  >                      "__whenMoreResolved",
+  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  ?
+  # stdout: WMR reactor invoked: NonceLocator
+  #         
+
+XXX test positive index
+
 --- Incoming GCExportOp ---
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
 To test GCExportOp, we must first export something.
 
@@ -204,13 +228,22 @@ Additional wireDelta of 2 should balance the three previous references.
 
 --- Incoming GCAnswerOp ---
 
-Dropping the entry containing the FQN of null.
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
-  ? receiver.GCAnswer(-3)
-  ? receiver.DeliverOnly(-3,
+  ? receiver.Deliver(-1, fn _ {}, 0, "__getAllegedType", [])
+  ? receiver.DeliverOnly(-1,
   >                      "__whenMoreResolved",
   >                      [fn r { println(`WMR reactor invoked: $r` )}])
-  # problem: 3 not alloced in AnswersTable__1
+  ?
+  # stdout: WMR reactor invoked: NonceLocator
+  #         
+
+  ? receiver.GCAnswer(-1)
+  ? receiver.DeliverOnly(-1,
+  >                      "__whenMoreResolved",
+  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  # problem: 1 not alloced in AnswersTable__1
 
 --- Incoming ShutdownOp ---
 
@@ -227,24 +260,25 @@ XXX do this (shut down connection iff no more messages than the specified count 
 
 --- Incoming TerminatedOp ---
 
-  ? def [_, ttReceiver, ttRemoteNonceLocator, ttBuildIn] := makeTestConnection(); null
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
 There are several cases to check the behavior of:
 
 Imported far ref:
   
-  ? def outgoingFar := ttRemoteNonceLocator <- getTerminatedTestRef1()
+  ? def outgoingFar := remoteNonceLocator <- getTerminatedTestRef1()
   # value: <Promise>
   
   ?
   # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "getTerminatedTestRef1", []]]
   #         
   
-  ? ttReceiver.DeliverOnly(1, "run", ttBuildIn([descs.NewFar(1, 1234)]))
+  ? receiver.DeliverOnly(1, "run", buildIn([descs.NewFar(1, 1234)]))
 
 Question (promise resulting from DeliverOp):
 
-  ? def outgoingQuestion := ttRemoteNonceLocator <- getTerminatedTestRef2()
+  ? def outgoingQuestion := remoteNonceLocator <- getTerminatedTestRef2()
   # value: <Promise>
   
   ?
@@ -257,7 +291,7 @@ Imported remote promise:
   
 Export, which should receive a __reactToLostClient:
 
-  ? E.sendOnly(ttRemoteNonceLocator, "TerminatedExportTest", [
+  ? E.sendOnly(remoteNonceLocator, "TerminatedExportTest", [
   >   def ttReactReceiver {to __reactToLostClient(p) { print(`rTLC expecter got $p`) }}])
   ?
   # stdout: ["DeliverOnly", [0, "TerminatedExportTest", [NewFarDesc(3, 47255196895205160731987244561159478631887357377)]]]
@@ -265,12 +299,12 @@ Export, which should receive a __reactToLostClient:
 
 The termination:
 
-  ? ttReceiver.Terminated("foo" :Throwable)
+  ? receiver.Terminated("foo" :Throwable)
   # stdout: rTLC expecter got problem: foo
 
 Consequences:
 
-  ? [outgoingFar, outgoingQuestion, ttRemoteNonceLocator]
+  ? [outgoingFar, outgoingQuestion, remoteNonceLocator]
   # value: [<ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>]
   
   ? Ref.optProblem(outgoingFar) == Ref.optProblem(outgoingQuestion)
@@ -280,28 +314,28 @@ Checking for robust termination:
 
 We don't need to test anything but the receiver and builder-maker, because every other access is an eventual ref that gets broken, as tested above.
 
-  ? ttReceiver.DeliverOnly(0, "", [])
+  ? receiver.DeliverOnly(0, "", [])
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? ttReceiver.Deliver(-1, null, 0, "", [])
+  ? receiver.Deliver(-1, null, 0, "", [])
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? ttReceiver.GCAnswer(-1)
+  ? receiver.GCAnswer(-1)
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? ttReceiver.GCExport(1, 0)
+  ? receiver.GCExport(1, 0)
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  x ? ttReceiver.Shutdown(0)
+  x ? receiver.Shutdown(0)
   x # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? ttReceiver.Terminated("bar")
+  ? receiver.Terminated("bar")
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  x ? ttReceiver.Wormhole(-1, null, 0, "", [])
+  x ? receiver.Wormhole(-1, null, 0, "", [])
   x # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? ttBuildIn(descs.Incoming(0))
+  ? buildIn(descs.Incoming(0))
   # problem: this CapTP connection has been terminated (problem: foo)
 
 XXX test operations on builders gotten from the maker before the termination
@@ -314,12 +348,18 @@ XXX we don't have VatID processing yet
 
 --- Incoming NewFarDesc ---
 
-  ? receiver.DeliverOnly(0, "__whenMoreResolved", def nfdL := buildIn([descs.NewFar(1, 13904808385)]))
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
+  ? receiver.DeliverOnly(0, "__whenMoreResolved", buildIn([descs.NewFar(1, 13904808385)]))
   ?
   # stdout: ["DeliverOnly", [1, "run", [ImportDesc(0)]]]
   #         
 
 --- Incoming NewRemotePromiseDesc ---
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
 First we set up an incoming reference to an object to catch the remote promise.
 
@@ -333,7 +373,7 @@ First we set up an incoming reference to an object to catch the remote promise.
   > receiver.Deliver(-3, buildIn(descs.NewFar(2, 928)), 0, "lookupSwiss", [swiss, null])
   > receiver.GCAnswer(-3)
   ?
-  # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 1033912670282953026478972818820010722176128073325)]]]
+  # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
 Then we deliver a message containing the promise.
@@ -387,28 +427,33 @@ Cleaning up:
 
 --- Incoming ImportDesc ---
 
-This test depends on the above NewFarDesc test having allocated index 1.
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
-  ? buildIn([descs.Import(1)])
-  # value: [<Far ref>]
+  ? receiver.DeliverOnly(0, "lookupSwiss", def nfdL := buildIn([0, descs.NewFar(1, 13904808385)]))
+
+  ? buildIn(descs.Import(1))
+  # value: <Far ref>
   
-  ? buildIn([descs.Import(1)]) == nfdL
+  ? buildIn([0, descs.Import(1)]) == nfdL
   # value: true
 
-  ? buildIn([descs.Import(999)])
+  ? buildIn(descs.Import(999))
   # problem: 999 not alloced in ProxiesTable__1
 
 An ImportDesc cannot have a negative index (receiver's questions table) because that would conflict with the receiver being able to GC its questions table entries.
 
 --- Incoming IncomingDesc ---
 
-Restore the FQN-of-null answer entry for testing:
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
-  ? receiver.Deliver(-3, fn r {}, -2, "getFQName", [])
+  ? def swiss :int := swissTable.getNewSwiss(def f(x) { println(x == f) }); null
 
-  ? receiver.Deliver(-4, println, -3, "add", buildIn([descs.Incoming(-3)]) )
-  ?
-  # stdout: org.cubik.cle.prim.nullorg.cubik.cle.prim.null
+  ? receiver.Deliver(-1, fn _ {}, 0, "lookupSwiss", [swiss, null])
+
+  ? receiver.DeliverOnly(-1, "run", buildIn([descs.Incoming(-1)]) )
+  # stdout: true
   #         
 
 --- Incoming Promise3Desc ---
@@ -430,10 +475,13 @@ XXX write this
 
 --- Outgoing DeliverOp ---
 
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
   ? def outgoingFar := remoteNonceLocator <- lookupSwiss(12345, null)
   # value: <Promise>
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 47255196895205160731987244561159478631887357377), 0, "lookupSwiss", [12345, null]]]
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [12345, null]]]
   #         
 
 The above is a delivery to the NonceLocator, which is a bit of an unusual case; so we will also test a Far ref.
@@ -449,11 +497,14 @@ Here's a normal message to that Far ref.
   ? outgoingFar <- foo()
   # value: <Promise>
   ? 
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 412897248500657771667886264468852369692723684603), 1, "foo", []]]
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 1, "foo", []]]
   #         
 
 
 --- Outgoing GCExportOp ---
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
 GCExportOp is sent when a proxy for an import-table entry has gone away; so to test it, we simulate an arriving import which is discarded.
 
@@ -477,18 +528,21 @@ Note that the sender of GCExportOp does not know whether the index was actually 
 
 --- Outgoing GCAnswerOp ---
 
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
 We create a remote promise for an answer and tell the connection that it has been GCed.
 
   ? clearFinalizers()
   > E.send(remoteNonceLocator, "lookupSwiss", [93478934, null])
   > null
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(3, 82190111274176756684133692948252028599388244870), 0, "lookupSwiss", [93478934, null]]]
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [93478934, null]]]
   #         
   
   ? runFinalizers()
   ?
-  # stdout: ["GCAnswer", [-3]]
+  # stdout: ["GCAnswer", [-1]]
   #
 
 After GC, the question table entry is free and will be reused.
@@ -496,12 +550,12 @@ After GC, the question table entry is free and will be reused.
   ? E.send(remoteNonceLocator, "lookupSwiss", [23948931413532, null])
   > null
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(4, 682009956380579499771617381148460370106090083063), 0, "lookupSwiss", [23948931413532, null]]]
+  # stdout: ["Deliver", [-1, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [23948931413532, null]]]
   #         
   
   ? runFinalizers()
   ?
-  # stdout: ["GCAnswer", [-3]]
+  # stdout: ["GCAnswer", [-1]]
   #
 
 
@@ -516,34 +570,42 @@ XXX write this
 
 --- Outgoing NewFarDesc ---
 
-  ? E.sendOnly(outgoingFar, "newFarDescTest", [def newSelfish {}])
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
+  ? E.sendOnly(remoteNonceLocator, "newFarDescTest", [def newSelfish {}])
   ?
-  # stdout: ["DeliverOnly", [1, "newFarDescTest", [NewFarDesc(5, 1194597571256310373217679255844280815354866957945)]]]
+  # stdout: ["DeliverOnly", [0, "newFarDescTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
 After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:
 
-  ? E.sendOnly(outgoingFar, "sameFarTest", [newSelfish])
+  ? E.sendOnly(remoteNonceLocator, "sameFarTest", [newSelfish])
   ?
-  # stdout: ["DeliverOnly", [1, "sameFarTest", [ImportDesc(5)]]]
+  # stdout: ["DeliverOnly", [0, "sameFarTest", [ImportDesc(1)]]]
   #         
 
 --- Outgoing NewRemotePromiseDesc ---
 
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
   ? def exportedPromise
-  > E.sendOnly(outgoingFar, "newRemotePromiseDescTest", [exportedPromise])
+  > E.sendOnly(remoteNonceLocator, "newRemotePromiseDescTest", [exportedPromise])
   ?
-  # stdout: ["DeliverOnly", [1, "newRemotePromiseDescTest", [NewRemotePromiseDesc(6, -3, 10000008)]]]
+  # stdout: ["DeliverOnly", [0, "newRemotePromiseDescTest", [NewRemotePromiseDesc(1, -1, 10000001)]]]
   #         
   
-  ? bind exportedPromise := 1; null
+  ? bind exportedPromise := 31432943; null
   ?
-  # stdout: ["DeliverOnly", [-3, "run", [1]]]
+  # stdout: ["DeliverOnly", [-1, "run", [31432943]]]
   #         
 
 (Yes, it is correct that the third argument isn't a hash. It's direct from entropy.nextSwiss(), and is a SwissBase, the authority to *be* an object (as seen from outside some vat).)
 
 XXX test properties of the identity of the redirector passed to exportedPromise <- __whenMoreResolved, and that if re-imported it is still good
+
+XXX test that index 1 delivers to the promise
 
 --- Outgoing ImportDesc ---
 
@@ -553,14 +615,39 @@ See NewFarDesc above for testing of ordinary imports; this is the special NonceL
 
 --- Outgoing IncomingDesc ---
 
-  ? E.sendOnly(outgoingFar, "nonceLocatorSendIncomingTest", [remoteNonceLocator])
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
+IncomingDesc for the nonce locator (magic index 0)
+
+  ? E.sendOnly(remoteNonceLocator, "incomingNonceLocatorTest", [remoteNonceLocator])
   ?
-  # stdout: ["DeliverOnly", [1, "nonceLocatorSendIncomingTest", [IncomingDesc(0)]]]
+  # stdout: ["DeliverOnly", [0, "incomingNonceLocatorTest", [IncomingDesc(0)]]]
   #         
-  
-  ? E.sendOnly(outgoingFar, "farSendIncomingTest", [outgoingFar])
+
+IncomingDesc for an export
+
+  ? def outgoing := remoteNonceLocator <- willBeFar(); null
   ?
-  # stdout: ["DeliverOnly", [1, "farSendIncomingTest", [IncomingDesc(1)]]]
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "willBeFar", []]]
+  #         
+  ? receiver.DeliverOnly(1, "run", buildIn([descs.NewFar(1, 398427908325834)]))
+
+  ? E.sendOnly(remoteNonceLocator, "incomingFarTest", [outgoing])
+  ?
+  # stdout: ["DeliverOnly", [0, "incomingFarTest", [IncomingDesc(1)]]]
+  #         
+
+IncomingDesc for an answer
+
+  ? def outgoing := remoteNonceLocator <- willBePromise(); null
+  ?
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "willBePromise", []]]
+  #         
+
+  ? E.sendOnly(remoteNonceLocator, "incomingAnswerTest", [outgoing])
+  ?
+  # stdout: ["DeliverOnly", [0, "incomingAnswerTest", [IncomingDesc(-2)]]]
   #         
 
 --- Outgoing Promise3Desc ---
@@ -572,19 +659,22 @@ XXX
 
 ------ Serialization ------
 
-  ? E.sendOnly(outgoingFar, "setupIncoming", [println])
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
+  ? E.sendOnly(remoteNonceLocator, "setupIncoming", [println])
   ?
-  # stdout: ["DeliverOnly", [1, "setupIncoming", [NewFarDesc(7, 676259857959289598128720760374698425339633638932)]]]
+  # stdout: ["DeliverOnly", [0, "setupIncoming", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
 --- Disconnected ref ---
 
-  ? E.sendOnly(outgoingFar, "s", [Ref.broken("b")])
+  ? E.sendOnly(remoteNonceLocator, "s", [Ref.broken("b")])
   ?
-  # stdout: ["DeliverOnly", [1, "s", [<ref broken by problem: b>]]]
+  # stdout: ["DeliverOnly", [0, "s", [<ref broken by problem: b>]]]
   #         
 
-  ? receiver.DeliverOnly(7, "run", buildIn([Ref.broken("b")]))
+  ? receiver.DeliverOnly(1, "run", buildIn([Ref.broken("b")]))
   # stdout: <ref broken by problem: b>
   #         
 
@@ -593,6 +683,9 @@ XXX write more serialization tests
 ------ Other ------
 
 --- remoteNonceLocator ref ---
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
   ? E.sendOnly(remoteNonceLocator, "foo", [])
   ?
