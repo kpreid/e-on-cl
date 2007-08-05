@@ -56,7 +56,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     
     def termination # resolved when connection is dead
     def remoteNonceLocatorResolutionSlot
-    
+
+    def remoteNonceLocator
     def prepareQuestion
     
     def [remoteIncomingPosSealer, remoteIncomingPosUnsealer] := 
@@ -163,8 +164,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
 
     def lookupImport(index :int) {
       return if (index.isZero()) {
-        throw("Not proven necessary yet")
-        #return remoteNonceLocator
+        return remoteNonceLocator
       } else if (index.belowZero()) {
         #questions[-index]
         throw("can't happen: <0 import")
@@ -360,7 +360,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     }
     
     # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
-    def remoteNonceLocator := makeProxy(makeEventualHandler(0), remoteNonceLocatorResolutionSlot, true)
+    bind remoteNonceLocator := makeProxy(makeEventualHandler(0), remoteNonceLocatorResolutionSlot, true)
     
     return [capTPReceiver, capTPBuilderMaker, remoteNonceLocator]
   }

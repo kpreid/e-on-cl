@@ -441,6 +441,12 @@ Cleaning up:
   ? buildIn(descs.Import(999))
   # problem: 999 not alloced in ProxiesTable__1
 
+  ? buildIn(descs.Import(0))
+  # value: <Far ref>
+  
+  ? buildIn(descs.Import(0)) == remoteNonceLocator
+  # value: true
+  
 An ImportDesc cannot have a negative index (receiver's questions table) because that would conflict with the receiver being able to GC its questions table entries.
 
 --- Incoming IncomingDesc ---
