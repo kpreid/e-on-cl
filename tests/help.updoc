@@ -12,6 +12,9 @@ ParamDesc
   ? def pd := makeParamDesc("new", int)
   # value: new :int
   
+  ? pd :PassByCopy
+  # value: new :int
+
   ? pd.getOptName()
   # value: "new"
 
@@ -75,6 +78,10 @@ MessageDesc
   # value: /** doc comment */
   #        to verb(arg) :float64
 
+  ? md :PassByCopy
+  # value: /** doc comment */
+  #        to verb(arg) :float64
+
   ? md.getVerb()
   # value: "verb"
   
@@ -122,6 +129,9 @@ TypeDesc
   # value: <makeTypeDesc>
 
   ? def td := makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [md])
+  # value: N
+  
+  ? td :PassByCopy
   # value: N
 
   ? makeTypeDesc("doc", "f.q.n", [int], [DeepFrozen], [md, md])

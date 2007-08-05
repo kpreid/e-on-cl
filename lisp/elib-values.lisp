@@ -798,7 +798,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defobject +the-make-type-desc+
     "org.erights.e.elib.base.makeTypeDesc"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +standard-graph-exit-stamp+)
   (:|run| ((doc-comment 'string)
            (fq-name     '(or null string))
            (supers      'vector)
@@ -819,7 +820,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defobject +the-make-message-desc+
     "org.erights.e.elib.base.makeMessageDesc"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +standard-graph-exit-stamp+)
   (:|run| ((doc-comment      'string)
            (verb             'string)
            (params           '(vector param-desc))
@@ -836,7 +838,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defobject +the-make-param-desc+
     "org.erights.e.elib.base.makeParamDesc"
-    (:stamped +deep-frozen-stamp+)
+    (:stamped +deep-frozen-stamp+
+     :stamped +standard-graph-exit-stamp+)
   (:|run| ((opt-name '(or null string))
            (opt-guard 't))
     (make-instance 'param-desc :opt-name opt-name :opt-guard opt-guard)))
