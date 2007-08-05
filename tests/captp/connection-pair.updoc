@@ -47,10 +47,10 @@ This is a mechanism for tracing communication between the CapTPConnections.
   >     
   >     def traceBuilder extends deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) {
   >       to buildRoot(value) {
-  >         def argValue := deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(value, innerBuilder)
+  >         # "value" here is the representation for tracing
   >         def argWrapper implements ArgWrapperMarker {
   >           to show() { return value }
-  >           to get() { return argValue }
+  >           to get() { return deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(value, innerBuilder) }
   >         }
   >         return argWrapper
   >       }

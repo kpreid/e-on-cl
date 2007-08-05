@@ -1,7 +1,6 @@
 # Copyright 2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-  ? def makeVine := <import:net.captp.tables.makeVine>; null
   ? def makeFlexMap := <elib:tables.makeFlexMap>; null
   ? def deSubgraphKit := <elib:serial.deSubgraphKit>; null
   ? def makeCycleBreaker := <elib:tables.makeCycleBreaker>; null
@@ -106,45 +105,45 @@ The 2-cycle delay on the redirector reports is because there is first a send of 
 
 
   ? receiver.Deliver(-1, 
-  >                  fn r { println(`Redirector invoked: $r`) },
+  >                  buildIn(descs.NewFar(1, 81479683)),
   >                  nonceLocatorIndex, 
   >                  "lookupSwiss",
-  >                  [nullSwissNumber, makeVine("irrelevant")])
+  >                  buildIn([nullSwissNumber, null]))
   ?
-  # stdout: Redirector invoked: null
+  # stdout: ["DeliverOnly", [1, "run", [null]]]
   #         
 
 null should now be present in the connection's answers table at -1.
 
   ? receiver.Deliver(-2,
-  >                  fn r { println(`Redirector invoked: $r`) },
+  >                  buildIn(descs.Import(1)),
   >                  -1,
   >                  "__getAllegedType",
-  >                  [])
+  >                  buildIn([]))
   ?
-  # stdout: Redirector invoked: Null
+  # stdout: ["DeliverOnly", [1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
   
   ? receiver.Deliver(-3,
-  >                  fn r { println(`Redirector invoked: $r`) },
+  >                  buildIn(descs.Import(1)),
   >                  -2,
   >                  "getFQName",
-  >                  [])
+  >                  buildIn([]))
   ?
-  # stdout: Redirector invoked: org.cubik.cle.prim.null
+  # stdout: ["DeliverOnly", [1, "run", ["org.cubik.cle.prim.null"]]]
   #         
 
 Positive/zero answer index is an error:
 
-  ? receiver.Deliver(0, fn _ {}, -2, "getFQName", [])
+  ? receiver.Deliver(0, buildIn(descs.Import(1)), -2, "getFQName", buildIn([]))
   # problem: 0 is not in the region -2147483648..!0
 
-  ? receiver.Deliver(1, fn _ {}, -2, "getFQName", [])
+  ? receiver.Deliver(1, buildIn(descs.Import(1)), -2, "getFQName", buildIn([]))
   # problem: 1 is not in the region -2147483648..!0
 
 Missing recipient:
 
-  ? receiver.Deliver(-1, fn _ {}, -999, "getFQName", [])
+  ? receiver.Deliver(-1, buildIn(descs.Import(1)), -999, "getFQName", buildIn([]))
   # problem: 999 not alloced in AnswersTable__1
 
 --- Incoming DeliverOnlyOp ---
@@ -154,22 +153,38 @@ Missing recipient:
 
 2-cycle delay on this test because the reactor invocation is itself a send.
 
+Delivery to the NonceLocator:
+
   ? receiver.DeliverOnly(0,
   >                      "__whenMoreResolved",
-  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  >                      buildIn([descs.NewFar(1, 329849023489032)]))
   ?
-  # stdout: WMR reactor invoked: <nonceLocator>
+  # stdout: ["DeliverOnly", [1, "run", [ImportDesc(0)]]]
   #         
 
-  ? receiver.Deliver(-1, fn _ {}, 0, "__getAllegedType", [])
+Delivery to an answer, creating the answer first:
+
+  ? receiver.Deliver(-1, buildIn(descs.NewFar(2, 78897982443232)), 
+  >                  0, "__getAllegedType", buildIn([]))
+  ?
+  # stdout: ["DeliverOnly", [2, "run", [NonceLocator]]]
+  #         
+
   ? receiver.DeliverOnly(-1,
   >                      "__whenMoreResolved",
-  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  >                      buildIn([descs.Import(1)]))
   ?
-  # stdout: WMR reactor invoked: NonceLocator
+  # stdout: ["DeliverOnly", [1, "run", [NonceLocator]]]
   #         
 
-XXX test positive index
+Delivery to an import:
+
+  ? receiver.DeliverOnly(-1,
+  >                      "__whenMoreResolved",
+  >                      buildIn([descs.Import(1)]))
+  ?
+  # stdout: ["DeliverOnly", [1, "run", [NonceLocator]]]
+  #         
 
 --- Incoming GCExportOp ---
 
@@ -186,14 +201,14 @@ To test GCExportOp, we must first export something.
 wireDelta of 0 should have no effect.
 
   ? receiver.GCExport(1, 0)
-  ? receiver.DeliverOnly(1, "run", ["still here"])
+  ? receiver.DeliverOnly(1, "run", buildIn(["still here"]))
   # stdout: still here
   #         
   
 wireDelta of 1 should delete the export.
 
   ? receiver.GCExport(1, 1)
-  ? receiver.DeliverOnly(1, "run", ["gone"])
+  ? receiver.DeliverOnly(1, "run", buildIn(["gone"]))
   # problem: 1 not alloced in ExportsTable__1
 
 A reference is collected once the sum of wireDeltas in all received GCExport messages exceeds the number of times it is exported. Here's a multiple export:
@@ -215,14 +230,14 @@ A reference is collected once the sum of wireDeltas in all received GCExport mes
 wireDelta of 1 should have no effect (export count now 2).
 
   ? receiver.GCExport(1, 1)
-  ? receiver.DeliverOnly(1, "run", ["still here #2"])
+  ? receiver.DeliverOnly(1, "run", buildIn(["still here #2"]))
   # stdout: still here #2
   #         
   
 Additional wireDelta of 2 should balance the three previous references.
 
   ? receiver.GCExport(1, 2)
-  ? receiver.DeliverOnly(1, "run", ["gone #2"])
+  ? receiver.DeliverOnly(1, "run", buildIn(["gone #2"]))
   # problem: 1 not alloced in ExportsTable__1
 
 
@@ -231,18 +246,25 @@ Additional wireDelta of 2 should balance the three previous references.
   ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
-  ? receiver.Deliver(-1, fn _ {}, 0, "__getAllegedType", [])
+Create an answer.
+
+  ? receiver.Deliver(-1, buildIn(descs.Incoming(0)), 0, "__getAllegedType", buildIn([]))
+
+Deliveries to the answer are possible now:
+
   ? receiver.DeliverOnly(-1,
   >                      "__whenMoreResolved",
-  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  >                      buildIn([descs.NewFar(1, 3124570689423516780)]))
   ?
-  # stdout: WMR reactor invoked: NonceLocator
+  # stdout: ["DeliverOnly", [1, "run", [NonceLocator]]]
   #         
+
+but not after GCAnswerOp:
 
   ? receiver.GCAnswer(-1)
   ? receiver.DeliverOnly(-1,
   >                      "__whenMoreResolved",
-  >                      [fn r { println(`WMR reactor invoked: $r` )}])
+  >                      buildIn([descs.Import(1)]))
   # problem: 1 not alloced in AnswersTable__1
 
 --- Incoming ShutdownOp ---
@@ -299,7 +321,7 @@ Export, which should receive a __reactToLostClient:
 
 The termination:
 
-  ? receiver.Terminated("foo" :Throwable)
+  ? receiver.Terminated(buildIn("foo" :Throwable))
   # stdout: rTLC expecter got problem: foo
 
 Consequences:
@@ -314,10 +336,10 @@ Checking for robust termination:
 
 We don't need to test anything but the receiver and builder-maker, because every other access is an eventual ref that gets broken, as tested above.
 
-  ? receiver.DeliverOnly(0, "", [])
+  ? receiver.DeliverOnly(0, "", buildIn([]))
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? receiver.Deliver(-1, null, 0, "", [])
+  ? receiver.Deliver(-1, buildIn(null), 0, "", buildIn([]))
   # problem: this CapTP connection has been terminated (problem: foo)
 
   ? receiver.GCAnswer(-1)
@@ -329,10 +351,10 @@ We don't need to test anything but the receiver and builder-maker, because every
   x ? receiver.Shutdown(0)
   x # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? receiver.Terminated("bar")
+  ? receiver.Terminated(buildIn("bar"))
   # problem: this CapTP connection has been terminated (problem: foo)
 
-  x ? receiver.Wormhole(-1, null, 0, "", [])
+  x ? receiver.Wormhole(-1, buildIn(null), 0, "", buildIn([]))
   x # problem: this CapTP connection has been terminated (problem: foo)
 
   ? buildIn(descs.Incoming(0))
@@ -370,7 +392,7 @@ First we set up an incoming reference to an object to catch the remote promise.
   >   bind remotePromise := p
   > }
   > def swiss :int := swissTable.getNewSwiss(promiseReceiver); null
-  > receiver.Deliver(-3, buildIn(descs.NewFar(2, 928)), 0, "lookupSwiss", [swiss, null])
+  > receiver.Deliver(-3, buildIn(descs.NewFar(2, 928)), 0, "lookupSwiss", buildIn([swiss, null]))
   > receiver.GCAnswer(-3)
   ?
   # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
@@ -392,7 +414,7 @@ Testing sends to the promise:
 
 The redirector should be accessible by our provided SwissBase:
 
-  ? receiver.Deliver(-3, buildIn(descs.Import(2)), 0, "lookupSwiss", [remotePromiseRdrBase.cryptoHash(), null])
+  ? receiver.Deliver(-3, buildIn(descs.Import(2)), 0, "lookupSwiss", buildIn([remotePromiseRdrBase.cryptoHash(), null]))
   ?
   # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 216307466466887903142951307717254789854244528344)]]]
   #         
@@ -401,7 +423,7 @@ The redirector should be accessible by our provided SwissBase:
 
 Invoking the redirector causes the remote promise to resolve:
 
-  ? receiver.DeliverOnly(-4, "run", [56])
+  ? receiver.DeliverOnly(-4, "run", buildIn([56]))
   ? remotePromise
   # value: 56
   
@@ -430,23 +452,32 @@ Cleaning up:
   ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
-  ? receiver.DeliverOnly(0, "lookupSwiss", def nfdL := buildIn([0, descs.NewFar(1, 13904808385)]))
+Setting up a proxy for testing:
 
-  ? buildIn(descs.Import(1))
-  # value: <Far ref>
-  
-  ? buildIn([0, descs.Import(1)]) == nfdL
-  # value: true
+  ? def swiss :int := swissTable.getNewSwiss(def _ {
+  >   to compare(x, y) { println(x == y) }
+  >   to compareNL(x) { println(x == remoteNonceLocator) }
+  > }); null
+  > receiver.Deliver(-1, buildIn(descs.NewFar(1, 2384978932)), 0, "lookupSwiss", buildIn([swiss, null]))
+  > receiver.GCAnswer(-1)
+  ? 
+  # stdout: ["DeliverOnly", [1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  #         
+
+Actual testing:
+
+  ? receiver.DeliverOnly(1, "compare", buildIn([descs.NewFar(1, 13904808385), 
+  >                                             descs.Import(1)]))
+  # stdout: true
+  #         
 
   ? buildIn(descs.Import(999))
   # problem: 999 not alloced in ProxiesTable__1
 
-  ? buildIn(descs.Import(0))
-  # value: <Far ref>
-  
-  ? buildIn(descs.Import(0)) == remoteNonceLocator
-  # value: true
-  
+  ? receiver.DeliverOnly(1, "compareNL", buildIn([descs.Import(0)]))
+  # stdout: true
+  #         
+
 An ImportDesc cannot have a negative index (receiver's questions table) because that would conflict with the receiver being able to GC its questions table entries.
 
 --- Incoming IncomingDesc ---
@@ -456,7 +487,7 @@ An ImportDesc cannot have a negative index (receiver's questions table) because 
 
   ? def swiss :int := swissTable.getNewSwiss(def f(x) { println(x == f) }); null
 
-  ? receiver.Deliver(-1, fn _ {}, 0, "lookupSwiss", [swiss, null])
+  ? receiver.Deliver(-1, buildIn(descs.Incoming(0)), 0, "lookupSwiss", buildIn([swiss, null]))
 
   ? receiver.DeliverOnly(-1, "run", buildIn([descs.Incoming(-1)]) )
   # stdout: true
@@ -697,3 +728,18 @@ XXX write more serialization tests
   ?
   # stdout: ["DeliverOnly", [0, "foo", []]]
   #         
+
+--- Misinterleaved unserialization ---
+
+This is prohibited because it can cause subtle failures due to descriptors such as IncomingDesc being unserialized before the messages that define their indexes arrive.
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
+  ? def b1 := buildIn([])
+  > def b2 := buildIn([])
+  > null
+  
+  ? receiver.DeliverOnly(0, "__getAllegedType", b1)
+  > receiver.DeliverOnly(0, "__getAllegedType", b2)
+  # problem: CapTP incoming message #1 was given an argument unserialized during time for message #0

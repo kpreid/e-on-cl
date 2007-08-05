@@ -58,6 +58,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def remoteNonceLocatorResolutionSlot
 
     def remoteNonceLocator
+    # Used to ensure that unserialized args are correctly interleaved with their messages.
+    var currentIncomingSerialNumber := 0
+    
     def prepareQuestion
     
     def [remoteIncomingPosSealer, remoteIncomingPosUnsealer] := 
@@ -184,20 +187,41 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
+    def checkedAndAboutToHandleIncoming() {
+      requireLive()
+      currentIncomingSerialNumber += 1
+    }
+    
+    def [argSealer, argUnsealer] := makeBrand("CapTP unserialized argument")
+    
+    def Arg {
+      to get(guard) {
+        return def Arg1 {
+          to coerce(specimen, ejector) {
+            def [serial, value] := argUnsealer.unseal(specimen)
+            if (serial != currentIncomingSerialNumber) {
+              throw.eject(ejector, `CapTP incoming message #$currentIncomingSerialNumber was given an argument unserialized during time for message #$serial`)
+            }
+            return guard.coerce(value, ejector)
+          }
+        }
+      }
+    }
+    
     def capTPReceiver {
       to DeliverOnly(recipPos :IncomingPos,
                      verb :MsgName,
-                     args :List[any]) :void {
-        requireLive()
+                     args :Arg[List[any]]) :void {
+        checkedAndAboutToHandleIncoming()
         E.sendOnly(lookupIncoming(recipPos), verb, args)
       }
 
       to Deliver(answerPos :AnswerPos,
-                 rdr :OneArgFunc,
+                 rdr :Arg[OneArgFunc],
                  recipPos :IncomingPos,
                  verb :MsgName,
-                 args :List[any]) :void {
-        requireLive()
+                 args :Arg[List[any]]) :void {
+        checkedAndAboutToHandleIncoming()
         def answer := E.send(lookupIncoming(recipPos), verb, args)
         answers.put(-answerPos, answer, true)
         E.sendOnly(answer, "__whenMoreResolved", [rdr])
@@ -205,18 +229,18 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       
       to GCExport(exportPos :ExportPos,
                   wireDelta :WireDelta) {
-        requireLive()
+        checkedAndAboutToHandleIncoming()
         exports.decr(exportPos, wireDelta)
         # XXX do we need to do something upon reaching 0?
       }
       
       to GCAnswer(answerPos :AnswerPos) {
-        requireLive()
+        checkedAndAboutToHandleIncoming()
         answers.free(-answerPos)
       }
 
-      to Terminated(problem :Throwable) {
-        requireLive()
+      to Terminated(problem :Arg[Throwable]) {
+        checkedAndAboutToHandleIncoming()
         
         bind termination := Ref.broken(problem)
         
@@ -356,7 +380,17 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     
     def capTPBuilderMaker() {
       requireLive()
-      return deSubgraphKit.makeBuilder(buildScope)
+      def baseBuilder := deSubgraphKit.makeBuilder(buildScope)
+      return def capTPArgBuilder {
+        to buildRoot(subtree) {
+          # note that we're allowing our caller to insert anything here -- this is not much of a problem because this sealer is really just advisory about interleaving problems and improperly unserialized args
+          return argSealer.seal([currentIncomingSerialNumber, subtree])
+        }
+        match msg {
+          requireLive()
+          E.callWithPair(baseBuilder, msg)
+        }
+      }
     }
     
     # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
