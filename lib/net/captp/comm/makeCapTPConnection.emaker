@@ -340,9 +340,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
                 swissHash :SwissHash) {
         requireLive()
 
-        imports.put(importPos, makeProxyRecord(
-          true,
-          importPos))
+        imports.put(importPos, makeProxyRecord(true, importPos))
         
         return imports.getProxy(importPos)
       }
@@ -352,15 +350,13 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
                           rdrBase   :SwissBase) {
         requireLive()
         
-        # XXX it is suspicious that this record isn't stored anywhere
-        def record := makeProxyRecord(
-          false,
-          importPos)
+        imports.put(importPos, def record := makeProxyRecord(false, importPos))
         
-        def redirector := record.makeRedirector()
-
-        swissTable.registerIdentity(redirector, rdrBase)
-        answers.put(-rdrPos, redirector, true)
+        {
+          def redirector := record.makeRedirector()
+          swissTable.registerIdentity(redirector, rdrBase)
+          answers.put(-rdrPos, redirector, true)
+        }
         
         return record.reference()
       }

@@ -309,14 +309,21 @@ Question (promise resulting from DeliverOp):
   
 Imported remote promise:
 
-  XXX write test once importing remote promises works
-  
+  ? def outgoingPromise := remoteNonceLocator <- getTerminatedTestRef3()
+  # value: <Promise>
+
+  ?
+  # stdout: ["Deliver", [-3, NewFarDesc(3, 47255196895205160731987244561159478631887357377), 0, "getTerminatedTestRef3", []]]
+  #         
+
+  ? receiver.DeliverOnly(3, "run", buildIn([descs.NewRemotePromise(2, -1, 4352160789)]))
+
 Export, which should receive a __reactToLostClient:
 
   ? E.sendOnly(remoteNonceLocator, "TerminatedExportTest", [
   >   def ttReactReceiver {to __reactToLostClient(p) { print(`rTLC expecter got $p`) }}])
   ?
-  # stdout: ["DeliverOnly", [0, "TerminatedExportTest", [NewFarDesc(3, 47255196895205160731987244561159478631887357377)]]]
+  # stdout: ["DeliverOnly", [0, "TerminatedExportTest", [NewFarDesc(4, 412897248500657771667886264468852369692723684603)]]]
   #         
 
 The termination:
@@ -326,15 +333,18 @@ The termination:
 
 Consequences:
 
-  ? [outgoingFar, outgoingQuestion, remoteNonceLocator]
-  # value: [<ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>]
+  ? [outgoingFar, outgoingQuestion, outgoingPromise, remoteNonceLocator]
+  # value: [<ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>]
   
   ? Ref.optProblem(outgoingFar) == Ref.optProblem(outgoingQuestion)
   # value: true
 
+  ? Ref.optProblem(outgoingFar) == Ref.optProblem(outgoingPromise)
+  # value: true
+
 Checking for robust termination:
 
-We don't need to test anything but the receiver and builder-maker, because every other access is an eventual ref that gets broken, as tested above.
+We don't need to test anything but the receiver, builder-maker, and builders, because every other access is an eventual ref that gets broken, as tested above.
 
   ? receiver.DeliverOnly(0, "", buildIn([]))
   # problem: this CapTP connection has been terminated (problem: foo)
@@ -360,7 +370,10 @@ We don't need to test anything but the receiver and builder-maker, because every
   ? buildIn(descs.Incoming(0))
   # problem: this CapTP connection has been terminated (problem: foo)
 
-XXX test operations on builders gotten from the maker before the termination
+XXX test these things' behavior after termination:
+  operations on builders gotten from the maker before the termination
+  proxy finalizer
+  locally referenced redirector (gets exported then sent home)
 
 --- Incoming WormholeOp ---
 
@@ -412,6 +425,13 @@ Testing sends to the promise:
   # stdout: ["DeliverOnly", [3, "hello eventual", []]]
   #         
 
+Testing that the promise is present in the imports table:
+
+  ? receiver.DeliverOnly(0, "__whenMoreResolved", buildIn([descs.Import(3)]))
+  ?
+  # stdout: ["DeliverOnly", [3, "run", [ImportDesc(0)]]]
+  #         
+
 The redirector should be accessible by our provided SwissBase:
 
   ? receiver.Deliver(-3, buildIn(descs.Import(2)), 0, "lookupSwiss", buildIn([remotePromiseRdrBase.cryptoHash(), null]))
@@ -431,11 +451,11 @@ The remote promise proxy is now garbage, so CapTP should send GCExportOp:
 
   ? runFinalizers()
   ?
-  # stdout: ["GCExport", [3, 1]]
+  # stdout: ["GCExport", [3, 2]]
   #         ["GCExport", [2, 2]]
   #         
 
-Index 3 is the remote promise, and index 2 is the twice-used fake redirector for incoming deliveries.
+Index 3 is the remote promise (passed in once as NewRemotePromiseDesc and once as ImportDesc), and index 2 is the twice-used fake redirector for incoming deliveries.
 
 Export index 2 now holds the redirector.
 
