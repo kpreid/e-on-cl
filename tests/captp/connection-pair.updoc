@@ -85,8 +85,11 @@ Now we can make the SwissTables and connections.
   
 --- 
 
+Simple message with side effects and return value.
+
   ? def leftObj {
   >   to ping() { println("pinged"); return "pong" }
+  >   to delayUC(x) { return fn { x.toUpperCase() } }
   > }
   # value: <leftObj>
 
@@ -114,3 +117,22 @@ Now we can make the SwissTables and connections.
 
   ? r
   # value: "pong"
+
+---
+
+Pipelined sends.
+
+  ? interp.waitAtTop(def r := leftViaRight <- delayUC(leftViaRight <- ping()) <- run())
+  # stdout: Left <- Deliver(-3, NewFarDesc(5, 682009956380579499771617381148460370106090083063), 1, "ping", [])
+  #         Left <- Deliver(-4, NewFarDesc(6, 1194597571256310373217679255844280815354866957945), 1, "delayUC", [IncomingDesc(-3)])
+  #         pinged
+  #         Left <- Deliver(-5, NewFarDesc(7, 730711925653291799414144031897225860482398091347), -4, "run", [])
+  #         Left <- DeliverOnly(-5, "__whenMoreResolved", [NewFarDesc(8, 676259857959289598128720760374698425339633638932)])
+  #         Right <- DeliverOnly(5, "run", ["pong"])
+  #         Right <- DeliverOnly(6, "run", [NewFarDesc(2, 1201612705638176454711919383590853899224201778053)])
+  #         Right <- DeliverOnly(7, "run", ["PONG"])
+  #         Right <- DeliverOnly(8, "run", ["PONG"])
+  #         
+  
+  ? r
+  # value: "PONG"
