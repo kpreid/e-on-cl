@@ -1,0 +1,61 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ...............
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+/**
+ * Each product of this maker represents a presence of the pervasive LocatorUnum service.
+ *
+ * For Una in general: To hold a reference to any presence of the Unum is conceptually to hold a reference to the Unum as a whole. Therefore, a reference to the Unum may as well always be a reference to a local presence of the Unum. Since it can be, and since this would provide better service, we specify that all references to an Unum will be local.
+ * 
+ * Therefore, an encoded reference to a presence of Unum that's local to the sending side will be decoded as a reference to a presence of the same Unum local to the receiving side. Therefore, a fulfilled reference to an Unum is always <a href="http://www.erights.org/elib/concurrency/refmech.html">Near</a>, and therefore a reference to an Unum is always eventually Near or Broken.
+ * 
+ * The LocatorUnum is the only Unum built into E itself. It represents the pervasive vatID/swissNumber lookup service built jointly out of all vats and VLSes. It is used only by SturdyRefs to establish their authority to perform a lookup, and to enable SturdyRefs to maintain this authority as they are copied between vats.
+ * 
+ * The locatorUnum instance should be a graph exit in every connection in the CapTP system; it does not itself provide __optUncall (which would reveal the Introducer). [XXX is this paragraph correct? -- kpreid]
+ *
+ * @author Mark S. Miller
+ */
+def makeLocatorUnum(introducer) implements DeepFrozen, ExitViaHere {
+
+    return def locatorUnum {
+
+        /**
+         * The basic operation underlying 'SturdyRef.getRcvr()'.
+         * <p/>
+         * This is where a reference to a remote object actually gets the various
+         * underlying comm systems connected so that we can send messages.
+         * <p/>
+         * getRcvr only works when we're {@link Introducer#onTheAir onTheAir}.
+         *
+         * @param searchPath A list of places to try to find the vat
+         * @param vatID      The vat from which the object reference should be
+         *                   obtained
+         * @param swissNum   The SwissNumber of the desired object
+         * @param optFarVine Optional object for holding onto a Remote reference
+         *                   via whoever we got it from long enough to fetch our
+         *                   own Remote reference via this lookup.
+         */
+        to getRcvr(searchPath :List[String],
+                   vatID :String,
+                   swissNum :int,
+                   optFarVine :any) :any {
+            if (true) { # XXX was "Trace.captp.debug && Trace.ON" in EoJ
+                traceln(`$locatorUnum.getRcvr($searchPath, $vatID, $swissNum, $optFarVine)`)
+            }
+            if (vatID == introducer.getVatID()) {
+
+                #if we are following into the local vat, do a local lookup.
+                #If not found, it'll throw an IndexOutOfBoundsException
+                # XXX switch to ejector for sealed-throw rules
+                return introducer.getSwissTable().lookupSwiss(swissNum)
+            }
+            # XXX we currently have no connection objects in E-on-CL, so the below code won't do anything useful. Once we have a CapTPMgr we'll see what the interface for retrieving the remote nonce locator is
+            def optProxyConn := introducer.getCapTPMgr() \
+              .getOrMakeProxyConnection(searchPath, vatID)
+            def remoteNonceLocator := optProxyConn.getRemoteNonceLocator()
+            return E.send(remoteNonceLocator, "lookupSwiss", swissNum, optFarVine)
+        }
+    }
+}

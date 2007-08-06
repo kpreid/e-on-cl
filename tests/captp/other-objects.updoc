@@ -26,3 +26,5 @@ This is a placeholder. We *should* have tests for the operation of each of these
   >                                          def swissTable {})
   # value: <nonceLocator>
 
+  ? <import:net.captp.comm.makeLocatorUnum>(def fakeIntroducer {})
+  # value: <locatorUnum>
