@@ -1,0 +1,7 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# XXX Restrict this, and reference documentation. A VatID seems from inspection to be a 180-bit number represented as 32 base-36 (0-9a-z) digits.
+# XXX Should the VatID be an object holding the bits, or a number, rather than the string form?
+
+String

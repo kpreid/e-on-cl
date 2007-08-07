@@ -4,6 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
+def VatID := <import:net.captp.VatID>
 def Vine := <import:net.captp.tables.makeVine>.asType()
 
 def CapTPMgr := def SwissTable := def PromiseGiftTable := def NearGiftTable := any # XXX restrict or interface or something
@@ -18,7 +19,7 @@ def CapTPMgr := def SwissTable := def PromiseGiftTable := def NearGiftTable := a
  */
 def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
                      myNGifts :NearGiftTable,
-                     myOwnID :String,
+                     myOwnID :VatID,
                      myCapTPMgr :CapTPMgr,
                      mySwissTable :SwissTable) \
       implements ExitViaHere, DeepFrozen {
@@ -28,7 +29,7 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
         /**
          *
          */
-        to provideFor(gift :any, recipID :String, nonce :int) :Vine {
+        to provideFor(gift :any, recipID :VatID, nonce :int) :Vine {
             return myPGifts.provideFor(gift, recipID, nonce);
         }
 
@@ -36,7 +37,7 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
          *
          */
         to provideFor(gift :any,
-                      recipID :String,
+                      recipID :VatID,
                       nonce :int,
                       swissHash :int) :Vine {
             require(Ref.isNear(gift), fn { "Must be Near: " + E.toString(gift) })
@@ -57,7 +58,7 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
          *                   prevent it from being gced.
          */
         to acceptFrom(donorPath :List, # XXX document
-                      donorID :String,
+                      donorID :VatID,
                       nonce :int,
                       optFarVine :any) :any {
             def optDonorConn :=
@@ -81,7 +82,7 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
          *                   prevent it from being gced.
          */
         to acceptFrom(donorPath :List,
-                      donorID :String,
+                      donorID :VatID,
                       nonce :int,
                       swissHash :int,
                       optFarVine :any) :any {

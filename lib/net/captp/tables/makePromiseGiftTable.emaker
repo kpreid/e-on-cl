@@ -6,6 +6,7 @@ pragma.enable("function-implements")
 
 def makeValueThunk := <import:org.erights.e.elib.base.makeValueThunk>
 def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
+def VatID := <import:net.captp.VatID>
 def makeVine := <import:net.captp.tables.makeVine>
 def Vine := makeVine.asType()
 def Throwable := <type:java.lang.Throwable>
@@ -63,7 +64,7 @@ def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen
          * Make the gift available to the recipient so long as the Vine is held
          * onto (isn't garbage).
          */
-        to provideFor(gift :any, recipID :String, nonce :int) :Vine {
+        to provideFor(gift :any, recipID :VatID, nonce :int) :Vine {
             def keyPair := [recipID, nonce]
             def optValuePair :=
               myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK());
@@ -100,7 +101,7 @@ def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen
          *                gift is being picked up for.
          * @param nonce   Identifies (together with the recipID) the gift.
          */
-        to acceptFor(recipID :String, nonce :int) :any {
+        to acceptFor(recipID :VatID, nonce :int) :any {
             def keyPair := [recipID, nonce];
             var optValuePair := myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK())
             if (null == optValuePair) {
@@ -126,7 +127,7 @@ def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen
          * 
          * XXX E translation note: we can and therefore should now make this private
          */
-        to drop(recipID :String, nonce :int) :void {
+        to drop(recipID :VatID, nonce :int) :void {
             def keyPair := [recipID, nonce];
             def optValuePair :=
               myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK());

@@ -5,10 +5,10 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
+def VatID := <import:net.captp.VatID>
 def makeVine := <import:net.captp.tables.makeVine>
 def Vine := makeVine.asType()
 def Throwable := <type:java.lang.Throwable>
-
 /**
  * Rendezvous point for 3-vat live Granovetter introductions of Resolved remote
  * references (FarRefs).
@@ -62,7 +62,7 @@ def makeNearGiftTable(makeWeakPtr) implements DeepFrozen {
          * onto (isn't garbage).
          */
         to provideFor(gift :any,
-                      recipID :String,
+                      recipID :VatID,
                       nonce :int,
                       swissHash :int) :Vine {
             def keyTriple := [recipID, nonce, swissHash];
@@ -86,7 +86,7 @@ def makeNearGiftTable(makeWeakPtr) implements DeepFrozen {
          *                gift is being picked up for.
          * @param nonce   Identifies (together with the recipID) the gift.
          */
-        to acceptFor(recipID :String, nonce :int, swissHash :int) :any {
+        to acceptFor(recipID :VatID, nonce :int, swissHash :int) :any {
             def keyTriple := [recipID, nonce, swissHash]
             #if absent, get/1 will throw
             def result := myStuff.get(keyTriple)
@@ -102,7 +102,7 @@ def makeNearGiftTable(makeWeakPtr) implements DeepFrozen {
          *
          * XXX E translation note: we can and therefore should now make this private
          */
-        to drop(recipID :String, nonce :int, swissHash :int) :void {
+        to drop(recipID :VatID, nonce :int, swissHash :int) :void {
             def keyTriple := [recipID, nonce, swissHash];
             myStuff.removeKey(keyTriple);
         }

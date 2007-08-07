@@ -4,6 +4,8 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
+def VatID := <import:net.captp.VatID>
+
 /**
  * Each product of this maker represents a presence of the pervasive LocatorUnum service.
  *
@@ -38,7 +40,7 @@ def makeLocatorUnum(introducer) implements DeepFrozen, ExitViaHere {
          *                   own Remote reference via this lookup.
          */
         to getRcvr(searchPath :List[String],
-                   vatID :String,
+                   vatID :VatID,
                    swissNum :int,
                    optFarVine :any) :any {
             if (true) { # XXX was "Trace.captp.debug && Trace.ON" in EoJ
