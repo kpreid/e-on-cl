@@ -51,17 +51,24 @@ Objects to represent the descriptors used by CapTP for connection-spanning refer
   >   }
   > }; null
 
+LocatorUnum presences:
+
+  ? def locatorUnumLocal {}
+  > def locatorUnumRemote {}
+  > null
+
 Data-E setup:
   
   ? def [testGraphRecognizer, testBuilderMaker] := {
   >   def scope := deSubgraphKit.getDefaultScope() | [
   >     "CapTP_1_descs" => descs,
+  >     "CapTP_1_locatorUnum" => locatorUnumRemote,
   >     => Ref,
   >     => <import>]
   >   [deSubgraphKit.makeRecognizer(null, makeCycleBreaker.byInverting(scope)),
   >    fn { deSubgraphKit.makeBuilder(scope) }]
   > }; null
-  
+
 To make the tests' use of indexes and swiss numbers independent of each other, we set up a new connection repeatedly using this function.
 
   > def makeTestConnection() {
@@ -82,6 +89,7 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >     def outgoing { match msg { println(msg) }},
   >     testBuilderMaker,
   >     swissTable,
+  >     locatorUnumLocal,
   >     pseudoWhenGarbage)
 
 buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
@@ -521,10 +529,6 @@ XXX
 
 XXX
 
---- Incoming LocatorUnumDesc ---
-
-XXX
-
 ------ Outgoing operations ------
 
 --- Outgoing DeliverOnlyOp ---
@@ -711,8 +715,6 @@ IncomingDesc for an answer
 XXX
 --- Outgoing Far3Desc ---
 XXX
---- Outgoing LocatorUnumDesc ---
-XXX
 
 ------ Serialization ------
 
@@ -734,6 +736,18 @@ XXX
   ? receiver.DeliverOnly(1, "run", buildIn([Ref.broken("b")]))
   # stdout: <ref broken by problem: b>
   #         
+
+--- LocatorUnum ---
+
+  ? E.sendOnly(remoteNonceLocator, "s", [locatorUnumLocal])
+  ?
+  # stdout: ["DeliverOnly", [0, "s", [<locatorUnumRemote>]]]
+  #         
+
+  ? receiver.DeliverOnly(1, "run", buildIn([locatorUnumRemote]))
+  # stdout: <locatorUnumLocal>
+  #         
+
 
 XXX write more serialization tests
 

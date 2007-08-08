@@ -42,7 +42,8 @@ def makeProxiesTable := <import:net.captp.tables.makeProxiesTable>
 def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
-  to run(var outgoingReceiver, var outArgBuilderMaker, swissTable, whenGarbage) {
+  # XXX this should be a map
+  to run(var outgoingReceiver, var outArgBuilderMaker, swissTable, locatorUnum, whenGarbage) {
     def nonceLocator := makeNonceLocator(null,
                                          null,
                                          "fake-id-ctc",
@@ -74,6 +75,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def scopeWithoutDescs := {
       def s := deSubgraphKit.getDefaultScope().diverge()
       s["Ref"] := Ref
+      s["CapTP_1_locatorUnum"] := locatorUnum
       s.snapshot()
     }
     
