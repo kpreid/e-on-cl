@@ -1,0 +1,68 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def scheme := "captp"
+
+def makeIntroducer implements ExitViaHere, DeepFrozen {
+  to makePair(config :Map,
+              entropy :any, # XXX interface
+              timer :any) { # XXX interface
+    
+    interface SturdyRef {} # XXX srub
+    
+    # XXX stub
+    def srMap := [].asMap().diverge()
+    def getSturdyRef(uriBody) {
+      if (srMap.maps(uriBody)) { return srMap[uriBody] }
+      def sturdyRef implements SturdyRef {
+        to getRcvr() { throw("introducer not yet identified") }
+        to _uriBody() { return uriBody } # XXX should be opaque
+      }
+      srMap[uriBody] := sturdyRef
+      return sturdyRef
+    }
+    
+    def locatorUnum {} # XXX stub
+    
+    def introducer {
+      to getLocatorUnum() { return locatorUnum }
+      to getNetConfig() { throw("XXX no net config object yet") } # XXX stub
+      to getVatID() { throw("introducer not yet identified") } # XXX stub
+      to hasIdentity() { return false } # XXX stub
+      to isOnTheAir() { return false } # XXX stub
+      to negotiable() { return ["BOGUS_PLACEHOLDER"] } # XXX stub
+      
+      to get(uriBody :String) { return getSturdyRef(uriBody) }
+      to sturdyFromURI(`$scheme:@uriBody`) { return getSturdyRef(uriBody) }
+      
+      to sturdyToURI(sr) { # XXX guard
+        return `$scheme:${sr._uriBody()}`
+      }
+      to optUnget(specimen) {
+        if (specimen =~ sr :SturdyRef) {
+          return sr._uriBody()
+        }
+      }
+      to optUncall(specimen) {
+        if (specimen =~ sr :SturdyRef) {
+          return [introducer, "get", sr._uriBody()]
+        }
+      }
+      
+      to __printOn(out :TextWriter) {
+        out.write("<Off the Air>")  # XXX stub
+      }
+    }
+    
+    def identityMgr {
+       # XXX stub
+       to __printOn(out :TextWriter) {
+         out.write("<identityMgr Off the Air>")  # XXX stub
+       }
+    }
+    
+    return [introducer, identityMgr]
+  }
+}
