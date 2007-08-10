@@ -347,7 +347,8 @@
           (or (position-if #'match str :start start)
               -1))))))
 
-(defobject +the-get-character+ "org.cubik.cle.prim.getCharacter" ()
+(defobject +the-get-character+ "org.cubik.cle.prim.getCharacter" 
+    (:stamped +deep-frozen-stamp+)
   (:|run| (codepoint)
     ;; XXX Unicode assumption
     (or (code-char codepoint)
