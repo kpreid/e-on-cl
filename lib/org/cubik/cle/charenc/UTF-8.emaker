@@ -35,7 +35,7 @@ def EncodedBy2 := 0x80..0x7FF
 def EncodedBy3 := 0x800..0xFFFF
 def EncodedBy4 := 0x10000..0x10FFFF
 
-def ::"UTF-8" implements ExitViaHere { # implements CharacterEncoding, DeepFrozen
+def ::"UTF-8" implements DeepFrozen, ExitViaHere { # implements CharacterEncoding
   to decode(octetStream, ==([].asMap())) {
     var bits :nullOk[int] := null
     var expect :nullOk[int] := null

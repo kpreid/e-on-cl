@@ -7,7 +7,7 @@
   ? def charsets := <import:org.cubik.cle.charsets>
   # value: <IANA 'charsets'>
   
-  ? def ascii := charsets["US-ASCII"]
+  ? def ascii :DeepFrozen := charsets["US-ASCII"]
   # value: <US-ASCII encoding>
   
   x ? ascii == charsets["us-ascii"]
@@ -32,7 +32,7 @@
   # value: [97, 112, 112, 108, 101, 115, 32, 97, 110, 100, 32, 111, 114, 97, 110, 103, 101, 115]
 
   
-  ? def utf_8 := charsets["UTF-8"]
+  ? def utf_8 :DeepFrozen := charsets["UTF-8"]
   # value: <UTF-8>
   
   ? def s := utf_8.decode([0xE2, 0x80, 0xA2, 0x20, 0x68, 0x6f, 0x6c, 0xc3, 0xa9, 0x73].asStream(), [].asMap())
