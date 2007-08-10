@@ -1,0 +1,12 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  
+  ? def getCharacter :DeepFrozen := <import:org.cubik.cle.prim.getCharacter>
+  # value: <getCharacter>
+  
+XXX tests of getCharacter
+XXX tests of characters (move from literals.updoc)
+XXX do we really want to diverge from makeFoo naming scheme?
+XXX idea: objects which provide collection/loader interfaces (get/optUnget/optUncall), one for Unicode codepoints and one for Unicode names
