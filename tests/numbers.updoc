@@ -65,6 +65,18 @@ approxDivide (by zero), and print of funny floats
   ? [-1.0 / 0.0, 0.0 / 0.0, 1.0 / 0.0]
   # value: [-Infinity, NaN, Infinity]
 
+Division variations
+
+  ? for i in -5..5 { print(i.approxDivide(3), " ") }
+  # stdout: -1.6666666666666667 -1.3333333333333333 -1.0 -0.6666666666666666 -0.3333333333333333 0.0 0.3333333333333333 0.6666666666666666 1.0 1.3333333333333333 1.6666666666666667 
+  ? for i in -5..5 { print(i.floorDivide(3), " ") }
+  # stdout: -2 -2 -1 -1 -1 0 0 0 1 1 1 
+  ? for i in -5..5 { print(i.ceilDivide(3), " ") }
+  # stdout: -1 -1 -1 0 0 0 1 1 1 2 2 
+  ? for i in -5..5 { print(i.truncDivide(3), " ") }
+  # stdout: -1 -1 -1 0 0 0 0 0 1 1 1 
+  
+
 Exponentiation
 
   ? 2 ** 16
@@ -131,6 +143,9 @@ Coercion tests
   # value: -2
   
   ? (-3).truncDivide(like(2))
+  # value: -1
+  
+  ? (-3).ceilDivide(like(2))
   # value: -1
   
   ? 53 % like(10)

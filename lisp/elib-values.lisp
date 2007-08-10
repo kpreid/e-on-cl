@@ -510,6 +510,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (floor a b))
   (:|truncDivide| (a (b 'number))
     (truncate a b))
+  (:|ceilDivide| (a (b 'number))
+    ;; E-on-CL extension -- XXX propose
+    (ceiling a b))
   (:|floor/0| 'floor)
   (:|ceil/0| 'ceiling) ; XXX name method ceiling/0?
   
@@ -576,6 +579,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (ash a b))
   (:|shiftRight| (a (b 'integer))
     (ash a (- b)))
+  (:|bitLength/0| 'integer-length)
 
   (:|and| (a (b 'integer))
     (logand a b))

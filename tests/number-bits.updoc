@@ -48,6 +48,11 @@ right shift
   > for y in [-2, -1, 0, 1, 2, 3, 4, 5, 32, 64] { 
   >   interp.pushTestStep(`$x >> $y`, [["value", E.toQuote((x / 2 ** y).floor())]]) }}
 
+bitLength (two's complement, not including sign bit)
+
+  ? for i in -5..5 { print(i.bitLength(), " ") }
+  # stdout: 3 2 2 1 0 0 1 2 2 3 3 
+
 cryptoHash (Unsigned integer interpretation of the SHA-1 hash of the smallest possible octet array holding the big-endian two's complement representation of the integer.)
 
   ? 10.cryptoHash()
