@@ -43,7 +43,7 @@ def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
   # XXX this should be a map
-  to run(var outgoingReceiver, var outArgBuilderMaker, swissTable, locatorUnum, whenGarbage) {
+  to run(var outgoingReceiver, swissTable, locatorUnum, whenGarbage) {
     def nonceLocator := makeNonceLocator(null,
                                          null,
                                          "fake-id-ctc",
@@ -59,7 +59,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def remoteNonceLocatorResolutionSlot
 
     def remoteNonceLocator
-    # Used to ensure that unserialized args are correctly interleaved with their messages.
+
+    # Currently unused.
     var currentIncomingSerialNumber := 0
     
     def prepareQuestion
@@ -178,9 +179,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
 
-    /** Transform a CapTP message argument object into an outgoing wire message. */
+    /** Transform a CapTP message argument object into the form for the outgoing receiver to accept. */
     def outEncode(object) {
-      return encRecognizer.recognize(object, outArgBuilderMaker())
+      return once(fn builder { encRecognizer.recognize(object, builder) })
     }
     
     def requireLive() {
@@ -192,72 +193,6 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def checkedAndAboutToHandleIncoming() {
       requireLive()
       currentIncomingSerialNumber += 1
-    }
-    
-    def [argSealer, argUnsealer] := makeBrand("CapTP unserialized argument")
-    
-    def Arg {
-      to get(guard) {
-        return def Arg1 {
-          to coerce(specimen, ejector) {
-            def [serial, value] := argUnsealer.unseal(specimen)
-            if (serial != currentIncomingSerialNumber) {
-              throw.eject(ejector, `CapTP incoming message #$currentIncomingSerialNumber was given an argument unserialized during time for message #$serial`)
-            }
-            return guard.coerce(value, ejector)
-          }
-        }
-      }
-    }
-    
-    def capTPReceiver {
-      to DeliverOnly(recipPos :IncomingPos,
-                     verb :MsgName,
-                     args :Arg[List[any]]) :void {
-        checkedAndAboutToHandleIncoming()
-        E.sendOnly(lookupIncoming(recipPos), verb, args)
-      }
-
-      to Deliver(answerPos :AnswerPos,
-                 rdr :Arg[OneArgFunc],
-                 recipPos :IncomingPos,
-                 verb :MsgName,
-                 args :Arg[List[any]]) :void {
-        checkedAndAboutToHandleIncoming()
-        def answer := E.send(lookupIncoming(recipPos), verb, args)
-        answers.put(-answerPos, answer, true)
-        E.sendOnly(answer, "__whenMoreResolved", [rdr])
-      }
-      
-      to GCExport(exportPos :ExportPos,
-                  wireDelta :WireDelta) {
-        checkedAndAboutToHandleIncoming()
-        exports.decr(exportPos, wireDelta)
-        # XXX do we need to do something upon reaching 0?
-      }
-      
-      to GCAnswer(answerPos :AnswerPos) {
-        checkedAndAboutToHandleIncoming()
-        answers.free(-answerPos)
-      }
-
-      to Terminated(problem :Arg[Throwable]) {
-        checkedAndAboutToHandleIncoming()
-        
-        bind termination := Ref.broken(problem)
-        
-        # Discard our local references, break our proxies
-        exports.smash(problem)
-        imports.smash(problem)
-        answers.smash(problem)
-        questions.smash(problem)
-        bind remoteNonceLocatorResolutionSlot := __makeFinalSlot(termination)
-        
-        # Discard our outgoing references, since we will no longer use them
-        outgoingReceiver := null
-        outArgBuilderMaker := null
-        # XXX review for additional cleanup needed/useful
-      }
     }
     
     def makeEventualHandler
@@ -376,24 +311,77 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     
     def buildScope := scopeWithoutDescs.with(DESCS_EXIT, incomingDescMaker)
     
-    def capTPBuilderMaker() {
-      requireLive()
+    /** Turns an incoming encoded-object (a closure over some Data-E recognizer) into a local object by providing it with a builder. */    
+    def inObj(specimen, ejector) {
+      # XXX All this would be better done by a Data-E protocol verifier intermediary -- and we ought to be hiding the builder products from the provided recognizer, anyway.
+      var builderDead := false
       def baseBuilder := deSubgraphKit.makeBuilder(buildScope)
-      return def capTPArgBuilder {
-        to buildRoot(subtree) {
-          # note that we're allowing our caller to insert anything here -- this is not much of a problem because this sealer is really just advisory about interleaving problems and improperly unserialized args
-          return argSealer.seal([currentIncomingSerialNumber, subtree])
-        }
+      def capTPArgBuilder {
         match msg {
           requireLive()
+          if (builderDead) {
+            throw.eject(ejector, `this CapTP argument builder is no longer valid`)
+          }
           E.callWithPair(baseBuilder, msg)
         }
+      }
+      try {
+        return specimen(capTPArgBuilder)
+      } finally { builderDead := true }
+    }
+    
+    def capTPReceiver {
+      to DeliverOnly(recipPos :IncomingPos,
+                     verb :MsgName,
+                     via (inObj) args :List[any]) :void {
+        checkedAndAboutToHandleIncoming()
+        E.sendOnly(lookupIncoming(recipPos), verb, args)
+      }
+
+      to Deliver(answerPos :AnswerPos,
+                 via (inObj) rdr :OneArgFunc,
+                 recipPos :IncomingPos,
+                 verb :MsgName,
+                 via (inObj) args :List[any]) :void {
+        checkedAndAboutToHandleIncoming()
+        def answer := E.send(lookupIncoming(recipPos), verb, args)
+        answers.put(-answerPos, answer, true)
+        E.sendOnly(answer, "__whenMoreResolved", [rdr])
+      }
+      
+      to GCExport(exportPos :ExportPos,
+                  wireDelta :WireDelta) {
+        checkedAndAboutToHandleIncoming()
+        exports.decr(exportPos, wireDelta)
+        # XXX do we need to do something upon reaching 0?
+      }
+      
+      to GCAnswer(answerPos :AnswerPos) {
+        checkedAndAboutToHandleIncoming()
+        answers.free(-answerPos)
+      }
+
+      to Terminated(via (inObj) problem :Throwable) {
+        checkedAndAboutToHandleIncoming()
+        
+        bind termination := Ref.broken(problem)
+        
+        # Discard our local references, break our proxies
+        exports.smash(problem)
+        imports.smash(problem)
+        answers.smash(problem)
+        questions.smash(problem)
+        bind remoteNonceLocatorResolutionSlot := __makeFinalSlot(termination)
+        
+        # Discard our outgoing references, since we will no longer use them
+        outgoingReceiver := null
+        # XXX review for additional cleanup needed/useful
       }
     }
     
     # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
     bind remoteNonceLocator := makeProxy(makeEventualHandler(0), remoteNonceLocatorResolutionSlot, true)
     
-    return [capTPReceiver, capTPBuilderMaker, remoteNonceLocator]
+    return [capTPReceiver, remoteNonceLocator]
   }
 }

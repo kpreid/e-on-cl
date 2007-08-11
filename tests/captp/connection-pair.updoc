@@ -41,28 +41,24 @@ This is a mechanism for tracing communication between the CapTPConnections.
   >   u[descs] := "CapTP_1_descs"
   >   u.snapshot()
   > }
-  > def traceBuilderMaker(mb) {
-  >   return fn {
-  >     def innerBuilder := mb()
-  >     
-  >     def traceBuilder extends deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) {
-  >       to buildRoot(value) {
-  >         # "value" here is the representation for tracing
-  >         def argWrapper implements ArgWrapperMarker {
-  >           to show() { return value }
-  >           to get() { return deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(value, innerBuilder) }
-  >         }
-  >         return argWrapper
+  > def traceBuilderMaker() {
+  >   return def traceBuilder extends deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) {
+  >     to buildRoot(value) {
+  >       # "value" here is the representation for tracing
+  >       def argWrapper implements ArgWrapperMarker {
+  >         to __printOn(out) { value.__printOn(out) }
+  >         to run(recBuilder) { return deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(value, recBuilder) }
   >       }
+  >       return argWrapper # this is both for trace printing and the recognizer closure the captp receiver expects
   >     }
-  >   } 
+  >   }
   > }
   > def traceReceiver(label, ref) {
   >   return def wrapper match [v,a] {
   >     stdout.print(label, " <- ", v)
-  >     accum [] for arg in a { _.with(if (arg =~ aw :ArgWrapperMarker) { aw.show() } else { arg }) }.printOn("(", ", ", ")", stdout)
-  >     stdout.println()
-  >     E.call(ref, v, accum [] for arg in a { _.with(if (arg =~ aw :ArgWrapperMarker) { aw.get() } else { arg }) })
+  >     def traceArgs := accum [] for arg in a { _.with(if (arg =~ c :any[int, String]) { arg } else { arg(traceBuilderMaker()) }) }
+  >     traceArgs.printOn("(", ", ", ")\n", stdout)
+  >     E.call(ref, v, traceArgs)
   >   }
   > }
   > null
@@ -72,16 +68,16 @@ Now we can make the SwissTables and connections.
   ? def swissTableL := <import:net.captp.tables.makeSwissTable>(pseudoEntropy, makeFlexMap, makeFlexMap); null
   ? def swissTableR := <import:net.captp.tables.makeSwissTable>(pseudoEntropy, makeFlexMap, makeFlexMap); null
   
-  ? def [[receiverL, mbL, rnlL], [receiverR, mbR, rnlR]] := 
+  ? def [[receiverL, rnlL], [receiverR, rnlR]] := 
   >   [makeCapTPConnection(traceReceiver("Right", receiverR),
-  >                        traceBuilderMaker(mbR),
   >                        swissTableL,
+  >                        def locatorUnumL {},
   >                        pseudoWhenGarbage),
   >    makeCapTPConnection(traceReceiver("Left", receiverL), 
-  >                        traceBuilderMaker(mbL),
   >                        swissTableR,
+  >                        def locatorUnumR {},
   >                        pseudoWhenGarbage)]
-  # value: [[<capTPReceiver>, <capTPBuilderMaker>, <Far ref>], [<capTPReceiver>, <capTPBuilderMaker>, <Far ref>]]
+  # value: [[<capTPReceiver>, <Far ref>], [<capTPReceiver>, <Far ref>]]
   
 --- 
 

@@ -1,10 +1,14 @@
 # Copyright 2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
+  
+  ? pragma.syntax("0.9")
+  ? pragma.enable("accumulator")
 
   ? def makeFlexMap := <elib:tables.makeFlexMap>; null
   ? def deSubgraphKit := <elib:serial.deSubgraphKit>; null
   ? def makeCycleBreaker := <elib:tables.makeCycleBreaker>; null
   ? def Throwable := <type:java.lang.Throwable>; null
+  ? def once := <import:org.erights.e.facet.once>; null
 
 In this file, we test the implementation of the CapTP operations and associated state.
 
@@ -59,14 +63,14 @@ LocatorUnum presences:
 
 Data-E setup:
   
-  ? def [testGraphRecognizer, testBuilderMaker] := {
+  ? def [testGraphRecognizer, makeTGBuilder] := {
   >   def scope := deSubgraphKit.getDefaultScope() | [
   >     "CapTP_1_descs" => descs,
   >     "CapTP_1_locatorUnum" => locatorUnumRemote,
   >     => Ref,
   >     => <import>]
   >   [deSubgraphKit.makeRecognizer(null, makeCycleBreaker.byInverting(scope)),
-  >    fn { deSubgraphKit.makeBuilder(scope) }]
+  >    def makeTGBuilder() { return deSubgraphKit.makeBuilder(scope) }]
   > }; null
 
 To make the tests' use of indexes and swiss numbers independent of each other, we set up a new connection repeatedly using this function.
@@ -85,9 +89,11 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >
   >   def swissTable := makeSwissTable(pseudoEntropy, makeFlexMap, makeFlexMap)
   >     
-  >   def [r, makeIncomingBuilder, rnl] := makeCapTPConnection(
-  >     def outgoing { match msg { println(msg) }},
-  >     testBuilderMaker,
+  >   def [r, rnl] := makeCapTPConnection(
+  >     def outgoing { match [v,args] { 
+  >       # arg testing here is a trick to avoid writing knowledge of the CapTP arg types in
+  >       println([v, accum [] for arg in args { _.with(if (arg =~ c :any[int, String, List]) { c } else { arg(makeTGBuilder()) }) }])
+  >     }},
   >     swissTable,
   >     locatorUnumLocal,
   >     pseudoWhenGarbage)
@@ -95,7 +101,7 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
 buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
 
   >   def buildIn(obj) {
-  >     return testGraphRecognizer.recognize(obj, makeIncomingBuilder())
+  >     return once(fn b { testGraphRecognizer.recognize(obj, b) })
   >   }; null
   >   return [swissTable, r, rnl, buildIn]
   > }; null
@@ -375,11 +381,7 @@ We don't need to test anything but the receiver, builder-maker, and builders, be
   x ? receiver.Wormhole(-1, buildIn(null), 0, "", buildIn([]))
   x # problem: this CapTP connection has been terminated (problem: foo)
 
-  ? buildIn(descs.Incoming(0))
-  # problem: this CapTP connection has been terminated (problem: foo)
-
 XXX test these things' behavior after termination:
-  operations on builders gotten from the maker before the termination
   proxy finalizer
   locally referenced redirector (gets exported then sent home)
 
@@ -499,7 +501,7 @@ Actual testing:
   # stdout: true
   #         
 
-  ? buildIn(descs.Import(999))
+  ? receiver.DeliverOnly(1, "whatever", buildIn([descs.Import(999)]))
   # problem: 999 not alloced in ProxiesTable__1
 
   ? receiver.DeliverOnly(1, "compareNL", buildIn([descs.Import(0)]))
@@ -763,17 +765,14 @@ XXX write more serialization tests
   # stdout: ["DeliverOnly", [0, "foo", []]]
   #         
 
---- Misinterleaved unserialization ---
+--- Reuse of builders ---
 
-This is prohibited because it can cause subtle failures due to descriptors such as IncomingDesc being unserialized before the messages that define their indexes arrive.
+This is prohibited because the timing and reoccurrence of unserialization operations affects the results and the state of the comm tables.
 
   ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
 
-  ? def b1 := buildIn([])
-  > def b2 := buildIn([])
-  > null
-  
-  ? receiver.DeliverOnly(0, "__getAllegedType", b1)
-  > receiver.DeliverOnly(0, "__getAllegedType", b2)
-  # problem: CapTP incoming message #1 was given an argument unserialized during time for message #0
+  ? def builder
+  > receiver.DeliverOnly(0, "__getAllegedType", fn bind builder { testGraphRecognizer.recognize([], builder) })
+  ? builder.buildImport("CapTP_1_descs")
+  # problem: this CapTP argument builder is no longer valid
