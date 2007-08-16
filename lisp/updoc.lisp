@@ -503,7 +503,7 @@
       (e.syntax:parse-to-kernel step))
     (:|takeStreams| () nil)
     (:|answer/1| #'print-answer)
-    (:|backtrace/1| (constantly nil))
+    (:|backtrace| (backtrace) (write backtrace :readably nil :escape t :circle t :pretty t))
     (:|finish| () nil)
     (:|answer| () nil)))
 
