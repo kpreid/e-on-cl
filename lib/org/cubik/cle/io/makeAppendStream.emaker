@@ -1,0 +1,23 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("call-pattern")
+
+def OutStream := any # <elib:eio.OutStream> # XXX should be DeepFrozen, isn't because 'vow' isn't
+def makeWriterStream := <import:org.cubik.cle.io.makeWriterStream>
+
+/** Makes OutStreams which synchronously append to FlexLists or other objects with append/1 and elementType/0 methods. A trivial but frequently occurring use of makeWriterStream. (For closure notification, check the resulting stream's terminates/0.) */
+def makeAppendStream implements DeepFrozen, ExitViaHere {
+  to run(target) :OutStream {
+    # XXX target could be nonnear on construction if we could defer target.elementType(). change makeWriterStream interface?
+    return makeWriterStream(List[target.valueType()], E.call, def listWriter {
+      to write(chunk) { target.append(chunk) }
+      to flush() {}
+      to close() {}
+      to fail(_) {}
+    })
+  }
+}
+

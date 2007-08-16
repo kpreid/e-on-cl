@@ -1,0 +1,51 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+makeAppendStream takes a FlexList or other object providing valueType/0 and append/1 and produces an output stream appending to it.
+  
+  ? def makeAppendStream :DeepFrozen := <import:org.cubik.cle.io.makeAppendStream>
+  # value: <makeAppendStream>
+
+  ? def reporter {
+  >   to valueType() { println("valueType"); return int }
+  >   match msg { println(msg) }
+  > }
+  # value: <reporter>
+  
+  ? def s := makeAppendStream(reporter)
+  # stdout: valueType
+  #         
+  
+  # value: -><calling "call" facet>(<listWriter>, ...)
+
+XXX This print syntax reflects its implementation using makeWriterStream, and should be changed. XXX should we print the target list or not? (i.e. revealing existing contents)
+  
+  ? s.getChunkType()
+  # value: List[int]
+
+  ? s.reserve().resolve([10]); "return"
+  # stdout: ["append", [[10]]]
+  #         
+  
+  # value: "return"
+
+Delivery occurs synchronously with the resolve message.
+  
+Flushing does not notify the target.
+
+  ? s.flush()
+  
+Closure affects the stream, but does not notify the target.
+  
+  ? s.reserve().resolve(null)
+  
+  ? [s.reserve()]
+  # value: [null]
+
+  ? def s := makeAppendStream(reporter)
+  > s.reserve().resolve(Ref.broken("boing"))
+  > [s.reserve()]
+  # stdout: valueType
+  #         
+  
+  # value: [<ref broken by problem: boing>]
