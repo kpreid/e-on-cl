@@ -18,6 +18,11 @@ import
   ? eLoader["tools.collect.allOf"]
   # value: <allOf>
   
+  ? def ["tools.collect.allOf" => a, 
+  >      "elib.ref.makeProxy" => m] | _ := eLoader
+  > [a, m]
+  # value: [<allOf>, <makeProxy>]
+  
   ? <import> :DeepFrozen
   # value: <import:*>
   

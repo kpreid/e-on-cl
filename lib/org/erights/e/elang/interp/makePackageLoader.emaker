@@ -26,6 +26,11 @@ def makePackageLoader implements DeepFrozen, ExitViaHere {
       to get(name) {
         return loader[fqnPrefix + name]
       }
+      to fetch(name, absent) {
+        return loader.fetch(fqnPrefix + name, absent)
+      }
+      
+      to without(_) { return packageLoader } # XXX map-pattern support hack
     }
     
     return packageLoader
