@@ -54,6 +54,8 @@ def EIO implements DeepFrozen, ExitViaHere {
         # XXX doesn't work for Twines 
         match =="" { def [tw, sb] := makeTextWriter.makeBufferingPair(); [tw.write, sb.snapshot] }
         match ==[] { def l := [].diverge(); [l.append, l.snapshot] }
+        match ==null { return [] } # XXX should return according to chunk type
+        match t ? Ref.isBroken(t) { return t }
         # XXX support unknown chunk types
       }
       

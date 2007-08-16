@@ -103,4 +103,16 @@ EIO.takeRange
 
 XXX the above tests would be better written using pipes; they are not because there is a lost signal bug in the pipe implementation. I'm doing it this way so I can get this done before starting on the pipe bug. --kpreid 2007-06-07
 
+ Already-terminated stream
+ 
+  ? EIO.takeRange(1, 3, [].asStream())
+  # value: []
+  
+  ? EIO.takeRange(1, 3, "".asStream())
+  # value: []
+  XXX this is a flaw; the result should be "". The current stream interface provides no way to get an empty chunk from a closed stream. This should be fixed in the getChunkType -> getChunkMaker revision. -- kpreid 2007-08-16
+  
+  ? EIO.takeRange(1, 3, def failedInitiallyTest { to takeAtMost(_) { return Ref.broken("p") }})
+  # value: <ref broken by problem: p>
+ 
 XXX EIO.takeAll
