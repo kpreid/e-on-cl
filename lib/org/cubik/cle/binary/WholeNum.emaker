@@ -1,0 +1,38 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def dataBits := 7
+
+/** http://www.waterken.com/dev/Doc/code/#ExtensionNumber */
+# XXX is this the right name? should we call this ExtensionNumber instead?
+def WholeNum extends (int >= 0) implements DeepFrozen, ExitViaHere { # implements Binary
+  to writingTo(out) { # , schedule
+    # XXX consult stream's byte size
+    return def writeWholeNum(n :WholeNum) {
+      def count := n.bitLength().ceilDivide(dataBits)
+      out.reserve().resolve(__makeList.fromValuesOf(def wnIter {
+        to iterate(f) {
+          var i := count * dataBits
+          while ((i -= dataBits).atLeastZero()) {
+            f(null, ((n >> i) & (2**dataBits-1)) | i.isZero().pick(0, 2**dataBits))
+          }
+        }
+      })) 
+    }
+  }
+  to takingFrom(ins) {
+    # XXX consult stream's byte size
+    return def takeWholeNum() :WholeNum { # , schedule
+      # XXX this is O(n^2) in the size of the number; we could do better by buffering the 7-bytes and using an efficient "bignum-from-digit-array" primitive
+      var acc := 0
+      __loop(fn {
+        def [byte] := EIO.takeRange(1, 1, ins)
+        acc := (acc << dataBits) | (byte & (2**dataBits-1))
+        (byte & 2**dataBits).aboveZero() # continuation condition
+      })
+      return acc
+    }
+  }
+}

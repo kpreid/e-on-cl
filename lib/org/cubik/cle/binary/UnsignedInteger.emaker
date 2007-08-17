@@ -1,0 +1,41 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("one-method-object")
+
+def dataBits := 7
+
+def UnsignedInteger implements DeepFrozen, ExitViaHere {
+  to get(bitCount :(int >= 0)) {
+    return def UnsignedIntegerSpecific extends (0..!(2**bitCount)) implements DeepFrozen { # implements Binary
+      to writingTo(out) { # , schedule
+        def byteCount := bitCount // 8
+        def mask := (2**8-1)
+        # XXX consult stream's byte size
+        return def writer(n :UnsignedIntegerSpecific) {
+          out.reserve().resolve(__makeList.fromValuesOf(def wIter.iterate(f) {
+            var i := bitCount - 8
+            while (i >= 0) {
+              f(null, n >> i & mask)
+              i -= 8
+            }
+          }))
+        }
+      }
+      to takingFrom(ins) { # , schedule
+        def byteCount := bitCount // 8
+        # XXX consult stream's byte size
+        return def taker() :UnsignedIntegerSpecific {
+          def bytes := EIO.takeRange(byteCount, byteCount, ins)
+          # XXX this is O(n^2) in the size of the number; we could do better by using an efficient "bignum-from-digit-array" primitive
+          var acc := 0
+          for i => byte in bytes {
+            acc |= byte << (bitCount - (i+1)*8)
+          }
+          return acc
+        }
+      }
+    }
+  }
+}
