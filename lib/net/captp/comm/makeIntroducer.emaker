@@ -34,6 +34,19 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
       to isOnTheAir() { return false } # XXX stub
       to negotiable() { return ["BOGUS_PLACEHOLDER"] } # XXX stub
       
+      to __printOn(out :TextWriter) {
+        out.write("<Off the Air>")  # XXX stub
+      }
+    }
+    
+    def identityMgr {
+       # XXX stub
+       to __printOn(out :TextWriter) {
+         out.write("<identityMgr Off the Air>")  # XXX stub
+       }
+    }
+    
+    def <captp> {
       to get(uriBody :String) { return getSturdyRef(uriBody) }
       to sturdyFromURI(`$scheme:@uriBody`) { return getSturdyRef(uriBody) }
       
@@ -50,19 +63,8 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
           return [introducer, "get", sr._uriBody()]
         }
       }
-      
-      to __printOn(out :TextWriter) {
-        out.write("<Off the Air>")  # XXX stub
-      }
     }
     
-    def identityMgr {
-       # XXX stub
-       to __printOn(out :TextWriter) {
-         out.write("<identityMgr Off the Air>")  # XXX stub
-       }
-    }
-    
-    return [introducer, identityMgr]
+    return [introducer, identityMgr, <captp>]
   }
 }

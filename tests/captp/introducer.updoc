@@ -7,8 +7,8 @@
   ? def makeIntroducer :DeepFrozen := <import:net.captp.comm.makeIntroducer>
   # value: <makeIntroducer>
   
-  ? def [introducer, identityMgr] := makeIntroducer.makePair([].asMap(), def fakeEntropy {}, def fakeTimer {})
-  # value: [<Off the Air>, <identityMgr Off the Air>]
+  ? def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), def fakeEntropy {}, def fakeTimer {})
+  # value: [<Off the Air>, <identityMgr Off the Air>, <captp__uriGetter>]
 
 Get/information operations, off the air:
   
@@ -33,26 +33,26 @@ Get/information operations, off the air:
 
 SturdyRef operations work even when off the air, except for the ref's getRcvr:
 
-  ? def sr := introducer.sturdyFromURI("captp://*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd")
+  ? def sr := <captp>.sturdyFromURI("captp://*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd")
   # value: <sturdyRef>
   
   ? sr.getRcvr()
   # problem: introducer not yet identified
   
-  ? sr == introducer["//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"]
+  ? sr == <captp>["//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"]
   # value: true
   
-  ? introducer.sturdyToURI(sr)
+  ? <captp>.sturdyToURI(sr)
   # value: "captp://*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"
   
-  ? introducer.optUnget(sr)
+  ? <captp>.optUnget(sr)
   # value: "//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"
   
-  ? introducer.optUncall(sr)
+  ? <captp>.optUncall(sr)
   # value: [<Off the Air>, "get", "//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"]
   
-  ? introducer.optUnget("foo")
-  ? introducer.optUncall("foo")
+  ? <captp>.optUnget("foo")
+  ? <captp>.optUncall("foo")
   
   
 
