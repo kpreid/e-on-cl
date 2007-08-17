@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
-def VatID := <import:net.captp.VatID>
+def VatID := <import:net.captp.protocol.VatID>
 def makeVine := <import:net.captp.tables.makeVine>
 def Vine := makeVine.asType()
 def Throwable := <type:java.lang.Throwable>

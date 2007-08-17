@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def VatID := <import:net.captp.VatID>
+def VatID := <import:net.captp.protocol.VatID>
 
 /**
  * Each product of this maker represents a presence of the pervasive LocatorUnum service.
