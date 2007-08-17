@@ -73,6 +73,23 @@ Data-E setup:
   >    def makeTGBuilder() { return deSubgraphKit.makeBuilder(scope) }]
   > }; null
 
+Mock other-connections-of-this-comm-system for 3-vat introductions:
+
+  ? def hub {
+  >   to get(searchPath, vatID) {
+  >     println(`hub.get($searchPath, ${E.toQuote(vatID)})`)
+  >     return def otherVat {
+  >       to nonceLocator() {
+  >         return def otherNonceLocator {
+  >           match msg { println(`<nonce locator ref for ${E.toQuote(vatID)}>.$msg`); `${msg[0]} result` }
+  >         }
+  >       }
+  >       match msg { println(`<other vat ${E.toQuote(vatID)}>.$msg`) }
+  >     }
+  >   }
+  >   match msg { println(`hub.$msg`) }
+  > }; null
+
 To make the tests' use of indexes and swiss numbers independent of each other, we set up a new connection repeatedly using this function.
 
   > def makeTestConnection() {
@@ -96,7 +113,10 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >     }},
   >     swissTable,
   >     locatorUnumLocal,
-  >     pseudoWhenGarbage)
+  >     pseudoWhenGarbage,
+  >     hub,
+  >     ["tRemoteSearchPath"],
+  >     "tRemoteVatID")
 
 buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
 
@@ -525,7 +545,28 @@ An ImportDesc cannot have a negative index (receiver's questions table) because 
 
 --- Incoming Promise3Desc ---
 
-XXX
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+
+  ? def swiss :int := swissTable.getNewSwiss(def f(x) { println(x); Ref.whenResolved(x, println) }); null
+
+  ? receiver.Deliver(-1, buildIn(descs.Incoming(0)), 0, "lookupSwiss", buildIn([swiss, null]))
+
+  ? receiver.DeliverOnly(-1, "run", buildIn([
+  >   descs.Promise3(["a"], 
+  >   "b",
+  >   3241570689,
+  >   descs.NewFar(1, 39248071832))]))
+  # stdout: hub.get(["a"], "b")
+  #         
+  
+  # stdout: <Promise>
+  #
+  
+  ?
+  # stdout: <nonce locator ref for "b">.["acceptFrom", [["tRemoteSearchPath"], "tRemoteVatID", 3241570689, <vine>]]
+  #         acceptFrom result
+  #         
 
 --- Incoming Far3Desc ---
 

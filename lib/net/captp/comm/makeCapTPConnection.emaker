@@ -27,6 +27,7 @@ def SwissNumber := int
 def SwissHash := int
 def Nonce := int
 def OneArgFunc := <elib:util.OneArgFunc>
+def Vine := any # should be rcvr (DeepFrozen missing)
 
 def DESCS_EXIT := "CapTP_1_descs"
 
@@ -38,12 +39,13 @@ def makeNonceLocator := <import:net.captp.comm.makeNonceLocator>
 def makeAnswersTable := <import:net.captp.tables.makeAnswersTable>
 def makeExportsTable := <import:net.captp.tables.makeExportsTable>
 def makeProxiesTable := <import:net.captp.tables.makeProxiesTable>
+def makeVine := <import:net.captp.tables.makeVine>
 
 def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
   # XXX this should be a map
-  to run(var outgoingReceiver, swissTable, locatorUnum, whenGarbage) {
+  to run(var outgoingReceiver, swissTable, locatorUnum, whenGarbage, hub, remoteSearchPath, remoteVatID) {
     def nonceLocator := makeNonceLocator(null,
                                          null,
                                          "fake-id-ctc",
@@ -306,6 +308,15 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to Incoming(incomingPos :IncomingPos) {
         requireLive()
         return lookupIncoming(incomingPos)
+      }
+      
+      to Promise3(searchPath :List[String],
+                  hostID     :VatID,
+                  nonce      :Nonce,
+                  vine       :Vine) {
+        # XXX how does this succeed in waiting long enough?
+        return hub[searchPath, hostID] <- nonceLocator() \
+                 <- acceptFrom(remoteSearchPath, remoteVatID, nonce, makeVine(vine))
       }
     }
     
