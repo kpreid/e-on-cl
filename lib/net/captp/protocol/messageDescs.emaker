@@ -1,0 +1,25 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def messageDescs implements DeepFrozen, ExitViaHere {
+  to get([=> AnswerPos,
+          => ExportPos,
+          => MsgCount,
+          => MsgName,
+          => Obj,
+          => WireDelta,
+          => IncomingPos] | _) {
+    return [
+      ["DeliverOnly", 8,  [IncomingPos, MsgName, Obj]],
+      ["Deliver",     13, [AnswerPos, Obj, IncomingPos, MsgName, Obj]],
+      ["GCExport",    10, [ExportPos, WireDelta]],
+      ["GCAnswer",    11, [AnswerPos]],
+      ["Shutdown",    12, [MsgCount]],
+      #["Terminated", _,  [Obj]],
+      #["Wormhole",   _,  [Data, VatID, VatID]]
+    ]
+  }
+}

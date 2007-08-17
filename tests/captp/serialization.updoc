@@ -1,0 +1,118 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  ? pragma.enable("accumulator")
+  
+  ? def makeCapTPSerializer := <import:net.captp.comm.makeCapTPSerializer>
+  # value: <makeCapTPSerializer>
+
+  ? def makeCapTPUnserializer := <import:net.captp.comm.makeCapTPUnserializer>
+  # value: <makeCapTPUnserializer>
+
+  ? def deSubgraphKit := <elib:serial.deSubgraphKit>
+  > def rc(value) { return fn builder { deSubgraphKit.recognize(value, builder) } }
+  # value: <rc>
+
+A CapTPSerializer operates on an input stream supplying output streams, one per message.
+
+A CapTPUnserializer provides such a stream and delivers the unserialized message to the provided recipient.
+
+  ? def targetReceiver {
+  >   match [verb, args] {
+  >     println(`Decoded: ${[verb, accum [] for arg in args { _.with(if (arg =~ c :any[int, String]) { c } else { arg(deSubgraphKit.makeBuilder()) }) }]}`)
+  >   }
+  > }; null
+
+  ? def unserStream := makeCapTPUnserializer(targetReceiver)
+  # value: <capTPUnserializerInput>
+
+  ? def makeAppendStream := <import:org.cubik.cle.io.makeAppendStream>
+  > var i := 0
+  > def messageStreamSupply {
+  >   to getChunkType() { return List }
+  >   to close() {}
+  >   to fail(_) {}
+  >   to flush() {}
+  >   to takeAtMost(n) {
+  >     if (n.isZero()) { return [] }
+  >     def buffer := [].diverge(int)
+  >     def id := i += 1
+  >     def s := makeAppendStream(buffer)
+  >     Ref.whenResolvedOnly(s.terminates(), fn t {
+  >       if (Ref.isBroken(t)) {
+  >         println(`Message #$id broken: ${Ref.optProblem(t)}`)
+  >       } else {
+  >         println(`Message #$id: ${buffer.snapshot()}`)
+  >         def s := unserStream.takeAtMost(1) <- get(0)
+  >         s <- reserve() <- resolve(buffer.snapshot())
+  >         s <- reserve() <- resolve(null)
+  >       }
+  >     })
+  >     return [s]
+  >   }
+  > }
+  # value: <messageStreamSupply>
+  
+  ? def receiver := makeCapTPSerializer(messageStreamSupply)
+  # value: <capTPSerializer>
+  
+The message format is one opcode octet followed by the concatenated encodings of the arguments.
+  
+  ? receiver.GCAnswer(-2)
+  ?
+  # stdout: Message #1: [11, 255, 255, 255, 254]
+  #         
+  
+  ?
+  ?
+  # stdout: Decoded: ["GCAnswer", [-2]]
+  #         
+  
+  ? receiver.GCExport(1, 2)
+  ?
+  # stdout: Message #2: [10, 0, 0, 0, 1, 2]
+  #         
+  
+  ?
+  ?
+  # stdout: Decoded: ["GCExport", [1, 2]]
+  #         
+  
+  ? receiver.DeliverOnly(1, "run", rc([54]))
+  ? 
+  # stdout: Message #3: [8, 0, 0, 0, 1, 0, 3, 114, 117, 110, 11, 7, 0, 10, 95, 95, 109, 97, 107, 101, 76, 105, 115, 116, 11, 2, 54, 12, 3, 9, 0, 3, 114, 117, 110, 1, 12, 1, 1]
+  #         
+  
+  ?
+  ?
+  # stdout: Decoded: ["DeliverOnly", [1, "run", [54]]]
+  #         
+  
+  [0, 3, 114, 117, 110] is "run".
+[11, 7, 0, 10, 95, 95, 109, 97, 107, 101, 76, 105, 115, 116, 11, 2, 54, 12, 3, 9, 0, 3, 114, 117, 110, 1, 12, 1, 1] is the unsimplified deSubgraphKit->deBytecodeKit representation of [54].
+
+  ? receiver.Deliver(-1, rc(111), 3, "run", rc(222))
+  ? 
+  # stdout: Message #4: [13, 255, 255, 255, 255, 11, 2, 111, 12, 1, 1, 0, 0, 0, 3, 0, 3, 114, 117, 110, 11, 2, 129, 94, 12, 1, 1]
+  #         
+  
+  ?
+  ?
+  # stdout: Decoded: ["Deliver", [-1, 111, 3, "run", 222]]
+  #         
+
+[11, 2, 111, 12, 1, 1] is the representation of 111.
+[11, 2, 129, 94, 12, 1, 1] is the representation of 222.
+  
+  ? receiver.Shutdown(0x0102030405060708)
+  ? 
+  # stdout: Message #5: [12, 1, 2, 3, 4, 5, 6, 7, 8]
+  #         
+  
+  ?
+  ?
+  # stdout: Decoded: ["Shutdown", [72623859790382856]]
+  #         
+  
+XXX closure (recognize Terminated?)

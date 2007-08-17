@@ -1,0 +1,46 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("accumulator")
+
+def messageDescs := <import:net.captp.protocol.messageDescs>
+def makeAppendStream := <import:org.cubik.cle.io.makeAppendStream>
+def typeEncodings := <import:net.captp.protocol.paramTypes>[<import:org.cubik.cle.binary.*>]
+def [=> OpCode] | _ := typeEncodings
+
+# XXX parser bug: shouldn't need line continuation here
+def msgDecoders := accum [].asMap() for [verb, opCode, decoders] \
+                                        in messageDescs[typeEncodings] {
+  _.with(opCode, def decodeMsg(ins, rec) implements DeepFrozen {
+    E.send(rec, verb, accum [] for i => decoder in decoders { _.with(decoder.takingFrom(ins)()) })
+  })
+}
+
+def makeCapTPUnserializer(receiver) implements ExitViaHere, DeepFrozen {
+  # XXX this should not make a stream available until the previous one is closed -- potential ordering problem
+  return def capTPUnserializerInput {
+    to getChunkType() { return List }
+    to close() {}
+    to fail(_) {}
+    to flush() {}
+    to takeAtMost(n) {
+      if (n.isZero()) { return [] }
+      def buffer := [].diverge(0..!2**8)
+      def s := makeAppendStream(buffer)
+      # XXX could skip the buffer and use a pipe instead, except that the decoder is not prepared to deal with non-immediate availability
+      Ref.whenResolvedOnly(s.terminates(), fn t {
+        if (Ref.isBroken(t)) {
+          traceln(`CapTP unserializer for $receiver discarding broken message of length ${buffer.size()} (${Ref.optProblem(t)})`)
+        } else {
+          def ds := buffer.snapshot().asStream()
+          def opcode := OpCode.takingFrom(ds)()
+          def handler := msgDecoders.fetch(opcode, fn{throw(`Unrecognized CapTP opcode: $opcode`)})
+          handler(ds, receiver)
+        }
+      })
+      return [s]
+    }
+  }
+}

@@ -1,0 +1,36 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("accumulator")
+
+def messageDescs := <import:net.captp.protocol.messageDescs>
+def typeEncodings := <import:net.captp.protocol.paramTypes>[<import:org.cubik.cle.binary.*>]
+def [=> OpCode] | _ := typeEncodings
+
+# XXX parser bug: shouldn't need line continuation here
+def argTable2 := accum [].asMap() for [verb, opCode, encoders] \
+                                    in messageDescs[typeEncodings] {
+  _.with(verb, def encodeMsg(out, args) implements DeepFrozen {
+    require(args.size() == encoders.size())
+    OpCode.writingTo(out)(opCode)
+    for i => encoder in encoders { encoder.writingTo(out)(args[i]) }
+  })
+}
+
+def makeCapTPSerializer(messageStreams) implements ExitViaHere, DeepFrozen {
+ 
+  return def capTPSerializer {
+    match [verb, args] {
+      def encoder := argTable2[verb]
+      def [s] := messageStreams.takeAtMost(1)
+      try {
+        encoder(s, args)
+      } finally {
+        s <- reserve() <- resolve(null)
+      }
+      null
+    }
+  }
+}

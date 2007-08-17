@@ -1,0 +1,22 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def paramTypes implements DeepFrozen, ExitViaHere {
+  to get([=> SignedInteger,
+          => UTF8StringWithLength16,
+          => DataEBuild] | _) {
+    return [
+      "OpCode"      => SignedInteger[8],
+      "IncomingPos" => SignedInteger[32],
+      "AnswerPos"   => SignedInteger[32],
+      "ExportPos"   => SignedInteger[32],
+      "MsgName"     => UTF8StringWithLength16,
+      "MsgCount"    => SignedInteger[64],
+      "WireDelta"   => SignedInteger[8],
+      "Obj"         => DataEBuild,
+    ]
+  }
+}
