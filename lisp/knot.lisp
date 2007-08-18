@@ -740,7 +740,7 @@
 
           ; --- utility: miscellaneous ---
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
-          ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any { return x }"))
+          ("&__identityFunc"    ,(typical-lazy "pragma.enable(\"function-implements\"); def identityFunc(x) :any implements DeepFrozen { return x }"))
           
           ; --- XXX describe this category ---
           ;; XXX remove this special and use a parameter instead

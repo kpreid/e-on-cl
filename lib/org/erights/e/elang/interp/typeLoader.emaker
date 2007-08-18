@@ -2,8 +2,9 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
+pragma.enable("function-implements")
 
-def insertNamePrefix(fqn, insertion) {
+def insertNamePrefix(fqn, insertion) implements DeepFrozen {
   def lastDotPos := fqn.lastIndexOf1('.')
   return \
     if (lastDotPos == -1) {
@@ -15,7 +16,7 @@ def insertNamePrefix(fqn, insertion) {
 }
 
 /** Compatibility. <type:a.b.C> => <import:a.b.type.C> OR <import:a.b.makeC>.asType(), whichever exists */
-def typeLoader implements ExitViaHere { # XXX implements DeepFrozen once import__uriGetter is DeepFrozen
+def typeLoader implements DeepFrozen, ExitViaHere {
   to __printOn(out :TextWriter) {
     out.print("<type:*>")
   }

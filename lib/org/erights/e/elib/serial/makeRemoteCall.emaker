@@ -6,6 +6,6 @@ pragma.syntax("0.9")
 /** Currently, this exists only to make serial.makeUncaller import successfully.
   *
   * XXX is this in JavaE a remnant of JOSS serialization or is it useful? */
-def makeRemoteCall implements ExitViaHere {
+def makeRemoteCall implements DeepFrozen, ExitViaHere {
   to optUncall(specimen) {}
 }

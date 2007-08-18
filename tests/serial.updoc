@@ -10,7 +10,7 @@ Check for type optUncall, which is wanted by the default uncaller list
 
 Coarse check
 
-  ? def deSubgraphKit := <elib:serial.deSubgraphKit>
+  ? def deSubgraphKit :DeepFrozen := <elib:serial.deSubgraphKit>
   # value: <deSubgraphKit>
   
   ? def recognizer := deSubgraphKit.getDefaultRecognizer()

@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def makeURIKit implements ExitViaHere {
+def makeURIKit implements DeepFrozen, ExitViaHere {
   to __printOn(out :TextWriter) {
     out.print("<import:org.quasiliteral.syntax.makeURIKit>")
   }

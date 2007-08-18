@@ -45,7 +45,7 @@ The second argument to makeProxy is the resolution of a remote promise, or the f
   # value: [false, false, true, true, true, true, null]
 
   ? def remoteKey := __equalizer.makeTraversalKey(remote)
-  # value: <key:<Far ref>>
+  # value: <a traversal key>
 
 -- Send on Far ref
 

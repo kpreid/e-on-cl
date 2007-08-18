@@ -10,7 +10,7 @@ pragma.syntax("0.8")
 def makeRemoteCall := <elib:serial.makeRemoteCall>
 def Uncaller := <type:org.erights.e.elib.serial.Uncaller>
 
-def minimalUncaller implements Uncaller {
+def minimalUncaller implements DeepFrozen, Uncaller {
     to optUncall(obj) :nullOk[__Portrayal] {
         if (Ref.isNear(obj)) {
             obj.__optUncall()

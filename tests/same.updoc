@@ -104,10 +104,10 @@ TraversalKey
   > def makeTraversalKey := __equalizer.makeTraversalKey; null
   
   ? def k83 := makeTraversalKey(83)
-  # value: <key:83>
+  # value: <a traversal key>
   
   ? def k84 := makeTraversalKey(84)
-  # value: <key:84>
+  # value: <a traversal key>
   
   ? k84 == k84
   # value: true
@@ -139,13 +139,13 @@ Checking that TKs respect differing fringe positions. There was a bug where TK s
   # value: <Resolver>
 
   ? def [ka1, kb1] := [makeTraversalKey([1, p]), makeTraversalKey([p, 1])]
-  # value: [<key:[1, <Promise>]>, <key:[<Promise>, 1]>]
+  # value: [<a traversal key>, <a traversal key>]
 
   ? def [ka2, kb2] := [makeTraversalKey([p, p, 1]), makeTraversalKey([p, 1, p])]
-  # value: [<key:[<Promise>, <Promise>, 1]>, <key:[<Promise>, 1, <Promise>]>]
+  # value: [<a traversal key>, <a traversal key>]
 
   ? def [ka3, kb3] := [makeTraversalKey([p, 1, p]), makeTraversalKey([1, p, p])]
-  # value: [<key:[<Promise>, 1, <Promise>]>, <key:[1, <Promise>, <Promise>]>]
+  # value: [<a traversal key>, <a traversal key>]
 
   ? [ka1 == kb1, ka2 == kb2, ka3 == kb3]
   # value: [false, false, false]

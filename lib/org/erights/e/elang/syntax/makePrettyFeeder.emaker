@@ -3,6 +3,6 @@
 
 pragma.syntax("0.9")
 
-def makePrettyFeeder {
+def makePrettyFeeder implements DeepFrozen, ExitViaHere {
   # XXX unimplemented
 }

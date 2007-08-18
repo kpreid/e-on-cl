@@ -3,9 +3,10 @@
 
 pragma.syntax("0.9")
 
+def deBytecodeKit := <elib:serial.deBytecodeKit>
+
 def DataEBuild extends any implements DeepFrozen, ExitViaHere { # implements Binary
   to writingTo(out) { # , schedule
-    def deBytecodeKit := <elib:serial.deBytecodeKit> # XXX not DeepFrozen
     return def writer(value :DataEBuild) {
       var done := false
       try {
@@ -27,7 +28,6 @@ def DataEBuild extends any implements DeepFrozen, ExitViaHere { # implements Bin
     }
   }
   to takingFrom(ins) { # , schedule
-    def deBytecodeKit := <elib:serial.deBytecodeKit> # XXX not DeepFrozen
     return def taker() :DataEBuild {
       def storage := deBytecodeKit.recognizeStream(ins, deBytecodeKit.makeBuilder())
       return fn b { deBytecodeKit.recognize(storage, b) }

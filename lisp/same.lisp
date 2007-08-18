@@ -298,11 +298,13 @@
   tk-snap-hash)
 
 (def-vtable traversal-key
+  (audited-by-magic-verb (this auditor)
+    (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this (tw +the-text-writer-guard+))
-    (e. tw |print|
-      "<key:"
-      (tk-wrapped this)
-      ">")))
+    "Does not print the reference behind this traversal key so that:
+  * The key may be DeepFrozen trivially.
+  * The key does not convey any authority to its referent."
+    (e. tw |write| "<a traversal key>")))
 
 (defmethod print-object ((tk traversal-key) stream)
   "solely for debugging"

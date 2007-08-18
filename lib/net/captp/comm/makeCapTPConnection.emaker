@@ -35,6 +35,9 @@ def makeProxy := <elib:ref.makeProxy>
 def makeBrand := <elib:sealing.makeBrand>
 def Throwable := <type:java.lang.Throwable>
 
+def makeCycleBreaker := <elib:tables.makeCycleBreaker>
+def deSubgraphKit := <elib:serial.deSubgraphKit>
+
 def makeNonceLocator := <import:net.captp.comm.makeNonceLocator>
 def makeAnswersTable := <import:net.captp.tables.makeAnswersTable>
 def makeExportsTable := <import:net.captp.tables.makeExportsTable>
@@ -71,9 +74,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       makeBrand("CapTP far ref's remote incomingPos")
     def remoteIncomingPosBrand := remoteIncomingPosSealer.getBrand()
 
-    def deSubgraphKit := <elib:serial.deSubgraphKit> # XXX unnecessarily not DeepFrozen
-    def makeCycleBreaker := <elib:tables.makeCycleBreaker> # ditto
-    def once := <import:org.erights.e.facet.once> # ditto
+    def once := <import:org.erights.e.facet.once> # DeepFrozen missing
     
     def scopeWithoutDescs := {
       def s := deSubgraphKit.getDefaultScope().diverge()
