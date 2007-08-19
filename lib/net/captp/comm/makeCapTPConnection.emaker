@@ -134,7 +134,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     }
     
     /** Uncalls promises, assuming that they are either local or from a foreign comm system; that is, they are not subject to 3-vat introduction. */
-    def localPromiseUncaller {
+    def genericPromiseUncaller {
       to optUncall(r) {
         if (Ref.isEventual(r) && !Ref.isResolved(r)) {
           def rdrSwissBase := swissTable.nextSwiss()
@@ -150,11 +150,23 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
+    /** Uncalls promises that are part of another CapTP connection of this hub. */
+    def otherConnPromiseUncaller {
+      to optUncall(r) {
+        if (Ref.isEventual(r) &&
+            !Ref.isResolved(r) &&
+            hub.amplifyFor3Desc(r) =~ descArgs :Tuple[List[String], String, int, any]) {
+          return [descMakerStandin, "Promise3", descArgs]
+        }
+      }
+    }
+    
     # XXX document exit table used
     def encRecognizer := deSubgraphKit.makeRecognizer(
       [goingHomeUncaller,
        nonceLocatorUncaller,
-       localPromiseUncaller,
+       otherConnPromiseUncaller,
+       genericPromiseUncaller,
        pbcUncaller,
        <import>,
        proxyUncaller],

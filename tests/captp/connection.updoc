@@ -9,6 +9,7 @@
   ? def makeCycleBreaker := <elib:tables.makeCycleBreaker>; null
   ? def Throwable := <type:java.lang.Throwable>; null
   ? def once := <import:org.erights.e.facet.once>; null
+  ? def makeVine := <import:net.captp.tables.makeVine>; null
 
 In this file, we test the implementation of the CapTP operations and associated state.
 
@@ -75,7 +76,16 @@ Data-E setup:
 
 Mock other-connections-of-this-comm-system for 3-vat introductions:
 
+  ? def [otherConnProxySealer, otherConnProxyUnsealer] := <elib:sealing.makeBrand>("otherConnProxy")
+  > def otherConnProxyBrand := otherConnProxyUnsealer.getBrand()
+  > null
+
   ? def hub {
+  >   to amplifyFor3Desc(specimen) {
+  >     if (otherConnProxyUnsealer.amplify(specimen) =~ [descArgs]) {
+  >       return descArgs
+  >     }
+  >   }
   >   to get(searchPath, vatID) {
   >     println(`hub.get($searchPath, ${E.toQuote(vatID)})`)
   >     return def otherVat {
@@ -755,7 +765,30 @@ IncomingDesc for an answer
   #         
 
 --- Outgoing Promise3Desc ---
-XXX
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  
+  ? def otherConnPromise := <elib:ref.makeProxy>(
+  >   def handler {
+  >     to handleOptSealedDispatch(brand) {
+  >       if (brand == otherConnProxyBrand) {
+  >         def nonce := 893921618639987
+  >         return otherConnProxySealer.seal([["otherSP"], "otherID", nonce, makeVine(otherConnPromise)])
+  >       }
+  >     }
+  >     to handleSendOnly(_, _) {}
+  >     to handleSend(_, _) {}
+  >   },
+  >   Ref.promise()[0],
+  >   false)
+  # value: <Promise>
+  
+  ? E.sendOnly(remoteNonceLocator, "introduction", [otherConnPromise])
+  ?
+  # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(1, 382064925828890872342377433413917253333972024416))]]]
+  #         
+
 --- Outgoing Far3Desc ---
 XXX
 
