@@ -81,11 +81,13 @@ Mock other-connections-of-this-comm-system for 3-vat introductions:
   > null
 
   ? def hub {
-  >   to amplifyFor3Desc(specimen) {
-  >     if (otherConnProxyUnsealer.amplify(specimen) =~ [descArgs]) {
-  >       return descArgs
+  >   to amplifyFor3Desc(specimen, recipID) {
+  >     if (otherConnProxyUnsealer.amplify(specimen) =~ [wantsRecip]) {
+  >       return wantsRecip(recipID)
   >     }
   >   }
+  >   to get3DescBrand() { return otherConnProxyBrand }
+  >   to get3DescSealer() { return otherConnProxySealer }
   >   to get(searchPath, vatID) {
   >     println(`hub.get($searchPath, ${E.toQuote(vatID)})`)
   >     return def otherVat {
@@ -774,7 +776,7 @@ IncomingDesc for an answer
   >     to handleOptSealedDispatch(brand) {
   >       if (brand == otherConnProxyBrand) {
   >         def nonce := 893921618639987
-  >         return otherConnProxySealer.seal([["otherSP"], "otherID", nonce, makeVine(otherConnPromise)])
+  >         return otherConnProxySealer.seal(fn recipID {[["otherSP"], "otherID", nonce, makeVine(otherConnPromise)]})
   >       }
   >     }
   >     to handleSendOnly(_, _) {}
@@ -828,6 +830,28 @@ XXX
 XXX write more serialization tests
 
 ------ Other ------
+
+--- Being Carol ---
+
+At the sending side in a 3-vat introduction, the proxy for the passed far ref must amplify to the data for a Promise3Desc or Far3Desc, so that other connections can pass it as such.
+
+This includes making an entry in the promise gift table[?] for the generated nonce.
+
+  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  
+  ? def eventualRef := remoteNonceLocator <- eventualForPassTest()
+  # value: <Promise>
+  ?
+  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "eventualForPassTest", []]]
+  #         
+
+  ? hub.amplifyFor3Desc(eventualRef, "recipID")
+  # value: [["tRemoteSearchPath"], "tRemoteVatID", 10000002, <vine>]
+  
+  ?
+  # stdout: ["Deliver", [-2, NewFarDesc(2, 47255196895205160731987244561159478631887357377), 0, "provideFor", [IncomingDesc(-1), "recipID", 10000002]]]
+  #         
 
 --- remoteNonceLocator ref ---
 

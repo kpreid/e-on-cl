@@ -155,7 +155,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to optUncall(r) {
         if (Ref.isEventual(r) &&
             !Ref.isResolved(r) &&
-            hub.amplifyFor3Desc(r) =~ descArgs :Tuple[List[String], String, int, any]) {
+            hub.amplifyFor3Desc(r, remoteVatID) \
+              =~ descArgs :Tuple[List[String], String, int, any]) {
           return [descMakerStandin, "Promise3", descArgs]
         }
       }
@@ -271,6 +272,16 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         to handleOptSealedDispatch(brand) {
           if (brand == remoteIncomingPosBrand) {
             return remoteIncomingPosSealer.seal(position)
+          } else if (brand == hub.get3DescBrand()) {
+            return hub.get3DescSealer().seal(fn recipID {
+              def nonce := swissTable.nextSwiss() # XXX use a long
+              # XXX we shouldn't have the authority to specify the path+vatID - it should be baked into our access to the hub
+              def farVine := remoteNonceLocator <- provideFor(
+                def incomingDescStub implements pbc {to __optUncall() {return [descMakerStandin, "Incoming", [position]]}},
+                recipID,
+                nonce)
+              [remoteSearchPath, remoteVatID, nonce, makeVine(farVine)]
+            })
           }
         }
         
