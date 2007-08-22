@@ -417,6 +417,22 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
     bind remoteNonceLocator := makeProxy(makeEventualHandler(0), remoteNonceLocatorResolutionSlot, true)
     
-    return [capTPReceiver, remoteNonceLocator]
+    /** Facet of this connection provided for the LocatorUnum etc. */
+    def outgoingConnection {
+      to __printOn(out :TextWriter) {
+        out.print("<CapTP outgoing to ", remoteVatID, ">")
+      }
+      to nonceLocator() { return remoteNonceLocator }
+    }
+    
+    # XXX review what the least authority is for this
+    /** Facet of this connection provided for its peer connections, to manage 3-vat introductions. */
+    def peerConnection {
+      to __printOn(out :TextWriter) {
+        out.print("<CapTP peer to ", remoteVatID, ">")
+      }
+    }
+    
+    return [capTPReceiver, outgoingConnection, peerConnection]
   }
 }

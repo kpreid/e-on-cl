@@ -54,12 +54,12 @@ This is a mechanism for tracing communication between the CapTPConnections.
   >   }
   > }
   > def traceReceiver(label, ref) {
-  >   return def wrapper match [v,a] {
+  >   return def wrapper { match [v,a] {
   >     stdout.print(label, " <- ", v)
   >     def traceArgs := accum [] for arg in a { _.with(if (arg =~ c :any[int, String]) { arg } else { arg(traceBuilderMaker()) }) }
   >     traceArgs.printOn("(", ", ", ")\n", stdout)
   >     E.call(ref, v, traceArgs)
-  >   }
+  >   }}
   > }
   > null
 
@@ -68,7 +68,7 @@ Now we can make the SwissTables and connections.
   ? def swissTableL := <import:net.captp.tables.makeSwissTable>(pseudoEntropy, makeFlexMap, makeFlexMap); null
   ? def swissTableR := <import:net.captp.tables.makeSwissTable>(pseudoEntropy, makeFlexMap, makeFlexMap); null
   
-  ? def [[receiverL, rnlL], [receiverR, rnlR]] := 
+  ? def [[receiverL, outL, _], [receiverR, outR, _]] := 
   >   [makeCapTPConnection(traceReceiver("Right", receiverR),
   >                        swissTableL,
   >                        def locatorUnumL {},
@@ -79,7 +79,7 @@ Now we can make the SwissTables and connections.
   >                        def locatorUnumR {},
   >                        pseudoWhenGarbage,
   >                        def hubR {}, [], "L")]
-  # value: [[<capTPReceiver>, <Far ref>], [<capTPReceiver>, <Far ref>]]
+  # value: [[<capTPReceiver>, <CapTP outgoing to R>, <CapTP peer to R>], [<capTPReceiver>, <CapTP outgoing to L>, <CapTP peer to L>]]
   
 --- 
 
@@ -95,7 +95,7 @@ Simple message with side effects and return value.
   ? swissTableL.lookupSwiss(swissL) == leftObj
   # value: true
 
-  ? interp.waitAtTop(def leftViaRight := rnlR <- lookupSwiss(swissL, null))
+  ? interp.waitAtTop(def leftViaRight := outR.nonceLocator() <- lookupSwiss(swissL, null))
   # stdout: Left <- Deliver(-1, NewFarDesc(1, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [10000001, null])
   #         Left <- DeliverOnly(-1, "__whenMoreResolved", [NewFarDesc(2, 47255196895205160731987244561159478631887357377)])
   #         Right <- DeliverOnly(1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])

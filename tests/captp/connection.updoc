@@ -74,6 +74,12 @@ Data-E setup:
   >    def makeTGBuilder() { return deSubgraphKit.makeBuilder(scope) }]
   > }; null
 
+buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
+
+  ? def buildIn(obj) {
+  >   return once(fn b { testGraphRecognizer.recognize(obj, b) })
+  > }; null
+
 Mock other-connections-of-this-comm-system for 3-vat introductions:
 
   ? def [otherConnProxySealer, otherConnProxyUnsealer] := <elib:sealing.makeBrand>("otherConnProxy")
@@ -118,7 +124,7 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >
   >   def swissTable := makeSwissTable(pseudoEntropy, makeFlexMap, makeFlexMap)
   >     
-  >   def [r, rnl] := makeCapTPConnection(
+  >   def [r, outgoingConnection, peerConnection] := makeCapTPConnection(
   >     def outgoing { match [v,args] { 
   >       # arg testing here is a trick to avoid writing knowledge of the CapTP arg types in
   >       println([v, accum [] for arg in args { _.with(if (arg =~ c :any[int, String, List]) { c } else { arg(makeTGBuilder()) }) }])
@@ -129,19 +135,13 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >     hub,
   >     ["tRemoteSearchPath"],
   >     "tRemoteVatID")
-
-buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
-
-  >   def buildIn(obj) {
-  >     return once(fn b { testGraphRecognizer.recognize(obj, b) })
-  >   }; null
-  >   return [swissTable, r, rnl, buildIn]
+  >   return [swissTable, r, outgoingConnection, peerConnection]
   > }; null
   
 --- Incoming DeliverOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 At this point, the only thing the remote side can possibly do is close the connection or talk to the NonceLocator, which is at the well-known position 0. We'll ask it for null, which has the well-known swiss number 0.
 
@@ -194,8 +194,8 @@ Missing recipient:
 
 --- Incoming DeliverOnlyOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 2-cycle delay on this test because the reactor invocation is itself a send.
 
@@ -234,12 +234,12 @@ Delivery to an import:
 
 --- Incoming GCExportOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 To test GCExportOp, we must first export something.
 
-  ? E.sendOnly(remoteNonceLocator, "exportTest", [def exported(x) {println(x)}])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "exportTest", [def exported(x) {println(x)}])
   ?
   # stdout: ["DeliverOnly", [0, "exportTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
@@ -259,15 +259,15 @@ wireDelta of 1 should delete the export.
 
 A reference is collected once the sum of wireDeltas in all received GCExport messages exceeds the number of times it is exported. Here's a multiple export:
 
-  ? E.sendOnly(remoteNonceLocator, "exportTest2a", [exported])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "exportTest2a", [exported])
   ?
   # stdout: ["DeliverOnly", [0, "exportTest2a", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
 (The NewFarDesc's index is the same because 1 is at the head of the exports table's free list, not because of any deliberate relationship.)
 
-  ? E.sendOnly(remoteNonceLocator, "exportTest2b", [exported])
-  > E.sendOnly(remoteNonceLocator, "exportTest2c", [exported])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "exportTest2b", [exported])
+  > E.sendOnly(outgoingConnection.nonceLocator(), "exportTest2c", [exported])
   ?
   # stdout: ["DeliverOnly", [0, "exportTest2b", [ImportDesc(1)]]]
   #         ["DeliverOnly", [0, "exportTest2c", [ImportDesc(1)]]]
@@ -289,8 +289,8 @@ Additional wireDelta of 2 should balance the three previous references.
 
 --- Incoming GCAnswerOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 Create an answer.
 
@@ -328,14 +328,14 @@ XXX do this (shut down connection iff no more messages than the specified count 
 
 --- Incoming TerminatedOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 There are several cases to check the behavior of:
 
 Imported far ref:
   
-  ? def outgoingFar := remoteNonceLocator <- getTerminatedTestRef1()
+  ? def outgoingFar := outgoingConnection.nonceLocator() <- getTerminatedTestRef1()
   # value: <Promise>
   
   ?
@@ -346,7 +346,7 @@ Imported far ref:
 
 Question (promise resulting from DeliverOp):
 
-  ? def outgoingQuestion := remoteNonceLocator <- getTerminatedTestRef2()
+  ? def outgoingQuestion := outgoingConnection.nonceLocator() <- getTerminatedTestRef2()
   # value: <Promise>
   
   ?
@@ -355,7 +355,7 @@ Question (promise resulting from DeliverOp):
   
 Imported remote promise:
 
-  ? def outgoingPromise := remoteNonceLocator <- getTerminatedTestRef3()
+  ? def outgoingPromise := outgoingConnection.nonceLocator() <- getTerminatedTestRef3()
   # value: <Promise>
 
   ?
@@ -366,7 +366,7 @@ Imported remote promise:
 
 Export, which should receive a __reactToLostClient:
 
-  ? E.sendOnly(remoteNonceLocator, "TerminatedExportTest", [
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "TerminatedExportTest", [
   >   def ttReactReceiver {to __reactToLostClient(p) { print(`rTLC expecter got $p`) }}])
   ?
   # stdout: ["DeliverOnly", [0, "TerminatedExportTest", [NewFarDesc(4, 412897248500657771667886264468852369692723684603)]]]
@@ -379,7 +379,7 @@ The termination:
 
 Consequences:
 
-  ? [outgoingFar, outgoingQuestion, outgoingPromise, remoteNonceLocator]
+  ? [outgoingFar, outgoingQuestion, outgoingPromise, outgoingConnection.nonceLocator()]
   # value: [<ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>, <ref broken by problem: foo>]
   
   ? Ref.optProblem(outgoingFar) == Ref.optProblem(outgoingQuestion)
@@ -425,8 +425,8 @@ XXX we don't have VatID processing yet
 
 --- Incoming NewFarDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
   ? receiver.DeliverOnly(0, "__whenMoreResolved", buildIn([descs.NewFar(1, 13904808385)]))
   ?
@@ -435,8 +435,8 @@ XXX we don't have VatID processing yet
 
 --- Incoming NewRemotePromiseDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 First we set up an incoming reference to an object to catch the remote promise.
 
@@ -511,14 +511,14 @@ Cleaning up:
 
 --- Incoming ImportDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 Setting up a proxy for testing:
 
   ? def swiss :int := swissTable.getNewSwiss(def _ {
   >   to compare(x, y) { println(x == y) }
-  >   to compareNL(x) { println(x == remoteNonceLocator) }
+  >   to compareNL(x) { println(x == outgoingConnection.nonceLocator()) }
   > }); null
   > receiver.Deliver(-1, buildIn(descs.NewFar(1, 2384978932)), 0, "lookupSwiss", buildIn([swiss, null]))
   > receiver.GCAnswer(-1)
@@ -544,8 +544,8 @@ An ImportDesc cannot have a negative index (receiver's questions table) because 
 
 --- Incoming IncomingDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
   ? def swiss :int := swissTable.getNewSwiss(def f(x) { println(x == f) }); null
 
@@ -557,8 +557,8 @@ An ImportDesc cannot have a negative index (receiver's questions table) because 
 
 --- Incoming Promise3Desc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
   ? def swiss :int := swissTable.getNewSwiss(def f(x) { println(x); Ref.whenResolved(x, println) }); null
 
@@ -591,10 +591,10 @@ XXX write this
 
 --- Outgoing DeliverOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
-  ? def outgoingFar := remoteNonceLocator <- lookupSwiss(12345, null)
+  ? def outgoingFar := outgoingConnection.nonceLocator() <- lookupSwiss(12345, null)
   # value: <Promise>
   ?
   # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [12345, null]]]
@@ -619,8 +619,8 @@ Here's a normal message to that Far ref.
 
 --- Outgoing GCExportOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 GCExportOp is sent when a proxy for an import-table entry has gone away; so to test it, we simulate an arriving import which is discarded.
 
@@ -644,13 +644,13 @@ Note that the sender of GCExportOp does not know whether the index was actually 
 
 --- Outgoing GCAnswerOp ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 We create a remote promise for an answer and tell the connection that it has been GCed.
 
   ? clearFinalizers()
-  > E.send(remoteNonceLocator, "lookupSwiss", [93478934, null])
+  > E.send(outgoingConnection.nonceLocator(), "lookupSwiss", [93478934, null])
   > null
   ?
   # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [93478934, null]]]
@@ -663,7 +663,7 @@ We create a remote promise for an answer and tell the connection that it has bee
 
 After GC, the question table entry is free and will be reused.
 
-  ? E.send(remoteNonceLocator, "lookupSwiss", [23948931413532, null])
+  ? E.send(outgoingConnection.nonceLocator(), "lookupSwiss", [23948931413532, null])
   > null
   ?
   # stdout: ["Deliver", [-1, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [23948931413532, null]]]
@@ -686,28 +686,28 @@ XXX write this
 
 --- Outgoing NewFarDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
-  ? E.sendOnly(remoteNonceLocator, "newFarDescTest", [def newSelfish {}])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "newFarDescTest", [def newSelfish {}])
   ?
   # stdout: ["DeliverOnly", [0, "newFarDescTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
 After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:
 
-  ? E.sendOnly(remoteNonceLocator, "sameFarTest", [newSelfish])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "sameFarTest", [newSelfish])
   ?
   # stdout: ["DeliverOnly", [0, "sameFarTest", [ImportDesc(1)]]]
   #         
 
 --- Outgoing NewRemotePromiseDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
   ? def exportedPromise
-  > E.sendOnly(remoteNonceLocator, "newRemotePromiseDescTest", [exportedPromise])
+  > E.sendOnly(outgoingConnection.nonceLocator(), "newRemotePromiseDescTest", [exportedPromise])
   ?
   # stdout: ["DeliverOnly", [0, "newRemotePromiseDescTest", [NewRemotePromiseDesc(1, -1, 10000001)]]]
   #         
@@ -731,45 +731,45 @@ See NewFarDesc above for testing of ordinary imports; this is the special NonceL
 
 --- Outgoing IncomingDesc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
 IncomingDesc for the nonce locator (magic index 0)
 
-  ? E.sendOnly(remoteNonceLocator, "incomingNonceLocatorTest", [remoteNonceLocator])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "incomingNonceLocatorTest", [outgoingConnection.nonceLocator()])
   ?
   # stdout: ["DeliverOnly", [0, "incomingNonceLocatorTest", [IncomingDesc(0)]]]
   #         
 
 IncomingDesc for an export
 
-  ? def outgoing := remoteNonceLocator <- willBeFar(); null
+  ? def outgoing := outgoingConnection.nonceLocator() <- willBeFar(); null
   ?
   # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "willBeFar", []]]
   #         
   ? receiver.DeliverOnly(1, "run", buildIn([descs.NewFar(1, 398427908325834)]))
 
-  ? E.sendOnly(remoteNonceLocator, "incomingFarTest", [outgoing])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "incomingFarTest", [outgoing])
   ?
   # stdout: ["DeliverOnly", [0, "incomingFarTest", [IncomingDesc(1)]]]
   #         
 
 IncomingDesc for an answer
 
-  ? def outgoing := remoteNonceLocator <- willBePromise(); null
+  ? def outgoing := outgoingConnection.nonceLocator() <- willBePromise(); null
   ?
   # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "willBePromise", []]]
   #         
 
-  ? E.sendOnly(remoteNonceLocator, "incomingAnswerTest", [outgoing])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "incomingAnswerTest", [outgoing])
   ?
   # stdout: ["DeliverOnly", [0, "incomingAnswerTest", [IncomingDesc(-2)]]]
   #         
 
 --- Outgoing Promise3Desc ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
   
   ? def otherConnPromise := <elib:ref.makeProxy>(
   >   def handler {
@@ -786,7 +786,7 @@ IncomingDesc for an answer
   >   false)
   # value: <Promise>
   
-  ? E.sendOnly(remoteNonceLocator, "introduction", [otherConnPromise])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "introduction", [otherConnPromise])
   ?
   # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(1, 382064925828890872342377433413917253333972024416))]]]
   #         
@@ -799,7 +799,7 @@ Until WormholeOp, Far refs are also sent using Promise3Desc.
   >   true)
   # value: <Far ref>
 
-  ? E.sendOnly(remoteNonceLocator, "introduction", [otherConnFar])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "introduction", [otherConnFar])
   ?
   # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(2, 1033912670282953026478972818820010722176128073325))]]]
   #         
@@ -809,17 +809,17 @@ XXX
 
 ------ Serialization ------
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
-  ? E.sendOnly(remoteNonceLocator, "setupIncoming", [println])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "setupIncoming", [println])
   ?
   # stdout: ["DeliverOnly", [0, "setupIncoming", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
 --- Disconnected ref ---
 
-  ? E.sendOnly(remoteNonceLocator, "s", [Ref.broken("b")])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "s", [Ref.broken("b")])
   ?
   # stdout: ["DeliverOnly", [0, "s", [<ref broken by problem: b>]]]
   #         
@@ -830,7 +830,7 @@ XXX
 
 --- LocatorUnum ---
 
-  ? E.sendOnly(remoteNonceLocator, "s", [locatorUnumLocal])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "s", [locatorUnumLocal])
   ?
   # stdout: ["DeliverOnly", [0, "s", [<locatorUnumRemote>]]]
   #         
@@ -850,10 +850,10 @@ At the sending side in a 3-vat introduction, the proxy for the passed far ref mu
 
 This includes making an entry in the promise gift table[?] for the generated nonce.
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
   
-  ? def eventualRef := remoteNonceLocator <- eventualForPassTest()
+  ? def eventualRef := outgoingConnection.nonceLocator() <- eventualForPassTest()
   # value: <Promise>
   ?
   # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "eventualForPassTest", []]]
@@ -866,12 +866,12 @@ This includes making an entry in the promise gift table[?] for the generated non
   # stdout: ["Deliver", [-2, NewFarDesc(2, 47255196895205160731987244561159478631887357377), 0, "provideFor", [IncomingDesc(-1), "recipID", 10000002]]]
   #         
 
---- remoteNonceLocator ref ---
+--- outgoingConnection.nonceLocator() ref ---
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
-  ? E.sendOnly(remoteNonceLocator, "foo", [])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "foo", [])
   ?
   # stdout: ["DeliverOnly", [0, "foo", []]]
   #         
@@ -880,8 +880,8 @@ This includes making an entry in the promise gift table[?] for the generated non
 
 This is prohibited because the timing and reoccurrence of unserialization operations affects the results and the state of the comm tables.
 
-  ? def [swissTable, receiver, remoteNonceLocator, buildIn] := makeTestConnection()
-  # value: [<swissTable>, <capTPReceiver>, <Far ref>, <buildIn>]
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
   ? def builder
   > receiver.DeliverOnly(0, "__getAllegedType", fn bind builder { testGraphRecognizer.recognize([], builder) })
