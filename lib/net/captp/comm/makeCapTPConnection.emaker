@@ -154,7 +154,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def otherConnPromiseUncaller {
       to optUncall(r) {
         if (Ref.isEventual(r) &&
-            !Ref.isResolved(r) &&
+            #!Ref.isResolved(r) &&  # -- until Far3Desc works
             hub.amplifyFor3Desc(r, remoteVatID) \
               =~ descArgs :Tuple[List[String], String, int, any]) {
           return [descMakerStandin, "Promise3", descArgs]

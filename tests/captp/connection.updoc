@@ -791,6 +791,19 @@ IncomingDesc for an answer
   # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(1, 382064925828890872342377433413917253333972024416))]]]
   #         
 
+Until WormholeOp, Far refs are also sent using Promise3Desc.
+
+  ? def otherConnFar := <elib:ref.makeProxy>(
+  >   handler,
+  >   Ref.promise()[0],
+  >   true)
+  # value: <Far ref>
+
+  ? E.sendOnly(remoteNonceLocator, "introduction", [otherConnFar])
+  ?
+  # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(2, 1033912670282953026478972818820010722176128073325))]]]
+  #         
+
 --- Outgoing Far3Desc ---
 XXX
 
