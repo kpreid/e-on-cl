@@ -50,7 +50,7 @@ def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
   # XXX this should be a map
-  to run(var outgoingReceiver, swissTable, locatorUnum, whenGarbage, hub, remoteSearchPath, remoteVatID) {
+  to run(var outgoingReceiver, swissTable, locatorUnum, whenGarbage, hub, localVatID, remoteSearchPath, remoteVatID) {
     def answers := makeAnswersTable()
     def exports := makeExportsTable()
     def imports := makeProxiesTable()
@@ -59,8 +59,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def nonceLocator := makeNonceLocator(
       def promiseGifts := makePromiseGiftTable(whenGarbage, nonceLocator),
       def nearGifts := makeNearGiftTable(whenGarbage),
-      "fake-id-ctc",
-      null,
+      localVatID,
+      hub,
       swissTable)
     
     def termination # resolved when connection is dead

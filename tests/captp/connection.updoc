@@ -85,6 +85,10 @@ Mock other-connections-of-this-comm-system for 3-vat introductions:
   ? def [otherConnProxySealer, otherConnProxyUnsealer] := <elib:sealing.makeBrand>("otherConnProxy")
   > def otherConnProxyBrand := otherConnProxyUnsealer.getBrand()
   > null
+  
+  ? def otherPromiseGiftTable := <import:net.captp.tables.makePromiseGiftTable>(pseudoWhenGarbage, def notNonceLocator {to ignore(_) {}})
+  > def otherNearGiftTable := <import:net.captp.tables.makeNearGiftTable>(pseudoWhenGarbage)
+  > null
 
   ? def hub {
   >   to amplifyFor3Desc(specimen, recipID) {
@@ -102,6 +106,8 @@ Mock other-connections-of-this-comm-system for 3-vat introductions:
   >           match msg { println(`<nonce locator ref for ${E.toQuote(vatID)}>.$msg`); `${msg[0]} result` }
   >         }
   >       }
+  >       to getNearGiftTable() { return otherNearGiftTable }
+  >       to getPromiseGiftTable() { return otherPromiseGiftTable }
   >       match msg { println(`<other vat ${E.toQuote(vatID)}>.$msg`) }
   >     }
   >   }
@@ -133,6 +139,7 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >     locatorUnumLocal,
   >     pseudoWhenGarbage,
   >     hub,
+  >     "tLocalVatID",
   >     ["tRemoteSearchPath"],
   >     "tRemoteVatID")
   >   return [swissTable, r, outgoingConnection, peerConnection]
@@ -876,7 +883,7 @@ This includes making an entry in the promise gift table[?] for the generated non
   # stdout: ["DeliverOnly", [0, "foo", []]]
   #         
 
---- Peer facet ---
+--- Peer facets and gift tables ---
 
   ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
@@ -900,16 +907,38 @@ Use of PromiseGiftTable
 
 Use of NearGiftTable
 
-  ? E.sendOnly(outgoingConnection.nonceLocator(), "exporting", [def foo {}])
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "exporting", [println])
   ?
   # stdout: ["DeliverOnly", [0, "exporting", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
   #         
 
   ? receiver.DeliverOnly(0, "provideFor", buildIn([descs.Incoming(1), "tPGTRecID", 346718905, 382064925828890872342377433413917253333972024416]))
   ? ngt.acceptFor("tPGTRecID", 346718905, 382064925828890872342377433413917253333972024416)
-  # value: <foo>
+  # value: <println>
 
 XXX review whether the full tables (vs. smaller facets of them) should be exposed to peers.
+
+NonceLocator#acceptFrom
+
+  ? otherPromiseGiftTable.provideFor(println, "tLocalVatID", 472938)
+  > receiver.Deliver(-1, buildIn(null), 0, "acceptFrom", buildIn([[], "tAFDonorID", 472938, null]))
+  > receiver.DeliverOnly(-1, "run", buildIn(["got promise gift"]))
+  # stdout: hub.get([], "tAFDonorID")
+  #         
+  
+  ?
+  # stdout: got promise gift
+  #         
+
+  ? otherNearGiftTable.provideFor(println, "tLocalVatID", 673563245, 382064925828890872342377433413917253333972024416)
+  > receiver.Deliver(-2, buildIn(null), 0, "acceptFrom", buildIn([[], "tAFDonorID", 673563245, 382064925828890872342377433413917253333972024416, null]))
+  > receiver.DeliverOnly(-2, "run", buildIn(["got near gift"]))
+  # stdout: hub.get([], "tAFDonorID")
+  #         
+  
+  ?
+  # stdout: got near gift
+  #         
 
 --- Reuse of builders ---
 

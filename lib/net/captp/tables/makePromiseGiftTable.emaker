@@ -107,10 +107,8 @@ def makePromiseGiftTable(whenGarbage, nonceLocatorPromise) implements DeepFrozen
                 optValuePair := Ref.promise();
                 myStuff.put(keyPair, optValuePair);
                 def vine := makeVine(null);
-                #XXX do we need to hold onto the weakPtr in order for it to be
-                #finalized?  If so, then we must.
                 whenGarbage(vine, fn { promiseGiftTable.drop(keyPair) })
-                E.sendOnly(nonceLocatorPromise, "ignore", vine)
+                E.sendOnly(nonceLocatorPromise, "ignore", [vine])
             } else {
                 #Done.
                 myStuff.removeKey(keyPair);

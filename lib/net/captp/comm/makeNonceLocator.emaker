@@ -7,7 +7,7 @@ pragma.enable("function-implements")
 def VatID := <import:net.captp.protocol.VatID>
 def Vine := <import:net.captp.tables.makeVine>.asType()
 
-def CapTPMgr := def SwissTable := def PromiseGiftTable := def NearGiftTable := any # XXX restrict or interface or something
+def PeerHub := def SwissTable := def PromiseGiftTable := def NearGiftTable := any # XXX restrict or interface or something
 
 /**
  * Made magically available at incoming position 0.
@@ -20,7 +20,7 @@ def CapTPMgr := def SwissTable := def PromiseGiftTable := def NearGiftTable := a
 def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
                      myNGifts :NearGiftTable,
                      myOwnID :VatID,
-                     myCapTPMgr :CapTPMgr,
+                     myHub :PeerHub,
                      mySwissTable :SwissTable) \
       implements ExitViaHere, DeepFrozen {
 
@@ -61,8 +61,8 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
                       donorID :VatID,
                       nonce :int,
                       optFarVine :any) :any {
-            def optDonorConn :=
-              myCapTPMgr.getOrMakeProxyConnection(donorPath, donorID);
+            def optDonorConn := myHub[donorPath, donorID]
+            # XXX hub.get can never yield null -- what was the old-CapTP situation in which this could occur?
             if (null == optDonorConn) {
                 return Ref.broken("The donor is gone")
             }
@@ -86,8 +86,8 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
                       nonce :int,
                       swissHash :int,
                       optFarVine :any) :any {
-            def optDonorConn :=
-              myCapTPMgr.getOrMakeProxyConnection(donorPath, donorID);
+            def optDonorConn := myHub[donorPath, donorID]
+            # XXX hub.get can never yield null -- what was the old-CapTP situation in which this could occur?
             if (null == optDonorConn) {
                 return Ref.broken("The donor is gone");
             }

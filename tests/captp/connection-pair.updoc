@@ -73,12 +73,12 @@ Now we can make the SwissTables and connections.
   >                        swissTableL,
   >                        def locatorUnumL {},
   >                        pseudoWhenGarbage,
-  >                        def hubL {}, [], "R"),
+  >                        def hubL {}, "L", [], "R"),
   >    makeCapTPConnection(traceReceiver("Left", receiverL), 
   >                        swissTableR,
   >                        def locatorUnumR {},
   >                        pseudoWhenGarbage,
-  >                        def hubR {}, [], "L")]
+  >                        def hubR {}, "R", [], "L")]
   # value: [[<capTPReceiver>, <CapTP outgoing to R>, <CapTP peer to R>], [<capTPReceiver>, <CapTP outgoing to L>, <CapTP peer to L>]]
   
 --- 
