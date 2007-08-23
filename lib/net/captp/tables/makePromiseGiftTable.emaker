@@ -41,7 +41,7 @@ def Throwable := <type:java.lang.Throwable>
  * 
  * @author Mark S. Miller.
  */
-def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen {
+def makePromiseGiftTable(whenGarbage, nonceLocatorPromise) implements DeepFrozen {
     # Maps from [recipID, Nonce] to [referent, optResolver]
     var myStuff := makeFlexMap.fromTypes(Tuple[any, int], Tuple[any, any])
 
@@ -73,9 +73,7 @@ def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen
                 #donation happened first.
                 def valuePair := [gift, null];
                 myStuff.put(keyPair, valuePair);
-                #XXX do we need to hold onto the weakPtr in order for it to be
-                #finalized?  If so, then we must.
-                makeWeakPtr(result, promiseGiftTable, "drop", keyPair);
+                whenGarbage(result, fn { promiseGiftTable.drop(keyPair) })
             } else {
                 #resolve the promise for a gift already looked up. Done.
                 def resolver := optValuePair[1];
@@ -111,7 +109,7 @@ def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen
                 def vine := makeVine(null);
                 #XXX do we need to hold onto the weakPtr in order for it to be
                 #finalized?  If so, then we must.
-                makeWeakPtr(vine, promiseGiftTable, "drop", keyPair);
+                whenGarbage(vine, fn { promiseGiftTable.drop(keyPair) })
                 E.sendOnly(nonceLocatorPromise, "ignore", vine)
             } else {
                 #Done.
@@ -127,8 +125,8 @@ def makePromiseGiftTable(makeWeakPtr, nonceLocatorPromise) implements DeepFrozen
          * 
          * XXX E translation note: we can and therefore should now make this private
          */
-        to drop(recipID :VatID, nonce :int) :void {
-            def keyPair := [recipID, nonce];
+        to drop(keyPair :List[VatID, int]) :void {
+            def [recipID, nonce] := keyPair
             def optValuePair :=
               myStuff.fetch(keyPair, makeValueThunk.getNULL_THUNK());
             if (null == optValuePair) {

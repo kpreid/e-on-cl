@@ -876,6 +876,41 @@ This includes making an entry in the promise gift table[?] for the generated non
   # stdout: ["DeliverOnly", [0, "foo", []]]
   #         
 
+--- Peer facet ---
+
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
+
+Access
+  
+  ? peerConnection.nonceLocator() == outgoingConnection.nonceLocator()
+  # value: true
+  
+  ? def pgt := peerConnection.getPromiseGiftTable()
+  # value: <promiseGiftTable>
+
+  ? def ngt := peerConnection.getNearGiftTable()
+  # value: <nearGiftTable>
+
+Use of PromiseGiftTable
+
+  ? receiver.DeliverOnly(0, "provideFor", buildIn(["gift1", "tPGTRecID", 346718905]))
+  ? pgt.acceptFor("tPGTRecID", 346718905)
+  # value: "gift1"
+
+Use of NearGiftTable
+
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "exporting", [def foo {}])
+  ?
+  # stdout: ["DeliverOnly", [0, "exporting", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  #         
+
+  ? receiver.DeliverOnly(0, "provideFor", buildIn([descs.Incoming(1), "tPGTRecID", 346718905, 382064925828890872342377433413917253333972024416]))
+  ? ngt.acceptFor("tPGTRecID", 346718905, 382064925828890872342377433413917253333972024416)
+  # value: <foo>
+
+XXX review whether the full tables (vs. smaller facets of them) should be exposed to peers.
+
 --- Reuse of builders ---
 
 This is prohibited because the timing and reoccurrence of unserialization operations affects the results and the state of the comm tables.

@@ -46,7 +46,7 @@ def Throwable := <type:java.lang.Throwable>
  *
  * @author Mark S. Miller.
  */
-def makeNearGiftTable(makeWeakPtr) implements DeepFrozen {
+def makeNearGiftTable(whenGarbage) implements DeepFrozen {
     var myStuff := makeFlexMap.fromTypes(List, any)
   
     def nearGiftTable {
@@ -70,7 +70,7 @@ def makeNearGiftTable(makeWeakPtr) implements DeepFrozen {
             myStuff.put(keyTriple, gift);
             #XXX do we need to hold onto the weakPtr in order for it to be
             #finalized?  If so, then we must.
-            makeWeakPtr(result, nearGiftTable, "drop", keyTriple);
+            whenGarbage(result, fn { nearGiftTable.drop(keyTriple) })
             return result;
         }
 
@@ -102,8 +102,8 @@ def makeNearGiftTable(makeWeakPtr) implements DeepFrozen {
          *
          * XXX E translation note: we can and therefore should now make this private
          */
-        to drop(recipID :VatID, nonce :int, swissHash :int) :void {
-            def keyTriple := [recipID, nonce, swissHash];
+        to drop(keyTriple :Tuple[VatID, int, int]) :void {
+            def [recipID, nonce, swissHash] := keyTriple
             myStuff.removeKey(keyTriple);
         }
     }

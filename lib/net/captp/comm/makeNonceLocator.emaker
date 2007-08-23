@@ -45,7 +45,7 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
             #which is as it should be.
             def giftSwiss := mySwissTable.getIdentity(gift);
             def giftHash := giftSwiss.cryptoHash();
-            require(giftHash.equals(swissHash), fn { "wrong hash: " + E.toString(swissHash) });
+            require(giftHash == swissHash, fn { "wrong hash: " + E.toString(swissHash) });
             return myNGifts.provideFor(gift, recipID, nonce, swissHash)
         }
 
@@ -100,7 +100,7 @@ def makeNonceLocator(myPGifts :PromiseGiftTable,                       # ){
             #which is as it should be.
             def id := mySwissTable.getIdentity(result);
             def idHash := id.cryptoHash();
-            if (!swissHash.equals(idHash)) {
+            if (swissHash != idHash) {
                 throw("internal: hash mismatch: " + E.toString(swissHash));
             }
             return result;

@@ -39,26 +39,29 @@ def makeCycleBreaker := <elib:tables.makeCycleBreaker>
 def deSubgraphKit := <elib:serial.deSubgraphKit>
 
 def makeNonceLocator := <import:net.captp.comm.makeNonceLocator>
-def makeAnswersTable := <import:net.captp.tables.makeAnswersTable>
-def makeExportsTable := <import:net.captp.tables.makeExportsTable>
-def makeProxiesTable := <import:net.captp.tables.makeProxiesTable>
-def makeVine := <import:net.captp.tables.makeVine>
+def [=> makeAnswersTable,
+     => makeExportsTable,
+     => makeProxiesTable,
+     => makeNearGiftTable,
+     => makePromiseGiftTable,
+     => makeVine] | _ := <import:net.captp.tables.*>
 
 def descMakerStandin implements DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
   # XXX this should be a map
   to run(var outgoingReceiver, swissTable, locatorUnum, whenGarbage, hub, remoteSearchPath, remoteVatID) {
-    def nonceLocator := makeNonceLocator(null,
-                                         null,
-                                         "fake-id-ctc",
-                                         null,
-                                         swissTable)
-    
     def answers := makeAnswersTable()
     def exports := makeExportsTable()
     def imports := makeProxiesTable()
     def questions := makeProxiesTable()
+    
+    def nonceLocator := makeNonceLocator(
+      def promiseGifts := makePromiseGiftTable(whenGarbage, nonceLocator),
+      def nearGifts := makeNearGiftTable(whenGarbage),
+      "fake-id-ctc",
+      null,
+      swissTable)
     
     def termination # resolved when connection is dead
     def remoteNonceLocatorResolutionSlot
@@ -431,6 +434,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to __printOn(out :TextWriter) {
         out.print("<CapTP peer to ", remoteVatID, ">")
       }
+      to nonceLocator() { return remoteNonceLocator }
+      to getPromiseGiftTable() { return promiseGifts }
+      to getNearGiftTable() { return nearGifts }
     }
     
     return [capTPReceiver, outgoingConnection, peerConnection]
