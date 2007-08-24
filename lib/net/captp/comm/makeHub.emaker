@@ -1,0 +1,58 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def makeBrand := <elib:sealing.makeBrand>
+
+def makeCapTPHub(makeConnection) implements ExitViaHere, DeepFrozen {
+  def liveConnections := [].asMap().diverge()
+
+  def [for3DescSealer, for3DescUnsealer] := makeBrand("CapTP 3Desc transfer")
+  def for3DescBrand := for3DescSealer.getBrand()
+
+  def makeAndReg
+  
+  def get(searchPath, vatID) {
+    return liveConnections.fetch(vatID, fn{ makeAndReg(searchPath, vatID) })
+  }
+
+  def register(vatID, f) {
+    var live := true
+    def peerHub {
+      to get(otherSearchPath, otherVatID) {
+        return get(otherSearchPath, otherVatID)[1]
+      }
+      to nowDead() {
+        if (live) {
+          live := false
+          liveConnections.removeKey(vatID)
+        }
+      }
+      to get3DescBrand() { return for3DescBrand }
+      to get3DescSealer() { return for3DescSealer }
+      to amplifyFor3Desc(specimen, recipID) {
+        if (for3DescUnsealer.amplify(specimen) =~ [wantsRecip]) {
+          return wantsRecip(recipID)
+        }
+      }
+    }
+
+    return liveConnections[vatID] := f(peerHub)
+  }
+
+  bind makeAndReg(searchPath, vatID) {
+    return register(vatID, fn peerHub { makeConnection(peerHub, searchPath, vatID) })
+  }
+  
+  def hubOutward {
+    to get(searchPath, vatID) {
+      return get(searchPath, vatID)[0]
+    }
+    to incoming(vatID, peerHub__Resolver, connectionFacets) :void {
+      register(vatID, fn bind peerHub { connectionFacets })
+    }
+  }
+  return hubOutward
+}

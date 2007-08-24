@@ -1,0 +1,127 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  > pragma.enable("accumulator")
+
+The hub's job is to manage multiple CapTP connections, creating them on demand and providing them the proper authorities to each other.
+
+  ? def makeHub :DeepFrozen := <import:net.captp.comm.makeHub>
+  # value: <makeCapTPHub>
+
+The connection maker (which will already have authorities for network access, etc.) receives the VatID and search path for the vat it should connect to, and unique access to its peers.
+
+The connection maker returns a facet for its peers and one for the next inner layer of the comm system (i.e. LocatorUnum).
+
+  ? def makeConnection(peerHub, searchPath, vatID) {
+  >   println(`makeConnection($peerHub, $searchPath, $vatID)`)
+  >   var live := true
+  >   return [def outwardConnection {
+  >             to __printOn(out :TextWriter) {
+  >               out.print(`<${live.pick("","dead ")}conn for $vatID>`)
+  >             }
+  >             to _pingPeer(vID) { return peerHub[["spPing"], vID]._ping() }
+  >             to _getPeerHub() { return peerHub }
+  >             to _die() { live := false; peerHub.nowDead() }
+  >           },
+  >           def peerConnection {
+  >             to _ping() { return `pong $vatID` }
+  >           }]
+  > }; null
+
+The hub returns its facet for use by the LocatorUnum.
+
+  ? def hubOutward := makeHub(makeConnection)
+  # value: <hubOutward>
+
+Making two connections.
+
+  ? def outc1 := hubOutward[["sp1"], "vi1"]
+  # stdout: makeConnection(<peerHub>, ["sp1"], vi1)
+  #         
+  
+  # value: <conn for vi1>
+  
+  ? def outc2 := hubOutward[["sp2"], "vi2"]
+  # stdout: makeConnection(<peerHub>, ["sp2"], vi2)
+  #         
+  
+  # value: <conn for vi2>
+
+Accessing an existing connection. (The search path should be ignored.)
+
+  ? outc1 == hubOutward[["sp1_2"], "vi1"]
+  # value: true
+
+Testing access to peer facets.
+
+  ? outc1._pingPeer("vi2")
+  # value: "pong vi2"
+
+Connection death.
+
+  ? outc2._die()
+
+  ? def outc2_dead := outc2; null
+
+Since the connection for vi2 is dead, another access to it (which we will do through a peer, to test that) starts a new connection.
+
+  ? outc1._getPeerHub()[["sp2_2"], "vi2"]
+  # stdout: makeConnection(<peerHub>, ["sp2_2"], vi2)
+  #         
+  
+  # value: <peerConnection>
+
+  ? def outc2 := hubOutward[["sp2_2"], "vi2"]
+  # value: <conn for vi2>
+
+Checking that the peer facet for the first vi2 connection can't do harm; particularly, that an extra nowDead doesn't delete the old connection:
+
+  ? outc2_dead._getPeerHub().nowDead()
+  ? outc2 == hubOutward[["sp2_2_2"], "vi2"]
+  # value: true
+
+Incoming connections.
+
+(XXX should we split this as an inward-facet? little benefit right now, I think)
+
+  ? hubOutward.incoming("vi3",
+  >                     def peerHub3, 
+  >                     def [outc3, _] := makeConnection(peerHub3, ["sp3"], "vi3"))
+  # stdout: makeConnection(<Promise>, ["sp3"], vi3)
+  #         
+  
+  ? hubOutward[["sp3_2"], "vi3"] == outc3
+  # value: true
+  
+  ? outc3._pingPeer("vi1")
+  # value: "pong vi1"
+
+3Desc brand
+
+  ? def b3 := outc1._getPeerHub().get3DescBrand()
+  # value: CapTP 3Desc transfer
+  
+  ? def s3 := outc1._getPeerHub().get3DescSealer()
+  # value: <CapTP 3Desc transfer sealer>
+  
+  ? b3 == outc2._getPeerHub().get3DescBrand()
+  # value: true
+
+  ? s3 == outc2._getPeerHub().get3DescSealer()
+  # value: true
+
+  ? outc2._getPeerHub().amplifyFor3Desc(
+  >   <elib:ref.makeProxy>(
+  >     def handler { to handleOptSealedDispatch(brand) { 
+  >       if (brand == b3) {
+  >         return s3.seal(fn recipID { 
+  >           println(`recipID = $recipID`)
+  >           "descData" })}}},
+  >     Ref.promise()[0],
+  >     true),
+  >  "foo")
+  # stdout: recipID = foo
+  #         
+  
+  # value: "descData"
