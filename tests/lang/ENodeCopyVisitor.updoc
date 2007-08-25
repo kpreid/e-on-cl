@@ -1,0 +1,19 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  
+  ? def makeENodeCopyVisitor :DeepFrozen := <import:org.erights.e.elang.visitors.makeENodeCopyVisitor>
+  # value: <makeENodeCopyVisitor>
+  
+  ? <import:org.erights.e.elang.visitors.makeKernelECopyVisitor> == makeENodeCopyVisitor
+  # value: true
+
+  ? def simple := makeENodeCopyVisitor(simple)
+  # value: <eNodeCopyVisitor>
+  
+  ? simple(e`def x := 1; def [y, z] := __makeList.run(x, x); __equalizer.sameEver(x, y)`)
+  # value: e`def x := 1
+  #        def [y, z] := __makeList.run(x, x)
+  #        __equalizer.sameEver(x, y)`
+

@@ -21,10 +21,6 @@ There is a special component loader supplying the ENode makers.
   ? def makeNounExpr := <vm:makeNounExpr>
   # value: <makeNounExpr>
 
-  ? <elang:visitors.makeKernelECopyVisitor>
-  # value: <import:org.erights.e.elang.visitors.makeKernelECopyVisitor>
-  XXX this is misplaced...?
-
 Type object accessibility:
 
   ? <type:org.erights.e.elang.evm.DefineExpr> == <import:org.erights.e.elang.evm.makeDefineExpr>.asType()
