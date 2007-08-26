@@ -725,7 +725,9 @@ XXX make precedence values available as constants"
   (:|run| ((source 'twine))
     (e-source-to-tree source))
   (:|pattern| ((source 'twine) quasi-info syntax-ejector)
-    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t)))
+    (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :pattern t))
+  (:|isIdentifier| (noun)
+    (as-e-boolean (is-identifier noun))))
 
 ;;; --- Antlr parser support ---
 

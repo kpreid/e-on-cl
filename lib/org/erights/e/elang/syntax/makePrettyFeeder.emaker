@@ -4,5 +4,5 @@
 pragma.syntax("0.9")
 
 def makePrettyFeeder implements DeepFrozen, ExitViaHere {
-  # XXX unimplemented
+  to pretty(text) { return text } # XXX stub for deSrcKit. this should be doing indentation
 }

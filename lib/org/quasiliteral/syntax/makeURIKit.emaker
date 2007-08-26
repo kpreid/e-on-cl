@@ -7,6 +7,14 @@ def makeURIKit implements DeepFrozen, ExitViaHere {
   to __printOn(out :TextWriter) {
     out.print("<import:org.quasiliteral.syntax.makeURIKit>")
   }
-
-  # XXX other methods
+  /** Check whether the string is made up entirely of 'uric's as defined in RFC 2396.
+    *
+    * XXX Currently does not check that % is followed by two hex digits. */
+  to isURICs(s :String) {
+    # XXX profile, check if this is too slow for its uses
+    for c ? ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0124356789;/?:@&=+$,-_.!~*'()%".indexOf1(c) == -1) in s {
+      return false
+    }
+    return true
+  }
 }

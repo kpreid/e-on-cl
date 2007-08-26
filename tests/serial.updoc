@@ -56,5 +56,37 @@ deENodeKit
   #        t__1.resolve(__makeList.run(t__0))
   #        t__0`
 
-XXX more tests of deENodeKit
-XXX should deENodeKit generate nonkernel node?
+XXX more tests of deENodeKit; particularly, recognition
+XXX should deENodeKit generate nonkernel nodes, e.g. defrec?
+
+deSrcKit
+
+  ? def deSrcKit := <import:org.erights.e.elib.serial.deSrcKit>
+  # value: <deSrcKit>
+
+To run deSrcKit under E-on-CL, a number of utilities had to be added.
+
+  makePrettyFeeder#pretty/1 (for everything):
+  ? deSubgraphKit.recognize(def x := [x], deSrcKit.makeBuilder())
+  # value: "def t__0 := [t__0]"
+  
+  makeELexer#isIdentifier/1 (for quoted verbs):
+  ? (def b := deSrcKit.makeBuilder()).buildRoot(b.buildCall("a", "bind", ["b"]))
+  # value: "a.\"bind\"(b)"
+  
+  makeURIKit#isURICs/1 (for URI-expressions):
+  ? (def b := deSrcKit.makeBuilder()).buildRoot(b.buildCall(b.buildImport("a__uriGetter"), "get", [b.buildLiteral("b")]))
+  # value: "<a:b>"
+  ? (def b := deSrcKit.makeBuilder()).buildRoot(b.buildCall(b.buildImport("a__uriGetter"), "get", [b.buildLiteral(" ")]))
+  # value: "<a>[\" \"]"
+  
+  integer#bitLength/0, toString64/0 (actually stubbed out; XXX unstub)
+  ? (def b := deSrcKit.makeBuilder()).buildRoot(b.buildLiteral(53))
+  # value: "53"
+
+  XXX this should be printed using toString64
+  ? (def b := deSrcKit.makeBuilder()).buildRoot(b.buildLiteral(998789031275891364789137648912367413487713248972893))
+  # value: "998789031275891364789137648912367413487713248972893"
+  
+XXX more tests of deSrcKit; particularly, recognition
+XXX review whether makeURIKit should be URIKit

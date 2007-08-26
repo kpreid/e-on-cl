@@ -50,7 +50,8 @@ def deSrcKit implements DeepFrozen, ExitViaHere {
             }
 
             to buildLiteral(value) :String {
-                if (value =~ i :int && i.bitLength() > 120) {
+                if (value =~ i :int && i.bitLength() > 120 && false) {
+                    # XXX disabled because E-on-CL doesn't have the String64 operators yet
                     def quot64 := i.toString64().quote()
                     return `__makeInt.fromString64($quot64)`
                 } else {
