@@ -841,6 +841,29 @@ See also MapExpr above.
 #             NounE. b
 #             [] NounE. c
 
+--- Source holes ---
+
+? def tqp(q, s) :any { return dumpENodes(pp.pattern(s, q, null), stdout) }; null
+
+? tqp([[0], []], "$")
+# stdout: QuasiLiteralP. 0
+
+? tqp([[1], []], "[$]")
+# stdout: ListP. [] QuasiLiteralP. 0
+
+x ? tqp([[0], []], "$ :any")
+x # stdout: FinalP.
+x #           QuasiLiteralP.
+x #             0
+x #           NounE. any
+
+XXX decide whether this is a good syntax idea:
+x ? tqp([[2], []], "::$")
+x # stdout: FinalP.
+x #           QuasiLiteralP.
+x #             0
+x #           null
+
 --- Parsing errors ---
 
 Printing of tokens in errors, for those tokens which have special treatment:

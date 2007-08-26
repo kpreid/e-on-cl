@@ -422,11 +422,11 @@
     :|Pattern|
     :|QuasiLiteralExpr|
     :|QuasiLiteralNode|
-    :|QuasiLiteralPatt|
+    :|QuasiLiteralPattern|
     :|QuasiNode|
     :|QuasiPatternExpr|
     :|QuasiPatternNode|
-    :|QuasiPatternPatt|
+    :|QuasiPatternPattern|
     :|SeqExpr|
     :|SlotExpr|
     :|SlotPattern|

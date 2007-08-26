@@ -424,9 +424,9 @@ tryExpr:        "try"^ block catcherList ("finally"! block | filler)
                 {##.setType(TryExpr);}
             ;
 
-bindPatt:       "bind"^ nounExpr optGuard {##.setType(BindPattern);} ;
-varPatt:        "var"^  nounExpr optGuard {##.setType(VarPattern);}  ;
-slotPatt:       "&"^    nounExpr optGuard {##.setType(SlotPattern);} ;
+bindPatt:       "bind"^ nounExprOrHole optGuard {##.setType(BindPattern);} ;
+varPatt:        "var"^  nounExprOrHole optGuard {##.setType(VarPattern);}  ;
+slotPatt:       "&"^    nounExprOrHole optGuard {##.setType(SlotPattern);} ;
 
 // those patterns which may replace a "def" keyword
 keywordPatt:    varPatt | bindPatt ;
@@ -440,8 +440,8 @@ objectExpr:     "def"^ objName objectTail           {##.setType(ObjectHeadExpr);
                 | keywordPatt objectTail    {##=#([ObjectHeadExpr],##);}
             ;
 
-defExpr:    "def"^  ( (nounExpr (":="|"exit")) => pattern defExit ":="! assign  {##.setType(DefrecExpr);}
-                    | (nounExpr) => nounExpr {##.setType(ForwardExpr);}
+defExpr:    "def"^  ( (nounExprOrHole (":="|"exit")) => pattern defExit ":="! assign  {##.setType(DefrecExpr);}
+                    | (nounExprOrHole) => nounExprOrHole {##.setType(ForwardExpr);}
                     | pattern defExit ":="! assign  {##.setType(DefrecExpr);}
                     )
             | keywordPatt defExit ":="! assign {##=#([DefrecExpr],##);}
@@ -490,17 +490,17 @@ multiExtends: "extends"^ br order (","! order)* {##.setType(List);}
              | {##=#([List],##);} ;
             // trailing comma would be ambiguous with HideExpr
 
-objName:        nounExpr         filler {##=#([FinalPattern],##);}
-            |   "_"^                    {##.setType(IgnorePattern);}
-            |   "bind"^ nounExpr filler {##.setType(BindPattern);}
-            |   "var"^ nounExpr  filler {##.setType(VarPattern);}
-            |   "&"^ nounExpr    filler {##.setType(SlotPattern);}
+objName:        nounExprOrHole         filler {##=#([FinalPattern],##);}
+            |   "_"^                          {##.setType(IgnorePattern);}
+            |   "bind"^ nounExprOrHole filler {##.setType(BindPattern);}
+            |   "var"^ nounExprOrHole  filler {##.setType(VarPattern);}
+            |   "&"^ nounExprOrHole    filler {##.setType(SlotPattern);}
             ;
 
 //TODO MARK: what is typeParamList for?  it appears to come right after "def name"
 typeParamList:  "["^ typePatterns br "]" ; // should have a br before the "]"
 
-typePatterns:   (nounExpr optGuard ("," typePatterns)?)? ;
+typePatterns:   (nounExprOrHole optGuard ("," typePatterns)?)? ;
 
 scriptPair:     "{"! methodList matcherList  "}"! ;
 
@@ -584,7 +584,7 @@ block:          "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 //  x[i...] := ...  converts to x.put(i..., ...)
 //  x::name := ...  converts to x.setName(...)
 //  x(i...) := ...  converts to x.setRun(i..., ...)
-// Based on the above patterns, only nounExpr, nounExpr
+// Based on the above patterns, only nounExprOrHole, nounExprOrHole
 assign:     (("def"|"var"|"bind") => objectPredict|) => cond (  ":="^ assign  {##.setType(NKAssignExpr);}
                 |   assignOp assign               {##=#([UpdateExpr], ##);}
                 |   verb "="!   // deal with deprecated single case
@@ -723,7 +723,7 @@ prim:           literal
             |   basic
             |   (IDENT QUASIOPEN) =>
                 quasiParser quasiString  {##=#([QuasiExpr],##);}
-            |   nounExpr
+            |   nounExprOrHole
             |   parenExpr (quasiString   {##=#([QuasiExpr],##);}  )?
             |   quasiString              {##=#([QuasiExpr,"simple"],
                                                [Absent],##);}
@@ -739,9 +739,9 @@ prim:           literal
 assocs:    (assoc (","! assocs)?)? ;
 
 assoc:          seq "=>"^ seq {##.setType(MapExprAssoc);}
-            |   "=>"^ ( nounExpr
+            |   "=>"^ ( nounExprOrHole
                       | slotExpr
-                      | "def" nounExpr
+                      | "def" nounExprOrHole
                         {throwSemanticHere("Reserved syntax: forward export");}
                       ) {##.setType(MapExprExport);}
             ;
@@ -756,9 +756,9 @@ literal:    (STRING | CHAR_LITERAL | INT | FLOAT64 | HEX | OCTAL)
             {##=#([LiteralExpr],##);} ;
 
 
-// a valid guard is a nounExpr or parenExpr, optionally followed by [args]*
+// a valid guard is a nounExprOrHole or parenExpr, optionally followed by [args]*
 guard:
-    (nounExpr | parenExpr)
+    (nounExprOrHole | parenExpr)
     // NOTE the greedy consumption of getters.  This accepts more than e.y
     (options{greedy=true;}: "["^ args "]"! {##.setType(GetExpr);})*
     ;
@@ -785,6 +785,10 @@ listPatt:
 
 eqPatt:         (IDENT QUASIOPEN) =>
                 quasiParser quasiString          {##=#([QuasiPattern],##);}
+                // The following duplication occurs because a lone hole
+                // should be a pattern hole, not a FinalPattern with noun hole;
+                // but a hole followed by one of the pattern types that start
+                // with noun-or-parens should be an expression hole.
             |   nounExpr ( parenParams           pocket["call-pattern"]
                                                  {##=#([FunCallPattern],##);}
                          | "["^ patterns "]"!    pocket["call-pattern"]
@@ -793,6 +797,17 @@ eqPatt:         (IDENT QUASIOPEN) =>
                                                  {##=#([CallPattern],##);}
                          |   optGuard            {##=#([FinalPattern],##);}
                          )
+            |   (sourceExprHole (parenParams|"["|"."|":")) => 
+                sourceExprHole
+                         ( parenParams           pocket["call-pattern"]
+                                                 {##=#([FunCallPattern],##);}
+                         | "["^ patterns "]"!    pocket["call-pattern"]
+                                                 {##.setType(GetPattern);}
+                         | "."! verb parenParams pocket["call-pattern"]
+                                                 {##=#([CallPattern],##);}
+                         |   ":"! guard          {##=#([FinalPattern],##);}
+                         )
+            |   sourcePattHole
             |   "_"^ ( ":"! guard       {##.setType(GuardTestPattern);}
                      |                  {##.setType(IgnorePattern);}
                      )
@@ -825,16 +840,22 @@ justNoun:       IDENT
             |   URIGetter
             ;
 
-// nounExpr happens to be the leaf which it is handy to hang the source hole
-// rule on
-nounExpr:       justNoun {##=#([NounExpr],##);}
-            |   sourceHole
-            ;
+nounExprOrHole: nounExpr | sourceExprHole ;
 
-sourceHole:     SOURCE_VALUE_HOLE
+nounExpr:       justNoun {##=#([NounExpr],##);} ;
+
+sourceExprHole:
+                SOURCE_VALUE_HOLE
                   {##.setType(INT);##=#([QuasiLiteralExpr],##);}
             |   SOURCE_PATTERN_HOLE
                   {##.setType(INT);##=#([QuasiPatternExpr],##);}
+            ;
+
+sourcePattHole:
+                SOURCE_VALUE_HOLE
+                  {##.setType(INT);##=#([QuasiLiteralPattern],##);}
+            |   SOURCE_PATTERN_HOLE
+                  {##.setType(INT);##=#([QuasiPatternPattern],##);}
             ;
 
 key:            parenExpr | literal ;
@@ -848,7 +869,7 @@ mapPattern:       mapPatternAddressing (":="^ order {##.setType(MapPatternOption
 
 mapPatternAddressing: key br "=>"^ pattern {##.setType(MapPatternAssoc);}
                     | "=>"^ namePatt       {##.setType(MapPatternImport);}
-                    | "=>"^ "def" {throwSemanticHere("Reserved syntax: forward export");} nounExpr
+                    | "=>"^ "def" {throwSemanticHere("Reserved syntax: forward export");} nounExprOrHole
                     ;
 
 // QUASI support

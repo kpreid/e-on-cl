@@ -288,16 +288,16 @@
 
 (defclass |QuasiExpr| (|EExpr| |QuasiNode|)
   ())
-(defclass |QuasiPatt| (|Pattern| |QuasiNode|)
+(defclass |QuasiPattern| (|Pattern| |QuasiNode|)
   ())
 
 (define-node-class |QuasiLiteralExpr| (|QuasiLiteralNode| |QuasiExpr|)
   ((:|index| nil (integer 0))))
 (define-node-class |QuasiPatternExpr| (|QuasiPatternNode| |QuasiExpr|)
   ((:|index| nil (integer 0))))
-(define-node-class |QuasiLiteralPatt| (|QuasiLiteralNode| |QuasiPatt|)
+(define-node-class |QuasiLiteralPattern| (|QuasiLiteralNode| |QuasiPattern|)
   ((:|index| nil (integer 0))))
-(define-node-class |QuasiPatternPatt| (|QuasiPatternNode| |QuasiPatt|)
+(define-node-class |QuasiPatternPattern| (|QuasiPatternNode| |QuasiPattern|)
   ((:|index| nil (integer 0))))
 
 #+sbcl (sb-ext:lock-package :e.elang.vm-node)
