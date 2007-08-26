@@ -45,3 +45,16 @@ Coarse check
   ? [a, b]
   # value: [1, 2]
 
+deENodeKit
+
+  ? def deENodeKit := <import:org.erights.e.elib.serial.deENodeKit>
+  # value: <deENodeKit>
+
+  Bug: makeFinalPattern was being used incorrectly
+  ? deSubgraphKit.recognize(def x := [x], deENodeKit.makeBuilder())
+  # value: e`def [t__0, t__1] := Ref.promise()
+  #        t__1.resolve(__makeList.run(t__0))
+  #        t__0`
+
+XXX more tests of deENodeKit
+XXX should deENodeKit generate nonkernel node?

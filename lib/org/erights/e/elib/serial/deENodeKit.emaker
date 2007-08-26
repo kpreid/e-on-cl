@@ -1,11 +1,12 @@
 #!/usr/bin/env rune
 
 pragma.syntax("0.8")
+pragma.enable("function-implements")
 
 # Copyright 2003 Hewlett Packard, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-# copied 2007-08-17 from EoJ r466, modified for DeepFrozen
+# copied 2007-08-17 from EoJ r466, modified for DeepFrozen, makeFinalPattern args, getOptPrincipalNoun
 
 def EExpr := <type:org.erights.e.elang.evm.EExpr>
 def FinalPattern := <type:org.erights.e.elang.evm.FinalPattern>
@@ -21,6 +22,10 @@ def makeSimpleNounExpr := <elang:evm.makeSimpleNounExpr>
 def makeKernelECopyVisitor := <elang:visitors.makeKernelECopyVisitor>
 
 def ANY := makeSimpleNounExpr(null, "any", null)
+
+def makeFinalPatternS(span, name :String, layout) :FinalPattern implements DeepFrozen {
+  return makeFinalPattern(span, makeSimpleNounExpr(span, name, null), null, layout)
+}
 
 def DEBuilderOf := <elib:serial.DEBuilderOf>
 
@@ -83,7 +88,7 @@ def deENodeKit implements DeepFrozen, ExitViaHere {
                                        optEjectorExpr,
                                        rValue) :any {
                         if (patt =~ fp :FinalPattern) {
-                            def name := fp.getOptName()
+                            def name := fp.getOptPrincipalNoun()
                             if (badNames.contains(name)) {
                                 return simplify(rValue)
                             }
@@ -123,7 +128,7 @@ def deENodeKit implements DeepFrozen, ExitViaHere {
                 nextTemp += 1
                 varReused[tempIndex] := false
                 def tempPatt :=
-                  makeFinalPattern(null, `t__$tempIndex`, null)
+                  makeFinalPatternS(null, `t__$tempIndex`, null)
                 def defExpr :=
                   makeDefineExpr(null, tempPatt, null, rValue, null)
                 [defExpr, tempIndex]
@@ -144,14 +149,14 @@ def deENodeKit implements DeepFrozen, ExitViaHere {
             to buildDefrec(resIndex :int, rValue :EExpr) :EExpr {
                 def promIndex := resIndex-1
                 def promPatt :=
-                  makeFinalPattern(null, `t__$promIndex`, null)
+                  makeFinalPatternS(null, `t__$promIndex`, null)
 
                 if (varReused[promIndex]) {
                     # We have a cycle
                     def promNoun :=
                       makeSimpleNounExpr(null, `t__$promIndex`, null)
                     def resPatt :=
-                      makeFinalPattern (null, `t__$resIndex`, null)
+                      makeFinalPatternS (null, `t__$resIndex`, null)
                     def resNoun  :=
                       makeSimpleNounExpr(null, `t__$resIndex`, null)
 
@@ -223,7 +228,7 @@ def deENodeKit implements DeepFrozen, ExitViaHere {
                                optEjectorExpr :nullOk[EExpr],
                                rValue :EExpr) :Node {
                 require(null == optEjectorExpr)
-                def varName :String := patt.getOptName()
+                def varName :String := patt.getOptPrincipalNoun()
                 require(isTempName(varName))
 
                 def rValueNode := rValue.welcome(visitor)
@@ -245,8 +250,8 @@ def deENodeKit implements DeepFrozen, ExitViaHere {
                     def e`@varNoun`                                  := sub2
                     def varName := varNoun.name()
                     def resName := resNoun.name()
-                    require(varPatt.getOptName() == varName)
-                    require(resPatt.getOptName() == resName)
+                    require(varPatt.getOptPrincipalNoun() == varName)
+                    require(resPatt.getOptPrincipalNoun() == resName)
                     require(isTempName(varName))
                     require(isTempName(resName))
 
@@ -264,13 +269,13 @@ def deENodeKit implements DeepFrozen, ExitViaHere {
                     def e`def @rPatt := def @oPatt := @rightExpr`    := sub1
                     def e`@resNoun.resolve(@oNoun)`                  := sub2
                     def e`@rNoun`                                    := sub3
-                    def varName := varPatt.getOptName()
+                    def varName := varPatt.getOptPrincipalNoun()
                     def resName := resNoun.name()
                     def rName := rNoun.name()
                     def oName := oNoun.name()
-                    require(resPatt.getOptName() == resName)
-                    require(rPatt.getOptName() == rName)
-                    require(oPatt.getOptName() == oName)
+                    require(resPatt.getOptPrincipalNoun() == resName)
+                    require(rPatt.getOptPrincipalNoun() == rName)
+                    require(oPatt.getOptPrincipalNoun() == oName)
                     require(isTempName(oName), fn{`unrecognized: $oName`})
 
                     def varIndex := builder.buildPromise()
