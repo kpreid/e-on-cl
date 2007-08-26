@@ -6,8 +6,7 @@
 
   ? def makeVine := <import:net.captp.tables.makeVine>; null
   ? def makeFlexMap := <elib:tables.makeFlexMap>; null
-  ? def deSubgraphKit := <elib:serial.deSubgraphKit>; null
-  ? def makeCycleBreaker := <elib:tables.makeCycleBreaker>; null
+  ? def traceMessages := <import:net.captp.util.traceMessages>; null
 
 In this file, we test that two linked CapTPConnections communicate successfully.
 
@@ -24,42 +23,8 @@ In this file, we test that two linked CapTPConnections communicate successfully.
 
 This is a mechanism for tracing communication between the CapTPConnections.
 
-  ? interface ArgWrapperMarker {}
-  > def descs {
-  >   match [v, a] { 
-  >     def generic {
-  >       to __printOn(out :TextWriter) { 
-  >         out.print(v, "Desc")
-  >         a.printOn("(", ", ", ")", out)
-  >       }
-  >       to __optUncall() { return [descs, v, a] }
-  >     }
-  >   }
-  > }
-  > def unscopeForTestIncoming := {
-  >   def u := deSubgraphKit.getDefaultUnscope().diverge()
-  >   u[descs] := "CapTP_1_descs"
-  >   u.snapshot()
-  > }
-  > def traceBuilderMaker() {
-  >   return def traceBuilder extends deSubgraphKit.makeBuilder(deSubgraphKit.getDefaultScope() | ["CapTP_1_descs" => descs]) {
-  >     to buildRoot(value) {
-  >       # "value" here is the representation for tracing
-  >       def argWrapper implements ArgWrapperMarker {
-  >         to __printOn(out) { value.__printOn(out) }
-  >         to run(recBuilder) { return deSubgraphKit.makeRecognizer(null, unscopeForTestIncoming).recognize(value, recBuilder) }
-  >       }
-  >       return argWrapper # this is both for trace printing and the recognizer closure the captp receiver expects
-  >     }
-  >   }
-  > }
   > def traceReceiver(label, ref) {
-  >   return def wrapper { match [v,a] {
-  >     stdout.print(label, " <- ", v)
-  >     def traceArgs := accum [] for arg in a { _.with(if (arg =~ c :any[int, String]) { arg } else { arg(traceBuilderMaker()) }) }
-  >     traceArgs.printOn("(", ", ", ")\n", stdout)
-  >     E.call(ref, v, traceArgs)
-  >   }}
+  >   return traceMessages(fn t { stdout.print(label, " <- "); stdout.println(t) }, ref)
   > }
   > null
 

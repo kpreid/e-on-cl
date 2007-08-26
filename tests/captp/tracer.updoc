@@ -1,0 +1,41 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+  
+  ? pragma.syntax("0.9")
+
+  ? def deSubgraphKit := <elib:serial.deSubgraphKit>; null
+  ? def once := <import:org.erights.e.facet.once>; null
+
+Utility for producing traces of CapTP communication.
+
+  ? def traceMessages := <import:net.captp.util.traceMessages>
+  # value: <traceMessages>
+  
+  ? def ctrace := traceMessages(stdout.println,
+  >                             def sink { match msg { stderr.println(msg) }})
+  # value: <tracing CapTP to <sink>>
+
+---
+
+  ? ctrace.GCAnswer(-3)
+  # stdout: GCAnswer(-3)
+  #         
+  
+  # stderr: ["GCAnswer", [-3]]
+  #         
+  
+  ? ctrace.DeliverOnly(0, "foo",
+  >   once(fn b {
+  >     b.buildRoot(b.buildCall(
+  >       b.buildImport("__makeList"),
+  >       "run",
+  >       [b.buildLiteral("bar"),
+  >        b.buildCall(b.buildImport("CapTP_1_descs"),
+  >                    "Incoming",
+  >                    [b.buildLiteral(2)] )]))}))
+  # stdout: DeliverOnly(0, "foo", ["bar", IncomingDesc(2)])
+  #         
+  
+  # stderr: ["DeliverOnly", [0, "foo", ["bar", IncomingDesc(2)]]]
+  #         
+

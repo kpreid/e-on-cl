@@ -10,6 +10,7 @@
   ? def Throwable := <type:java.lang.Throwable>; null
   ? def once := <import:org.erights.e.facet.once>; null
   ? def makeVine := <import:net.captp.tables.makeVine>; null
+  ? def traceMessages := <import:net.captp.util.traceMessages>; null
 
 In this file, we test the implementation of the CapTP operations and associated state.
 
@@ -64,14 +65,13 @@ LocatorUnum presences:
 
 Data-E setup:
   
-  ? def [testGraphRecognizer, makeTGBuilder] := {
+  ? def testGraphRecognizer := {
   >   def scope := deSubgraphKit.getDefaultScope() | [
   >     "CapTP_1_descs" => descs,
   >     "CapTP_1_locatorUnum" => locatorUnumRemote,
   >     => Ref,
   >     => <import>]
-  >   [deSubgraphKit.makeRecognizer(null, makeCycleBreaker.byInverting(scope)),
-  >    def makeTGBuilder() { return deSubgraphKit.makeBuilder(scope) }]
+  >   deSubgraphKit.makeRecognizer(null, makeCycleBreaker.byInverting(scope))
   > }; null
 
 buildIn takes an object in our test environment, containing objects made by 'descs' above, and transforms them as a CapTP wire protocol unserializer would.
@@ -131,10 +131,7 @@ Deterministic mock RNG. Its output will mostly appear in these tests hashed:
   >   def swissTable := makeSwissTable(pseudoEntropy, makeFlexMap, makeFlexMap)
   >     
   >   def [r, outgoingConnection, peerConnection] := makeCapTPConnection(
-  >     def outgoing { match [v,args] { 
-  >       # arg testing here is a trick to avoid writing knowledge of the CapTP arg types in
-  >       println([v, accum [] for arg in args { _.with(if (arg =~ c :any[int, String, List]) { c } else { arg(makeTGBuilder()) }) }])
-  >     }},
+  >     traceMessages(stdout.println, def sink { match _ {} }),
   >     swissTable,
   >     locatorUnumLocal,
   >     pseudoWhenGarbage,
@@ -163,7 +160,7 @@ The 2-cycle delay on the redirector reports is because there is first a send of 
   >                  "lookupSwiss",
   >                  buildIn([nullSwissNumber, null]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [null]]]
+  # stdout: DeliverOnly(1, "run", [null])
   #         
 
 null should now be present in the connection's answers table at -1.
@@ -174,7 +171,7 @@ null should now be present in the connection's answers table at -1.
   >                  "__getAllegedType",
   >                  buildIn([]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
   
   ? receiver.Deliver(-3,
@@ -183,7 +180,7 @@ null should now be present in the connection's answers table at -1.
   >                  "getFQName",
   >                  buildIn([]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", ["org.cubik.cle.prim.null"]]]
+  # stdout: DeliverOnly(1, "run", ["org.cubik.cle.prim.null"])
   #         
 
 Positive/zero answer index is an error:
@@ -212,22 +209,22 @@ Delivery to the NonceLocator:
   >                      "__whenMoreResolved",
   >                      buildIn([descs.NewFar(1, 329849023489032)]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [ImportDesc(0)]]]
+  # stdout: DeliverOnly(1, "run", [ImportDesc(0)])
   #         
 
 Delivery to an answer, creating the answer first:
 
   ? receiver.Deliver(-1, buildIn(descs.NewFar(2, 78897982443232)), 
-  >                  0, "__getAllegedType", buildIn([]))
+  >                  0, "__respondsTo", buildIn(["ignore", 1]))
   ?
-  # stdout: ["DeliverOnly", [2, "run", [NonceLocator]]]
+  # stdout: DeliverOnly(2, "run", [true])
   #         
 
   ? receiver.DeliverOnly(-1,
   >                      "__whenMoreResolved",
   >                      buildIn([descs.Import(1)]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [NonceLocator]]]
+  # stdout: DeliverOnly(1, "run", [true])
   #         
 
 Delivery to an import:
@@ -236,7 +233,7 @@ Delivery to an import:
   >                      "__whenMoreResolved",
   >                      buildIn([descs.Import(1)]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [NonceLocator]]]
+  # stdout: DeliverOnly(1, "run", [true])
   #         
 
 --- Incoming GCExportOp ---
@@ -248,7 +245,7 @@ To test GCExportOp, we must first export something.
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "exportTest", [def exported(x) {println(x)}])
   ?
-  # stdout: ["DeliverOnly", [0, "exportTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(0, "exportTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
 wireDelta of 0 should have no effect.
@@ -268,7 +265,7 @@ A reference is collected once the sum of wireDeltas in all received GCExport mes
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "exportTest2a", [exported])
   ?
-  # stdout: ["DeliverOnly", [0, "exportTest2a", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(0, "exportTest2a", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
 (The NewFarDesc's index is the same because 1 is at the head of the exports table's free list, not because of any deliberate relationship.)
@@ -276,8 +273,8 @@ A reference is collected once the sum of wireDeltas in all received GCExport mes
   ? E.sendOnly(outgoingConnection.nonceLocator(), "exportTest2b", [exported])
   > E.sendOnly(outgoingConnection.nonceLocator(), "exportTest2c", [exported])
   ?
-  # stdout: ["DeliverOnly", [0, "exportTest2b", [ImportDesc(1)]]]
-  #         ["DeliverOnly", [0, "exportTest2c", [ImportDesc(1)]]]
+  # stdout: DeliverOnly(0, "exportTest2b", [ImportDesc(1)])
+  #         DeliverOnly(0, "exportTest2c", [ImportDesc(1)])
   #         
 
 wireDelta of 1 should have no effect (export count now 2).
@@ -301,7 +298,7 @@ Additional wireDelta of 2 should balance the three previous references.
 
 Create an answer.
 
-  ? receiver.Deliver(-1, buildIn(descs.Incoming(0)), 0, "__getAllegedType", buildIn([]))
+  ? receiver.Deliver(-1, buildIn(descs.Incoming(0)), 0, "__respondsTo", buildIn(["ignore", 1]))
 
 Deliveries to the answer are possible now:
 
@@ -309,7 +306,7 @@ Deliveries to the answer are possible now:
   >                      "__whenMoreResolved",
   >                      buildIn([descs.NewFar(1, 3124570689423516780)]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [NonceLocator]]]
+  # stdout: DeliverOnly(1, "run", [true])
   #         
 
 but not after GCAnswerOp:
@@ -346,7 +343,7 @@ Imported far ref:
   # value: <Promise>
   
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "getTerminatedTestRef1", []]]
+  # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "getTerminatedTestRef1", [])
   #         
   
   ? receiver.DeliverOnly(1, "run", buildIn([descs.NewFar(1, 1234)]))
@@ -357,7 +354,7 @@ Question (promise resulting from DeliverOp):
   # value: <Promise>
   
   ?
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "getTerminatedTestRef2", []]]
+  # stdout: Deliver(-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "getTerminatedTestRef2", [])
   #         
   
 Imported remote promise:
@@ -366,7 +363,7 @@ Imported remote promise:
   # value: <Promise>
 
   ?
-  # stdout: ["Deliver", [-3, NewFarDesc(3, 47255196895205160731987244561159478631887357377), 0, "getTerminatedTestRef3", []]]
+  # stdout: Deliver(-3, NewFarDesc(3, 47255196895205160731987244561159478631887357377), 0, "getTerminatedTestRef3", [])
   #         
 
   ? receiver.DeliverOnly(3, "run", buildIn([descs.NewRemotePromise(2, -1, 4352160789)]))
@@ -376,7 +373,7 @@ Export, which should receive a __reactToLostClient:
   ? E.sendOnly(outgoingConnection.nonceLocator(), "TerminatedExportTest", [
   >   def ttReactReceiver {to __reactToLostClient(p) { print(`rTLC expecter got $p`) }}])
   ?
-  # stdout: ["DeliverOnly", [0, "TerminatedExportTest", [NewFarDesc(4, 412897248500657771667886264468852369692723684603)]]]
+  # stdout: DeliverOnly(0, "TerminatedExportTest", [NewFarDesc(4, 412897248500657771667886264468852369692723684603)])
   #         
 
 The termination:
@@ -437,7 +434,7 @@ XXX we don't have VatID processing yet
 
   ? receiver.DeliverOnly(0, "__whenMoreResolved", buildIn([descs.NewFar(1, 13904808385)]))
   ?
-  # stdout: ["DeliverOnly", [1, "run", [ImportDesc(0)]]]
+  # stdout: DeliverOnly(1, "run", [ImportDesc(0)])
   #         
 
 --- Incoming NewRemotePromiseDesc ---
@@ -457,7 +454,7 @@ First we set up an incoming reference to an object to catch the remote promise.
   > receiver.Deliver(-3, buildIn(descs.NewFar(2, 928)), 0, "lookupSwiss", buildIn([swiss, null]))
   > receiver.GCAnswer(-3)
   ?
-  # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(2, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
 Then we deliver a message containing the promise.
@@ -471,21 +468,21 @@ Testing sends to the promise:
 
   ? E.sendOnly(remotePromise, "hello eventual", [])
   ?
-  # stdout: ["DeliverOnly", [3, "hello eventual", []]]
+  # stdout: DeliverOnly(3, "hello eventual", [])
   #         
 
 Testing that the promise is present in the imports table:
 
   ? receiver.DeliverOnly(0, "__whenMoreResolved", buildIn([descs.Import(3)]))
   ?
-  # stdout: ["DeliverOnly", [3, "run", [ImportDesc(0)]]]
+  # stdout: DeliverOnly(3, "run", [ImportDesc(0)])
   #         
 
 The redirector should be accessible by our provided SwissBase:
 
   ? receiver.Deliver(-3, buildIn(descs.Import(2)), 0, "lookupSwiss", buildIn([remotePromiseRdrBase.cryptoHash(), null]))
   ?
-  # stdout: ["DeliverOnly", [2, "run", [NewFarDesc(1, 216307466466887903142951307717254789854244528344)]]]
+  # stdout: DeliverOnly(2, "run", [NewFarDesc(1, 216307466466887903142951307717254789854244528344)])
   #         
 
 (remotePromiseRdrBase.cryptoHash().cryptoHash() == 216307466466887903142951307717254789854244528344)
@@ -500,8 +497,8 @@ The remote promise proxy is now garbage, so CapTP should send GCExportOp:
 
   ? runFinalizers()
   ?
-  # stdout: ["GCExport", [3, 2]]
-  #         ["GCExport", [2, 2]]
+  # stdout: GCExport(3, 2)
+  #         GCExport(2, 2)
   #         
 
 Index 3 is the remote promise (passed in once as NewRemotePromiseDesc and once as ImportDesc), and index 2 is the twice-used fake redirector for incoming deliveries.
@@ -530,7 +527,7 @@ Setting up a proxy for testing:
   > receiver.Deliver(-1, buildIn(descs.NewFar(1, 2384978932)), 0, "lookupSwiss", buildIn([swiss, null]))
   > receiver.GCAnswer(-1)
   ? 
-  # stdout: ["DeliverOnly", [1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(1, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
 Actual testing:
@@ -604,7 +601,7 @@ XXX write this
   ? def outgoingFar := outgoingConnection.nonceLocator() <- lookupSwiss(12345, null)
   # value: <Promise>
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [12345, null]]]
+  # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [12345, null])
   #         
 
 The above is a delivery to the NonceLocator, which is a bit of an unusual case; so we will also test a Far ref.
@@ -620,7 +617,7 @@ Here's a normal message to that Far ref.
   ? outgoingFar <- foo()
   # value: <Promise>
   ? 
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 1, "foo", []]]
+  # stdout: Deliver(-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 1, "foo", [])
   #         
 
 
@@ -635,7 +632,7 @@ GCExportOp is sent when a proxy for an import-table entry has gone away; so to t
   > receiver.DeliverOnly(0, "__optSealedDispatch", buildIn([descs.NewFar(2, 38249328)]))
   ? runFinalizers()
   ?
-  # stdout: ["GCExport", [2, 1]]
+  # stdout: GCExport(2, 1)
   #         
 
 Note that the sender of GCExportOp does not know whether the index was actually freed by the remote side; if it was, the index will be overwritten by a New*Desc; otherwise, an ImportDesc will arrive causing the creation of a new proxy for the existing table entry.
@@ -645,7 +642,7 @@ Note that the sender of GCExportOp does not know whether the index was actually 
   > receiver.DeliverOnly(0, "__optSealedDispatch", buildIn([descs.Import(2)]))
   ? runFinalizers()
   ?
-  # stdout: ["GCExport", [2, 2]]
+  # stdout: GCExport(2, 2)
   #         
 
 
@@ -660,12 +657,12 @@ We create a remote promise for an answer and tell the connection that it has bee
   > E.send(outgoingConnection.nonceLocator(), "lookupSwiss", [93478934, null])
   > null
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [93478934, null]]]
+  # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "lookupSwiss", [93478934, null])
   #         
   
   ? runFinalizers()
   ?
-  # stdout: ["GCAnswer", [-1]]
+  # stdout: GCAnswer(-1)
   #
 
 After GC, the question table entry is free and will be reused.
@@ -673,12 +670,12 @@ After GC, the question table entry is free and will be reused.
   ? E.send(outgoingConnection.nonceLocator(), "lookupSwiss", [23948931413532, null])
   > null
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [23948931413532, null]]]
+  # stdout: Deliver(-1, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "lookupSwiss", [23948931413532, null])
   #         
   
   ? runFinalizers()
   ?
-  # stdout: ["GCAnswer", [-1]]
+  # stdout: GCAnswer(-1)
   #
 
 
@@ -698,14 +695,14 @@ XXX write this
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "newFarDescTest", [def newSelfish {}])
   ?
-  # stdout: ["DeliverOnly", [0, "newFarDescTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(0, "newFarDescTest", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
 After an outgoing NewFarDesc, the object should be present in the exports table, so further outgoing messages use ImportDesc:
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "sameFarTest", [newSelfish])
   ?
-  # stdout: ["DeliverOnly", [0, "sameFarTest", [ImportDesc(1)]]]
+  # stdout: DeliverOnly(0, "sameFarTest", [ImportDesc(1)])
   #         
 
 --- Outgoing NewRemotePromiseDesc ---
@@ -716,12 +713,12 @@ After an outgoing NewFarDesc, the object should be present in the exports table,
   ? def exportedPromise
   > E.sendOnly(outgoingConnection.nonceLocator(), "newRemotePromiseDescTest", [exportedPromise])
   ?
-  # stdout: ["DeliverOnly", [0, "newRemotePromiseDescTest", [NewRemotePromiseDesc(1, -1, 10000001)]]]
+  # stdout: DeliverOnly(0, "newRemotePromiseDescTest", [NewRemotePromiseDesc(1, -1, 10000001)])
   #         
   
   ? bind exportedPromise := 31432943; null
   ?
-  # stdout: ["DeliverOnly", [-1, "run", [31432943]]]
+  # stdout: DeliverOnly(-1, "run", [31432943])
   #         
 
 (Yes, it is correct that the third argument isn't a hash. It's direct from entropy.nextSwiss(), and is a SwissBase, the authority to *be* an object (as seen from outside some vat).)
@@ -745,32 +742,32 @@ IncomingDesc for the nonce locator (magic index 0)
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "incomingNonceLocatorTest", [outgoingConnection.nonceLocator()])
   ?
-  # stdout: ["DeliverOnly", [0, "incomingNonceLocatorTest", [IncomingDesc(0)]]]
+  # stdout: DeliverOnly(0, "incomingNonceLocatorTest", [IncomingDesc(0)])
   #         
 
 IncomingDesc for an export
 
   ? def outgoing := outgoingConnection.nonceLocator() <- willBeFar(); null
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "willBeFar", []]]
+  # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "willBeFar", [])
   #         
   ? receiver.DeliverOnly(1, "run", buildIn([descs.NewFar(1, 398427908325834)]))
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "incomingFarTest", [outgoing])
   ?
-  # stdout: ["DeliverOnly", [0, "incomingFarTest", [IncomingDesc(1)]]]
+  # stdout: DeliverOnly(0, "incomingFarTest", [IncomingDesc(1)])
   #         
 
 IncomingDesc for an answer
 
   ? def outgoing := outgoingConnection.nonceLocator() <- willBePromise(); null
   ?
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "willBePromise", []]]
+  # stdout: Deliver(-2, NewFarDesc(2, 1033912670282953026478972818820010722176128073325), 0, "willBePromise", [])
   #         
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "incomingAnswerTest", [outgoing])
   ?
-  # stdout: ["DeliverOnly", [0, "incomingAnswerTest", [IncomingDesc(-2)]]]
+  # stdout: DeliverOnly(0, "incomingAnswerTest", [IncomingDesc(-2)])
   #         
 
 --- Outgoing Promise3Desc ---
@@ -795,7 +792,7 @@ IncomingDesc for an answer
   
   ? E.sendOnly(outgoingConnection.nonceLocator(), "introduction", [otherConnPromise])
   ?
-  # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(1, 382064925828890872342377433413917253333972024416))]]]
+  # stdout: DeliverOnly(0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(1, 382064925828890872342377433413917253333972024416))])
   #         
 
 Until WormholeOp, Far refs are also sent using Promise3Desc.
@@ -808,7 +805,7 @@ Until WormholeOp, Far refs are also sent using Promise3Desc.
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "introduction", [otherConnFar])
   ?
-  # stdout: ["DeliverOnly", [0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(2, 1033912670282953026478972818820010722176128073325))]]]
+  # stdout: DeliverOnly(0, "introduction", [Promise3Desc(["otherSP"], "otherID", 893921618639987, NewFarDesc(2, 1033912670282953026478972818820010722176128073325))])
   #         
 
 --- Outgoing Far3Desc ---
@@ -821,14 +818,14 @@ XXX
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "setupIncoming", [println])
   ?
-  # stdout: ["DeliverOnly", [0, "setupIncoming", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(0, "setupIncoming", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
 --- Disconnected ref ---
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "s", [Ref.broken("b")])
   ?
-  # stdout: ["DeliverOnly", [0, "s", [<ref broken by problem: b>]]]
+  # stdout: DeliverOnly(0, "s", [Ref.broken(<import:org.cubik.cle.prim.makeStringException>("b"))])
   #         
 
   ? receiver.DeliverOnly(1, "run", buildIn([Ref.broken("b")]))
@@ -839,7 +836,7 @@ XXX
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "s", [locatorUnumLocal])
   ?
-  # stdout: ["DeliverOnly", [0, "s", [<locatorUnumRemote>]]]
+  # stdout: DeliverOnly(0, "s", [CapTP_1_locatorUnum])
   #         
 
   ? receiver.DeliverOnly(1, "run", buildIn([locatorUnumRemote]))
@@ -863,14 +860,14 @@ This includes making an entry in the promise gift table[?] for the generated non
   ? def eventualRef := outgoingConnection.nonceLocator() <- eventualForPassTest()
   # value: <Promise>
   ?
-  # stdout: ["Deliver", [-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "eventualForPassTest", []]]
+  # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "eventualForPassTest", [])
   #         
 
   ? hub.amplifyFor3Desc(eventualRef, "recipID")
   # value: [["tRemoteSearchPath"], "tRemoteVatID", 10000002, <vine>]
   
   ?
-  # stdout: ["Deliver", [-2, NewFarDesc(2, 47255196895205160731987244561159478631887357377), 0, "provideFor", [IncomingDesc(-1), "recipID", 10000002]]]
+  # stdout: Deliver(-2, NewFarDesc(2, 47255196895205160731987244561159478631887357377), 0, "provideFor", [IncomingDesc(-1), "recipID", 10000002])
   #         
 
 --- outgoingConnection.nonceLocator() ref ---
@@ -880,7 +877,7 @@ This includes making an entry in the promise gift table[?] for the generated non
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "foo", [])
   ?
-  # stdout: ["DeliverOnly", [0, "foo", []]]
+  # stdout: DeliverOnly(0, "foo", [])
   #         
 
 --- Peer facets and gift tables ---
@@ -909,7 +906,7 @@ Use of NearGiftTable
 
   ? E.sendOnly(outgoingConnection.nonceLocator(), "exporting", [println])
   ?
-  # stdout: ["DeliverOnly", [0, "exporting", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)]]]
+  # stdout: DeliverOnly(0, "exporting", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
   #         
 
   ? receiver.DeliverOnly(0, "provideFor", buildIn([descs.Incoming(1), "tPGTRecID", 346718905, 382064925828890872342377433413917253333972024416]))

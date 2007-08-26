@@ -1,0 +1,74 @@
+# Copyright 2007 Kevin Reid under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("accumulator")
+
+def messageDescs := <import:net.captp.protocol.messageDescs>
+def ["deENodeKit" => bufferingKit,
+     => deSrcKit] | _ := <elib:serial.*>
+
+def VERY_WIDE := 10000
+
+def convertDE(f) implements DeepFrozen {
+  def builder := bufferingKit.makeBuilder()
+  def ast := f(builder)
+  return def dataECarrier {
+    to __printOn(out :TextWriter) {
+      def twiddleBuilder extends deSrcKit.makeBuilder(VERY_WIDE, 1) {
+        to buildCall(rec, verb, args) {
+          if (rec == "CapTP_1_descs") {
+            return super.buildCall(verb + "Desc", "run", args)
+          } else {
+            return super.buildCall(rec, verb, args)
+          }
+        }
+      }
+      out.print(bufferingKit.recognize(ast, twiddleBuilder))
+    }
+    to run(b2) {
+      return bufferingKit.recognize(ast, b2)
+    }
+  }
+}
+
+def converterTable implements DeepFrozen {
+  to fetch(name, _) {
+    return if (name == "Obj") { convertDE } else { __identityFunc }
+  }
+  to without(_) { return converterTable }
+}
+
+# XXX parser bug: shouldn't need line continuation here
+def dispatchTable := accum [].asMap() for [verb, _, argConverters] \
+                                        in messageDescs[converterTable] {
+  _.with(verb, def convertMsg(args) implements DeepFrozen {
+    require(args.size() == argConverters.size())
+    return accum [] for i => c in argConverters { _.with(c(args[i])) }
+  })
+}
+
+def traceMessages(traceCollector, nextCapTPReceiver) implements ExitViaHere, DeepFrozen {
+ 
+  return def tracer {
+    to __printOn(out :TextWriter) {
+      out.write("<tracing CapTP to ")
+      out.quote(nextCapTPReceiver)
+      out.write(">")
+    }
+    match [verb, args] {
+      def convArgs := dispatchTable[verb](args)
+      try {
+        traceCollector(def traceMessage {
+          to __printOn(out :TextWriter) {
+            out.write(verb)
+            convArgs.printOn("(", ", ", ")", out)
+          }
+        })
+      } catch p { throw <- (p) }
+      Ref.isNear(nextCapTPReceiver).pick(E.call, E.sendOnly)(nextCapTPReceiver, verb, convArgs)
+      null
+    }
+  }
+}
