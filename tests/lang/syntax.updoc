@@ -437,11 +437,22 @@ Quasi-E-source issues
   ? e__quasiParser.valueMaker("${0}")
   # value: e`${0}`
 
-  ? e__quasiParser.valueMaker("${0}")
+  ? e__quasiParser.matchMaker("${0}")
   # value: e`${0}`
+
+  ? e__quasiParser.matchMaker("@{0}")
+  # value: e`@{0}`
 
   ? {def a := e`"a"`; e`$a + "$$b"`}.eval(safeScope)
   # value: "a$b"
+
+Substitution
+
+  ? e`[${e`a`}]`
+  # value: e`__makeList.run(a)`
+  
+  ? epatt`[${epatt`a`}]`
+  # value: epatt`[a]`
 
 XXX specific tests for e`` and epatt``
 XXX printing all nodes, parens, precedence

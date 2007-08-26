@@ -128,9 +128,9 @@ tokens {
     IgnorePattern;
     ListPattern;
     MapPattern;
-    QuasiLiteralPattern;
+    QuasiLiteralPatt;
     QuasiPattern;
-    QuasiPatternPattern;
+    QuasiPatternPatt;
     SamePattern;
     SlotPattern;
     SuchThatPattern;
@@ -853,9 +853,9 @@ sourceExprHole:
 
 sourcePattHole:
                 SOURCE_VALUE_HOLE
-                  {##.setType(INT);##=#([QuasiLiteralPattern],##);}
+                  {##.setType(INT);##=#([QuasiLiteralPatt],##);}
             |   SOURCE_PATTERN_HOLE
-                  {##.setType(INT);##=#([QuasiPatternPattern],##);}
+                  {##.setType(INT);##=#([QuasiPatternPatt],##);}
             ;
 
 key:            parenExpr | literal ;

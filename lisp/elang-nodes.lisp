@@ -295,9 +295,9 @@
   ((:|index| nil (integer 0))))
 (define-node-class |QuasiPatternExpr| (|QuasiPatternNode| |QuasiExpr|)
   ((:|index| nil (integer 0))))
-(define-node-class |QuasiLiteralPattern| (|QuasiLiteralNode| |QuasiPattern|)
+(define-node-class |QuasiLiteralPatt| (|QuasiLiteralNode| |QuasiPattern|)
   ((:|index| nil (integer 0))))
-(define-node-class |QuasiPatternPattern| (|QuasiPatternNode| |QuasiPattern|)
+(define-node-class |QuasiPatternPatt| (|QuasiPatternNode| |QuasiPattern|)
   ((:|index| nil (integer 0))))
 
 #+sbcl (sb-ext:lock-package :e.elang.vm-node)

@@ -846,21 +846,21 @@ See also MapExpr above.
 ? def tqp(q, s) :any { return dumpENodes(pp.pattern(s, q, null), stdout) }; null
 
 ? tqp([[0], []], "$")
-# stdout: QuasiLiteralP. 0
+# stdout: QuasiLiteralPatt 0
 
 ? tqp([[1], []], "[$]")
-# stdout: ListP. [] QuasiLiteralP. 0
+# stdout: ListP. [] QuasiLiteralPatt 0
 
 x ? tqp([[0], []], "$ :any")
 x # stdout: FinalP.
-x #           QuasiLiteralP.
+x #           QuasiLiteralPatt
 x #             0
 x #           NounE. any
 
 XXX decide whether this is a good syntax idea:
 x ? tqp([[2], []], "::$")
 x # stdout: FinalP.
-x #           QuasiLiteralP.
+x #           QuasiLiteralPatt
 x #             0
 x #           null
 
