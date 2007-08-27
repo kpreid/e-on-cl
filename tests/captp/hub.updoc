@@ -9,14 +9,19 @@ The hub's job is to manage multiple CapTP connections, creating them on demand a
   ? def makeHub :DeepFrozen := <import:net.captp.comm.makeHub>
   # value: <makeCapTPHub>
 
-The connection maker (which will already have authorities for network access, etc.) receives the VatID and search path for the vat it should connect to, and unique access to its peers.
+The connection maker (which will already have authorities for local garbage collection, swiss table, etc.) receives the information about the connection, the receiver for the remote side, and unique access to its peers. It is used both for incoming and outgoing connections.
 
-The connection maker returns a facet for its peers and one for the next inner layer of the comm system (i.e. LocatorUnum).
+The connection maker returns three facets: the local receiver (accepting messages from outside), a facet for its peers, and a facet for the next inner layer of the comm system (i.e. LocatorUnum).
 
-  ? def makeConnection(peerHub, searchPath, vatID) {
-  >   println(`makeConnection($peerHub, $searchPath, $vatID)`)
+  ? def makeConnection(peerHub, searchPath, vatID, remoteReceiver) {
+  >   println(`makeConnection($peerHub, $searchPath, $vatID, $remoteReceiver)`)
   >   var live := true
-  >   return [def outwardConnection {
+  >   return [def receiver {
+  >             to __printOn(out :TextWriter) {
+  >               out.print(`<${live.pick("","dead ")}receiver for $vatID>`)
+  >             }
+  >           },
+  >           def outwardConnection {
   >             to __printOn(out :TextWriter) {
   >               out.print(`<${live.pick("","dead ")}conn for $vatID>`)
   >             }
@@ -29,25 +34,51 @@ The connection maker returns a facet for its peers and one for the next inner la
   >           }]
   > }; null
 
+The hub's other parameter is the object which initiates connections, yielding remote receivers.
+
+XXX terminology is a little confusing; perhaps makeConnection is not a good name for the above? Something more like makeProxyManager?
+
+  ? def connectOutgoing(localReceiver, searchPath, vatID) {
+  >   println(`connectOutgoing($localReceiver, $searchPath, $vatID)`)
+  >   when (localReceiver) -> {
+  >     println(`local receiver for $vatID: $localReceiver`)
+  >   }
+  >   return def remoteReceiver {
+  >     to __printOn(out :TextWriter) {
+  >       out.print(`<remote receiver $searchPath $vatID>`)
+  >     }
+  >   }
+  > }; null
+
 The hub returns its facet for use by the LocatorUnum.
 
-  ? def hubOutward := makeHub(makeConnection)
+  ? def hubOutward := makeHub(makeConnection, connectOutgoing)
   # value: <hubOutward>
 
 Making two connections.
 
   ? def outc1 := hubOutward[["sp1"], "vi1"]
-  # stdout: makeConnection(<peerHub>, ["sp1"], vi1)
+  # stdout: connectOutgoing(<Promise>, ["sp1"], vi1)
+  #         makeConnection(<peerHub>, ["sp1"], vi1, <remote receiver ["sp1"] vi1>)
   #         
   
   # value: <conn for vi1>
+
+  ?
+  # stdout: local receiver for vi1: <receiver for vi1>
+  #         
   
   ? def outc2 := hubOutward[["sp2"], "vi2"]
-  # stdout: makeConnection(<peerHub>, ["sp2"], vi2)
+  # stdout: connectOutgoing(<Promise>, ["sp2"], vi2)
+  #         makeConnection(<peerHub>, ["sp2"], vi2, <remote receiver ["sp2"] vi2>)
   #         
   
   # value: <conn for vi2>
 
+  ?
+  # stdout: local receiver for vi2: <receiver for vi2>
+  #         
+  
 Accessing an existing connection. (The search path should be ignored.)
 
   ? outc1 == hubOutward[["sp1_2"], "vi1"]
@@ -67,11 +98,16 @@ Connection death.
 Since the connection for vi2 is dead, another access to it (which we will do through a peer, to test that) starts a new connection.
 
   ? outc1._getPeerHub()[["sp2_2"], "vi2"]
-  # stdout: makeConnection(<peerHub>, ["sp2_2"], vi2)
+  # stdout: connectOutgoing(<Promise>, ["sp2_2"], vi2)
+  #         makeConnection(<peerHub>, ["sp2_2"], vi2, <remote receiver ["sp2_2"] vi2>)
   #         
   
   # value: <peerConnection>
 
+  ?
+  # stdout: local receiver for vi2: <receiver for vi2>
+  #         
+  
   ? def outc2 := hubOutward[["sp2_2"], "vi2"]
   # value: <conn for vi2>
 
@@ -85,14 +121,14 @@ Incoming connections.
 
 (XXX should we split this as an inward-facet? little benefit right now, I think)
 
-  ? hubOutward.incoming("vi3",
-  >                     def peerHub3, 
-  >                     def [outc3, _] := makeConnection(peerHub3, ["sp3"], "vi3"))
-  # stdout: makeConnection(<Promise>, ["sp3"], vi3)
+  ? def incRec3 := hubOutward.incoming(["sp3"], "vi3", def outRec3 {})
+  # stdout: makeConnection(<peerHub>, ["sp3"], vi3, <outRec3>)
   #         
   
-  ? hubOutward[["sp3_2"], "vi3"] == outc3
-  # value: true
+  # value: <receiver for vi3>
+  
+  ? def outc3 := hubOutward[["sp3_2"], "vi3"]
+  # value: <conn for vi3>
   
   ? outc3._pingPeer("vi1")
   # value: "pong vi1"

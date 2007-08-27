@@ -6,19 +6,21 @@ pragma.enable("function-implements")
 
 def makeBrand := <elib:sealing.makeBrand>
 
-def makeCapTPHub(makeConnection) implements ExitViaHere, DeepFrozen {
+def makeCapTPHub(makeConnection, outgoingConnect) implements ExitViaHere, DeepFrozen {
   def liveConnections := [].asMap().diverge()
 
   def [for3DescSealer, for3DescUnsealer] := makeBrand("CapTP 3Desc transfer")
   def for3DescBrand := for3DescSealer.getBrand()
 
-  def makeAndReg
+  def connectAndRegister
   
   def get(searchPath, vatID) {
-    return liveConnections.fetch(vatID, fn{ makeAndReg(searchPath, vatID) })
+    return liveConnections.fetch(vatID, fn{ 
+      connectAndRegister(searchPath, vatID)
+      liveConnections[vatID] })
   }
 
-  def register(vatID, f) {
+  def register(searchPath, vatID, remoteRec) {
     var live := true
     def peerHub {
       to get(otherSearchPath, otherVatID) {
@@ -38,20 +40,23 @@ def makeCapTPHub(makeConnection) implements ExitViaHere, DeepFrozen {
         }
       }
     }
-
-    return liveConnections[vatID] := f(peerHub)
+    def [localRec, of, pf] := makeConnection(peerHub, searchPath, vatID, remoteRec)
+    liveConnections[vatID] := [of, pf]
+    return localRec
   }
 
-  bind makeAndReg(searchPath, vatID) {
-    return register(vatID, fn peerHub { makeConnection(peerHub, searchPath, vatID) })
+  bind connectAndRegister(searchPath, vatID) {
+    def localRec := register(searchPath, vatID,
+                             outgoingConnect(localRec, searchPath, vatID))
   }
   
   def hubOutward {
     to get(searchPath, vatID) {
       return get(searchPath, vatID)[0]
     }
-    to incoming(vatID, peerHub__Resolver, connectionFacets) :void {
-      register(vatID, fn bind peerHub { connectionFacets })
+    to incoming(searchPath, vatID, remoteRec) {
+      # XXX fail if connection already present
+      return register(searchPath, vatID, remoteRec)
     }
   }
   return hubOutward
