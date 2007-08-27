@@ -1,0 +1,95 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  > pragma.enable("accumulator")
+
+  ? def makeFlexMap := <elib:tables.makeFlexMap>; null
+  ? def makeSwissTable := <import:net.captp.tables.makeSwissTable>; null
+  ? def traceMessages := <import:net.captp.util.traceMessages>; null
+
+In this file, we test the interaction of hubs and connections.
+
+  ? def makeHub := <import:net.captp.comm.makeHub>
+  # value: <makeCapTPHub>
+
+  ? def makeCapTPConnection := <import:net.captp.comm.makeCapTPConnection>
+  # value: <makeCapTPConnection>
+  
+  ? var i := 10000000
+  > /** Deterministic source of pseudo-SwissNumbers so that our tracing output is deterministic. */
+  > def pseudoEntropy {
+  >   to nextSwiss() { return (i += 1) }
+  > }
+  > def pseudoWhenGarbage(_, _) {}
+  > null
+
+  ? def connectTable; null
+
+  ? def trec(label, ref) {
+  >   #return traceMessages(fn t { traceln(`$label <- $t`) }, ref)
+  >   return ref
+  > }
+  > def makeHubAuthorized(myID) {
+  >   def swissTable := makeSwissTable(pseudoEntropy, makeFlexMap, makeFlexMap)
+  >   def locatorUnum {}
+  >   def makeConAu(peerHub, searchPath, remoteID, remoteRec) {
+  >     return makeCapTPConnection(trec(`$myID->$remoteID`, remoteRec), swissTable, locatorUnum, pseudoWhenGarbage, peerHub, myID, searchPath, remoteID)
+  >   }
+  >   def hub := makeHub(makeConAu, def connect(localRec, _, vatID) {
+  >     return connectTable[vatID]["doIncoming"](myID, localRec)
+  >   })
+  >   def doIncoming(remoteID, outgoingRec) {
+  >     return hub.incoming([], remoteID, outgoingRec)
+  >   }
+  >   return [=> swissTable, => hub, => doIncoming]
+  > }; null
+
+  ? bind connectTable := [
+  >   "A" => makeHubAuthorized("A"),
+  >   "B" => makeHubAuthorized("B"),
+  >   "C" => makeHubAuthorized("C")
+  > ]; null
+  
+--- 
+
+  ? def carolFromBob
+  > def bobDone
+  > def bob {
+  >   to run(x) {
+  >     println(`Bob got $x`)
+  >     when (x) -> { # wait for lost resolution to be found
+  >       println(x == carolFromBob)
+  >       bind bobDone := true
+  >     }
+  >   }
+  > }
+  # value: <bob>
+
+  ? def carol {
+  > }
+  # value: <carol>
+
+  ? def swissB :int := connectTable["B"]["swissTable"].getNewSwiss(bob); null
+  ? def swissC :int := connectTable["C"]["swissTable"].getNewSwiss(carol); null
+
+  ? def abNonceLocator := connectTable["A"]["hub"][[], "B"].nonceLocator()
+  # value: <Far ref>
+  
+  ? def acNonceLocator := connectTable["A"]["hub"][[], "C"].nonceLocator(); null
+  ? def bcNonceLocator := connectTable["B"]["hub"][[], "C"].nonceLocator(); null
+  
+  ? interp.waitAtTop(def carolFromAlice := acNonceLocator <- lookupSwiss(swissC, null))
+  ? carolFromAlice
+  # value: <Far ref>
+  
+  ? bind carolFromBob := bcNonceLocator <- lookupSwiss(swissC, null); null
+  ? def bobFromAlice := abNonceLocator <- lookupSwiss(swissB, null); null
+  
+  ? E.sendOnly(bobFromAlice, "run", [carolFromAlice])
+  > interp.waitAtTop(bobDone)
+  
+  # stdout: Bob got <Promise>
+  #         true
+  #         
+
