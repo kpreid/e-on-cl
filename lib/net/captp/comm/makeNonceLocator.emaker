@@ -14,6 +14,8 @@ def PeerHub := def SwissTable := def PromiseGiftTable := def NearGiftTable := an
  * <p/>
  * Used to resolve 3-vat live Granovetter introductions, and to log tracing
  * info sent from the other vat.
+ * 
+ * Note that myOwnID is the *remote* vat's ID.
  *
  * @author Mark S. Miller
  */

@@ -917,7 +917,7 @@ XXX review whether the full tables (vs. smaller facets of them) should be expose
 
 NonceLocator#acceptFrom
 
-  ? otherPromiseGiftTable.provideFor(println, "tLocalVatID", 472938)
+  ? otherPromiseGiftTable.provideFor(println, "tRemoteVatID", 472938)
   > receiver.Deliver(-1, buildIn(null), 0, "acceptFrom", buildIn([[], "tAFDonorID", 472938, null]))
   > receiver.DeliverOnly(-1, "run", buildIn(["got promise gift"]))
   # stdout: hub.get([], "tAFDonorID")
@@ -927,7 +927,7 @@ NonceLocator#acceptFrom
   # stdout: got promise gift
   #         
 
-  ? otherNearGiftTable.provideFor(println, "tLocalVatID", 673563245, 382064925828890872342377433413917253333972024416)
+  ? otherNearGiftTable.provideFor(println, "tRemoteVatID", 673563245, 382064925828890872342377433413917253333972024416)
   > receiver.Deliver(-2, buildIn(null), 0, "acceptFrom", buildIn([[], "tAFDonorID", 673563245, 382064925828890872342377433413917253333972024416, null]))
   > receiver.DeliverOnly(-2, "run", buildIn(["got near gift"]))
   # stdout: hub.get([], "tAFDonorID")

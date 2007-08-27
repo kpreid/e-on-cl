@@ -59,7 +59,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     def nonceLocator := makeNonceLocator(
       def promiseGifts := makePromiseGiftTable(whenGarbage, nonceLocator),
       def nearGifts := makeNearGiftTable(whenGarbage),
-      localVatID,
+      remoteVatID,
       hub,
       swissTable)
     
