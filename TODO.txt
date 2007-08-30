@@ -26,15 +26,31 @@ Little features:
   - serialization-base primitives: __optUncall where needed, selfless where needed, Loader#optUncall.
   - Investigate what SourceSpan#isOneToOne really means (as it is it seems to be ambiguous between "mixed-up" and "multiline")
   - __getAllegedType merging at the miranda-and-matcher interface
+  - "lambda-args" syntax
 
 Big features:
+  - Standalone images (no loading emakers from lib/, stubbed out ASDF, etc.). Use to make binaries for users who don't want to install CL+ASDF+dependencies.
   - Parse E code without requiring E-on-Java.
   - more complete socket IO
   - more complete file IO
   - finish term-tree system (matching, etc.)
 
-  - Pluribus
-    - This is (as of revision 864, 2007-08-03) partially done, in that the CapTP message protocol is almost complete. Still needed are serialization for those messages, and an encrypted wire protocol (TLS?).
+  - Pluribus (now partially done). Subtasks:
+    - Buffering __whenMoreResolved and __whenBroken on remote promises, to handle breakage and to eliminate unnecessary network traffic.
+    - Using DelayedRedirectors in the resolution of remote promises.
+      def redirector(shortening) { 
+        if (isFresh()) {
+          localPromiseResolver.resolve(shortening) 
+        } else {
+          def [p, r] := Ref.promise()
+          localPromiseResolver.resolve(p)
+          E.sendOnly(originalPromise, "__whenMoreResolved", [r.resolve])
+        }
+      }
+    - VatTP (encrypted wire protocol/connection-manager/negotiation layer).
+    - De-stubbing Introducer/SturdyRef/IdentityMgr.
+    - Incorporating LocatorUnum.
+    - WormholeOp.
 
   - Try multi-process runner communication
     Threading is error-prone and not universally available; memory images and process creation are *more* available and much safer;
@@ -43,7 +59,7 @@ Big features:
 
   - Threaded runners, if the multi-process version doesn't turn out sufficient.
 
-  - Audited Selfless for E-objects
+  - Audited transparent Selfless for E-objects
   
   - Implicit parallelism (requires thread-safety):
     - If the send queue has at the head several sends whose target and arguments are DeepFrozen and thread-safe, and at most one which isn't, then they may be run simultaneously. Looking at the result ref for such a send must wait for the thread to finish.
