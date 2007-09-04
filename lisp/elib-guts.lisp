@@ -414,7 +414,8 @@
   (sb-c:any)
   :derive-type #'sbcl-derive-dispatch-result)
 
-#+sbcl (sb-c:deftransform e-call-dispatch
+#+(or) ;; this is disabled because it triggers a sbcl optimizer bug (introduced in 0.9.16.42, according to Nikodemus Siivola) now that our CL gen makes the FUNCTIONness of E object expressions visible; see thread from http://article.gmane.org/gmane.lisp.steel-bank.devel/9878 "Compiler hang, sbcl 1.0.8/.9". XXX reenable this when bug is fixed
+(sb-c:deftransform e-call-dispatch
     ((target mverb &rest args)
      (function t &rest t))
   "optimize e-call to function call"

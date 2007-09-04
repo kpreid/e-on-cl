@@ -381,31 +381,44 @@
 
 (define-sequence-expr |ObjectExpr| (layout result doc-comment pattern auditor-exprs script
     &aux (auditor-vars (loop for nil across auditor-exprs collect (gensym "AUDITOR")))
-         (object-var (gensym (or (pattern-opt-noun pattern) "G"))))
+         (object-var (gensym (or (pattern-opt-noun pattern) "G")))
+         (needs-self-reference (or (e.elang::usesp pattern script))))
   (assert (or (and (typep pattern '|FinalPattern|)
                    (null (e. pattern |getOptGuardExpr|)))
               (typep pattern '|IgnorePattern|)) 
     (pattern)
     "Non-final object-naming patterns are not yet supported.")
   (assert (not (e.elang::usesp pattern auditor-exprs)))
-  (values
-    (append
-      `((,object-var 'the-compiler-is-broken-if-you-have-this))
-      ;; XXX assuming this is a final pattern or ignore pattern or similar, and that final patterns keep the specimen var (rather than taking its value)
-      ;; XXX instead of using the regular compiler for these patterns, make our own bindings which are explicitly aware of this. this will also fix the object name being available (with the above bogus value) in auditing environments.
-      (updating-sequence-patt pattern layout object-var nil)
-      (let ((layout layout))
-        ;; auditor exprs are disallowed from mentioning the object
-        (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
-              for auditor-var-cell on auditor-vars
-              append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail))))
-      `((,result
-          (setf ,object-var
-                ,(object-form +seq-object-generators+
-                              layout 
-                              (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditor-exprs script))
-                              auditor-vars)))))
-    layout))
+  ;; note that each of these reassigns the layout variable
+  (let* ((pattern-seq (updating-sequence-patt pattern layout object-var nil))
+         (auditors-seq 
+          (let ((layout layout))
+            ;; auditor exprs are disallowed from mentioning the object
+            (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
+                  for auditor-var-cell on auditor-vars
+                  append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))))
+         (object-form (object-form +seq-object-generators+
+                                   layout 
+                                   (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditor-exprs script))
+                                   auditor-vars)))
+    (values
+      (if needs-self-reference
+        (append
+          ;; XXX assuming that final patterns keep the specimen var (rather than taking its value). todo: instead of using the regular compiler for these patterns, make our own binding types which understand the reassignment. this will also be usable to fix the object name being available (with the initial bogus value) in auditing environments.
+          `((,object-var 'the-compiler-is-broken-if-you-have-this))
+          pattern-seq
+          auditors-seq
+          `((,result
+              (setf ,object-var
+                    ,object-form))))
+        ;; if the object doesn't refer to itself, we don't need any assignment gimmicks
+        ;; ASSUMPTION: the auditors cannot reference the pattern (checked by assert above)
+        ;; ASSUMPTION: reordering is OK, because side effects are only within one sequence (the object-form's execution of auditors)
+        (append auditors-seq
+                `((,object-var ,object-form))
+                pattern-seq
+                `((,result ,object-var))))
+      layout)))
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values

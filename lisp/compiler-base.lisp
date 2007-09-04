@@ -608,6 +608,22 @@ XXX This is an excessively large authority and will probably be replaced."
     `((string= slot-name ,name) ,(binding-get-slot-code binding)))
   (t (error "no such slot: ~A" slot-name))) |#
 
+(defmacro compiler-object (object-body post-forms self-fsym)
+  ;; XXX poor name
+  "Used by the E-to-CL compiler as the translation of ObjectExpr. This is a macro rather than part of the compiler, so that compiler-macros can recognize object expressions easily. XXX There is more work to be done on simplifying this macro's parameter structure."
+  `(let ((.identity-token. (cons nil nil)))
+     (labels ((,self-fsym (mverb &rest args)
+                ;; This is to prevent the CL compiler from hoisting the closure
+                ;; closure, forcing it to generate a fresh closure for each
+                ;; execution of this ObjectExpr.
+                ;; 
+                ;; xxx optimization: we could skip this token if the code is
+                ;; known to close over something which varies sufficiently.
+                (refer-to .identity-token.)
+                ,object-body))
+       ,@post-forms
+       #',self-fsym)))
+
 (defun object-form (generators layout this-expr auditor-forms
     &aux (script (e. this-expr |getScript|)))
   "...
@@ -626,23 +642,16 @@ The scope layout provided should include the binding for the object's name patte
                  :object-expr this-expr
                  :rest (make-instance 'prefix-scope-layout 
                          :fqn-prefix (concatenate 'string fqn "$")
-                         :rest layout))))
-           (labels-fns
-             `((,self-fsym (mverb &rest args)
-                 ;; This is to prevent the CL compiler from hoisting the closure
-                 ;; closure, forcing it to generate a fresh closure for each
-                 ;; execution of this ObjectExpr.
-                 ;; 
-                 ;; xxx optimization: we could skip this token if the code is
-                 ;; known to close over something which varies sufficiently.
-                 (refer-to .identity-token.)
-                 ,(funcall (if opt-methods
-                             #'methodical-object-body
-                             #'plumbing-object-body)
-                  generators self-fsym inner-layout opt-methods matchers fqn checker-sym type-desc)))))
+                         :rest layout)))))
       (flet ((build-labels (post-forms)
-               `(let ((.identity-token. (cons nil nil)))
-                  (labels ,labels-fns ,@post-forms #',self-fsym))))
+               `(compiler-object 
+                  ,(funcall (if opt-methods
+                              #'methodical-object-body
+                              #'plumbing-object-body)
+                            generators self-fsym inner-layout opt-methods
+                            matchers fqn checker-sym type-desc)
+                  ,post-forms
+                  ,self-fsym)))
         (if (not has-auditors)
           (build-labels '())
           (let ((audition-sym  (make-symbol "AUDITION"))
