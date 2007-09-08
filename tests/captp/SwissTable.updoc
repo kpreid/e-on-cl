@@ -1,0 +1,24 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+  
+  ? pragma.syntax("0.9")
+  
+  ? def makeSwissTable := <import:net.captp.tables.makeSwissTable>
+  # value: <makeSwissTable>
+
+args 2 and 3 standing in for makeWeakKeyMap and makeWeakValueMap
+
+  ? def swissTable := makeSwissTable(entropy, <elib:tables.makeFlexMap>, <elib:tables.makeFlexMap>)
+  # value: <swissTable>
+
+Bug: getNewSwiss and lookupSwiss would not accept promises
+
+  ? def p
+  > def swiss :int := swissTable.getNewSwiss(p) ;null
+  
+  ? swissTable.lookupSwiss(swiss) == p
+  # value: true
+
+XXX test case: register a promise, resolve it to null, the lookupSwiss it
+XXX test that the weak maps are used properly
+XXX write more tests; this covers only specific bugs found.
