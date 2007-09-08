@@ -15,10 +15,6 @@ This is a placeholder. We *should* have tests for the operation of each of these
   ? <import:net.captp.tables.makePromiseGiftTable>(def makeWeakPtr {}, def nonceLocatorPromise {})
   # value: <promiseGiftTable>
 
-  args 2 and 3 standing in for makeWeakKeyMap and makeWeakValueMap
-  ? <import:net.captp.tables.makeSwissTable>(def entropy {}, <elib:tables.makeFlexMap>, <elib:tables.makeFlexMap>)
-  # value: <swissTable>
-
   ? <import:net.captp.comm.makeNonceLocator>(def pgt {},
   >                                          def ngt {},
   >                                          "fake-id",
