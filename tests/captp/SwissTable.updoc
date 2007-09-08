@@ -19,6 +19,32 @@ Bug: getNewSwiss and lookupSwiss would not accept promises
   ? swissTable.lookupSwiss(swiss) == p
   # value: true
 
+Bug: null was being used as a lookup failure marker in a way that only worked in the Java version.
+
+  ? def faultHandler(hash) {
+  >   println(`faulting for $hash`)
+  > }
+  > swissTable.addFaultHandler(faultHandler)
+
+This should fault, and fail.
+
+  ? swissTable.lookupSwiss(21561735424)
+  # stdout: faulting for 995105635960187122290482398214630504868150852438
+  #         
+  
+  # problem: 21561735424 not found
+
+  ? def p
+  > def swiss :int := swissTable.getNewSwiss(p) ;null
+  > bind p := null
+
+This should not fault.
+
+  ? swissTable.lookupSwiss(swiss) == p
+  # value: true
+
+  ? swissTable.removeFaultHandler(faultHandler)
+
 XXX test case: register a promise, resolve it to null, the lookupSwiss it
 XXX test that the weak maps are used properly
 XXX write more tests; this covers only specific bugs found.

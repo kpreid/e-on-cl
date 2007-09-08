@@ -52,13 +52,9 @@ def makeSwissTable(entropy, makeWeakKeyMap, makeWeakValueMap) implements DeepFro
                 #Since Weak*Maps can't handle nulls, we handle it ourselves.
                 return null;
             }
-            def optResult := mySwissToRef.fetch(swissNum, makeValueThunk.getNULL_THUNK());
-            if (__equalizer.sameYet(optResult, null)) {
-                return optResult;
+            escape fault { 
+              return mySwissToRef.fetch(swissNum, fault)
             }
-            #Since we handle null ourselves, we know that a null optResult means
-            #a lookup miss.
-            # XXX the above is false in the E implementation; a promise could be put in the table and then later resolve to null.
             def swissHash := swissNum.cryptoHash();
             for db in mySwissDBs {
                 #give each fault handler a chance
