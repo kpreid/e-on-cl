@@ -223,7 +223,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       def handler := makeEventualHandler(position)
 
       return def proxyRecord {
-        to resolver() { return proxySlotResolver }
+        to smash(problem :Throwable) {
+          proxyRecord.makeRedirector()(Ref.broken(problem))
+        }
         
         to makeRedirector() {
           return def redirector(resolution) :void {
