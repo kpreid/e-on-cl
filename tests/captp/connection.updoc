@@ -710,16 +710,35 @@ After an outgoing NewFarDesc, the object should be present in the exports table,
   ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
-  ? def exportedPromise
+  ? var wmrs := []
+  > def resolution
+  > def exportedPromise := <elib:ref.makeProxy>(
+  >   def handler {
+  >     match [=="handleSendOnly", [=="__whenMoreResolved", [reactor]]] {
+  >       wmrs with= reactor
+  >     }
+  >     match msg { stderr.println(msg) }},
+  >   resolution,
+  >   false)
   > E.sendOnly(outgoingConnection.nonceLocator(), "newRemotePromiseDescTest", [exportedPromise])
   ?
   # stdout: DeliverOnly(0, "newRemotePromiseDescTest", [NewRemotePromiseDesc(1, -1, 10000001)])
   #         
   
-  ? bind exportedPromise := 31432943; null
-  ?
-  # stdout: DeliverOnly(-1, "run", [31432943])
+  # stderr: ["handleOptSealedDispatch", [CapTP far ref's remote incomingPos]]
+  #         ["handleOptSealedDispatch", [otherConnProxy]]
   #         
+
+The resolution must be delivered to the redirector even if it's a promise, to allow for promise shortening; in other words, it must be whenMoreResolved and not whenResolved.
+
+  ? def anotherPromise
+  > bind resolution := __makeFinalSlot(anotherPromise); null
+  > for r in wmrs { E.sendOnly(r, "run", [anotherPromise]) }
+  ?
+  # stdout: DeliverOnly(-1, "run", [NewRemotePromiseDesc(2, -2, 10000002)])
+  #         
+
+XXX if the answer to http://www.eros-os.org/pipermail/e-lang/2007-September/012219.html is local promises should invoke reactors, then we can get rid of using proxies for this test.
 
 (Yes, it is correct that the third argument isn't a hash. It's direct from entropy.nextSwiss(), and is a SwissBase, the authority to *be* an object (as seen from outside some vat).)
 
