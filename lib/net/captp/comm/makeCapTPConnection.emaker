@@ -64,9 +64,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       swissTable)
     
     def termination # resolved when connection is dead
-    def remoteNonceLocatorResolutionSlot
 
-    def remoteNonceLocator
+    def remoteNonceLocatorRecord
 
     # Currently unused.
     var currentIncomingSerialNumber := 0
@@ -189,7 +188,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
 
     def lookupImport(index :int) {
       return if (index.isZero()) {
-        return remoteNonceLocator
+        return remoteNonceLocatorRecord.reference()
       } else if (index.belowZero()) {
         #questions[-index]
         throw("can't happen: <0 import")
@@ -214,15 +213,48 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       currentIncomingSerialNumber += 1
     }
     
-    def makeEventualHandler
-    
-    def makeProxyRecord(far, position) {
+    def makeProxyRecord(far, position :vow[IncomingPos]) {
       var wireCount := 0
       var localCount := 0
       def [resolutionSlot, proxySlotResolver] := Ref.promise()
-      def handler := makeEventualHandler(position)
 
-      return def proxyRecord {
+      def proxyRecord
+      
+      def capTPEventualHandler {
+        to handleSend(verb, args) {
+
+          def [answerPos, questionRecord] := prepareQuestion(false)
+          def redirector := questionRecord.makeRedirector()
+
+          E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
+          
+          return questionRecord.reference()
+        }
+        to handleSendOnly(verb, args) {
+          E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
+        }
+        to handleOptSealedDispatch(brand) {
+          if (brand == remoteIncomingPosBrand) {
+            return remoteIncomingPosSealer.seal(position)
+          } else if (brand == hub.get3DescBrand()) {
+            return hub.get3DescSealer().seal(fn recipID {
+              def nonce := swissTable.nextSwiss() # XXX use a long
+              # XXX we shouldn't have the authority to specify the path+vatID - it should be baked into our access to the hub
+              def farVine := remoteNonceLocatorRecord.reference() <- provideFor(
+                def incomingDescStub implements pbc {to __optUncall() {return [descMakerStandin, "Incoming", [position]]}},
+                recipID,
+                nonce)
+              [remoteSearchPath, remoteVatID, nonce, makeVine(farVine)]
+            })
+          }
+        }
+        
+        to __printOn(out :TextWriter) {
+          out.print("<CapTP proxy handler for ", position, " of ", outgoingReceiver, ">")
+        }
+      }
+
+      return bind proxyRecord {
         to smash(problem :Throwable) {
           proxyRecord.makeRedirector()(Ref.broken(problem))
         }
@@ -237,7 +269,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         /** make a local reference, and increment the wireCount (number of received descriptors for this local entry) */
         to reference() {
           wireCount += 1
-          def proxy := makeProxy(handler, resolutionSlot, far)
+          def proxy := makeProxy(capTPEventualHandler, resolutionSlot, far)
           localCount += 1
           
           whenGarbage(proxy, once(fn {
@@ -260,42 +292,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
-    bind makeEventualHandler(position :vow[IncomingPos]) {
-      return def capTPEventualHandler {
-        to handleSend(verb, args) {
-
-          def [answerPos, questionRecord] := prepareQuestion(false)
-          def redirector := questionRecord.makeRedirector()
-
-          E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
-          
-          return questionRecord.reference()
-        }
-        to handleSendOnly(verb, args) {
-          E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
-        }
-        to handleOptSealedDispatch(brand) {
-          if (brand == remoteIncomingPosBrand) {
-            return remoteIncomingPosSealer.seal(position)
-          } else if (brand == hub.get3DescBrand()) {
-            return hub.get3DescSealer().seal(fn recipID {
-              def nonce := swissTable.nextSwiss() # XXX use a long
-              # XXX we shouldn't have the authority to specify the path+vatID - it should be baked into our access to the hub
-              def farVine := remoteNonceLocator <- provideFor(
-                def incomingDescStub implements pbc {to __optUncall() {return [descMakerStandin, "Incoming", [position]]}},
-                recipID,
-                nonce)
-              [remoteSearchPath, remoteVatID, nonce, makeVine(farVine)]
-            })
-          }
-        }
-        
-        to __printOn(out :TextWriter) {
-          out.print("<CapTP proxy handler for ", position, " of ", outgoingReceiver, ">")
-        }
-      }
-    }
-
+    # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
+    bind remoteNonceLocatorRecord := makeProxyRecord(true, 0)
+    
     bind prepareQuestion(resolved :boolean) {
       def position := -(questions."bind"(def record := makeProxyRecord(
         resolved,
@@ -411,7 +410,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         imports.smash(problem)
         answers.smash(problem)
         questions.smash(problem)
-        bind remoteNonceLocatorResolutionSlot := __makeFinalSlot(termination)
+        remoteNonceLocatorRecord.smash(problem)
         
         # Discard our outgoing references, since we will no longer use them
         outgoingReceiver := null
@@ -419,15 +418,12 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       }
     }
     
-    # The remote nonce locator is a Far reference which is unique to this connection -- XXX this representation will have to be changed for ShutdownOp; see connection.updoc
-    bind remoteNonceLocator := makeProxy(makeEventualHandler(0), remoteNonceLocatorResolutionSlot, true)
-    
     /** Facet of this connection provided for the LocatorUnum etc. */
     def outgoingConnection {
       to __printOn(out :TextWriter) {
         out.print("<CapTP outgoing to ", remoteVatID, ">")
       }
-      to nonceLocator() { return remoteNonceLocator }
+      to nonceLocator() { return remoteNonceLocatorRecord.reference() }
     }
     
     # XXX review what the least authority is for this
@@ -436,7 +432,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to __printOn(out :TextWriter) {
         out.print("<CapTP peer to ", remoteVatID, ">")
       }
-      to nonceLocator() { return remoteNonceLocator }
+      to nonceLocator() { return remoteNonceLocatorRecord.reference() }
       to getPromiseGiftTable() { return promiseGifts }
       to getNearGiftTable() { return nearGifts }
     }
