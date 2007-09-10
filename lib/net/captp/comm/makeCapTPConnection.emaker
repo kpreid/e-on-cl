@@ -213,6 +213,10 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       currentIncomingSerialNumber += 1
     }
     
+    def isProxyForOtherConnection(ref) {
+      return remoteIncomingPosUnsealer.amplify(ref) == null && hub.isOurProxy(ref)
+    }
+    
     def makeProxyRecord(far, position :vow[IncomingPos]) {
       var wireCount := 0
       var localCount := 0
@@ -222,16 +226,28 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       
       def capTPEventualHandler {
         to handleSend(verb, args) {
-
-          def [answerPos, questionRecord] := prepareQuestion(false)
-          def redirector := questionRecord.makeRedirector()
-
-          E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
-          
-          return questionRecord.reference()
+          if (verb == "__whenMoreResolved" && args.size() == 1) {
+            capTPEventualHandler.handleSendOnly(verb, args)
+            return null
+          } else {
+            def [answerPos, questionRecord] := prepareQuestion(false)
+            def redirector := questionRecord.makeRedirector()
+            
+            E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
+            
+            return questionRecord.reference()
+          }
         }
         to handleSendOnly(verb, args) {
-          E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
+          #traceln(`sendOnly $verb $args`)
+          if (verb == "__whenMoreResolved" \
+              && args =~ [reactor] \
+              && isProxyForOtherConnection(reactor)) {
+            E.sendOnly(reactor, "run", [proxyRecord.reference()])
+            return null
+          } else {
+            E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
+          }
         }
         to handleOptSealedDispatch(brand) {
           if (brand == remoteIncomingPosBrand) {

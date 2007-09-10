@@ -39,6 +39,9 @@ def makeCapTPHub(makeConnection, outgoingConnect) implements ExitViaHere, DeepFr
           return wantsRecip(recipID)
         }
       }
+      to isOurProxy(specimen) {
+        return for3DescUnsealer.amplify(specimen) =~ [_]
+      }
     }
     def [localRec, of, pf] := makeConnection(peerHub, searchPath, vatID, remoteRec)
     liveConnections[vatID] := [of, pf]

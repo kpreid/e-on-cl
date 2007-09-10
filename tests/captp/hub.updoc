@@ -148,7 +148,7 @@ Incoming connections.
   # value: true
 
   ? outc2._getPeerHub().amplifyFor3Desc(
-  >   <elib:ref.makeProxy>(
+  >   def sampleOther := <elib:ref.makeProxy>(
   >     def handler { to handleOptSealedDispatch(brand) { 
   >       if (brand == b3) {
   >         return s3.seal(fn recipID { 
@@ -161,3 +161,9 @@ Incoming connections.
   #         
   
   # value: "descData"
+
+  ? outc2._getPeerHub().isOurProxy(sampleOther)
+  # value: true
+  
+  ? outc2._getPeerHub().isOurProxy(<elib:ref.makeProxy>(def handler { match _ {}}, Ref.promise()[0], true))
+  # value: false

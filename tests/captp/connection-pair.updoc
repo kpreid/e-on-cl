@@ -5,6 +5,7 @@
   > pragma.enable("accumulator")
 
   ? def makeVine := <import:net.captp.tables.makeVine>; null
+  ? def makeHub := <import:net.captp.comm.makeHub>; null
   ? def makeFlexMap := <elib:tables.makeFlexMap>; null
   ? def traceMessages := <import:net.captp.util.traceMessages>; null
 
@@ -27,6 +28,13 @@ This is a mechanism for tracing communication between the CapTPConnections.
   >   return traceMessages(fn t { stdout.print(label, " <- "); stdout.println(t) }, ref)
   > }
   > null
+  
+  ? def hub {
+  >   to isOurProxy(specimen) {
+  >     return false # XXX adequate?
+  >   }
+  > }
+  > null
 
 Now we can make the SwissTables and connections.
 
@@ -38,12 +46,12 @@ Now we can make the SwissTables and connections.
   >                        swissTableL,
   >                        def locatorUnumL {},
   >                        pseudoWhenGarbage,
-  >                        def hubL {}, "L", [], "R"),
+  >                        hub, "L", [], "R"),
   >    makeCapTPConnection(traceReceiver("Left", receiverL), 
   >                        swissTableR,
   >                        def locatorUnumR {},
   >                        pseudoWhenGarbage,
-  >                        def hubR {}, "R", [], "L")]
+  >                        hub, "R", [], "L")]
   # value: [[<capTPReceiver>, <CapTP outgoing to R>, <CapTP peer to R>], [<capTPReceiver>, <CapTP outgoing to L>, <CapTP peer to L>]]
   
 --- 

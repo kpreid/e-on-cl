@@ -96,6 +96,9 @@ Mock other-connections-of-this-comm-system for 3-vat introductions:
   >       return wantsRecip(recipID)
   >     }
   >   }
+  >   to isOurProxy(specimen) {
+  >     return otherConnProxyUnsealer.amplify(specimen) =~ [_]
+  >   }
   >   to get3DescBrand() { return otherConnProxyBrand }
   >   to get3DescSealer() { return otherConnProxySealer }
   >   to get(searchPath, vatID) {
@@ -967,3 +970,38 @@ This is prohibited because the timing and reoccurrence of unserialization operat
   > receiver.DeliverOnly(0, "__getAllegedType", fn bind builder { testGraphRecognizer.recognize([], builder) })
   ? builder.buildImport("CapTP_1_descs")
   # problem: this CapTP argument builder is no longer valid
+
+--- Outgoing __whenMoreResolved ---
+
+If a remote promise proxy receives a __whenMoreResolved where the reactor is a proxy for another connection, then instead of forwarding the message, it delivers itself to the reactor. This creates the opportunity for the promise to be serialized as a Promise3Desc, triggering 3-vat shortening.
+
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
+
+  ? def otherConnReactor := <elib:ref.makeProxy>(
+  >   def handler {
+  >     to handleOptSealedDispatch(brand) {
+  >       if (brand == otherConnProxyBrand) {
+  >         def nonce := 483853534795
+  >         return otherConnProxySealer.seal(fn recipID {[["otherSP"], "otherID", nonce, makeVine(otherConnReactor)]})
+  >       }
+  >     }
+  >     match msg { stderr.println(msg) }
+  >   },
+  >   Ref.promise()[0],
+  >   true)
+  # value: <Far ref>
+  
+  ? def someRemotePromise := outgoingConnection.nonceLocator() <- wmrTest()
+  # value: <Promise>
+  
+  ?
+  # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "wmrTest", [])
+  #         
+  
+  ? E.sendOnly(someRemotePromise, "__whenMoreResolved", [otherConnReactor])
+
+  ?
+  # stderr: ["handleSendOnly", ["run", [<Promise>]]]
+  #         
+  
