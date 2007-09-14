@@ -44,7 +44,7 @@ Using Unicode letters in nouns
   ? def π2 := π * 2
   # value: 6.28318
   
-  ? e`def π2 := π * 2`
+  ? e`def π2 := π * 2`.asKernelE()
   # value: e`def π2 := π.multiply(2)`
 
 Codepoints

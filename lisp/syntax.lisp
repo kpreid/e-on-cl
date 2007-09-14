@@ -233,7 +233,7 @@ XXX make precedence values available as constants"
                     (declare (ignore opt-original))
                     (e-coercef index 'integer)
                     (e. tw |print| tag "{" index "}"))))
-        (e-lambda "$printVisitor" ()
+        (e-lambda |printVisitor| ()
           (:|__printOn| ((ptw +the-text-writer-guard+))
             (e. ptw |print| "<E-syntax node visitor printing to " tw ">")
             nil)
@@ -245,6 +245,26 @@ XXX make precedence values available as constants"
               (e. tw |print| " := ")
               (subprint value-expr +precedence-in-assign-right+)))
           
+          (:|visitNKAssignExpr| (oo n v)
+            (e. |printVisitor| |visitAssignExpr| oo n v))
+
+          (:|visitBinaryExpr| (opt-original operator left-expr right-exprs)
+            (declare (ignore opt-original))
+            (precedential (+precedence-outer+)
+              (subprint left-expr +precedence-atom+) ;; XXX wrong precedence
+              (e. tw |write| " ")
+              (e. tw |print| operator)
+              (e. tw |write| " ")
+              (if (samep 1 (e. right-exprs |size|))
+                (subprint (eelt right-exprs 0) +precedence-atom+) ;; XXX wrong precedence
+                (progn
+                  (e. tw |print| "(" #|)|#)
+                  (loop for sep = "" then ", "
+                        for arg across (e-coerce right-exprs 'vector)
+                        do (e. tw |write| sep)
+                           (subprint arg +precedence-outer+))
+                  (e. tw |print| #|(|# ")")))))
+
           (:|visitCallExpr| (opt-original rec verb args)
             (declare (ignore opt-original))
             (subprint rec +precedence-call-rec+)
@@ -279,6 +299,9 @@ XXX make precedence values available as constants"
               (e. tw |print| " := ")
               (subprint specimen +precedence-define-right+)))
           
+          (:|visitDefrecExpr| (oo p e s)
+            (e. |printVisitor| |visitDefineExpr| oo p e s))
+          
           (:|visitEscapeExpr| (opt-original ejector-patt body catch-patt catch-body)
             (declare (ignore opt-original))
             (e. tw |print| "escape ")
@@ -311,6 +334,15 @@ XXX make precedence values available as constants"
             (subprint-block true-block)
             (e. tw |print| " else ")
             (subprint-block false-block))
+          
+          (:|visitListExpr| (opt-original args)
+            (declare (ignore opt-original))
+            (e. tw |print| "[" #|]|#)
+            (loop for sep = "" then ", "
+                  for arg across (e-coerce args 'vector)
+                  do (e. tw |print| sep)
+                     (subprint arg +precedence-outer+))
+            (e. tw |print| #|[|# "]"))
           
           (:|visitLiteralExpr| (opt-original (value '(or string integer character float64)))
             (declare (ignore opt-original))

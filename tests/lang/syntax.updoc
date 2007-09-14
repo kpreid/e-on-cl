@@ -203,7 +203,7 @@ node visitor
   ? def visitor := ePrinter.makePrintENodeVisitor(stdout)
   # value: <E-syntax node visitor printing to <textWriter>>
   
-  ? e`1 + 1`.welcome(visitor)
+  ? e`1 + 1`.asKernelE().welcome(visitor)
   # stdout: 1.add(1)
 
   XXX further print visitor tests
@@ -215,7 +215,7 @@ XXX print tests for all nodes
 
 Catch
 
-  ? e`try { a } catch b { c }`
+  ? e`try { a } catch b { c }`.asKernelE()
   # value: e`try {
   #            a
   #        } catch b {
@@ -224,7 +224,7 @@ Catch
 
 Finally
 
-  ? e`try { a } finally { b }`
+  ? e`try { a } finally { b }`.asKernelE()
   # value: e`try {
   #            a
   #        } finally {
@@ -276,14 +276,14 @@ ListPattern
   ? epatt`[]`
   # value: epatt`[]`
 
-Testing printing of nodes with no specific print code yet:
-
-  ? <import:org.cubik.cle.prim.parser>.run("{[a.run()]}")
-  # value: e`{
-  #            $<ListExpr [e`a.run()`]>$
-  #        }`
-  XXX these dollar signs are inappropriate
-  xxx this test will break as soon as ListExpr gets appropriate printing
+xTesting printing of nodes with no specific print code yet:
+x
+x  ? <import:org.cubik.cle.prim.parser>.run("{[a.run()]}")
+x  # value: e`{
+x  #            $<ListExpr [e`a.run()`]>$
+x  #        }`
+x  XXX these dollar signs are inappropriate
+x  xxx this test is broken now that ListExpr gets appropriate printing
 
 Precedence parenthesization tests
 
@@ -319,36 +319,36 @@ Universal precedence-proper print-parenthesization tester:
   > def SeqExpr := <vm:makeSeqExpr>.asType()
   >
   > def innerNodes := [
-  >   e`a := b`,
-  >   e`a.b(c)`,
-  >   e`try {a} catch b {c}`,
-  >   e`def a := b`,
-  >   e`escape a {b}`,
-  >   e`try {a} finally {b}`,
-  >   e`{a}`,
-  >   e`if (a) {b}`,
-  >   e`if (a) {b} else {c}`,
-  >   e`1`,
-  >   e`meta.context()`,
-  >   e`meta.getState()`,
-  >   # e`a =~ b`,
-  >   e`a`,
-  >   e`def o {}`,
-  >   e`a; b`,
-  >   e`&a`,
+  >   e`a := b`.asKernelE(),
+  >   e`a.b(c)`.asKernelE(),
+  >   e`try {a} catch b {c}`.asKernelE(),
+  >   e`def a := b`.asKernelE(),
+  >   e`escape a {b}`.asKernelE(),
+  >   e`try {a} finally {b}`.asKernelE(),
+  >   e`{a}`.asKernelE(),
+  >   e`if (a) {b}`.asKernelE(),
+  >   e`if (a) {b} else {c}`.asKernelE(),
+  >   e`1`.asKernelE(),
+  >   e`meta.context()`.asKernelE(),
+  >   e`meta.getState()`.asKernelE(),
+  >   # e`a =~ b`.asKernelE(),
+  >   e`a`.asKernelE(),
+  >   e`def o {}`.asKernelE(),
+  >   e`a; b`.asKernelE(),
+  >   e`&a`.asKernelE(),
   > ]; null
   
   ? for inner in innerNodes {
   >   for whole in [
-  >     e`aa := $inner`,
-  >     e`aa($inner)`,
-  >     e`$inner(aa)`,
-  >     e`def aa := $inner`,
-  >     # e`$inner =~ aa`,
-  >     e`$inner; aa`,
-  >     e`aa; $inner`,
-  >     e`def aa { method bb() :$inner {} }`,
-  >     e`def aa :$inner := bb`,
+  >     e`aa := $inner`.asKernelE(),
+  >     e`aa($inner)`.asKernelE(),
+  >     e`$inner(aa)`.asKernelE(),
+  >     e`def aa := $inner`.asKernelE(),
+  >     # e`$inner =~ aa`.asKernelE(),
+  >     e`$inner; aa`.asKernelE(),
+  >     e`aa; $inner`.asKernelE(),
+  >     e`def aa { method bb() :$inner {} }`.asKernelE(),
+  >     e`def aa :$inner := bb`.asKernelE(),
   >   ] {
   >     # Special case: SeqExpr may merge harmlessly with nested SeqExprs
   >     # XXX make this test more precise
@@ -382,7 +382,7 @@ e__quasiParser
   # value: <import:org.erights.e.elang.syntax.makeEParser>
   
   ? e`1 + 1`
-  # value: e`1.add(1)`
+  # value: e`1 + 1`
   
   ? e__quasiParser("hi")
   # value: e`hi`
@@ -449,7 +449,7 @@ Quasi-E-source issues
 Substitution
 
   ? e`[${e`a`}]`
-  # value: e`__makeList.run(a)`
+  # value: e`[a]`
   
   ? epatt`[${epatt`a`}]`
   # value: epatt`[a]`

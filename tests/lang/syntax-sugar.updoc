@@ -334,9 +334,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   ? t("for a => b in b { c }")
   # problem: <misleading-apparent-usage-error: a ForExpr's collection (e`b`) may not appear to use definitions from its valuePattern (epatt`b`)>
   ? t("for via (c) a => b in (def c := d) { e }")
-  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`via (c) a`) may not use definitions from its collection (e`$<DefrecExpr c, null, d>$`)>
+  # problem: <misleading-actual-usage-error: a ForExpr's optKeyPattern (epatt`via (c) a`) may not use definitions from its collection (e`def c := d`)>
   ? t("for a => via (c) b in (def c := d) { e }")
-  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`via (c) b`) may not use definitions from its collection (e`$<DefrecExpr c, null, d>$`)>
+  # problem: <misleading-actual-usage-error: a ForExpr's valuePattern (epatt`via (c) b`) may not use definitions from its collection (e`def c := d`)>
   XXX prettier errors
 
   XXX look into extracting more of the for-loop expansion into a function
@@ -1179,7 +1179,7 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`c`]) may not appear to use definitions from its patterns ([epatt`c`])>
 
   ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :(def d := e) implements d { e }")
-  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`$<DefrecExpr d, null, e>$`)>
+  # problem: <misleading-apparent-usage-error: a FunctionObject's auditors ([e`d`]) may not appear to use definitions from its optResultGuard (e`def d := e`)>
   XXX prettier error
 
 'OneMethodObject'

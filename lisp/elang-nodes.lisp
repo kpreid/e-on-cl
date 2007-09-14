@@ -485,12 +485,11 @@ List nodes will be assumed to be sequences."
     "Quasiliteral ValueMaker interface.
 
 NOTE: There is a non-transparent optimization, with the effect that if args == [] and there are quasi-nodes in this tree, they will be returned unreplaced."
-    (kernelize
-      (if (zerop (length args))
-        this
-        (e. this |welcome|
-            (efuncall (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
-                      args)))))
+    (if (zerop (length args))
+      this
+      (e. this |welcome|
+          (efuncall (e-import "org.erights.e.elang.visitors.makeQuasiSubstituteVisitor") 
+                    args))))
   (:|asKernelE/0| 'kernelize)
   (:|welcome| (this visitor)
     (e-call
@@ -544,10 +543,12 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (:|quasiTypeTag| (this)
     (declare (ignore this))
     "e")
-  (:|eval/1| 'eval-e)
+  (:|eval| (this scope)
+    ;; XXX kernelize here and in evalToPair is done for EoJ compatibility; is it the Right Thing?
+    (eval-e (kernelize this) scope))
   (:|evalToPair| (this scope)
     "Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings."
-    (multiple-value-call #'vector (eval-e this scope))))
+    (multiple-value-call #'vector (eval-e (kernelize this) scope))))
 
 (def-vtable |Pattern|
   (:|getOptPrincipalNoun/0| #'pattern-opt-noun)
