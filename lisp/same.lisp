@@ -11,35 +11,8 @@
 
 (defconstant +hash-depth+ 5)
 
+(declaim (inline identity-hash))
 (defun identity-hash (target) (sxhash target))
-
-(defun sameness-fringe (original path opt-fringe &optional (sofar (make-hash-table)))
-  "returns cl:boolean"
-  ; XXX translation of Java
-  ;(declare (optimize (speed 3) (safety 3)))
-  (when (nth-value 1 (gethash original sofar))
-    (return-from sameness-fringe t))
-  (let ((obj (ref-shorten original)))
-    (when (nth-value 1 (gethash obj sofar))
-      (return-from sameness-fringe t))
-    (when (transparent-selfless-p obj)
-      (setf (gethash original sofar) nil)
-      (return-from sameness-fringe
-        (loop
-          with result = t
-          for elem across (spread-uncall obj)
-          for i from 0
-          do (setf result (and result (sameness-fringe elem (when opt-fringe (cons i path)) opt-fringe sofar)))
-             (when (and (not result) (null opt-fringe))
-               (return nil))
-          finally (return result))))
-    (if (ref-is-resolved obj)
-      (progn
-        t)
-      (progn
-        (when opt-fringe
-          (vector-push-extend (cons obj path) opt-fringe))
-        nil))))
 
 (declaim (inline transparent-selfless-p))
 (defun transparent-selfless-p (a)
@@ -57,35 +30,82 @@
   (assert (not (eql left right)))
   nil)
 
+(declaim (inline %examine-reference))
+(defun %examine-reference (original path opt-fringe
+                           &key 
+                           (before-shortening (constantly nil))
+                           early-test
+                           (selfless-early (constantly nil))
+                           selfless-seed
+                           selfless-op
+                           (selfless-shortcut (constantly nil))
+                           when-resolved-selfish
+                           when-unresolved-selfish)
+  (funcall before-shortening original)
+  (let ((short (ref-shorten original)))
+    (funcall early-test short)
+    (if (transparent-selfless-p short)
+      (progn
+        (funcall selfless-early)
+        (loop with result = selfless-seed
+              for a across (spread-uncall short)
+              for i from 0
+              do (setf result (funcall selfless-op result a (when opt-fringe (cons i path))))
+                 (when (funcall selfless-shortcut result)
+                   (return result))
+              finally (return result)))
+      (if (ref-is-resolved short)
+        (funcall when-resolved-selfish short)
+        (progn
+          (when opt-fringe
+            ; target is an unresolved promise. Our caller will take its hash into account via opt-fringe.
+            (vector-push-extend (cons short path) opt-fringe))
+          (funcall when-unresolved-selfish))))))
+
+(defun sameness-fringe (original path opt-fringe &optional (sofar (make-hash-table)))
+  "Returns a cl:boolean indicating whether the given reference is settled; fills OPT-FRINGE if provided."
+  ;(declare (optimize (speed 3) (safety 3)))
+  (flet ((stop-on-cycle (obj)
+           (when (nth-value 1 (gethash obj sofar))
+             (return-from sameness-fringe t))))
+    (%examine-reference
+      original path opt-fringe
+      :before-shortening #'stop-on-cycle
+      :early-test        #'stop-on-cycle
+      :selfless-early (lambda () (setf (gethash original sofar) nil))
+      :selfless-seed t
+      :selfless-op (lambda (accum elem path-ext)
+                     (let ((sub-settled (sameness-fringe elem path-ext opt-fringe sofar)))
+                       (and accum sub-settled)))
+      :selfless-shortcut (lambda (result)
+                           (and (not result) (null opt-fringe)))
+      :when-resolved-selfish (constantly t)
+      :when-unresolved-selfish (constantly nil))))
+
 (defun %sameness-hash (target hash-depth path opt-fringe)
   ;(declare (optimize (speed 3) (safety 3)))
-  (setf target (ref-shorten target))
-  (if (<= hash-depth 0)
-    (return-from %sameness-hash (cond
-      ((sameness-fringe target path opt-fringe)
-        -1)
-      ((null opt-fringe)
-        (error "Must be settled"))
-      (t
-        -1))))
-  (if (transparent-selfless-p target)
-    (reduce #'logxor 
-      (loop for a across (spread-uncall target)
-            for i from 0
-            collect (%sameness-hash a (1- hash-depth) (when opt-fringe (cons i path)) opt-fringe)))
-    (let ((hash (elib::same-hash-dispatch target)))
-      (cond
-        (hash
-          hash)
-        ((ref-is-resolved target)
-          ; Selfless objects were caught earlier. Any settled non-Selfless reference has the identity of its underlying object.
-          (identity-hash target))
-        ((null opt-fringe)
-          (error "Must be settled"))
-        (t
-          ; target is an unresolved promise. Our caller will take its hash into account via opt-fringe.
-          (vector-push-extend (cons target path) opt-fringe)
-          -1)))))
+  "Compute the hash of a reference. If the vector OPT-FRINGE is provided, fills it with promises and their locations in the structure; otherwise, encountering a promise is an error."
+  (flet ((unresolved-selfish ()
+           (if opt-fringe
+             -1
+             (error "Must be settled"))))
+    (%examine-reference
+      target path opt-fringe
+      :early-test
+        (lambda (target)
+          (when (<= hash-depth 0)
+            (return-from %sameness-hash
+              (if (sameness-fringe target path opt-fringe)
+                -1
+                (unresolved-selfish)))))
+      :selfless-seed 0
+      :selfless-op (lambda (accum a path-ext)
+                     (logxor accum (%sameness-hash a (1- hash-depth) path-ext opt-fringe)))
+      :when-resolved-selfish
+        (lambda (target)
+          (or (elib::same-hash-dispatch target)
+              (identity-hash target)))
+      :when-unresolved-selfish #'unresolved-selfish)))
 
 (defmethod elib::same-hash-dispatch ((a null))
   (declare (ignore a))
@@ -299,11 +319,13 @@
 
 (def-vtable traversal-key
   (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
     (eql auditor +deep-frozen-stamp+))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     "Does not print the reference behind this traversal key so that:
   * The key may be DeepFrozen trivially.
   * The key does not convey any authority to its referent."
+    (declare (ignore this))
     (e. tw |write| "<a traversal key>")))
 
 (defmethod print-object ((tk traversal-key) stream)
