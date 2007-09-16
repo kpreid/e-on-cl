@@ -230,13 +230,17 @@ Delivery to an answer, creating the answer first:
   # stdout: DeliverOnly(1, "run", [true])
   #         
 
-Delivery to an import:
+Delivery to an export:
 
-  ? receiver.DeliverOnly(-1,
-  >                      "__whenMoreResolved",
-  >                      buildIn([descs.Import(1)]))
+  ? E.sendOnly(outgoingConnection.nonceLocator(), "export", [def exported(x) {println(x)}])
   ?
-  # stdout: DeliverOnly(1, "run", [true])
+  # stdout: DeliverOnly(0, "export", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
+  #         
+
+  ? receiver.DeliverOnly(1,
+  >                      "run",
+  >                      buildIn(["foo"]))
+  # stdout: foo
   #         
 
 --- Incoming GCExportOp ---
