@@ -9,7 +9,9 @@
 ; --- direct E-to-Lisp interfaces and powers ---
 
 ; XXX look into whether e-lambda, now that it has matcher support, would be cleaner for implementing this
-(defun wrap-function (f &key stamps)
+(defun wrap-function (f &key stamps
+    &aux (hash-code #+e.function-sxhash-inadequate (make-hash-code)
+                    #-e.function-sxhash-inadequate (cons nil nil)))
   "Return an E function value corresponding to the given Lisp function value."
   (labels ((wrapper (mverb &rest args)
       (cond
@@ -41,6 +43,7 @@
                     (e-is-true (elib:miranda #'wrapper mverb args #'funcall))))))
             ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
               (not (not (find auditor stamps :test #'samep)))))
+            ((e.elib:selfish-hash-magic-verb) hash-code)
             (otherwise
               (elib:miranda #'wrapper mverb args #'funcall)))))))
     #'wrapper))

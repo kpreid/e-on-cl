@@ -21,15 +21,25 @@
 (defun environment-fqn-prefix (env)
   (macroexpand '(%fqn-prefix) env))
 
+#+e.function-sxhash-inadequate
+(progn
+  (defvar *hash-counter* 0)
+  (declaim (type fixnum *hash-counter*))
+  (defun make-hash-code ()
+    (setf *hash-counter* (mod (1+ *hash-counter*) most-positive-fixnum))))
+
 (defun e-lambda-expansion (smethods fqn documentation stamp-forms opt-otherwise-body
     &aux (self-func (make-symbol fqn))
          (self-expr `#',self-func)
          (stamps-sym (gensym "STAMPS"))
          (mverb-sym  (gensym "MVERB"))
          (args-sym   (gensym "ARGS"))
+         (hash-sym   (gensym "HASH"))
          (miranda-return-sym (gensym "FAIL")))
   (declare (string fqn documentation))
-  `(let ((,stamps-sym (vector ,@stamp-forms)))
+  `(let ((,stamps-sym (vector ,@stamp-forms))
+         (,hash-sym #+e.function-sxhash-inadequate (make-hash-code)
+                    #-e.function-sxhash-inadequate (cons nil nil)))
     (declare (ignorable ,stamps-sym)) ;; will be ignored if there is an explicit audited-by-magic-verb method
     (nest-fq-name (,fqn)
       (labels ((,self-func (,mverb-sym &rest ,args-sym)
@@ -60,6 +70,8 @@
                         ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
                                   smethods))
                 (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym #'funcall)))))) ;; XXX should invoke matcher
+            ,@(nl-miranda-case-maybe 'e.elib:selfish-hash-magic-verb smethods
+                hash-sym)
             ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
               (not (not (find auditor ,stamps-sym :test #'samep)))))
             (otherwise 

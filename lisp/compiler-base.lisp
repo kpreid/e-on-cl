@@ -611,16 +611,19 @@ XXX This is an excessively large authority and will probably be replaced."
 (defmacro compiler-object (object-body post-forms self-fsym)
   ;; XXX poor name
   "Used by the E-to-CL compiler as the translation of ObjectExpr. This is a macro rather than part of the compiler, so that compiler-macros can recognize object expressions easily. XXX There is more work to be done on simplifying this macro's parameter structure."
-  `(let ((.identity-token. (cons nil nil)))
+  `(let ((.hash-code. #+e.function-sxhash-inadequate (make-hash-code)
+                      #-e.function-sxhash-inadequate (cons nil nil)))
      (labels ((,self-fsym (mverb &rest args)
-                ;; This is to prevent the CL compiler from hoisting the closure
+                ;; Besides providing a hash code for the sxhash-inadequate
+                ;; case, this prevents the CL compiler from hoisting the
                 ;; closure, forcing it to generate a fresh closure for each
                 ;; execution of this ObjectExpr.
                 ;; 
-                ;; xxx optimization: we could skip this token if the code is
-                ;; known to close over something which varies sufficiently.
-                (refer-to .identity-token.)
-                ,object-body))
+                ;; xxx optimization: we could skip this if the code is known
+                ;; to close over something which varies sufficiently.
+                (if (eql mverb 'e.elib:selfish-hash-magic-verb)
+                  .hash-code.
+                  ,object-body)))
        ,@post-forms
        #',self-fsym)))
 

@@ -252,6 +252,8 @@
     :traversal-key
     :def-atomic-sameness
     :insufficiently-settled-error
+    :selfish-hash-magic-verb
+    :make-hash-code
     
     :source-span :+the-make-source-span+
     :twine :+the-make-twine+

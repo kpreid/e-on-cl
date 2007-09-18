@@ -11,8 +11,13 @@
 
 (defconstant +hash-depth+ 5)
 
-(declaim (inline identity-hash))
-(defun identity-hash (target) (sxhash target))
+(declaim (inline selfish-hash))
+(defun selfish-hash (target) 
+  #-e.function-sxhash-inadequate (sxhash target)
+  #+e.function-sxhash-inadequate
+  (or (when (functionp target)
+        (funcall target 'e.elib:selfish-hash-magic-verb))
+      (sxhash target)))
 
 (declaim (inline transparent-selfless-p))
 (defun transparent-selfless-p (a)
@@ -104,7 +109,7 @@
       :when-resolved-selfish
         (lambda (target)
           (or (elib::same-hash-dispatch target)
-              (identity-hash target)))
+              (selfish-hash target)))
       :when-unresolved-selfish #'unresolved-selfish)))
 
 (defmethod elib::same-hash-dispatch ((a null))
@@ -277,8 +282,8 @@
 
 (defun same-yet-hash (target fringe)
   "Used by TraversalKey implementation. Returns a hash value which corresponds to the equality test ELIB:SAME-YET-P mixed with the fringe's hashes."
-  ;; identity-hash is correct here as long as it descends into conses
-  (reduce #'logxor fringe :key #'identity-hash :initial-value
+  ;; selfish-hash is correct here as long as it descends into conses (ook)
+  (reduce #'logxor fringe :key #'selfish-hash :initial-value
     (%sameness-hash target +hash-depth+ nil fringe)))
 
 (defclass traversal-key (vat-checking) 
