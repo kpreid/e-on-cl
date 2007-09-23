@@ -283,7 +283,7 @@ ObjectExpr, EScript
   # value: []
   
   ? emptyObject.getScript()
-  # value: e??` {
+  # value: e??`{
   #        }`
   
   ? emptyObject.asTypeDesc(safeScope.getFQNPrefix()) == emptyObject.eval(safeScope).__getAllegedType()
@@ -297,7 +297,7 @@ ObjectExpr, EScript
   # value: <[] := ["b"] =~ [] + var []>
   
   ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
-  # value: e??` {
+  # value: e??`{
   #            
   #            method run() {
   #                foo
@@ -339,11 +339,8 @@ ObjectExpr, EScript
  
   XXX standalone IgnorePattern tests
   
-  ? makeEScript(null, null, [], null)
-  # problem: EScript must have methods or at least one matcher
-  
   ? def bothScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
-  # value: e??` {
+  # value: e??`{
   #            
   #            method run() {
   #                foo
@@ -353,7 +350,7 @@ ObjectExpr, EScript
   #            }
   #        }`
   
-  ? bothScript.getOptMethods()
+  ? bothScript.getMethods()
   # value: [e??`
   #        method run() {
   #            foo
@@ -364,8 +361,14 @@ ObjectExpr, EScript
   #            1
   #        }`]
   
-  ? makeEScript(null, null, [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
-  # value: e??` match _ {
+  ? def matcher := makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)
+  # value: e??`match _ {
+  #            1
+  #        }`
+  
+  Plumbing print:
+  ? makeObjectExpr(null, "", makeIgnorePattern(null, null), [], matcher, null)
+  # value: e`def _ match _ {
   #            1
   #        }`
   
@@ -669,8 +672,8 @@ ObjectExpr
   #             <3>.withSubnodeIndex["auditorExprs", 0, e`a`] => <4>
   #             <4>.withSubnodeIndex["auditorExprs", 1, e`b`] => <5>
   #         => <5> => <6>
-  #         <6>.withHide(<_>) => f(<7>)
-  #             <7>.withSubnode["script", e??` {
+  #         <6>.withScript(<_>) => f(<7>)
+  #             <7>.withSubnode["script", e??`{
   #             }`] => <8>
   #         => <8> => <9>
   
@@ -681,7 +684,7 @@ Plumbing ObjectExpr
   ? e`def x implements a match b { c }`.asKernelE().staticScope()
   # value: <[] := ["c", "a"] =~ ["x"] + var []>
 
-  There is no walkScopes test for this case since it's an EScript variation.
+  There is no walkScopes test for this case since it's composed of ObjectExpr and EMatcher.
 
 EScript
 
@@ -695,36 +698,22 @@ EScript
   
   ? script.walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withScript(<_>) => f(<2>)
-  #             <2>.withSubnodeIndex["optMethods", 0, e??`
-  #             method y(c) :(def dd := d) {
-  #                 c
-  #                 dd
-  #                 def ee := e
-  #             }`] => <3>
-  #             <3>.withSubnodeIndex["matchers", 0, e??`match f {
-  #                 f
-  #                 def gg := g
-  #             }`] => <4>
-  #         => <4> => <5>
+  #         <1>.withSubnodeIndex["methods", 0, e??`
+  #         method y(c) :(def dd := d) {
+  #             c
+  #             dd
+  #             def ee := e
+  #         }`] => <2>
+  #         <2>.withSubnodeIndex["matchers", 0, e??`match f {
+  #             f
+  #             def gg := g
+  #         }`] => <3>
   
-  # value: <5>
-
-  ? def plumbingScript := e`def _ match a { b }`.asKernelE().getScript(); null
-  
-  ? plumbingScript.walkScopes(makeReporter())
-  # stdout: 
-  #         <1>.withScript(<_>) => f(<2>)
-  #             <2>.withSubnodeIndex["matchers", 0, e??`match a {
-  #                 b
-  #             }`] => <3>
-  #         => <3> => <4>
-  
-  # value: <4>
+  # value: <3>
 
 EMethod
 
-  ? def ::"method" := script.getOptMethods()[0]; null
+  ? def ::"method" := script.getMethods()[0]; null
   
   ? ::"method".staticScope()
   # value: <[] := ["e", "d"] =~ [] + var []>
@@ -1008,7 +997,7 @@ These tests check the arguments which nodes give to visitors.
   #           _list null...
   #             NounExpr e`auditor`...
   #               auditor
-  #           EScript e??` {...
+  #           EScript e??`{...
   #             _list null...
   #               EMethod e??`...
   #                 
@@ -1040,16 +1029,13 @@ These tests check the arguments which nodes give to visitors.
   #               obj2
   #             null
   #           _list null...
-  #           EScript e??` match plumbingPatt {...
-  #             null
-  #             _list null...
-  #               EMatcher e??`match plumbingPatt {...
-  #                 FinalPattern epatt`plumbingPatt`...
-  #                   NounExpr e`plumbingPatt`...
-  #                     plumbingPatt
-  #                   null
-  #                 NounExpr e`plumbingBody`...
-  #                   plumbingBody
+  #           EMatcher e??`match plumbingPatt {...
+  #             FinalPattern epatt`plumbingPatt`...
+  #               NounExpr e`plumbingPatt`...
+  #                 plumbingPatt
+  #               null
+  #             NounExpr e`plumbingBody`...
+  #               plumbingBody
   #         
   
   ? e`first; second`.asKernelE().welcome(makeVisitor(0))

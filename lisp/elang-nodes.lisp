@@ -246,14 +246,16 @@
    (:|patterns| t (e-list |Pattern|))
    (:|optResultGuard| t (or null |EExpr|))
    (:|body| t |EExpr|)))
-(define-node-class |EMatcher|        (|ENode|)
-  ((:|pattern| t |Pattern|) 
-   (:|body| t |EExpr|)))
 
 (defclass |EScriptoid| (|ENode|) ())
 (define-node-class |EScript|         (|EScriptoid|)
-  ((:|optMethods| t (or null (e-list |EMethodoid|)))
+  ((:|methods| t (e-list |EMethodoid|))
    (:|matchers| t (e-list |EMatcher|))))
+
+(define-node-class |EMatcher|        (|EScriptoid|)
+  ;; as a script, is plumbing
+  ((:|pattern| t |Pattern|) 
+   (:|body| t |EExpr|)))
                                
 (define-node-class |IgnorePattern|   (|Pattern|)
   ())
@@ -391,13 +393,6 @@ List nodes will be assumed to be sequences."
   (declare (ignore slot-names))
   (unless (> (length (funcall (opt-node-property-getter node :|subs|))) 0)
     (error "SeqExpr must have at least one subexpression")))
-
-(defmethod shared-initialize :after ((node |EScript|) slot-names &key &allow-other-keys
-    &aux (methods (funcall (opt-node-property-getter node :|optMethods|)))
-         (matchers (funcall (opt-node-property-getter node :|matchers|))))
-  (declare (ignore slot-names))
-  (unless (or methods (> (length matchers) 0))
-      (error "EScript must have methods or at least one matcher")))
 
 ;;; --- node creation utilities ---
 
@@ -567,8 +562,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       #()
       #()
       (or-miranda-message-descs
-        ;; XXX will die if a plumbing expression
-        (loop for method across (ref-shorten (e. (e. object-expr |getScript|) |getOptMethods|))
+        (loop for method across (let ((script (ref-shorten (e. object-expr |getScript|))))
+                                  (etypecase script
+                                    (|EScript| (ref-shorten (e. script |getMethods|)))
+                                    (|EMatcher| #())))
           for (doc-comment verb patterns opt-result-guard nil) = (node-elements method)
           collect
             (make-instance 'message-desc
@@ -926,7 +923,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |ObjectExpr|
   (seq :|pattern|
        (hide (flatten :|auditorExprs|))
-       (hide :|script|)))
+       (script :|script|)))
 
 (def-scope-rule |SeqExpr|
   (flatten :|subs|))
@@ -966,8 +963,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
              :|body|)))
 
 (def-scope-rule |EScript|
-  (script (seq (flatten :|optMethods|)
-               (flatten :|matchers|))))
+  (seq (flatten :|methods|)
+       (flatten :|matchers|)))
 
 ;;; --- scope utilities ---
 
@@ -1108,7 +1105,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (this-reject-usage nil :|auditorExprs| :|script|)
   (this-reject-usage t   :|pattern|      :|auditorExprs|)
   (check-property-types
-    (:|script| |EScript|)))
+    (:|script| (or |EScript| |EMatcher|))))
 
 (define-kernel-e-type-constraints |AssignExpr|
   (:|noun| |NounExpr|))
@@ -1124,6 +1121,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                        (e-quote guard)))))
 
 (define-kernel-e-type-constraints |EScript|
-  (:|optMethods| (or null (e-list |EMethod|)))
+  (:|methods| (e-list |EMethod|))
   (:|matchers| (e-list |EMatcher|)))
   

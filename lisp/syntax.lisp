@@ -390,6 +390,7 @@ XXX make precedence values available as constants"
                     for sub across (e-coerce auditors 'vector)
                     do (e. tw |print| sep)
                        (subprint sub nil)))
+            (e. tw |print| " ")
             (subprint script nil))
           
           (:|visitSeqExpr| (opt-original subs)
@@ -406,26 +407,17 @@ XXX make precedence values available as constants"
               (e. tw |print| "&")
               (subprint noun +precedence-in-slot-expr+)))
           
-          (:|visitEScript| (opt-original
-                            (opt-methods '(or null vector))
-                            (matchers 'vector))
+          (:|visitEScript| (opt-original (methods 'vector) (matchers 'vector))
             (declare (ignore opt-original))
-            ; XXX print patterns and opt-result-guard directly
-            (if opt-methods
-              (progn
-                (e. tw |print| " {" #|}|#)
-                (let ((indented (e. tw |indent|)))
-                  (loop for method across opt-methods do
-                    (e. indented |println|)
-                    (subprint method nil :tw indented))
-                (loop for matcher across matchers do
-                  (e. indented |println|)
-                  (subprint matcher nil :tw indented)))
-                (e. tw |lnPrint| #|{|# "}"))
-              (progn
-                (assert (= (length matchers) 1) () "XXX Don't know what to do here")
-                (e. tw |print| " ")
-                (subprint (aref matchers 0) nil))))
+            (e. tw |print| "{" #|}|#)
+            (let ((indented (e. tw |indent|)))
+              (loop for method across methods do
+                (e. indented |println|)
+                (subprint method nil :tw indented))
+            (loop for matcher across matchers do
+              (e. indented |println|)
+              (subprint matcher nil :tw indented)))
+            (e. tw |lnPrint| #|{|# "}"))
             
           (:|visitEMethod| (opt-original
                             (doc-comment 'string)
@@ -434,6 +426,7 @@ XXX make precedence values available as constants"
                             opt-result-guard
                             body)
             (declare (ignore opt-original))
+            ; XXX print patterns and opt-result-guard directly
             (e. tw |println|)
             (e. +e-printer+ |printMethodHeader| tw +e-true+
               doc-comment

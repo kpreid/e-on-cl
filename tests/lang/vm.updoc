@@ -348,7 +348,7 @@ ObjectExpr
   
  Apparent usage of 'implements' in the script is rejected (this test once tested that it was actual usage and allowed)
   ? { def x := 1; { def thing implements (def x {to audit(_) :any {return true}}) { to run() :any {return x} }; [x, thing()] }}
-  # problem: <misleading-apparent-usage-error: a ObjectExpr's script (e??` {
+  # problem: <misleading-apparent-usage-error: a ObjectExpr's script (e??`{
   #              
   #              method run() :any {
   #                  escape __return {

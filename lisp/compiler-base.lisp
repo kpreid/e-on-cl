@@ -444,9 +444,13 @@
 
 ;; XXX TODO: map out the twisty path of build-matcher-call, build-method-case, matcher-function, and fail, and see if some simplification can be done
 
-(defun methodical-object-body (generators self-fsym layout methods matchers qualified-name checker-sym type-desc
+(defgeneric object-body (generators self-fsym layout script qualified-name checker-sym type-desc))
+
+(defmethod object-body (generators self-fsym layout (script |EScript|) qualified-name checker-sym type-desc
     &aux (simple-name (simplify-fq-name qualified-name))
-         (method-body (getf generators :method-body)))
+         (method-body (getf generators :method-body))
+         (methods (e. script |getMethods|))
+         (matchers (e. script |getMatchers|)))
   (flet ((build-method-case (build-matcher-call)
            `(case mverb
               ,@(loop for method across methods
@@ -510,7 +514,7 @@
                         (lambda (fail)
                           (funcall matcher-function :|__respondsTo/2| args fail))))))))
 
-(defun plumbing-object-body (generators self-fsym layout methods matchers qualified-name checker-sym type-desc)
+(defmethod object-body (generators self-fsym layout (matcher |EMatcher|) qualified-name checker-sym type-desc)
   (declare (ignore self-fsym methods type-desc))
   `(case mverb
     ((elib:audited-by-magic-verb) 
@@ -519,7 +523,7 @@
          nil))
     ; XXX should propagate match failure exception instead
     (otherwise 
-      ,(matchers-body generators layout matchers 'mverb 'args
+      ,(matchers-body generators layout (list matcher) 'mverb 'args
         `(error "Plumbing match failure: ~W#~A" ',qualified-name mverb)))))
 
 (defmacro updating-fully-qualify-name (scope-layout-place qn-form
@@ -632,42 +636,38 @@ XXX This is an excessively large authority and will probably be replaced."
   "...
   
 The scope layout provided should include the binding for the object's name pattern."
-  (destructuring-bind (opt-methods matchers) (node-elements script)
-    (let* ((has-auditors (> (length auditor-forms) 0))
-           (checker-sym (when has-auditors (make-symbol "APPROVEDP")))
-           (type-desc (e. this-expr |asTypeDesc| (scope-layout-fqn-prefix layout)))
-           (fqn (e. type-desc |getFQName|))
-           (self-fsym (make-symbol fqn))
-           (inner-layout
-             (scope-layout-nest
-               (make-instance 'object-scope-layout
-                 :nouns (map 'list #'ref-shorten (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|))
-                 :object-expr this-expr
-                 :rest (make-instance 'prefix-scope-layout 
-                         :fqn-prefix (concatenate 'string fqn "$")
-                         :rest layout)))))
-      (flet ((build-labels (post-forms)
-               `(compiler-object 
-                  ,(funcall (if opt-methods
-                              #'methodical-object-body
-                              #'plumbing-object-body)
-                            generators self-fsym inner-layout opt-methods
-                            matchers fqn checker-sym type-desc)
-                  ,post-forms
-                  ,self-fsym)))
-        (if (not has-auditors)
-          (build-labels '())
-          (let ((audition-sym  (make-symbol "AUDITION"))
-                (finisher-sym (make-symbol "AUDITION-FINISH")))
-            `(multiple-value-bind (,audition-sym ,finisher-sym ,checker-sym) 
-                (make-audition ',fqn 
-                              ',this-expr
-                              ,(e.compiler.seq::leaf-sequence 
-                                (make-instance '|MetaStateExpr| :elements '()) inner-layout))
-              ,@(loop for auditor-form in auditor-forms collect
-                  `(funcall ,audition-sym :|ask/1| ,auditor-form))
-              ,(build-labels
-                 ;; This does not need to be in an unwind-protect, because in
-                 ;; the event of a nonlocal exit the object reference will not
-                 ;; be available, so its mutability is moot.
-                 `((funcall ,finisher-sym))))))))))
+  (let* ((has-auditors (> (length auditor-forms) 0))
+         (checker-sym (when has-auditors (make-symbol "APPROVEDP")))
+         (type-desc (e. this-expr |asTypeDesc| (scope-layout-fqn-prefix layout)))
+         (fqn (e. type-desc |getFQName|))
+         (self-fsym (make-symbol fqn))
+         (inner-layout
+           (scope-layout-nest
+             (make-instance 'object-scope-layout
+               :nouns (map 'list #'ref-shorten (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|))
+               :object-expr this-expr
+               :rest (make-instance 'prefix-scope-layout 
+                       :fqn-prefix (concatenate 'string fqn "$")
+                       :rest layout)))))
+    (flet ((build-labels (post-forms)
+             `(compiler-object 
+                ,(object-body generators self-fsym inner-layout script fqn
+                              checker-sym type-desc)
+                ,post-forms
+                ,self-fsym)))
+      (if (not has-auditors)
+        (build-labels '())
+        (let ((audition-sym  (make-symbol "AUDITION"))
+              (finisher-sym (make-symbol "AUDITION-FINISH")))
+          `(multiple-value-bind (,audition-sym ,finisher-sym ,checker-sym) 
+              (make-audition ',fqn 
+                            ',this-expr
+                            ,(e.compiler.seq::leaf-sequence 
+                              (make-instance '|MetaStateExpr| :elements '()) inner-layout))
+            ,@(loop for auditor-form in auditor-forms collect
+                `(funcall ,audition-sym :|ask/1| ,auditor-form))
+            ,(build-labels
+               ;; This does not need to be in an unwind-protect, because in
+               ;; the event of a nonlocal exit the object reference will not
+               ;; be available, so its mutability is moot.
+               `((funcall ,finisher-sym)))))))))

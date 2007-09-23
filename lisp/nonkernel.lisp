@@ -804,7 +804,8 @@
                                 |parent|)
               (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
                                   (mn '|EScript|
-                                    (e. |script| |getOptMethods|)
+                                    ;; XXX this does the wrong thing for plumbing
+                                    (e. |script| |getMethods|)
                                     (e. (e. |script| |getMatchers|) |with|
                                       (let ((msg-noun (gennoun "message")))
                                         (mn '|EMatcher|
@@ -1359,7 +1360,7 @@
 (defemacro |PlumbingObject| (|ObjectTail|) ((|auditors| t (e-list |EExpr|))
                                             (|matcher| t |EMatcher|))
                                            ()
-  (vector nil |auditors| (mn '|EScript| nil (vector |matcher|))))
+  (vector nil |auditors| |matcher|))
 
 (defemacro |ETo| (|EMethodoid|) 
     ((|docComment| nil string)

@@ -33,9 +33,9 @@ def requireDF(condition, problemThunk) :void {
 
 def makeCallExpr := <import:org.erights.e.elang.evm.makeCallExpr>
 
-def [NounExpr, EExpr, ENode, FinalPattern, IfExpr, SeqExpr] := \
+def [NounExpr, EExpr, ENode, FinalPattern, IfExpr, SeqExpr, EScript] := \
   { var types := []
-    ["NounExpr", "EExpr", "ENode", "FinalPattern", "IfExpr", "SeqExpr"] \
+    ["NounExpr", "EExpr", "ENode", "FinalPattern", "IfExpr", "SeqExpr", "EScript"] \
       .iterate(fn _,name {types := types.with(<import>["org.erights.e.elang.evm.type." + name]); null})
     types
   }
@@ -227,11 +227,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                    _ & !(_maps(p.staticScope().outNames(), noun)) }
       }
 
-      def script := objectExpr.getScript()
       def precedingExprs := [objectExpr.getPattern()] + objectExpr.getAuditorExprs()
       
       # The matcher is irrelevant provided that our method exists
-      if ((def methds := script.getOptMethods()) != null) {
+      if (objectExpr.getScript() =~ script :Really[EScript]) {
+        def methds := script.getMethods()
         # both 'method' and 'methods' are E keywords
 
         requireDF(
