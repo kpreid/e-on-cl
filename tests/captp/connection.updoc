@@ -1009,3 +1009,13 @@ If a remote promise proxy receives a __whenMoreResolved where the reactor is a p
   # stderr: ["handleSendOnly", ["run", [<Promise>]]]
   #         
   
+
+--- Replay attacks on outgoing encoding ---
+
+Unfortunately, there is no way to test this at the moment. The potential problem is: if the __optSealedDispatch responses of a proxy are replayed after the proxy is GCed, can the CapTP system be fooled into presenting an invalid (or reused for an unrelated object) position to the remote side?
+
+The solution is to retain the proxy in the sealed box, so the position cannot have been GCed. (Revoking the box is not acceptable as this would allow the replayer to discover whether the remote reference has been GCed.)
+
+If this mechanism also checks, when amplifying the proxy, that the proxy in the box is the same as the proxy sealed-dispatch was performed on, then it would be possible to test that the check happens, and therefore that the proxy is in the box, but remote promise proxies do not currently have the sameness they should, so this check cannot be done yet.
+
+XXX fix this, write the test

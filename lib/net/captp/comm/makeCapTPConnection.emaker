@@ -114,8 +114,14 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     /** Uncalls Far refs that are being passed to their home vat. */
     def goingHomeUncaller {
       to optUncall(ref) {
-        if (remoteIncomingPosUnsealer.amplify(ref) =~ [pos :IncomingPos]) {
-          return [descMakerStandin, "Incoming", [pos]]
+        if (remoteIncomingPosUnsealer.amplify(ref) \
+              =~ [[proxy, pos :IncomingPos]]) {
+          if (false && !(__equalizer.sameYet(proxy, ref))) {
+            # This test is stubbed out because the promise proxies are not the same when they should be. XXX fix proxy implementation, then remove "false && ".y
+            return [__identityFunc, "run", [Ref.broken("impersonated going-home proxy")]]
+          } else {
+            return [descMakerStandin, "Incoming", [pos]]
+          }
         }
       }
     }
@@ -251,7 +257,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         }
         to handleOptSealedDispatch(brand) {
           if (brand == remoteIncomingPosBrand) {
-            return remoteIncomingPosSealer.seal(position)
+            traceln(__equalizer.sameYet(proxyRecord.localReference(), proxyRecord.localReference()))
+            return remoteIncomingPosSealer.seal([proxyRecord.localReference(), position])
           } else if (brand == hub.get3DescBrand()) {
             return hub.get3DescSealer().seal(fn recipID {
               def nonce := swissTable.nextSwiss() # XXX use a long
@@ -269,7 +276,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
           out.print("<CapTP proxy handler for ", position, " of ", outgoingReceiver, ">")
         }
       }
-
+      
       return bind proxyRecord {
         to smash(problem :Throwable) {
           proxyRecord.makeRedirector()(Ref.broken(problem))
@@ -284,7 +291,12 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
         
         /** make a local reference, and increment the wireCount (number of received descriptors for this local entry) */
         to reference() {
+          # XXX Rename this to incomingReference and review uses of it for whether they shoul be localReference instead
           wireCount += 1
+          return proxyRecord.localReference()
+        }
+
+        to localReference() {
           def proxy := makeProxy(capTPEventualHandler, resolutionSlot, far)
           localCount += 1
           
