@@ -979,6 +979,8 @@ This is prohibited because the timing and reoccurrence of unserialization operat
 
 If a remote promise proxy receives a __whenMoreResolved where the reactor is a proxy for another connection, then instead of forwarding the message, it delivers itself to the reactor. This creates the opportunity for the promise to be serialized as a Promise3Desc, triggering 3-vat shortening.
 
+  ? clearFinalizers()
+
   ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
 
@@ -1002,6 +1004,10 @@ If a remote promise proxy receives a __whenMoreResolved where the reactor is a p
   ?
   # stdout: Deliver(-1, NewFarDesc(1, 382064925828890872342377433413917253333972024416), 0, "wmrTest", [])
   #         
+
+In order to check for a particular refcount bug, the promise must be an import rather than a question.
+
+  ? receiver.DeliverOnly(1, "run", buildIn([descs.NewRemotePromise(1, -1, def remotePromiseRdrBase := 23897893247)]))
   
   ? E.sendOnly(someRemotePromise, "__whenMoreResolved", [otherConnReactor])
 
@@ -1009,6 +1015,12 @@ If a remote promise proxy receives a __whenMoreResolved where the reactor is a p
   # stderr: ["handleSendOnly", ["run", [<Promise>]]]
   #         
   
+Bug test: the self-reference in __whenMoreResolved was being treated like an arriving reference and increasing the wire-count, resulting in this wire count being 2 rather than 1.
+  ? runFinalizers()
+  ?
+  # stdout: GCAnswer(-1)
+  #         GCExport(1, 1)
+  #         
 
 --- Replay attacks on outgoing encoding ---
 

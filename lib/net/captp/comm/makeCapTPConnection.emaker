@@ -149,7 +149,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
           def [rdrAnswerPos, rdrRecord] := prepareQuestion(true)
           # XXX we're not using rdrSwissBase for anything; it *should* be extractible from the question proxy so that we can pass it to another vat
 
-          E.sendOnly(r, "__whenMoreResolved", [rdrRecord.reference()])
+          E.sendOnly(r, "__whenMoreResolved", [rdrRecord.localReference()])
           return [descMakerStandin, "NewRemotePromise", [
                    exports."bind"(r),
                    rdrAnswerPos,
@@ -194,12 +194,12 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
 
     def lookupImport(index :int) {
       return if (index.isZero()) {
-        return remoteNonceLocatorRecord.reference()
+        return remoteNonceLocatorRecord.receivedReference()
       } else if (index.belowZero()) {
         #questions[-index]
         throw("can't happen: <0 import")
       } else { # above zero
-        imports.getProxy(index)
+        imports[index].receivedReference()
       }
     }
 
@@ -241,7 +241,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
             
             E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
             
-            return questionRecord.reference()
+            return questionRecord.localReference()
           }
         }
         to handleSendOnly(verb, args) {
@@ -249,7 +249,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
           if (verb == "__whenMoreResolved" \
               && args =~ [reactor] \
               && isProxyForOtherConnection(reactor)) {
-            E.sendOnly(reactor, "run", [proxyRecord.reference()])
+            E.sendOnly(reactor, "run", [proxyRecord.localReference()])
             return null
           } else {
             E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
@@ -263,7 +263,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
             return hub.get3DescSealer().seal(fn recipID {
               def nonce := swissTable.nextSwiss() # XXX use a long
               # XXX we shouldn't have the authority to specify the path+vatID - it should be baked into our access to the hub
-              def farVine := remoteNonceLocatorRecord.reference() <- provideFor(
+              def farVine := remoteNonceLocatorRecord.localReference() <- provideFor(
                 def incomingDescStub implements pbc {to __optUncall() {return [descMakerStandin, "Incoming", [position]]}},
                 recipID,
                 nonce)
@@ -288,10 +288,9 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
             proxySlotResolver.resolveRace(&resolution)
           }
         }
-        
+
         /** make a local reference, and increment the wireCount (number of received descriptors for this local entry) */
-        to reference() {
-          # XXX Rename this to incomingReference and review uses of it for whether they shoul be localReference instead
+        to receivedReference() {
           wireCount += 1
           return proxyRecord.localReference()
         }
@@ -337,7 +336,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
 
         imports.put(importPos, makeProxyRecord(true, importPos))
         
-        return imports.getProxy(importPos)
+        return imports[importPos].receivedReference()
       }
       
       to NewRemotePromise(importPos :ImportPos,
@@ -353,7 +352,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
           answers.put(-rdrPos, redirector, true)
         }
         
-        return record.reference()
+        return record.receivedReference()
       }
       
       to Import(importPos :ImportPos) {
@@ -451,7 +450,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to __printOn(out :TextWriter) {
         out.print("<CapTP outgoing to ", remoteVatID, ">")
       }
-      to nonceLocator() { return remoteNonceLocatorRecord.reference() }
+      to nonceLocator() { return remoteNonceLocatorRecord.localReference() }
     }
     
     # XXX review what the least authority is for this
@@ -460,7 +459,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       to __printOn(out :TextWriter) {
         out.print("<CapTP peer to ", remoteVatID, ">")
       }
-      to nonceLocator() { return remoteNonceLocatorRecord.reference() }
+      to nonceLocator() { return remoteNonceLocatorRecord.localReference() }
       to getPromiseGiftTable() { return promiseGifts }
       to getNearGiftTable() { return nearGifts }
     }

@@ -25,13 +25,6 @@ def makeProxiesTable() implements DeepFrozen {
             }
             super.smash(problem);
         }
-
-        /**
-         *
-         */
-        to getProxy(index :int) :any {
-          return proxiesTable[index].reference()
-        }
     }
     return proxiesTable
 }
