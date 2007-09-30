@@ -32,6 +32,7 @@ def Vine := any # should be rcvr (DeepFrozen missing)
 def DESCS_EXIT := "CapTP_1_descs"
 
 def makeProxy := <elib:ref.makeProxy>
+def makeDelayedRedirector := <elib:ref.makeDelayedRedirector>
 def makeBrand := <elib:sealing.makeBrand>
 def Throwable := <type:java.lang.Throwable>
 
@@ -224,11 +225,29 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     }
     
     def makeProxyRecord(far, position :vow[IncomingPos]) {
-      var wireCount := 0
-      var localCount := 0
+      var wireCount := 0 # number of mentions in incoming messages
+      var localCount := 0 # number of local proxies with finalizers
+      var fresh := true # have any messages been sent on this ref?
       def [resolutionSlot, proxySlotResolver] := Ref.promise()
 
       def proxyRecord
+      
+      /** for compatibility with the classic Redirector implementations - XXX review whether this facet and interface are appropriate */
+      def proxyResolver {
+        to getProxy() { return proxyRecord.localReference() }
+        to resolve(resolution) :void { proxySlotResolver.resolve(&resolution) }
+        to smash(problem) :void { proxySlotResolver.resolveRace(__makeFinalSlot(Ref.broken(problem))) }
+        to optHandler() {
+          if (!proxySlotResolver.isDone()) {
+            return def stubProxyHandler {
+              to isFresh() { return fresh }
+              to sameConnection(otherRef) {
+                return remoteIncomingPosUnsealer.amplify(otherRef) =~ [_]
+              }
+            }
+          }
+        }
+      }
       
       def capTPEventualHandler {
         to handleSend(verb, args) {
@@ -239,6 +258,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
             def [answerPos, questionRecord] := prepareQuestion(false)
             def redirector := questionRecord.makeRedirector()
             
+            fresh := false
             E.sendOnly(outgoingReceiver, "Deliver", [answerPos, outEncode(redirector), position, verb, outEncode(args)])
             
             return questionRecord.localReference()
@@ -252,6 +272,7 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
             E.sendOnly(reactor, "run", [proxyRecord.localReference()])
             return null
           } else {
+            fresh := false
             E.sendOnly(outgoingReceiver, "DeliverOnly", [position, verb, outEncode(args)])
           }
         }
@@ -279,14 +300,11 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
       
       return bind proxyRecord {
         to smash(problem :Throwable) {
-          proxyRecord.makeRedirector()(Ref.broken(problem))
+          proxyResolver.smash(problem)
         }
         
         to makeRedirector() {
-          return def redirector(resolution) :void {
-            # XXX review: Where's our equivalent, if applicable, of DelayedRedirector?
-            proxySlotResolver.resolveRace(&resolution)
-          }
+          return makeDelayedRedirector(proxyResolver)
         }
 
         /** make a local reference, and increment the wireCount (number of received descriptors for this local entry) */

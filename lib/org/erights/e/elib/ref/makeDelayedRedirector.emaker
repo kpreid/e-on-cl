@@ -1,0 +1,99 @@
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+
+def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
+def makeRedirector := <import:org.erights.e.elib.ref.makeRedirector>
+
+/** Wraps a EProxyResolver for a remote promise in a way suitable for inclusion as an argument in the first __whenMoreResolved message, in order to preserve reference-full-order.
+  * 
+  * XXX explain in what sense this is the "first" __whenMoreResolved message.
+  * 
+  * @author Mark S. Miller
+  */
+def makeDelayedRedirector(resolver) implements DeepFrozen, ExitViaHere {
+
+    # Dropped after the redirector is used.
+    var myOptResolver := resolver
+    
+    # While the DelayedRedirector isn't garbage, its {@link EProxy} isn't
+    # either, since the DelayedRedirector may still send on it.
+    var myOptProxy := resolver.getProxy()
+
+    return def delayedRedirector implements OneArgFunc {
+        /** XXX the following documents only the unoptimized case:
+          * 
+          * On the first response, send a second __whenMoreResolved on the original RemotePromise, and then resolve the EProxyResolver to a Promise that will be resolved by the answer to this second __whenMoreResolved.
+          * 
+          * This ensures that all messages have drained out of the previous path before enabling the new path. Once I've done my one-time-job, I become inoperative.
+          * 
+          * The argument of this first response is ignored (thanks Dean!). The argument of the second response is used as the true resolution of my RemotePromise.
+          * 
+          * XXX explain why the first response is ignored
+          */
+        to run(target :any) :void {
+            if (null == myOptResolver) {
+                # If my RemotePromise is already resolved, then ignore further
+                # resolution attempts
+                return
+            }
+
+            def handler := myOptResolver.optHandler()
+            if (handler.isFresh() || handler.sameConnection(target) ||
+                  DeepFrozen.isDeepFrozen(target)) {
+                # handler.isFresh():
+                # If no messages have yet been sent over my RemotePromise, then
+                # there's no message ordering issue, so resolve to target
+                # immediately.
+
+                # handler.sameConnection(target):
+                # If the new target is a remote reference into the same vat that
+                # my RemotePromise is into, then messages to be sent over target
+                # will only arrive after messages previously sent on this
+                # RemotePromise, so again there's no message ordering issue, and
+                # we can resolve to target immediately.
+
+                # DeepFrozen.isDeepFrozen(target):
+                # If target is DeepFrozen, then the order in which messages are
+                # delivered to it cannot matter, so resolve to target
+                # immediately.
+
+                myOptResolver.resolve(target)
+                myOptResolver := null
+                myOptProxy := null
+                return
+            }
+
+            # If we fall through the above special cases, then we're in the
+            # unoptimized case, where we do need to deal with the message ordering
+            # issue. In this case, ignore the run/1 argument, send a last
+            # __whenMoreResolved/1 message over the RemotePromise with a simple
+            # Redirector as argument, and then resolve to a promise whose
+            # resolver is held by that Redirector.
+            # 
+            # This will locally buffer messages until all previous messages have
+            # been drained out, and will then resolve to the argument of the
+            # second run/1 message (thereby delivering all buffered messages as
+            # well).
+
+            def [rdPromise, rdResolver] := Ref.promise()
+            def rdr := makeRedirector(rdResolver)
+            E.sendOnly(myOptProxy, "__whenMoreResolved", [rdr])
+            myOptResolver.resolve(rdPromise)
+
+            myOptResolver := null
+            myOptProxy := null
+        }
+
+        /** Smash the EProxyResolver with the arg. */
+        to __reactToLostClient(problem) :void {
+            if (null != myOptResolver) {
+                myOptResolver.smash(problem)
+                myOptResolver := null
+                myOptProxy := null
+            }
+        }
+    }
+}

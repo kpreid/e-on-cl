@@ -444,7 +444,7 @@ XXX we don't have VatID processing yet
   # stdout: DeliverOnly(1, "run", [ImportDesc(0)])
   #         
 
---- Incoming NewRemotePromiseDesc ---
+--- Incoming NewRemotePromiseDesc, and delayed redirection ---
 
   ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
   # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
@@ -492,14 +492,32 @@ The redirector should be accessible by our provided SwissBase:
   # stdout: DeliverOnly(2, "run", [NewFarDesc(1, 216307466466887903142951307717254789854244528344)])
   #         
 
+  Export index 2 now holds the redirector.
+
 (remotePromiseRdrBase.cryptoHash().cryptoHash() == 216307466466887903142951307717254789854244528344)
 
-Invoking the redirector causes the remote promise to resolve:
+Invoking the redirector performs a delayed redirection, to ensure that messages sent to the resolution don't arrive before the messages previously sent to the promise.
 
-  ? receiver.DeliverOnly(-4, "run", buildIn([56]))
-  ? remotePromise
-  # value: 56
+A delayed redirection is: __whenMoreResolved is sent to the ... XXX finish this explanation
+
+  ? def unoptimizableRedirection implements pbc {
+  >   to __optUncall() { return [[], "diverge", []] }}
+  > null
+
+  ? receiver.DeliverOnly(-4, "run", buildIn([unoptimizableRedirection]))
+  ?
+  # stdout: DeliverOnly(3, "__whenMoreResolved", [NewFarDesc(2, 1033912670282953026478972818820010722176128073325)])
+  #         
+
+Export 2 is the non-delayed redirector.
+
+  ? receiver.DeliverOnly(2, "run", buildIn(["secondRedirValue"]))
   
+  ? remotePromise
+  # value: "secondRedirValue"
+
+XXX explain why the second redirection wins
+
 The remote promise proxy is now garbage, so CapTP should send GCExportOp:
 
   ? runFinalizers()
@@ -510,15 +528,31 @@ The remote promise proxy is now garbage, so CapTP should send GCExportOp:
 
 Index 3 is the remote promise (passed in once as NewRemotePromiseDesc and once as ImportDesc), and index 2 is the twice-used fake redirector for incoming deliveries.
 
-Export index 2 now holds the redirector.
-
-Cleaning up:
-
-  ? receiver.GCExport(1, 1) # the redirector retrieved by lookupSwiss
-  > receiver.GCAnswer(-3) # the answer index of the lookupSwiss response
-  > receiver.GCAnswer(-4) # the answer index of the redirector 
-
   XXX further tests
+
+--- Incoming NewRemotePromiseDesc without delayed redirection ---
+
+  ? def [swissTable, receiver, outgoingConnection, peerConnection] := makeTestConnection()
+  # value: [<swissTable>, <capTPReceiver>, <CapTP outgoing to tRemoteVatID>, <CapTP peer to tRemoteVatID>]
+
+First we publish the resolver to catch the remote promise.
+
+  ? def swiss :int := swissTable.getNewSwiss(def remotePromise); null
+  > receiver.Deliver(-3, buildIn(descs.NewFar(2, 928)), 0, "lookupSwiss", buildIn([swiss, null]))
+  > receiver.GCAnswer(-3)
+  ?
+  # stdout: DeliverOnly(2, "run", [NewFarDesc(1, 382064925828890872342377433413917253333972024416)])
+  #         
+
+Then we deliver a message containing the promise.
+
+  ? receiver.DeliverOnly(1, "resolve", buildIn([descs.NewRemotePromise(3, -4, def remotePromiseRdrBase := 4290823709)]))
+
+Invoking the redirector causes the remote promise to resolve immediately:
+
+  ? receiver.DeliverOnly(-4, "run", buildIn([56]))
+  ? remotePromise
+  # value: 56
 
 --- Incoming ImportDesc ---
 
