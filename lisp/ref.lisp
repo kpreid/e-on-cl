@@ -41,13 +41,19 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
   (declare (optimize (speed 3))))
 
 (defgeneric same-hash-dispatch (a))
-(defgeneric samep-dispatch (left right))
+(defgeneric opt-same-dispatch (left right)
+  (:documentation "e-boolean or nil; nil indicates no definition")
+  (:method ((left t) (right t)) nil))
 
 (defmacro def-atomic-sameness (type eq-func-form hash-func-form
     &aux (left (gensym)) (right (gensym)))
   `(progn 
-    (defmethod samep-dispatch ((,left ,type) (,right ,type))
-      (,eq-func-form ,left ,right))
+    (defmethod opt-same-dispatch ((,left ,type) (,right ,type))
+      (as-e-boolean (,eq-func-form ,left ,right)))
+    (defmethod opt-same-dispatch ((,left ,type) (,right t))
+      +e-false+)
+    (defmethod opt-same-dispatch ((,left t) (,right ,type))
+      +e-false+)
     (defmethod same-hash-dispatch ((,left ,type))
       (,hash-func-form ,left))))
 
@@ -164,7 +170,7 @@ The 'values slot contains a list of the unsettled references.")
                  (e-quote (second values)))
                (format stream "not sufficiently settled: ~A"
                  (with-text-writer-to-string (tw)
-                   (e. (e-coercef values 'vector) |printOn| 
+                   (e. (coerce values 'vector) |printOn| 
                      "" ", " "" tw)))))))
 
 (define-condition not-settled-error (settling-error) 

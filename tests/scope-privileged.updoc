@@ -22,13 +22,13 @@ DeepFrozenStamp
   ? DeepFrozenStamp :DeepFrozen
   # value: <DeepFrozenStamp>
   
-SelflessStamp
+TransparentStamp
 
-  ? SelflessStamp
-  # value: <SelflessStamp>
+  ? TransparentStamp
+  # value: <TransparentStamp>
 
   ? def makeCell(arg) :any { 
-  >   return def cell implements SelflessStamp {
+  >   return def cell implements Selfless, TransparentStamp {
   >     to __optUncall() :any { return [makeCell, "run", [arg]] }
   >     to run() :any { return arg }
   >   }
@@ -51,7 +51,7 @@ SelflessStamp
  
   ? def makeCell2(option) :any { 
   >   def value := option.pick(1, 0)
-  >   return def cell implements SelflessStamp {
+  >   return def cell implements Selfless, TransparentStamp {
   >     to __optUncall() :any { return [makeCell2, "run", [value == 1]] }
   >     to run() :any { return value }
   >   }

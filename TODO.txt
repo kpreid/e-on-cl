@@ -59,7 +59,7 @@ Big features:
 
   - Threaded runners, if the multi-process version doesn't turn out sufficient.
 
-  - Audited transparent Selfless for E-objects
+  - Audited Transparent for E-objects
   
   - Implicit parallelism (requires thread-safety):
     - If the send queue has at the head several sends whose target and arguments are DeepFrozen and thread-safe, and at most one which isn't, then they may be run simultaneously. Looking at the result ref for such a send must wait for the thread to finish.

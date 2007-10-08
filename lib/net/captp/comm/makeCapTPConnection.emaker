@@ -129,7 +129,8 @@ def makeCapTPConnection implements ExitViaHere, DeepFrozen {
     
     def proxyUncaller {
       to optUncall(r) {
-        if (Ref.isSelfish(r)) {
+        # XXX implement Ref.isPassByProxy
+        if (!Ref.isPassByCopy(r)) {
           #traceln(`exporting $r`)
           if ((def index := exports.indexFor(r)) != -1) {
             exports.incr(index)

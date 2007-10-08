@@ -16,11 +16,11 @@ def Data implements DeepFrozen, ExitViaHere {
       if (!seen.maps(x)) {
         seen.put(x, null)
         switch (x) {
-          match list :List ? (x == list)  {
+          match list :List ? (x == list && list !~ _ :String)  {
             for sub in list { recur(sub) }
           }
           match _ {
-            if (!(Ref.isPassByCopy(x) || StandardGraphExit."is"(x))) {
+            if (!(Ref.isPassByCopy(x) || StandardGraphExit.passes(x))) {
               throw.eject(optEjector, `$specimen is not Data because $x is not`)
             }
             recur(x.__optUncall())

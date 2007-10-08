@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 def setSugar := <import:org.erights.e.elib.tables.setSugar>
 
-def makeConstSetAuthor(SelflessStamp) {
+def makeConstSetAuthor(TransparentStamp) {
   def ConstSetStamp implements DeepFrozen { 
     to audit(_) { return true }
   }
@@ -58,7 +58,7 @@ def makeConstSetAuthor(SelflessStamp) {
   
   /** unsafe maker which doesn't peek at its contents so we can e.g. preserve with-laziness */
   def unsafeMakeConstSet(itemMap) {
-    return def constSet implements ConstSetStamp, SelflessStamp { # , PassByCopyStamp
+    return def constSet implements ConstSetStamp, Selfless, TransparentStamp {
       to __printOn(tw :TextWriter) {
         tw.quote(itemMap.getKeys())
         tw.print(".asSet()")

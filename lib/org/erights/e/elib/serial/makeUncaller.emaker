@@ -89,19 +89,19 @@ def makeUncaller implements ExitViaHere {
     }
 
     /**
-     * Make an onlySelflessUncaller by wrapping baseUncallers with a
-     * pre-condition that accepts only Selfless objects.
+     * Make an onlyTransparentUncaller by wrapping baseUncallers with a
+     * pre-condition that accepts only Transparent objects.
      * <p>
-     * uncall on a Selfless object has all the guarantees explained at
+     * uncall on a Transparent object has all the guarantees explained at
      * {@link org.erights.e.elib.prim.MirandaMethods#__optUncall}.
-     * An onlySelflessUncaller is for the purpose of restricting uncall to
+     * An onlyTransparentUncaller is for the purpose of restricting uncall to
      * those cases where these strong guarantees apply.
      */
-    to onlySelfless(baseUncallers) :Uncaller {
+    to onlyTransparent(baseUncallers) :Uncaller {
 
-        def onlySelflessUncaller {
+        def onlyTransparentUncaller {
             to optUncall(obj) :nullOk[__Portrayal] {
-                if (Ref.isSelfless(obj)) {
+                if (Transparent.passes(obj)) {
                     for baseUncaller in baseUncallers {
                         if (baseUncaller.optUncall(obj) =~
                               result :notNull) {

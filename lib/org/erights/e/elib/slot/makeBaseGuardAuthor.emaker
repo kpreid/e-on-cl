@@ -3,11 +3,11 @@
 
 pragma.syntax("0.9")
 
-# XXX this would be reasonably straightforward to actually audit selfless
+# XXX this would be reasonably straightforward to actually audit transparent
 
 # Stamped DeepFrozen because this is a self-referential object (baseGuard#optUncall) and therefore has a promise to itself at audit time, and BaseGuard is (currently) depended on by the EventuallyDeepFrozen audit process.
 
-def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
+def makeBaseGuardAuthor(DeepFrozenStamp, TransparentStamp) {
 
   def makeException := <import:org.cubik.cle.prim.makeException>
   def ncfTypes := [meta.context().getFQNPrefix() + "NegatedCoercionFailure"]
@@ -25,7 +25,7 @@ def makeBaseGuardAuthor(DeepFrozenStamp, SelflessStamp) {
 
   def makeBaseGuard implements DeepFrozenStamp {
     to run(valueGuard) {
-      def baseGuard implements SelflessStamp {
+      def baseGuard implements Selfless, TransparentStamp {
   
         to __optUncall() {
           return [makeBaseGuard, "run", [valueGuard]]

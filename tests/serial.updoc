@@ -1,3 +1,6 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
 Check for type optUncall, which is wanted by the default uncaller list
 
   As E-on-CL has no special concept of type importing, all of the objects that <type> can uncall in Java E are instead accessible via <import>. <type> could act as a PackageLoader on <import>, but there is nothing that needs it.

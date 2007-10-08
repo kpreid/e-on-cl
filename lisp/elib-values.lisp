@@ -54,13 +54,14 @@
 
 (def-vtable string
   (audited-by-magic-verb (this auditor)
-    "Strings are atomic, but unlike other vectors, *not* Selfless."
+    "Strings are atomic, but unlike other vectors, *not* Transparent."
     (declare (ignore this))
     ;; NOTE that this implementation overrides the one for VECTORs, and so
-    ;; prevents STRINGs from claiming Selfless.
+    ;; prevents STRINGs from claiming Transparent.
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (eql auditor +standard-graph-exit-stamp+)))
+        (eql auditor +standard-graph-exit-stamp+)
+        (eql auditor +selfless+)))
   (:|__optUncall/0| (constantly nil))
 
   (:|__printOn| (this (tw +the-text-writer-guard+))
@@ -183,7 +184,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable cons
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. e.syntax:+e-printer+ |printCons| tw this))
   (:|__optUncall| (this)
@@ -228,13 +230,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                (error "there is no character after ~A" (e-quote char))))
         thereis (code-char code)))
 
+(def-atomic-sameness character char= sxhash)
+
 (def-vtable character
   (audited-by-magic-verb (this auditor)
-    "Characters are atomic."
+    "Characters are atomic and literals."
     (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (eql auditor +standard-graph-exit-stamp+)))
+        (eql auditor +standard-graph-exit-stamp+)
+        (eql auditor +selfless+)))
   
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (if (e-is-true (e. tw |isQuoting|))
@@ -301,7 +306,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable vector
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (or (eql auditor +selfless-stamp+)
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)
         (eql auditor +thread-sharable-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. e.syntax:+e-printer+ |printList| tw this +e-true+))
@@ -477,13 +483,16 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 ; --- Number ---
 
+(def-atomic-sameness number eql sxhash)
+
 (def-vtable number
   (audited-by-magic-verb (this auditor)
-    "Numbers are atomic."
+    "Numbers are atomic and literals."
+    (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
         (eql auditor +thread-sharable-stamp+)
-        (and (eql auditor +standard-graph-exit-stamp+)
-             (typep this '(or integer float64)))))
+        (eql auditor +standard-graph-exit-stamp+)
+        (eql auditor +selfless+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| (prin1-to-string this)))
   (:|add|      (a (b 'number))
@@ -705,7 +714,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable simple-error
   (audited-by-magic-verb (this auditor)
     (and (typep this 'string-error)
-         (eql auditor +selfless-stamp+)))
+         (or (eql auditor +selfless+)
+             (eql auditor +transparent-stamp+))))
   (:|__optUncall| (this)
     (when (typep this 'string-error)
       `#(,+the-make-string-error+ "run" #(,(format nil (simple-condition-format-control this)))))))
@@ -734,7 +744,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable type-error
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |write| "problem: ")
     (print-object-with-type tw (type-error-datum this))
@@ -854,7 +865,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable type-desc
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (let* ((simple-name (copy-seq (simplify-fq-name (or (type-desc-opt-fq-name this) "_"))))
            (initial (position-if #'both-case-p simple-name)))
@@ -880,7 +892,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable message-desc
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. e.syntax:+e-printer+ |printMethodHeader| tw +e-false+ 
       (message-desc-doc-comment this)
@@ -901,7 +914,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-vtable param-desc
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. e.syntax:+e-printer+ |printGuardedNounPattern| tw
       (param-desc-opt-name this)

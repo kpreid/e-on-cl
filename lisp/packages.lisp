@@ -192,7 +192,9 @@
     :+the-audit-checker+
     :audited-by-magic-verb
     :+deep-frozen-stamp+
-    :+selfless-stamp+
+    :+selfless+
+    :+transparent-guard+
+    :+transparent-stamp+
     
     :+thread-sharable-stamp+
     :+pass-by-construction+

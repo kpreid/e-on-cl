@@ -97,7 +97,7 @@
   
         (otherwise (call-next-method))))))
 
-; xxx it might be useful to enforce the constraint that anything stamped +selfless-stamp+ and not a FUNCTION must have a specialized observable-type-of, or something to that effect.
+; xxx it might be useful to enforce the constraint that anything transparent-selfless and not a FUNCTION must have a specialized observable-type-of, or something to that effect.
 ;
 ; Or, perhaps, the observable-type-of anything transparent-selfless should be derived from its uncall's maker somehow.
 
@@ -139,25 +139,37 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore audition))
     +e-true+)))
 
-(defglobal +selfless-stamp+ (e-lambda
-    "org.erights.e.elib.serial.SelflessStamp"
-    (:doc "The primitive rubber-stamping auditor for Frozen-and-Transparent-and-Selfless objects, whose uncalls are used in sameness tests.
+(defglobal +selfless+ (e-lambda 
+    "org.erights.e.elib.serial.Selfless"
+    (:doc "XXX document this")
+  (audited-by-magic-verb (auditor)
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +thread-sharable-stamp+)))
+  (:|audit| (audition)
+    (declare (ignore audition))
+    +e-true+)
+  (:|coerce/2| (standard-coerce #'selflessp (lambda () +selfless+)))
+  (:|passes| (x) (as-e-boolean (selflessp x)))))
+
+(defglobal +transparent-stamp+ (e-lambda
+    "org.erights.e.elib.serial.TransparentStamp"
+    (:doc "The primitive rubber-stamping auditor for Transparent objects, whose uncalls are guaranteed to be accurate.
   
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   (audited-by-magic-verb (auditor)
     (setf auditor (ref-shorten auditor))
     (cond 
-      ((eql auditor +selfless-stamp+)
+      ((eql auditor +transparent-stamp+)
         ;; Prevents an infinite recursion:
         ;;       (transparent-selfless-p some-obj)
-        ;;    -> (approvedp +selfless-stamp+ some-obj)
-        ;;    -> (samep +selfless-stamp+ some-approver-of-obj)
-        ;;    -> (transparent-selfless-p +selfless-stamp+)
-        ;;    -> (approvedp +selfless-stamp+ +selfless-stamp+)
-        ;;    -> (samep +selfless-stamp+ +deep-frozen-stamp+)
-        ;;    -> repeat with +selfless-stamp+ in place of some-obj
+        ;;    -> (approvedp +transparent-stamp+ some-obj)
+        ;;    -> (samep +transparent-stamp+ some-approver-of-obj)
+        ;;    -> (transparent-selfless-p +transparent-stamp+)
+        ;;    -> (approvedp +transparent-stamp+ +transparent-stamp+)
+        ;;    -> (samep +transparent-stamp+ +deep-frozen-stamp+)
+        ;;    -> repeat with +transparent-stamp+ in place of some-obj
         ;;      
-        ;; Since we know the SelflessStamp is not itself selfless, we can shortcut the selfless check to not involve equalizer operations.
+        ;; Since we know the TransparentStamp is not itself transparent, we can shortcut the transparent check to not involve equalizer operations.
         nil)
       ((eql auditor +deep-frozen-stamp+)
         ;; Similar to above; the precise form of this recursion has not been determined, but this is a hopeful workaround.
@@ -169,6 +181,16 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore audition))
     +e-true+)))
 
+(defglobal +transparent-guard+ (e-lambda 
+    "org.erights.e.elib.serial.Transparent"
+    (:stamped +deep-frozen-stamp+
+     :stamped +thread-sharable-stamp+)
+  (:|passes/1| (specimen)
+    (as-e-boolean (approvedp +transparent-stamp+ specimen)))
+  (:|coerce/2| (standard-coerce 
+                 (lambda (s) (approvedp +transparent-stamp+ s))
+                 (lambda () +transparent-guard+)))))
+
 (defglobal +pass-by-construction+ (e-lambda 
     "org.erights.e.elib.serial.PassByConstruction"
     (:stamped +deep-frozen-stamp+
@@ -179,7 +201,8 @@ While this is a process-wide object, its stamps should not be taken as significa
   (:|coerce/2| (standard-coerce 
                  (lambda (s) 
                    (or (approvedp +pass-by-construction+ s)
-                       (and (approvedp +selfless-stamp+ s)
+                       (and (approvedp +selfless+ s)
+                            (approvedp +transparent-stamp+ s)
                             (typep (e. (e. s |__optUncall|) |get| 0)
                                    `(or ,(guard-to-type-specifier +pass-by-construction+)
                                         ,(guard-to-type-specifier +standard-graph-exit+))))))

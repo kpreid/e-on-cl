@@ -233,10 +233,10 @@
       `(list ,(concatenate 'string "&" prefix (string name))
              (make-lazy-apply-slot (lambda () ,value-form)))))))
 
-(defun selfless-authorize (fqn)
-  "Perform the typical load and authorization for an E-implemented maker of selfless objects."
+(defun transparent-authorize (fqn)
+  "Perform the typical load and authorization for an E-implemented maker of transparent objects."
   (efuncall (e-import (concatenate 'string fqn "Author")) 
-            elib:+selfless-stamp+))
+            elib:+transparent-stamp+))
 
 (defglobal +shared-safe-loader+
   (prefix-scope ("org.cubik.cle.prim.sharedPrimLoader" "org.cubik.cle.prim.")
@@ -308,7 +308,7 @@
     
     (:|makeBaseGuard|
       (efuncall (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
-                elib:+deep-frozen-stamp+ elib:+selfless-stamp+))
+                elib:+deep-frozen-stamp+ elib:+transparent-stamp+))
     
     (:|makeBrand|
       (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
@@ -318,20 +318,20 @@
       (efuncall (e-import "org.cubik.cle.memoizeAuthor")
                 elib:+deep-frozen-stamp+))))
 
-(defglobal +selfless-maker-fqns+
+(defglobal +transparent-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"
     "org.erights.e.elib.slot.finalSlotGuardSugar"
     "org.quasiliteral.astro.makeAstroTag"
     "org.quasiliteral.term.makeTerm"))
 
-(defun make-selfless-loader ()
-  "Makes the loader for those makers which would be plain .emakers if they did not need the SelflessStamp."
-  (make-scope "org.cubik.cle.prim.selflessMakers" 
+(defun make-transparent-loader ()
+  "Makes the loader for those makers which would be plain .emakers if they did not need the TransparentStamp."
+  (make-scope "org.cubik.cle.prim.transparentLoaders" 
     (mapcar (lambda (fqn)
               (list (concatenate 'string "&" fqn)
                     (make-lazy-apply-slot 
-                      (lambda () (selfless-authorize fqn)))))
-            +selfless-maker-fqns+)))
+                      (lambda () (transparent-authorize fqn)))))
+            +transparent-maker-fqns+)))
 
 ;; XXX consider rewriting this in terms of Evaluator#getKernelNodes?
 (defglobal +vm-node-maker-importer+
@@ -510,7 +510,7 @@
 (defun sameness-is-eq-p (specimen)
   ;; XXX unify this with fast-sameness-test
   (and (typep specimen 'function)
-       (not (approvedp +selfless-stamp+ specimen))))
+       (not (approvedp +selfless+ specimen))))
 
 (defun make-caching-emaker-loader (source)
   (let* ((load-functions
@@ -557,7 +557,7 @@
                     +sharable-importer+ ;; first so that anything the sharable importer contains is agreed upon by this
                     (make-primitive-loader)
                     (make-safe-extern-loader)
-                    (make-selfless-loader)
+                    (make-transparent-loader)
                     emaker-importer
                     +vm-node-type-importer+
                     +vm-node-maker-importer+))))
@@ -584,7 +584,7 @@
   (:|coerce/2| (standard-coerce 
                  (lambda (s) (approvedp +standard-graph-exit-stamp+ s))
                  (lambda () +standard-graph-exit+)))
-  (:|is| (ref)
+  (:|passes| (ref)
     (as-e-boolean (approvedp +standard-graph-exit-stamp+ ref))))
 
 (defglobal +shared-safe-scope+
@@ -633,6 +633,8 @@
         ("pbc"        ,elib:+pass-by-construction+)
         ;; XXX safeScope["StandardGraphExit"] is a lousy name for this
         ("StandardGraphExit" ,+standard-graph-exit+)
+        ("Selfless" ,+selfless+)
+        ("Transparent" ,+transparent-guard+)
 
         ; --- primitive: reference operations (shared) ---        
         ("__auditedBy" ,+the-audit-checker+)
@@ -763,8 +765,8 @@
           (e. (make-scope "__localPrivileged$"
                 ;; XXX the comment on the next line is stale, because thread-sharability now exists. We need to review whether these authorities should be where they are.
                 ; NOTE: these stamps are process-wide, but their effect is local unless amplified with some authority allowing sharing objects between vats (e.g. a hypothetical thread-safe stamp)
-                `(("DeepFrozenStamp" ,elib:+deep-frozen-stamp+)
-                  ("SelflessStamp"   ,elib:+selfless-stamp+)))
+                `(("DeepFrozenStamp"  ,elib:+deep-frozen-stamp+)
+                  ("TransparentStamp" ,elib:+transparent-stamp+)))
             |or| (vat-safe-scope *vat*))))
     (efuncall (e-import "org.cubik.cle.makeIOScope")
         "__privileged$"

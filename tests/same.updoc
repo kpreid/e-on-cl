@@ -221,3 +221,46 @@ Bug: CL undefined closure equality was leaking into E when the objects were suff
   ? { def x() :any { return def y {} }
   >   x() == x() }
   # value: false
+
+Selfless
+
+  ? Selfless.passes(1)
+  # value: true
+  
+  ? Selfless.passes([])
+  # value: true
+  
+  ? Selfless.passes([].asMap())
+  # value: true
+  
+  ? Selfless.passes(def x {})
+  # value: false
+  
+  ? Selfless.passes([].diverge())
+  # value: false
+  
+  ? Selfless.passes(<elib:ref.makeProxy>(def _ {}, Ref.promise()[0], true))
+  # value: true
+  
+  XXX this is a correct answer, but an incorrect situation
+  ? Selfless.passes(<elib:ref.makeProxy>(def _ {}, Ref.promise()[0], false))
+  # value: false
+
+Properties of bogus Selfless objects
+
+  ? def makeBogus() { return def bogus implements Selfless {} }
+  > def bogus := makeBogus()
+  # value: <bogus>
+  
+  ? __equalizer.optSame(bogus, bogus)
+  # value: true
+  
+  ? [__equalizer.optSame(bogus, makeBogus())]
+  # value: [null]
+  
+  ? Selfless.passes(bogus)
+  # value: true
+  
+  ? __equalizer.isSettled(bogus)
+  # value: false
+  

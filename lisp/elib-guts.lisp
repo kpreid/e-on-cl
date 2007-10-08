@@ -65,7 +65,8 @@
 (def-vtable e-simple-slot
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__optUncall| (this)
     `#(,+the-make-simple-slot+ "run" #(,(simple-slot-value this))))
   (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?

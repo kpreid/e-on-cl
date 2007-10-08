@@ -5,7 +5,8 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (cl:defpackage :e.elib.same-impl
-  (:use :cl :e.elib))
+  (:use :cl :e.elib)
+  (:import-from :elib :selflessp))
 
 (in-package :e.elib.same-impl)
 
@@ -19,21 +20,22 @@
         (funcall target 'e.elib:selfish-hash-magic-verb))
       (sxhash target)))
 
-(declaim (inline transparent-selfless-p))
-(defun transparent-selfless-p (a)
-  (approvedp +selfless-stamp+ a))
+(declaim (inline selflessp transparentp))
+(defun transparentp (a)
+  (approvedp +transparent-stamp+ a))
+(defun selflessp (a)
+  ;; NOTE: This is the implementation of the test for the Selfless guard.
+  (or (approvedp +selfless+ a)
+      ;; NOTE: special case for proxies
+      ;; XXX should this instead be implemented by some mechanism for approvedp to dispatch on nonnear refs?
+      (typep a 'elib::resolved-handler-ref)))
 
 (defun spread-uncall (a)
   "assumes the object produces a properly formed uncall"
   (let ((unspread (e. a |__optUncall|)))
     (e-coercef unspread 'vector)
+    ;; XXX should kill the vat in the event of a malformed uncall
     (concatenate 'vector `#(,(aref unspread 0) ,(aref unspread 1)) (aref unspread 2))))
-
-(defmethod elib::samep-dispatch (left right)
-  (assert (not (transparent-selfless-p left)))
-  (assert (not (transparent-selfless-p right)))
-  (assert (not (eql left right)))
-  nil)
 
 (declaim (inline %examine-reference))
 (defun %examine-reference (original path opt-fringe
@@ -41,24 +43,27 @@
                            (before-shortening (constantly nil))
                            early-test
                            (selfless-early (constantly nil))
-                           selfless-seed
-                           selfless-op
-                           (selfless-shortcut (constantly nil))
+                           transparent-seed
+                           transparent-op
+                           (transparent-shortcut (constantly nil))
+                           nontransparent-op
                            when-resolved-selfish
                            when-unresolved-selfish)
   (funcall before-shortening original)
   (let ((short (ref-shorten original)))
     (funcall early-test short)
-    (if (transparent-selfless-p short)
+    (if (selflessp short)
       (progn
         (funcall selfless-early)
-        (loop with result = selfless-seed
-              for a across (spread-uncall short)
-              for i from 0
-              do (setf result (funcall selfless-op result a (when opt-fringe (cons i path))))
-                 (when (funcall selfless-shortcut result)
-                   (return result))
-              finally (return result)))
+        (if (transparentp short)
+          (loop with result = transparent-seed
+                for a across (spread-uncall short)
+                for i from 0
+                do (setf result (funcall transparent-op result a (when opt-fringe (cons i path))))
+                   (when (funcall transparent-shortcut result)
+                     (return result))
+                finally (return result))
+          (funcall nontransparent-op short path)))
       (if (ref-is-resolved short)
         (funcall when-resolved-selfish short)
         (progn
@@ -78,22 +83,30 @@
       :before-shortening #'stop-on-cycle
       :early-test        #'stop-on-cycle
       :selfless-early (lambda () (setf (gethash original sofar) nil))
-      :selfless-seed t
-      :selfless-op (lambda (accum elem path-ext)
-                     (let ((sub-settled (sameness-fringe elem path-ext opt-fringe sofar)))
-                       (and accum sub-settled)))
-      :selfless-shortcut (lambda (result)
-                           (and (not result) (null opt-fringe)))
+      :transparent-seed t
+      :transparent-op (lambda (accum elem path-ext)
+                        (let ((sub-settled (sameness-fringe elem path-ext opt-fringe sofar)))
+                          (and accum sub-settled)))
+      :transparent-shortcut (lambda (result)
+                              (and (not result) (null opt-fringe)))
+      :nontransparent-op (lambda (short path)
+                           (if (elib::same-hash-dispatch short)
+                             t
+                             (progn
+                               ;; XXX duplication here of the unresolved-selfish logic
+                               (when opt-fringe
+                                 (vector-push-extend (cons short path) opt-fringe))
+                               nil)))
       :when-resolved-selfish (constantly t)
       :when-unresolved-selfish (constantly nil))))
 
 (defun %sameness-hash (target hash-depth path opt-fringe)
   ;(declare (optimize (speed 3) (safety 3)))
-  "Compute the hash of a reference. If the vector OPT-FRINGE is provided, fills it with promises and their locations in the structure; otherwise, encountering a promise is an error."
-  (flet ((unresolved-selfish ()
+  "Compute the hash of a reference. If the vector OPT-FRINGE is provided, fills it with unsettled leaves and their locations in the structure; otherwise, encountering an unsettled reference is an error."
+  (flet ((unsettled ()
            (if opt-fringe
              -1
-             (error "Must be settled"))))
+             (error 'insufficiently-settled-error :values (list target)))))
     (%examine-reference
       target path opt-fringe
       :early-test
@@ -102,15 +115,16 @@
             (return-from %sameness-hash
               (if (sameness-fringe target path opt-fringe)
                 -1
-                (unresolved-selfish)))))
-      :selfless-seed 0
-      :selfless-op (lambda (accum a path-ext)
-                     (logxor accum (%sameness-hash a (1- hash-depth) path-ext opt-fringe)))
-      :when-resolved-selfish
-        (lambda (target)
-          (or (elib::same-hash-dispatch target)
-              (selfish-hash target)))
-      :when-unresolved-selfish #'unresolved-selfish)))
+                (unsettled)))))
+      :transparent-seed 0
+      :transparent-op (lambda (accum a path-ext)
+                        (logxor accum (%sameness-hash a (1- hash-depth) path-ext opt-fringe)))
+      :nontransparent-op (lambda (target path)
+                           (declare (ignore path))
+                           (or (elib::same-hash-dispatch target)
+                               (unsettled)))
+      :when-resolved-selfish #'selfish-hash
+      :when-unresolved-selfish #'unsettled)))
 
 (defmethod elib::same-hash-dispatch ((a null))
   (declare (ignore a))
@@ -229,21 +243,21 @@
                     ; at this depth.
                     (equalizer-trace "exit opt-same sofar loop")
                     (return +e-true+))
-                  (let ((left-selfless (transparent-selfless-p left))
-                        (right-selfless (transparent-selfless-p right)))
-                    (cond
-                      ((and left-selfless right-selfless)
-                        (opt-same-spread left right sofar))
-                      ((or  left-selfless right-selfless)
-                        ; Early exit: if one but not both are selfless,
-                        ; they can't be the same.
-                        (equalizer-trace "exit opt-same selflessness mismatch ~S ~S" left-selfless right-selfless)
-                        +e-false+)
-                      (t
-                        ; this handles what in Java-E are HONORARY selfless
-                        ; objects
-                        (equalizer-trace "exit opt-same via samep-dispatch to come")
-                        (as-e-boolean (elib::samep-dispatch left right))))))))
+                  (let ((left-selfless (selflessp left))
+                        (right-selfless (selflessp right)))
+                    (if (and left-selfless right-selfless)
+                      (cond
+                        ((and (transparentp left) (transparentp right))
+                          (opt-same-spread left right sofar))
+                        ((elib::opt-same-dispatch left right))
+                        (t
+                          ; missing sameness definition, consider unsettled
+                          nil))
+                      (progn
+                        ; Resolved, uneql, and not both selfless, so they
+                        ; can't be the same.
+                        (equalizer-trace "exit opt-same not selfless ~S ~S" left-selfless right-selfless)
+                        +e-false+))))))
       
       (nest-fq-name ("org.erights.e.elib.tables.makeEqualizer")
         (e-lambda |equalizer|
@@ -262,20 +276,7 @@
           
           (:|isSettled| (ref)
             (as-e-boolean (settledp ref)))
-          
-          (:|isSelfless| (ref)
-            "Returns whether the reference is selfless; that is, whether it can be acquired by construction as well as by passing. Such references may or may not also be transparent."
-            (as-e-boolean (typep ref
-              '(or (satisfies transparent-selfless-p)
-                   ;; XXX derive this list from the def-atomic-sameness
-                   ;; definitions instead of hardcoding
-                   null
-                   string
-                   character
-                   integer
-                   float64
-                   e-boolean))))
-          
+                    
           (:|makeTraversalKey/1| 'make-traversal-key))))))
 
 ;;; --- TraversalKey ---
@@ -325,7 +326,8 @@
 (def-vtable traversal-key
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +selfless+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     "Does not print the reference behind this traversal key so that:
   * The key may be DeepFrozen trivially.

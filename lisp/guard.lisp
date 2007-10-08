@@ -41,7 +41,8 @@
 (def-vtable cl-type-guard
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +deep-frozen-stamp+))
+    (or (eql auditor +deep-frozen-stamp+)
+        (eql auditor +selfless+)))
 
   (:|coerce| (guard specimen opt-ejector)
     (e-coerce-native specimen (guard-to-type-specifier guard) opt-ejector guard))

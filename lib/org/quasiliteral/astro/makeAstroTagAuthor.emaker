@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def makeAstroTagAuthor(SelflessStamp) {
+def makeAstroTagAuthor(TransparentStamp) {
 
   interface AstroTag guards AstroTagStamp {
     # XXX ...
@@ -14,7 +14,7 @@ def makeAstroTagAuthor(SelflessStamp) {
     /** Unlike E-on-Java, lack of a tag code is here represented by null, rather than -1; and lack of a data type is given by use of the nullOk guard. */
     to run(optTagCode :nullOk[int >= 0], tagName :String, dataGuard :Guard) {
       /** An AstroTag, which in this E implementation serves only as the label on a Term. See E-on-Java for further information. */
-      def astroTag implements SelflessStamp, AstroTagStamp { # , PassByCopyStamp
+      def astroTag implements Selfless, AstroTagStamp, TransparentStamp {
         to __optUncall() {
           return [makeAstroTag, "run", [optTagCode, tagName, dataGuard]]
         }

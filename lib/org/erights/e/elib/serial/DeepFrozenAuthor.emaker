@@ -105,11 +105,11 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         rtrace("--rDF atomic")
         return
 
-      } else if (__equalizer.isSelfless(specimen)) {
-        # An object which is Selfless by definition has no mutable state (because that would give it an identity) that is not exposed as a 'separate' reference via its uncall.
+      } else if (Selfless.passes(specimen)) {
+        # An object which is Selfless by definition has no mutable state (because that would give it an identity) that is not exposed as a 'separate' reference via its uncall or other mechanism.
         
         # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
-        if ((def uncall := specimen.__optUncall()) != null) {
+        if (Transparent.passes(specimen) && (def uncall := specimen.__optUncall()) != null) {
           def sub(_, component) {
             requireDeepFrozen(component, sofarther, optEjector, root)
           }
@@ -121,7 +121,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
           rtrace("--rDF selfless")
           return
         } else {
-          throw("can't happen: PassByCopy object " + E.toQuote(specimen) + " returned null from __optUncall and is not stamped DeepFrozen")
+          throw("don't know how to deal with non-Transparent Selfless object " + E.toQuote(specimen) + " returned null from __optUncall and is not stamped DeepFrozen")
         }
         
       } else if (__auditedBy(EventuallyDeepFrozen, specimen)) {
@@ -211,7 +211,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
   
     to audit(audition) {
       # xxx I am well aware that this code is an awful mess. I do plan to do something about it.
-    
+      
       def objectExpr := audition.getObjectExpr()
       
       def label := "EventuallyDeepFrozen: " + audition.getFQName()

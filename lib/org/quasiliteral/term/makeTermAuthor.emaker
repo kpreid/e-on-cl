@@ -10,7 +10,7 @@ def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 def AstroTag := makeAstroTag.asType()
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
-def makeTermAuthor(SelflessStamp) {
+def makeTermAuthor(TransparentStamp) {
   def TermStamp implements DeepFrozen { 
     to audit(_) { return true }
   }
@@ -145,7 +145,7 @@ def makeTermAuthor(SelflessStamp) {
            data :(tag.getDataGuard()),
            optSpan :nullOk[SourceSpan],
            args :List) { # NOTE: unrestricted - XXX must offer default-compatible restrictive guard
-      def term implements SelflessStamp, TermStamp { # , PassByCopyStamp
+      def term implements Selfless, TransparentStamp, TermStamp {
         to __optUncall() {
           return [makeTerm, "run", [tag, data, optSpan, args]]
         }

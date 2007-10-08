@@ -51,15 +51,15 @@ def RefAuthor {
       
       /** XXX doesn't belong here, recommend using the PassByCopy guard instead? */
       to isPassByCopy(r) :any { 
-        if (__equalizer.isSelfless(r)) { Ref.isPBC(r) } else { false }
+        if (Selfless.passes(r)) { Ref.isPBC(r) } else { false }
       }
       /** XXX doesn't belong here, recommend using the pbc guard instead? */
       to isPBC(r) :any { 
         return (escape fail { pbc.coerce(r, fail) == r } catch _ { false })
       }
-      /** XXX doesn't belong here, recommend using Equalizer#isSelfless/1 instead? */
+      /** XXX doesn't belong here, recommend using Selfless instead? */
       to isSelfish(r) :any {
-        if (Ref.isNear(r)) { !__equalizer.isSelfless(r) } else { false }
+        if (Ref.isNear(r)) { !Selfless.passes(r) } else { false }
       }
       
       to whenResolved(ref, reactor) :any {

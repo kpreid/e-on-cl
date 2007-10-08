@@ -399,7 +399,8 @@
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (or (eql auditor +deep-frozen-stamp+)
-        (eql auditor +selfless-stamp+)))
+        (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__optUncall| (this)
     `#(,+the-make-static-context+
        "run"

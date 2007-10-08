@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def finalSlotGuardSugarAuthor(SelflessStamp) {
+def finalSlotGuardSugarAuthor(TransparentStamp) {
   interface FinalSlotPGuard guards FinalSlotPGuardStamp { # confused yet?
     to getValueGuard()
   }
@@ -17,7 +17,7 @@ def finalSlotGuardSugarAuthor(SelflessStamp) {
     }
 
     to instance_get(self, valueGuard) {
-      return def FinalSlotP implements DeepFrozen."optionally"(), FinalSlotPGuardStamp, SelflessStamp {
+      return def FinalSlotP implements DeepFrozen."optionally"(), FinalSlotPGuardStamp, Selfless, TransparentStamp {
         to __optUncall() {
           return [<elib:slot.makeFinalSlot>.asType(), "get", [valueGuard]]
         }

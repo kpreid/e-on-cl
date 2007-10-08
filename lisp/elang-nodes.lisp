@@ -25,7 +25,8 @@
     (e-lambda 
         ,fqn
         (:stamped +thread-sharable-stamp+
-         :stamped +selfless-stamp+)
+         :stamped +selfless+
+         :stamped +transparent-stamp+)
       (:|__optUncall| ()
         `#(,e.knot:+sharable-importer+ "get" #(,,fqn)))
       (:|__getAllegedType| ()
@@ -445,7 +446,8 @@ List nodes will be assumed to be sequences."
 (def-vtable |ENode|
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (or (eql auditor +selfless-stamp+)
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)
         (eql auditor +thread-sharable-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (let ((quote (e-is-true (e. tw |isQuoting|))))
@@ -456,7 +458,7 @@ List nodes will be assumed to be sequences."
       (when quote
         (e. tw |print| "`"))))
   (:|__optUncall| (this)
-    ;; xxx if errors in Selfless uncalls should be vat-killing, this is one of them
+    ;; xxx if errors in Transparent uncalls should be vat-killing, this is one of them
     `#(,(let ((sm (get (observable-type-of this) 'static-maker)))
           (assert sm () "Missing maker for E-node class ~A" (observable-type-of this))
           sm)
@@ -652,7 +654,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (assert (not (and (e-is-true has-outer-meta-state-expr) 
                     (not (e-is-true has-meta-state-expr)))))
   (with-result-promise (self)
-    (e-lambda "org.erights.e.elang.evm.StaticScope" (:stamped +selfless-stamp+)
+    (e-lambda "org.erights.e.elang.evm.StaticScope" (:stamped +selfless+
+                                                     :stamped +transparent-stamp+)
       (:|__printOn| ((tw +the-text-writer-guard+))
         (e. tw |print| "<" (e. set-names  |getKeys|) " := "
                            (e. read-names |getKeys|) " =~ "

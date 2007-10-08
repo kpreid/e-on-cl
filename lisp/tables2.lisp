@@ -83,7 +83,8 @@
 (def-vtable source-span
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
   (:|__printOn/1| (span (out +the-text-writer-guard+))
     (with-accessors ((uri        span-uri         )
                      (one-to-one span-one-to-one-p)
@@ -466,7 +467,8 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 (def-vtable const-map
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (eql auditor +selfless-stamp+))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
 
   ; XXX import documentation strings lazily from EMap interface
   (:|__optUncall| (this)

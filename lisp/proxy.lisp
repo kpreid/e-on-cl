@@ -22,6 +22,7 @@
      (make-traversal-key (%proxy-ref-resolution-box ref))
      ref))
 
+;; NOTE: this is magic in that proxies are considered Selfless whereas no other kinds of eventual references are; implemented in elib::selflessp.
 (def-atomic-sameness resolved-handler-ref
   (lambda (a b) (and (eql (class-of a)
                           (class-of b))
