@@ -29,33 +29,6 @@
          :stamped +transparent-stamp+)
       (:|__optUncall| ()
         `#(,e.knot:+sharable-importer+ "get" #(,,fqn)))
-      (:|__getAllegedType| ()
-        ; XXX figure out how to write this code better; withFoo would be an improvement, to start with
-        (let ((base (e-lambda-type-desc)))
-          (e. +the-make-type-desc+ |run|
-            (e. base |getDocComment|)
-            (e. base |getOptFQName|)
-            (e. base |getSupers|)
-            (e. base |getAuditors|)
-            (map 'vector (lambda (md)
-                           (if (not (samep (e. md |getVerb|) "run"))
-                             md
-                             (e. +the-make-message-desc+ |run|
-                               (e. md |getDocComment|)
-                               (e. md |getVerb|)
-                               (coerce
-                                 (loop for pd across (e-coerce (e. md |getParams|) 'vector)
-                                       for i from -1
-                                       collect
-                                   (e. +the-make-param-desc+ |run|
-                                     (e. pd |getOptName|)
-                                     (when (<= 0 i ,(1- (length param-types)))
-                                       (locally
-                                         #+sbcl (declare (sb-ext:muffle-conditions warning)) ;; workaround for sbcl >= 1.0.3.40 type inference bug
-                                         (type-specifier-to-guard (elt ',param-types i))))))
-                                 'vector)
-                               (e. md |getOptResultGuard|))))
-                         (e-coerce (e. (e. base |getMessageTypes|) |getValues|) 'vector)))))
       (:|asType| () 
         (type-specifier-to-guard ',class-sym))
       (:|getParameterSubnodeFlags| ()
@@ -64,16 +37,10 @@
       (,(locally
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
           (e-util:mangle-verb "run" (+ 2 (length param-types))))
-        ((,span-sym '(or null source-span)) ,@param-syms (,jlayout-sym 'null))
+        ((,span-sym '(or null source-span))
+          ,@(mapcar (lambda (s ty) `(,s ',ty)) param-syms param-types)
+          (,jlayout-sym 'null))
         (declare (ignore ,jlayout-sym))
-        ;; XXX now that we have guarded lambda lists we should rewrite this
-        ,@(loop for param in param-syms
-                for type in param-types
-                ;; XXX half-baked fix for vector args
-                collect `(progn 
-                           (when (typep (setf ,param (ref-shorten ,param)) '(and vector (not string)))
-                             (setf ,param (map 'vector #'ref-shorten ,param)))
-                           (e-coercef ,param ',type)))
         (make-instance ',class-sym
           :source-span ,span-sym
           :elements
