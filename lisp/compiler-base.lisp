@@ -516,7 +516,7 @@
                           (funcall matcher-function :|__respondsTo/2| args fail))))))))
 
 (defmethod object-body (generators self-fsym layout (matcher |EMatcher|) qualified-name checker-sym type-desc)
-  (declare (ignore self-fsym methods type-desc))
+  (declare (ignore self-fsym type-desc))
   `(case mverb
     ((elib:audited-by-magic-verb) 
       ,(if checker-sym
