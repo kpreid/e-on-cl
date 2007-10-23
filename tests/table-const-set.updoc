@@ -15,13 +15,13 @@ statics
 
 maker methods and sets for further testing
   
-  ? def oneSet := makeConstSet.make([1 => 2])
+  ? def oneSet := makeConstSet.fromKeysOf([1 => 2])
   # value: [1].asSet()
   
   ? def emptySet := makeConstSet.getEmptySet()
   # value: [].asSet()
   
-  ? def threeSet := makeConstSet.make([1 => 2, 3 => 4, 5 => 6])
+  ? def threeSet := makeConstSet.fromKeysOf([1 => 2, 3 => 4, 5 => 6])
   # value: [1, 3, 5].asSet()
 
 guard
@@ -37,10 +37,10 @@ guard
 
 sameness
 
-  ? threeSet == makeConstSet.make([1 => 2, 3 => 4, 5 => 6])
+  ? threeSet == makeConstSet.fromKeysOf([1 => 2, 3 => 4, 5 => 6])
   # value: true
 
-  ? threeSet == makeConstSet.make([1 => 'a', 3 => 2, 5 => {def a;a}])
+  ? threeSet == makeConstSet.fromKeysOf([1 => 'a', 3 => 2, 5 => {def a;a}])
   # value: true
 
 __optUncall
@@ -107,18 +107,18 @@ contains
 
 and
 
-  ? threeSet & makeConstSet.make([1 => null, 2 => null])
+  ? threeSet & makeConstSet.fromKeysOf([1 => null, 2 => null])
   # value: [1].asSet()
   
 or
   
-  ? threeSet | makeConstSet.make([1 => null, 2 => null])
+  ? threeSet | makeConstSet.fromKeysOf([1 => null, 2 => null])
   # value: [1, 2, 3, 5].asSet()
   
-  ? threeSet.or(makeConstSet.make([1 => null, 2 => null]), false)
+  ? threeSet.or(makeConstSet.fromKeysOf([1 => null, 2 => null]), false)
   # value: [1, 2, 3, 5].asSet()
   
-  ? threeSet.or(makeConstSet.make([1 => null, 2 => null]), true)
+  ? threeSet.or(makeConstSet.fromKeysOf([1 => null, 2 => null]), true)
   # problem: both sets contain 1, in strict union of [1, 3, 5].asSet() and [1, 2].asSet()
   
 readOnly

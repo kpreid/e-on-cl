@@ -97,7 +97,7 @@ def makeConstSetAuthor(TransparentStamp) {
       /** Return a new set with the element removed if it is present. */
       to without(element) {
         return if (constSet.contains(element)) {
-          makeConstSet.make(itemMap.without(element))
+          makeConstSet.fromKeysOf(itemMap.without(element))
         } else {
           constSet
         }
@@ -106,13 +106,13 @@ def makeConstSetAuthor(TransparentStamp) {
       /** Return the intersection of two sets. The returned set has XXX document ordering */
       to and(other :ConstSet) :ConstSet {
         # XXX do this more efficiently with an asKeys or amplified-get-internal-map method
-        return makeConstSet.make(itemMap & __makeMap.fromColumns(other.getElements(), [null] * other.size()))
+        return makeConstSet.fromKeysOf(itemMap & __makeMap.fromColumns(other.getElements(), [null] * other.size()))
       }
       
       /** Return the ... of two sets. The returned set has XXX document ordering */
       to butNot(other :ConstSet) :ConstSet {
         # XXX do this more efficiently with an asKeys or amplified-get-internal-map method
-        return makeConstSet.make(itemMap &! __makeMap.fromColumns(other.getElements(), [null] * other.size()))
+        return makeConstSet.fromKeysOf(itemMap &! __makeMap.fromColumns(other.getElements(), [null] * other.size()))
       }
       
       # xxx or/3 with optEjector
@@ -121,7 +121,7 @@ def makeConstSetAuthor(TransparentStamp) {
       to or(other :ConstSet, strict :boolean) :ConstSet {
         # XXX do this more efficiently with an asKeys or amplified-get-internal-map method
         escape conflict {
-          return makeConstSet.make(itemMap.or(__makeMap.fromColumns(other.getElements(), [null] * other.size()), strict, conflict))
+          return makeConstSet.fromKeysOf(itemMap.or(__makeMap.fromColumns(other.getElements(), [null] * other.size()), strict, conflict))
         } catch _ {
           # XXX this is inefficient/silly. the exception should include the key, instead.
           def member := (constSet & other).getElements()[0]
@@ -142,11 +142,11 @@ def makeConstSetAuthor(TransparentStamp) {
     /** Return the empty ConstSet. */
     to getEmptySet() {
       # XXX memoize
-      return makeConstSet.make([].asMap())
+      return makeConstSet.fromKeysOf([].asMap())
     }
     
-    # XXX documentation
-    to make(itemMap :Map[any, void]) {
+    /** Make a set whose elements are the keys of itemMap. XXX Should also support any Iteratable, but doesn't yet. */
+    to fromKeysOf(itemMap :Map[any, void]) {
       return unsafeMakeConstSet(itemMap)
     }
   }

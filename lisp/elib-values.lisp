@@ -330,7 +330,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|asSet| (vector)
     "Return a ConstSet with the elements of this list, omitting duplicates."
     (e. (e-import "org.erights.e.elib.tables.makeConstSet") 
-        |make| (e. vector |asKeys|)))
+        |fromKeysOf| (e. vector |asKeys|)))
   (:|asStream| (vector &aux (position 0))
     "Return a stream providing the elements of this list."
     (e-lambda "org.erights.e.elib.tables$constListStream" ()
