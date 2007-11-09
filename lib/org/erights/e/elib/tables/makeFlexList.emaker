@@ -121,9 +121,17 @@ def makeFlexList implements EventuallyDeepFrozen, ExitViaHere {
   }
 
   to diverge(source, valueGuard) {
-    # XXX coerce on insertion instead of building a temporary list
-    def contents :List[valueGuard] := source.snapshot()
-    return makeFlexList._fromArray(makeArray.fromSequence(contents, true), valueGuard)
+    def uncoercedContents :List := source.snapshot()
+    def size := uncoercedContents.size()
+    def array := makeArray.fromSequence(uncoercedContents, true)
+    if (valueGuard != any) {
+      var i := 0
+      while (i < size) {
+        array.setElt(i, array.elt(i) :valueGuard)
+        i += 1
+      }
+    }
+    return makeFlexList._fromArray(array, valueGuard)
   }
 }
 
