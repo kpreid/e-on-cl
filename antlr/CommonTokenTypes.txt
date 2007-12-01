@@ -1,4 +1,3 @@
-// $ANTLR 2.7.4: quasi.g -> quasiTokenTypes.txt$
 Common // output token vocab name
 QUASIOPEN=4
 QUASICLOSE=5
