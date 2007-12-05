@@ -369,6 +369,7 @@
             (efuncall absent-thunk)))
         (efuncall absent-thunk)))))
 
+;; XXX If the user's locale is not full-Unicode, then we can get output errors from printing trace info (e.g. parser doings containing source). We should do whatever implementation-specific things are needed to have it replace unencodable characters.
 (defun make-tracer (&key (label "UNDEFINED TRACE LABEL") (stream *trace-output*))
   (let* ((first-prefix (format nil "; ~A " (e-print label)))
          (rest-prefix (format nil "; ~v@T" (- (length first-prefix) 3))))
