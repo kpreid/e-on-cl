@@ -369,7 +369,8 @@
 (defparameter *profilers*
   '(nil
     #+sbcl :sb-profile
-    #+sbcl :sb-sprof))
+    #+sbcl :sb-sprof
+    :ecall-counter))
 
 (defparameter *profile-package-names* 
   '("E.UTIL"
@@ -405,6 +406,41 @@
 (defmethod profile-finish ((profiler (eql :sb-sprof)))
   (sb-sprof:stop-profiling) 
   (sb-sprof:report))
+
+
+(defvar *call-counter-method*)
+(defvar *call-counts*)
+
+(defun cc-type-of (specimen)
+  (typecase specimen
+    (function
+      (let ((name (nth-value 2 (function-lambda-expression specimen))))
+        (typecase name
+          ((cons (eql labels) (cons symbol null)) (second name))
+          (otherwise name))))
+    (otherwise
+      ;; type-of turned out to be too fine-grained; e.g. array dimensions
+      (class-name (class-of specimen)))))
+
+(defmethod profile-start ((profiler (eql :ecall-counter)))
+  "Note that this makes a global change, namely installing a :before method on e-call-dispatch."
+  (setf *call-counts* (make-hash-table :test #'equal)
+        *call-counter-method*
+          (defmethod e-call-dispatch :before (rec mverb &rest args)
+            (incf (gethash (list* (cc-type-of rec)
+                                  mverb
+                                  (mapcar #'cc-type-of args))
+                           *call-counts*
+                           0)))))
+
+(defmethod profile-finish ((profiler (eql :ecall-counter)))
+  (remove-method #'e-call-dispatch *call-counter-method*) 
+  (format *trace-output* "~&--- Call count profile ---~%")
+  (loop for (name . count) in (sort (map-from-hash 'list #'cons *call-counts*)
+                                  #'< :key #'cdr)
+        do (format *trace-output* "~8D ~S~%" count name))
+  (format *trace-output* "~&--------------------------~%")
+  (force-output *trace-output*))
 
 
 ; --- Entry points, etc. ---
