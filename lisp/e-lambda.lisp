@@ -36,7 +36,8 @@
          (args-sym   (gensym "ARGS"))
          (hash-sym   (gensym "HASH"))
          (miranda-return-sym (gensym "FAIL")))
-  (declare (string fqn documentation))
+    (declare (string fqn)
+             (type doc-comment documentation))
   `(let ((,stamps-sym (vector ,@stamp-forms))
          (,hash-sym #+e.function-sxhash-inadequate (make-hash-code)
                     #-e.function-sxhash-inadequate (cons nil nil)))
@@ -83,7 +84,7 @@
         ,self-expr))))
 
 (defmacro efun (method-first &body method-rest &environment env)
-  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "$_") "" '() nil))
+  (e-lambda-expansion `((:|run| ,method-first ,@method-rest)) (join-fq-name (environment-fqn-prefix env) "$_") nil '() nil))
 
 (defmacro e-lambda (qname (&rest options) &body smethods &environment env)
   "XXX document this
@@ -97,7 +98,7 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
                    (,@options) ,@smethods))))
   (let ((fqn (join-fq-name (environment-fqn-prefix env) (or qname "_")))
         (stamp-forms '())
-        (documentation ""))
+        (documentation nil))
     ;; Parse options
     (loop for (key value) on options by #'cddr do
       (case key
@@ -108,12 +109,12 @@ fqn may be NIL, a string, or a symbol, in which case the symbol is bound to the 
             (error "Both ~S option and ~S specified in e-lambda ~S." :stamped 'audited-by-magic-verb fqn))
           (push value stamp-forms))
         (:doc
-          (assert (string= documentation "") (documentation) "duplicate :doc option")
+          (assert (null documentation) (documentation) "duplicate :doc option")
           (setf documentation value))
         (otherwise
           (error "Unrecognized option ~S ~S in e-lambda ~S."
                  key value fqn))))
-    (check-type documentation string)
+    (check-type documentation doc-comment)
     ;; Extract 'otherwise' method
     (multiple-value-bind (otherwises specifics)
         (partition (lambda (x) (typep x '(cons (eql otherwise) t)))

@@ -815,7 +815,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "org.erights.e.elib.base.makeTypeDesc"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
-  (:|run| ((doc-comment 'string)
+  (:|run| ((doc-comment 'doc-comment)
            (fq-name     '(or null string))
            (supers      'vector)
            (auditors    'vector)
@@ -837,7 +837,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     "org.erights.e.elib.base.makeMessageDesc"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
-  (:|run| ((doc-comment      'string)
+  (:|run| ((doc-comment      'doc-comment)
            (verb             'string)
            (params           '(vector param-desc))
            (opt-result-guard 't))

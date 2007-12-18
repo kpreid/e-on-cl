@@ -329,6 +329,7 @@
 (def-fqn message-desc "org.erights.e.elib.base.messageDesc")
 (def-fqn param-desc "org.erights.e.elib.base.paramDesc")
 (def-fqn local-throw-sealed-box "org.cubik.cle.prim.localThrowSealedBox")
+(def-fqn doc-comment "org.erights.e.elib.base.docComment") ; XXX get approval from MarkM for erights namespace use
 
 (loop for group-type in '(and or) do
   (defmethod cl-type-parameters ((type (eql group-type)) parameters)

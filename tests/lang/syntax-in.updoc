@@ -243,7 +243,7 @@ XXX produce a nice error for this?
 #           &
 #           NounE. a
 #           [] ObjectHeadE.
-#             
+#             null
 #             IgnoreP.
 #             MethodObject
 #               null
@@ -290,7 +290,7 @@ XXX source position
 >    pragma.disable(\"explicit-result-guard\")
 >    def a() {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -305,7 +305,7 @@ XXX source position
 >    pragma.disable(\"explicit-result-guard\")
 >    def a{ to b() {} }")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -313,7 +313,7 @@ XXX source position
 #             null
 #             []
 #             [] ETo
-#               
+#               null
 #               b
 #               []
 #               null
@@ -325,7 +325,7 @@ XXX source position
 >    pragma.disable(\"explicit-result-guard\")
 >    def a() {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -340,7 +340,7 @@ XXX source position
 >    pragma.disable(\"explicit-result-guard\")
 >    def a{ to b() {} }")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -348,7 +348,7 @@ XXX source position
 #             null
 #             []
 #             [] ETo
-#               
+#               null
 #               b
 #               []
 #               null
@@ -373,7 +373,7 @@ XXX source position
 ? t("pragma.syntax(\"0.8\")
 >    def a() :void {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -389,7 +389,7 @@ XXX source position
 ? t("pragma.syntax(\"0.9\")
 >    def a() {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -411,7 +411,7 @@ XXX test resulting pragma state directly?
 
 ? t("def a() :b {}")
 # stdout: ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -427,7 +427,7 @@ XXX test resulting pragma state directly?
 
 ? t("pragma.enable(\"function-implements\"); def a() :b implements c {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -442,7 +442,7 @@ Testing discrimination between functions and call patterns:
 
 ? t("pragma.disable(\"explicit-result-guard\"); def a() {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -455,7 +455,7 @@ Testing discrimination between functions and call patterns:
 
 ? t("pragma.disable(\"explicit-result-guard\"); pragma.enable(\"function-implements\"); def a() implements b {}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -468,7 +468,7 @@ Testing discrimination between functions and call patterns:
 
 ? t("def a() :b {}")
 # stdout: ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -543,7 +543,7 @@ Parentheses disable modPow form
 ? t("def _ {} :a")
 # stdout: CoerceE.
 #           ObjectHeadE.
-#             
+#             null
 #             IgnoreP.
 #             MethodObject
 #               null
@@ -599,7 +599,7 @@ XXX more tests (this section was written to test guardless ParamDesc)
 
 ? t("interface a { to b(c, d :e, _ :f, _) }")
 # stdout: InterfaceE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -607,7 +607,7 @@ XXX more tests (this section was written to test guardless ParamDesc)
 #           []
 #           []
 #           [] MessageDescE.
-#             
+#             null
 #             b
 #             []
 #               ParamDescE.
@@ -641,7 +641,7 @@ one-method-object
 
 ? t("pragma.enable(\"one-method-object\"); def a.b() :c {d}")
 # stdout: SeqE. [] ObjectHeadE.
-#           
+#           null
 #           FinalP.
 #             NounE. a
 #             null
@@ -652,6 +652,93 @@ one-method-object
 #             []
 #             NounE. d
 #             true
+
+--- Doc-comments ---
+
+? t("def _ {}")
+# stdout: ObjectHeadE.
+#           null
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             []
+#             []
+
+? t("/***/ def _ {}")
+# stdout: ObjectHeadE.
+#           
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             []
+#             []
+
+? t("/**a*/ def _ {}")
+# stdout: ObjectHeadE.
+#           a
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             []
+#             []
+
+? t("/** a */ def _ {}")
+# stdout: ObjectHeadE.
+#           a
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             []
+#             []
+
+? t("def _ { method b() {} }")
+# stdout: ObjectHeadE.
+#           null
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             [] EMethod
+#               null
+#               b
+#               []
+#               null
+#               NullE.
+#             []
+
+? t("def _ { /***/ method b() {} }")
+# stdout: ObjectHeadE.
+#           null
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             [] EMethod
+#               
+#               b
+#               []
+#               null
+#               NullE.
+#             []
+
+? t("def _ { /** a */ method b() {} }")
+# stdout: ObjectHeadE.
+#           null
+#           IgnoreP.
+#           MethodObject
+#             null
+#             []
+#             [] EMethod
+#               a
+#               b
+#               []
+#               null
+#               NullE.
+#             []
 
 --- Quasis ---
 

@@ -204,7 +204,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
   (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
     (make-instance 'message-desc
       :verb verb
-      :doc-comment (or (find-if #'stringp impl-desc) "") ; XXX too lenient
+        :doc-comment (find-if #'stringp impl-desc) ; XXX too lenient
       :params (if (rest impl-desc) ; therefore inline
                 (coercing-lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
                 (make-array arity :initial-element 

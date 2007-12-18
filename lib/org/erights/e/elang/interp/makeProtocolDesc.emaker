@@ -25,7 +25,7 @@ def makeProtocolDesc implements DeepFrozen, ExitViaHere {
    * This can be used for the object-equivalent of single-key
    * authentication.
    */
-  to run(docComment :String,
+  to run(docComment :nullOk[String],
          optFQName  :nullOk[String],
          supers     :List,   # XXX of what?
          auditors   :List,   # XXX [Auditor] but we don't have that yet
@@ -76,7 +76,7 @@ def makeProtocolDesc implements DeepFrozen, ExitViaHere {
   
   # XXX see notes on more specific types above
   # XXX write independent tests for makePair
-  to makePair(docComment :String, optFQName :nullOk[String], supers :List, auditors :List, mTypes :List) {
+  to makePair(docComment :nullOk[String], optFQName :nullOk[String], supers :List, auditors :List, mTypes :List) {
     # XXX methods
     def stamp
     def guard extends makeTypeDesc(docComment, optFQName, supers, auditors, mTypes) implements EventuallyDeepFrozen {

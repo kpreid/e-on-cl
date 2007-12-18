@@ -197,7 +197,7 @@
 (define-node-class |NounExpr|        (|EExpr|)
   ((:|name| nil string)))
 (define-node-class |ObjectExpr|      (|EExpr|)
-  ((:|docComment| nil string)
+  ((:|docComment| nil doc-comment)
    (:|pattern| t |Pattern|) 
    (:|auditorExprs| t (e-list |EExpr|)) 
    (:|script| t |EScriptoid|)))
@@ -209,7 +209,7 @@
 
 (defclass |EMethodoid| (|ENode|) ()) ;; to support "to"
 (define-node-class |EMethod|         (|EMethodoid|)
-  ((:|docComment| nil string)
+  ((:|docComment| nil doc-comment)
    (:|verb| nil string)
    (:|patterns| t (e-list |Pattern|))
    (:|optResultGuard| t (or null |EExpr|))

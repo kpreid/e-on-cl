@@ -504,13 +504,13 @@
         (mn '|FinallyExpr|
           (mn '|CallExpr| |collection| "iterate"
             (mn '|ObjectExpr|
-              ""
+              nil
               (mn '|IgnorePattern|)
               #()
               (mn '|EScript| 
                 (vector (mn '|EMethod| 
-                  "" "run" (vector (mn '|FinalPattern| key-var nil)
-                                   (mn '|FinalPattern| value-var nil)) 
+                  nil "run" (vector (mn '|FinalPattern| key-var nil)
+                                    (mn '|FinalPattern| value-var nil)) 
                   nil
                   (mn '|SeqExpr|
                     (mn '|FunCallExpr| (mn '|NounExpr| "__validateFor") valid-flag-var)
@@ -552,10 +552,10 @@
                                   (|body| t |EExpr|))
                                  ()
   (mn '|ObjectExpr|
-      ""
+      nil
       (mn '|IgnorePattern|)
       #()
-      (mn '|EScript| (vector (mn '|EMethod| "" "run" |patterns| nil |body|)) 
+      (mn '|EScript| (vector (mn '|EMethod| nil "run" |patterns| nil |body|)) 
                              #())))
 
 (defemacro |FunCallExpr| (|EExpr|) ((|recipient| t |EExpr|) 
@@ -583,7 +583,7 @@
     (mn '|If1Expr| test (expand-accum-body then accum-var))))
 
 ;; using LiteralExpr for the name is a bit clunky but necessary: when it's a pattern the slot must be marked as a subnode. XXX come up with a better solution
-(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil string)
+(defemacro |InterfaceExpr| (|EExpr|) ((|docComment| nil doc-comment)
                                       (|name| t (or null |Pattern| |LiteralExpr|))
                                       (|optStamp| t (or null |Pattern|))
                                       (|parents| t (e-list |EExpr|))
@@ -719,7 +719,7 @@
                     key-value)))
 
 (defemacro |MessageDescExpr| (|EExpr|)
-    ((|docComment| nil string)
+    ((|docComment| nil doc-comment)
      (|verb| nil string)
      (|params| t (e-list |ParamDescExpr|))
      (|optResultType| t (or null |EExpr|)))
@@ -728,8 +728,8 @@
   (mn '|HideExpr|
     (mn '|CallExpr| (mn '|NounExpr| "__makeMessageDesc")
                     "run"
-                    (mn '|LiteralExpr| |docComment|)
-                    (mn '|LiteralExpr| |verb|)
+                    (node-quote |docComment|)
+                    (node-quote |verb|)
                     (apply #'mn '|ListExpr| (coerce |params| 'list))
                     (or |optResultType| (mn '|NullExpr|)))))
 
@@ -776,7 +776,7 @@
     (t
      (error "Assignment can only be done to nouns and collection elements (not ~A)" (e-quote |place|) #| XXX ejector? |#))))
 
-(defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil string)
+(defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil doc-comment)
                                      (|name| t |Pattern|)
                                      (|parent| t (or null |EExpr|))
                                      (|auditors| t (e-list |EExpr|))
@@ -821,14 +821,14 @@
 (defemacro |NullExpr| (|EExpr|) () ()
   (mn '|NounExpr| "null"))
 
-(defemacro |ObjectHeadExpr| (|EExpr|) ((|docComment| nil string)
+(defemacro |ObjectHeadExpr| (|EExpr|) ((|docComment| nil doc-comment)
                                        (|name| t |Pattern|)
                                        (|tail| t |ObjectTail|))
                                       ()
   ;; XXX possibly merge NKObjectExpr into this
   (multiple-value-bind (doc tail)
       (if (typep |tail| '|OneMethodObject|)
-        (values "" (e. |tail| |withFunctionDocumentation| |docComment|))
+        (values nil (e. |tail| |withFunctionDocumentation| |docComment|))
         (values |docComment| |tail|))
     (destructuring-bind (parent auditors script) 
         (coerce (e-macroexpand #| NOT -all |# tail) 'list)
@@ -947,11 +947,11 @@
                       specimen-var failure-vars))))
           (match-chain (coerce |matchers| 'list) failure-vars))))))
 
-(defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil string)
+(defemacro |ThunkExpr| (|EExpr|) ((|docComment| nil doc-comment)
                                   (|body| t |EExpr|))
                                  ()
   (mn '|ObjectExpr|
-      ""
+      nil
       (mn '|IgnorePattern|)
       #()
       (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
@@ -1059,7 +1059,7 @@
                                   ()
   (let ((resolution (gennoun "resolution")))
     (mn '|ObjectHeadExpr|
-      "" |name|
+      nil |name|
       (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard| #()
         (mn '|TryExpr| 
           (mn '|SeqExpr|
@@ -1085,12 +1085,12 @@
   (mn '|EscapeExpr| (mn '|FinalPattern| (mn '|NounExpr| "__break") nil)
     (mn '|CallExpr| (mn '|NounExpr| "__loop") "run"
       (mn '|ObjectExpr|
-        ""
+        nil
         (mn '|IgnorePattern|)
         #()
         (mn '|EScript| 
           (vector (mn '|EMethod| 
-            "" "run" #() (mn '|NounExpr| "boolean")
+            nil "run" #() (mn '|NounExpr| "boolean")
             (mn '|IfExpr|
               |test|
               (mn '|SeqExpr|
@@ -1308,10 +1308,10 @@
      (|isEasyReturn| nil e-boolean))
     (&whole node)
   (declare (ignore |verb| |patterns| |optResultGuard| |auditors| |body| |isEasyReturn|))
-  (expand-one-method-object node ""))
+  (expand-one-method-object node nil))
 
 (def-vtable |OneMethodObject|
-  (:|withFunctionDocumentation| (this (doc '(or null string)))
+  (:|withFunctionDocumentation| (this (doc 'doc-comment))
     (expand-one-method-object this doc)))
 
 (defemacro |FunctionObject| (|OneMethodObject|) 
@@ -1322,7 +1322,7 @@
      (|isEasyReturn| nil e-boolean))
     (&whole node)
   (declare (ignore |patterns| |optResultGuard| |auditors| |body| |isEasyReturn|))
-  (expand-one-method-object node ""))
+  (expand-one-method-object node nil))
 
 (def-vtable |FunctionObject|
   (:|getVerb| (node)
@@ -1363,7 +1363,7 @@
   (vector nil |auditors| |matcher|))
 
 (defemacro |ETo| (|EMethodoid|) 
-    ((|docComment| nil string)
+    ((|docComment| nil doc-comment)
      (|verb| nil string)
      (|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))

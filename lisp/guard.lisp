@@ -59,7 +59,7 @@
                  ;; xxx should there be an ejector?
                  (error "No trivial value available")))))
   (:|getDocComment| (this)
-    (or (documentation (guard-to-type-specifier this) 'type) ""))
+    (coerce (documentation (guard-to-type-specifier this) 'type) 'doc-comment))
   (:|getSupers| (this) 
     "Supertype information is not currently available for primitive types."
     (declare (ignore this))

@@ -42,6 +42,9 @@
       qname
       #-(and) (error "Unrecognized qualified name: ~A (being qualified with prefix ~A)" (e-quote qname) (e-quote prefix)))))
 
+(deftype doc-comment ()
+  '(or null string))
+
 ;;; --- Early CL-type stuff ---
 
 (defgeneric observable-type-of (specimen)
@@ -60,7 +63,7 @@
 (defclass type-desc () 
   ((doc-comment :initarg :doc-comment
                 :reader type-desc-doc-comment
-                :type string)
+                :type doc-comment)
    (opt-fq-name :initarg :fq-name
                 :reader type-desc-opt-fq-name
                 :type (or null string))
@@ -80,9 +83,9 @@
   ((verb :initarg :verb 
          :reader message-desc-verb
          :type string)
-   (doc-comment :initarg :doc-comment :initform ""  
+   (doc-comment :initarg :doc-comment :initform nil
                 :reader message-desc-doc-comment
-                :type string)
+                :type doc-comment)
    (opt-result-guard :initarg :opt-result-guard :initform nil
                      :reader message-desc-opt-result-guard
                      :type t)

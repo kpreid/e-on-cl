@@ -81,10 +81,10 @@
     (e. tw |print| "<E-syntax printer>")
     nil)
   
-  (:|printDocComment| ((tw +the-text-writer-guard+) (text 'string))
+  (:|printDocComment| ((tw +the-text-writer-guard+) (text 'doc-comment))
     ; XXX have a strictness (about */) argument
     "Print a \"/** */\" documentation comment with a trailing line break on 'tw', if 'text' is not an empty string."
-    (when (string/= text "")
+    (when text
       (when (search "*/" text)
         ; xxx is there an escaping mechanism we can use?
         ; using print-not-readable is slightly wrong as this isn't a *lisp* printing problem
@@ -376,7 +376,7 @@ XXX make precedence values available as constants"
             (e. +e-printer+ |printNoun| tw noun))
           
           (:|visitObjectExpr| (opt-original 
-                               (doc-comment 'string) 
+                               (doc-comment 'doc-comment) 
                                pattern
                                (auditors 'vector)
                                script)
@@ -420,7 +420,7 @@ XXX make precedence values available as constants"
             (e. tw |lnPrint| #|{|# "}"))
             
           (:|visitEMethod| (opt-original
-                            (doc-comment 'string)
+                            (doc-comment 'doc-comment)
                             verb
                             (patterns 'vector)
                             opt-result-guard
@@ -869,7 +869,7 @@ XXX make precedence values available as constants"
           (assert (null out-children))
           ; XXX the lexer should do this stripping
           (if (string= text "")
-            ""
+            nil ; absent doc comment
             (string-trim " 	
 " (subseq text 3 (- (length text) 2)))))
         ((e.grammar::|DocComment|) 
@@ -942,7 +942,7 @@ XXX make precedence values available as constants"
 
         ;; -- doc-comment introduction --
         ((e.grammar::|ThunkExpr| e.grammar::|ObjectHeadExpr|)
-          (apply #'make-from-tag (or enclosing-doc-comment "") out-children))
+          (apply #'make-from-tag enclosing-doc-comment out-children))
 
         ;; -- negated-operator introduction --
         ((e.grammar::|SameExpr|)
@@ -971,7 +971,7 @@ XXX make precedence values available as constants"
         ((e.grammar::|InterfaceExpr|)
           (destructuring-bind (name &rest rest) out-children
             (apply #'make-from-tag
-              (or enclosing-doc-comment "")
+              enclosing-doc-comment
               (if (typep name 'string)
                 (mnp '|LiteralExpr| span name)
                 name)

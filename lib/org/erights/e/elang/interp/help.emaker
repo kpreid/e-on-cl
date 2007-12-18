@@ -17,7 +17,7 @@ def formatType(type) :any implements DeepFrozen {
   # XXX extends, implements
   
   # XXX use the routine for this in elang.lisp (we need to expose it)
-  if ((def s :String := type.getDocComment()) != "") {
+  if (type.getDocComment() =~ s :String) {
     tw.print("/** ", s, " */\n")
   }
   

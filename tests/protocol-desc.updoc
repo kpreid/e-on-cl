@@ -12,9 +12,9 @@ XXX not complete
   ? FooStamp :DeepFrozen
   # value: <Foo stamp>
   
-  ? Foo.getDocComment()
-  # value: ""
+  ? [Foo.getDocComment()]
+  # value: [null]
 
-  ? Bar.getDocComment()
-  # value: ""
+  ? [Bar.getDocComment()]
+  # value: [null]
   

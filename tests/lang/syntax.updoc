@@ -10,7 +10,11 @@
 
 Doc comments
   
+  ? ePrinter.printDocComment(stdout, null)
+  
   ? ePrinter.printDocComment(stdout, "")
+  # stdout: /**  */
+  #         
   
   ? ePrinter.printDocComment(stdout, "foo")
   # stdout: /** foo */
@@ -20,7 +24,7 @@ Doc comments
   # problem: doc comment containing "*/" cannot be printed: "*/*"
   
   ? ePrinter.printDocComment(stdout, 40)
-  # problem: the int 40 doesn't coerce to a String
+  # problem: the int 40 doesn't coerce to a DocComment
   
   ? ePrinter.printDocComment(stdout, def _{to __conformTo(_) :any {return "foo"}})
   # stdout: /** foo */
@@ -173,7 +177,7 @@ printMethodHeader
   # stdout: /** doc */
   #         to "verb!"(param) :org
   
-  ? ePrinter.printMethodHeader(stdout, true, "", "verb", [], null)
+  ? ePrinter.printMethodHeader(stdout, true, null, "verb", [], null)
   # stdout: method verb()
   
   ? ePrinter.printMethodHeader(stdout, 

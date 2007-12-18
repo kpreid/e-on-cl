@@ -100,12 +100,16 @@ MessageDesc
   ? md == makeMessageDesc("doc comment", "verb", [makeParamDesc("arg", null)], float64)
   # value: true
   
-  ? makeMessageDesc("", "//", [], null)
+  ? makeMessageDesc(null, "//", [], null)
   # value: to "//"()
   
-  ? makeMessageDesc(null, "v", [], null)
-  # problem: the Null null doesn't coerce to a String
+  ? makeMessageDesc("", "v", [], null)
+  # value: /**  */
+  #        to v()
 
+  ? makeMessageDesc(1, "", [], null)
+  # problem: the int 1 doesn't coerce to a DocComment
+  
   ? makeMessageDesc("", [], [], null)
   # problem: the ConstList [] doesn't coerce to a String
 
@@ -171,8 +175,8 @@ TypeDesc
 
  odd argument types
 
-  ? makeTypeDesc(null, "f.q.n", [int], [DeepFrozen], [md])
-  # problem: the Null null doesn't coerce to a String
+  ? makeTypeDesc(1, "f.q.n", [int], [DeepFrozen], [md])
+  # problem: the int 1 doesn't coerce to a DocComment
 
   ? def td := makeTypeDesc("doc", null, [int], [DeepFrozen], [md])
   # value: _
@@ -216,8 +220,8 @@ __getAllegedType details, def-vtable-based
 
   xxx we're assuming int has no documentation '
   xxx test something native *with* documentation (eg one of our own classes)
-  ? t.getDocComment()
-  # value: ""
+  ? [t.getDocComment()]
+  # value: [null]
   
   xxx Number?
   ? t.getSupers()

@@ -240,6 +240,7 @@
     :+the-make-type-desc+
     :+the-make-message-desc+
     :+the-make-param-desc+
+    :doc-comment
     
     :simplify-fq-name
     :join-fq-name

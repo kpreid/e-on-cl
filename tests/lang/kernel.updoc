@@ -245,7 +245,7 @@ EMethod
   ? methd.getBody()
   # value: e`1`
   
-  ? makeEMethod(null, "", "+", [], makeNounExpr(null, "any", null), makeLiteralExpr(null, 1, null), null)
+  ? makeEMethod(null, null, "+", [], makeNounExpr(null, "any", null), makeLiteralExpr(null, 1, null), null)
   # value: e??`
   #        method "+"() :any {
   #            1
@@ -296,7 +296,7 @@ ObjectExpr, EScript
   ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null)], emptyScript, null).staticScope()
   # value: <[] := ["b"] =~ [] + var []>
   
-  ? def thunkScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
+  ? def thunkScript := makeEScript(null, [makeEMethod(null, null, "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
   # value: e??`{
   #            
   #            method run() {
@@ -308,7 +308,7 @@ ObjectExpr, EScript
   ? thunkScript.staticScope()
   # value: <[] := ["foo"] =~ [] + var []>
   
-  ? def fooThunk := makeObjectExpr(null, "", makeFinalPattern(null, makeNounExpr(null, "fooThunk", null), null, null), [], thunkScript, null)
+  ? def fooThunk := makeObjectExpr(null, null, makeFinalPattern(null, makeNounExpr(null, "fooThunk", null), null, null), [], thunkScript, null)
   # value: e`def fooThunk {
   #            
   #            method run() {
@@ -326,12 +326,12 @@ ObjectExpr, EScript
   # value: true
 
   printing implements
-  ? makeObjectExpr(null, "", makeFinalPattern(null, makeNounExpr(null, "audited", null), null, null), [makeNounExpr(null, "auditor", null)], emptyScript, null)
+  ? makeObjectExpr(null, null, makeFinalPattern(null, makeNounExpr(null, "audited", null), null, null), [makeNounExpr(null, "auditor", null)], emptyScript, null)
   # value: e`def audited implements auditor {
   #        }`
   
   printing _
-  ? makeObjectExpr(null, "", makeIgnorePattern(null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
+  ? makeObjectExpr(null, null, makeIgnorePattern(null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
   # value: e`def _ {
   #        }`
 
@@ -339,7 +339,7 @@ ObjectExpr, EScript
  
   XXX standalone IgnorePattern tests
   
-  ? def bothScript := makeEScript(null, [makeEMethod(null, "", "run", [], null, makeNounExpr(null, "foo", null), null)], [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
+  ? def bothScript := makeEScript(null, [makeEMethod(null, null, "run", [], null, makeNounExpr(null, "foo", null), null)], [makeEMatcher(null, makeIgnorePattern(null, null), makeLiteralExpr(null, 1, null), null)], null)
   # value: e??`{
   #            
   #            method run() {
@@ -367,7 +367,7 @@ ObjectExpr, EScript
   #        }`
   
   Plumbing print:
-  ? makeObjectExpr(null, "", makeIgnorePattern(null, null), [], matcher, null)
+  ? makeObjectExpr(null, null, makeIgnorePattern(null, null), [], matcher, null)
   # value: e`def _ match _ {
   #            1
   #        }`
@@ -989,7 +989,7 @@ These tests check the arguments which nodes give to visitors.
   >   match matcherPatt { matcherBody }
   > }`.asKernelE().welcome(makeVisitor(0))
   # stdout: ObjectExpr e`def obj1 implements auditor {...
-  #           
+  #           null
   #           FinalPattern epatt`obj1`...
   #             NounExpr e`obj1`...
   #               obj1
@@ -1000,7 +1000,7 @@ These tests check the arguments which nodes give to visitors.
   #           EScript e??`{...
   #             _list null...
   #               EMethod e??`...
-  #                 
+  #                 null
   #                 aMethod
   #                 _list null...
   #                   FinalPattern epatt`param`...
@@ -1023,7 +1023,7 @@ These tests check the arguments which nodes give to visitors.
   
   ? e`def obj2 match plumbingPatt { plumbingBody }`.asKernelE().welcome(makeVisitor(0))
   # stdout: ObjectExpr e`def obj2 match plumbingPatt {...
-  #           
+  #           null
   #           FinalPattern epatt`obj2`...
   #             NounExpr e`obj2`...
   #               obj2
