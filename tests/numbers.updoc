@@ -101,7 +101,7 @@ Exponentiation
   # value: 0.25
   
   ? def x := 2.0 ** -0.5
-  # value: 0.7071067811865476
+  # value: 0.7071067811865475
   ? e__quasiParser(E.toQuote(x)).eval(safeScope) - x
   # value: 0.0
   
