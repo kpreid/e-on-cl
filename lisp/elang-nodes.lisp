@@ -938,6 +938,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 ;;; --- scope utilities ---
 
+;; a keyword is a property name for the node
+;; a list is a name and a function to be applied to the node
+(defun deref-node-part (node part)
+  (etypecase part
+    (keyword (funcall (opt-node-property-getter node part)))
+    (list (funcall (second part) node))))
+
+(defun name-node-part (part)
+  (with-standard-io-syntax
+    (etypecase part
+      (keyword (write-to-string part :readably nil :escape nil))
+      (list (first part)))))
+
 (define-condition misleading-usage-error (error)
   ;; XXX bad accessor names
   ((node :type |ENode|
@@ -953,21 +966,21 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                &aux (node (node condition))
                     (definer (defining-property condition))
                     (user (using-property condition))
-                    (node-d (funcall (opt-node-property-getter node definer)))
-                    (node-u (funcall (opt-node-property-getter node user))))
+                    (node-d (deref-node-part node definer))
+                    (node-u (deref-node-part node user)))
              (format stream "a ~A's ~A (~A) may not ~:[~;appear to ~]use ~
                              definitions from its ~A (~A)"
                             (observable-type-of node)
-                            user (e-quote node-u)
+                            (name-node-part user) (e-quote node-u)
                             (typep condition 'misleading-apparent-usage-error)
-                            definer (e-quote node-d)))))
+                            (name-node-part definer) (e-quote node-d)))))
 
 (define-condition misleading-actual-usage-error (misleading-usage-error) ())
 (define-condition misleading-apparent-usage-error (misleading-usage-error) ())
 
 (defun reject-definition-usage (node ejector actual definer user)
-  (let ((node-d (e-macroexpand-all (funcall (opt-node-property-getter node definer))))
-        (node-u (e-macroexpand-all (funcall (opt-node-property-getter node user)))))
+  (let ((node-d (e-macroexpand-all (deref-node-part node definer)))
+        (node-u (e-macroexpand-all (deref-node-part node user))))
   (when (and node-d node-u (usesp node-d node-u))
     (ejerror ejector (if actual
                        'misleading-actual-usage-error

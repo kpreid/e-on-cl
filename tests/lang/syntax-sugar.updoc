@@ -1080,6 +1080,13 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
   #         $$ ` @@ "), __makeList.run(b, "c"))) [d, [e]]`
   XXX test __quasiMatcher
 
+  ? tp("`@a $a`")
+  # problem: <misleading-apparent-usage-error: a QuasiPattern's value holes (e`[a]`) may not appear to use definitions from its pattern holes (epatt`[a]`)>
+
+  ? tp("`@{via (a) c} ${def a := b}`")
+  # problem: <misleading-actual-usage-error: a QuasiPattern's pattern holes (epatt`[via (a) c]`) may not use definitions from its value holes (e`[def a := b]`)>
+  XXX this print with e`[]` is a bit confusing, though explicable
+  
 'SamePattern'
 
   ? tp("==x")

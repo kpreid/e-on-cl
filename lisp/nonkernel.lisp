@@ -1244,12 +1244,20 @@
   (expand-map-pattern (coerce |pairs| 'list)))
 
 
+(defglobal +values-reject-des+ 
+  (list "value holes"
+        (lambda (node) (quasi-value-list      (e. node |getParts|)))))
+(defglobal +patterns-reject-des+ 
+  (list "pattern holes"
+        (lambda (node) (quasi-subpattern-list (e. node |getParts|)))))
 
 (defemacro |QuasiPattern| (|Pattern|)
     ((|optParser| t (or null |EExpr|))
      (|parts| t (e-list (and |QuasiPart|))))
-    (:rest-slot t)
-  ;; XXX todo: reject usage between (all $-holes) and (all @-holes)
+    (:rest-slot t
+     &whole node)
+  (reject-definition-usage node nil t   +values-reject-des+   +patterns-reject-des+)
+  (reject-definition-usage node nil nil +patterns-reject-des+ +values-reject-des+)
   (mn '|ViaPattern|
     (mn '|FunCallExpr| (mn '|NounExpr| "__quasiMatcher")
                        (mn '|CallExpr| (quasi-deopt-parser |optParser|)
