@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
@@ -22,14 +22,21 @@ def simpleRuneAuthor implements DeepFrozen, ExitViaHere {
   
     def simpleRune {
       to run(args :List) {
-        # XXX 
-        def [scriptName] + scriptArgs := args
-        
-        def scope := privilegedScope.with("interp", 
-          def interp extends privilegedScope["interp"] {
-            to getArgs() { return scriptArgs }})
-        
-        return makeEParser.run(<file>[scriptName].getTwine()).asKernelE() <- eval(scope)
+        switch (args) {
+          match [scriptName] + scriptArgs {
+            def scope := privilegedScope.with("interp", 
+              def interp extends privilegedScope["interp"] {
+                to getArgs() { return scriptArgs }})
+
+            return makeEParser.run(<file>[scriptName].getTwine()).asKernelE() <- eval(scope)
+          }
+          match [] {
+            def [=> lisp] | _ := privilegedScope
+            return lisp["CL", "FUNCALL"].getFunction()(
+              lisp["E.UTIL", "SYSTEM-SYMBOL"].getFunction()(
+                "REPL-START", "E.UPDOC", "e-on-cl.updoc"))
+          }
+        }
       }
     }
     return simpleRune
