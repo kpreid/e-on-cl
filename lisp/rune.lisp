@@ -416,7 +416,7 @@ Lisp-level options:
 (defun read-e-literal (stream character arg)
   (declare (ignore character))
   (check-type arg null)
-  (e.syntax:parse-to-kernel (read stream t nil t)))
+  (e.syntax:e-source-to-tree (read stream t nil t)))
 
 (defglobal +e-readtable+
   (let ((rt (copy-readtable nil)))
