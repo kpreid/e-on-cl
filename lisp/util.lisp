@@ -8,22 +8,23 @@
 ;; The definition of DEFGLOBALS is in packages.lisp.
 
 (defmacro defglobal (&rest args)
-  #+e.immutable 
-    `(defconstantonce ,@args)
-  #-e.immutable
-    `(defparameter ,@args))
+  `(defconstantonce ,@args))
 
 (defmacro defconstantonce (name value-form &optional documentation)
   `(progn
     (eval-when (:compile-toplevel)
-      (declaim (special ,name)))
+      (declaim (type t ,name)))
     (eval-when (:load-toplevel :execute)
-      (eval 
-        `(defconstant ,',name
-          ,(if (boundp ',name)
-            (symbol-value ',name)
-            ,value-form)
-          ,@',(when documentation (list documentation)))))))
+      (%defconstantonce ',name ,value-form ',documentation))))
+
+(defun %defconstantonce (name value documentation)
+  (if (boundp name)
+    (warn "Not recomputing ~A variable ~A." 'defconstantonce name)
+    ;; sbcl emits bogus-or-irrelevant "redefining special as constant" warnings due to our declaim
+    (handler-bind ((warning #'muffle-warning)) 
+      (eval `(defconstant ,name ',value
+               ,@(when documentation (list documentation))))))
+  name)
 
 ; --- misc ---
 
