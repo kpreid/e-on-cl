@@ -209,8 +209,6 @@
 
 ;;; --- ENode/scope consistency verification ---
 
-;; XXX once we have explicit Kernel-E verification, it should check for *internal* var/:= consistency, which this can't catch.
-
 ;; XXX all scope stuff should probably be moved to a different package; its presence in e.knot is historical
 (defun require-node-fits-scope (node scope ejector)
   (let ((ss (e. node |staticScope|)))

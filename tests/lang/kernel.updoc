@@ -1106,6 +1106,66 @@ These tests check the arguments which nodes give to visitors.
 
   ? <vm:makeIgnorePattern>(null, null).getOptPrincipalNoun()
 
+--- requireKernelE ---
+
+This section tests that the requireKernelE/1 method works and that it reports all types of errors through the ejector parameter, as it should. It does not test all of the Kernel-E constraints; merely one of each code path.
+
+  ? def rket(n) { return [true, escape r { n.requireKernelE(r) } catch p { return [false,p] }] }; null
+  XXX should something like this, for distinguishing ejection from return from throw, be available as a utility? (also rfst below)
+
+Kernel-E node types
+  ? rket(e`x`)
+  # value: [true, null]
+  
+  x ? rket(e`[x]`)
+  x # value: [true, problem: e`[x]` is not Kernel-E]
+  XXX this SHOULD be a failure, but requireKernelE doesn't actually check that the nodes are kernel node types, just other stuff
+
+Scope-based checks
+? rket(e`${makeDefineExpr(null, epatt`var x`, null, e`1`, null)}; ${makeAssignExpr(null, e`x`, e`2`, null)}`)
+  # value: [true, null]
+
+  ? rket(e`${makeDefineExpr(null, epatt`x`, null, e`1`, null)}; ${makeAssignExpr(null, e`x`, e`2`, null)}`)
+  # value: [false, problem: x is not an assignable variable]
+
+Usage constraints
+  ? rket(makeDefineExpr(null, epatt`x`, null, e`y`, null))
+  # value: [true, null]
+
+  ? rket(makeDefineExpr(null, epatt`x`, null, e`x`, null))
+  # value: [false, problem: <misleading-apparent-usage-error: a DefineExpr's rValue (e`x`) may not appear to use definitions from its pattern (epatt`x`)>]
+
+Special usage constraint
+  ? rket(epatt`a :b`)
+  # value: [true, null]
+
+  ? rket(epatt`a :a`)
+  # value: [false, problem: kernel FinalPattern may not use its own noun (e`a`) in its guard (e`a`)]
+
+Property types
+  ? rket(makeAssignExpr(null, e`a`, e`b`, null))
+  # value: [true, null]
+
+  ? rket(makeAssignExpr(null, e`1`, e`b`, null))
+  # value: [false, problem: e`1 := b` must have noun of type NounExpr, but had 1]
+
+--- requireFitsScope ---
+
+  ? def rfst(n, s) { return [true, escape r { n.requireFitsScope(s, r) } catch p { return [false,p] }] }; null
+  
+  ? rfst(e`int`, 99)
+  # problem: no such method: org.cubik.cle.native.int#fetchSlot/2
+  XXX should coerce or not?
+  
+  ? rfst(e`int`, safeScope)
+  # value: [true, null]
+  
+  ? rfst(e`asfdghjk`, safeScope)
+  # value: [false, problem: undefined variable: asfdghjk]
+  
+  ? rfst(makeAssignExpr(null, e`int`, e`1`, null), safeScope)
+  # value: [false, problem: int is not an assignable variable]
+
 XXX well-formedness constraints tested before eval, but not at construction so we can build conveniently
       no shadowing without an intervening HideExpr
       no recursive definitions in DefineExpr (evaluator constraint?)

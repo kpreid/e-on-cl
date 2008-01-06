@@ -472,7 +472,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (:|subPrintOn| (this tw precedence)
     "Java-E compatibility"
     (e. this |welcome|
-      (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw precedence))))
+      (e. e.syntax:+e-printer+ |makePrintENodeVisitor| tw precedence)))
+  
+  (:|requireKernelE/1| 'require-kernel-e)
+  (:|requireFitsScope/2| 'e.knot:require-node-fits-scope))
 
 (defun mverb-get-to-property-name (mverb)
   "Return \"foo\" if mverb is :|getFoo/0|, otherwise nil."
@@ -1018,8 +1021,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (defun require-kernel-e (node ejector)
   "Verify that the node is a valid Kernel-E tree."
-  (walk-node-scopes node (make-scope-checker ejector))
   (require-kernel-e-recursive node ejector)
+  (walk-node-scopes node (make-scope-checker ejector))
   (values))
 
 (defun make-scope-checker (ejector) 

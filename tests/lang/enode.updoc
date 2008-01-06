@@ -87,6 +87,8 @@ Check that the special loaders handle the nonexistent cases:
   #            to lnPrintOn(tw, precedence)
   #            /** Java-E compatibility */
   #            to subPrintOn(tw, precedence)
+  #            to requireKernelE(_)
+  #            to requireFitsScope(_, _)
   #            to eval(scope)
   #            /** Evaluate this expression in the given outer scope and return a tuple of the return value and a scope containing any new bindings. */
   #            to evalToPair(scope)
