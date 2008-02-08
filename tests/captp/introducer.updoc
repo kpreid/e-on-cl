@@ -4,10 +4,16 @@
   ? pragma.syntax("0.9")
   > pragma.enable("accumulator")
 
+  ? var i := 10000000
+  > def pseudoEntropy {
+  >   to nextSwiss() { return (i += 1) }
+  > }
+  > null
+
   ? def makeIntroducer :DeepFrozen := <import:net.captp.comm.makeIntroducer>
   # value: <makeIntroducer>
   
-  ? def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), def fakeEntropy {}, def fakeTimer {})
+  ? def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), pseudoEntropy, def fakeTimer {})
   # value: [<Off the Air>, <identityMgr Off the Air>, <captp__uriGetter>]
 
 Get/information operations, off the air:
@@ -54,7 +60,33 @@ SturdyRef operations work even when off the air, except for the ref's getRcvr:
   ? <captp>.optUnget("foo")
   ? <captp>.optUncall("foo")
   
+IdentityMgr, off the air:
+
+  ? identityMgr.makeKnown(40)
+  # problem: <SecurityException: introducer not yet identified>
+  XXX explain why this doesn't succeed
   
+  ... XXX other operations
+
+Going on the air
+
+  ? introducer.onTheAir()
+  # value: ["BOGUS_PLACEHOLDER"]
+  
+  ? introducer
+  # value: <On the Air ["BOGUS_PLACEHOLDER"]>
+  
+Introducer, on the air:
+
+  ... XXX operations
+
+IdentityMgr, on the air:
+
+  XXX sr1 :SturdyRef1
+  ? def [sr, timeout, swissBase] := identityMgr.makeKnown(40)
+  # value: [<sturdyRef to 40>, <timeout>, 10000001]
+
+  ... XXX other operations
 
 XXX operations to test: 
   getLocatorUnum's result's role

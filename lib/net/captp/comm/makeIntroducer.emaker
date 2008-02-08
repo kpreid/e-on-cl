@@ -5,18 +5,35 @@ pragma.syntax("0.9")
 
 def scheme := "captp"
 
+def makeSwissTable := <import:net.captp.tables.makeSwissTable>
+
 def makeIntroducer implements ExitViaHere, DeepFrozen {
   to makePair(config :Map,
               entropy :any, # XXX interface
               timer :any) { # XXX interface
     
-    interface SturdyRef {} # XXX srub
+    interface SturdyRef {} # XXX stub
+    
+    def swissTable := makeSwissTable(entropy, <elib:tables.makeFlexMap>, <elib:tables.makeFlexMap>) # XXX should be weak-key and weak-value maps
+    
+    def negotiable := ["BOGUS_PLACEHOLDER"]
+    
+    var onTheAir := false
     
     # XXX stub
     def srMap := [].asMap().diverge()
     def getSturdyRef(uriBody) {
       if (srMap.maps(uriBody)) { return srMap[uriBody] }
       def sturdyRef implements SturdyRef {
+        to __printOn(out :TextWriter) {
+          if (uriBody =~ `//foo/@swissNumberStr`) {
+            out.write("<sturdyRef to ")
+            out.quote(swissTable.lookupSwiss(__makeInt(swissNumberStr)))
+            out.write(">")
+          } else {
+            out.write("<sturdyRef>")
+          }
+        }
         to getRcvr() { throw("introducer not yet identified") }
         to _uriBody() { return uriBody } # XXX should be opaque
       }
@@ -32,18 +49,39 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
       to getVatID() { throw("introducer not yet identified") } # XXX stub
       to hasIdentity() { return false } # XXX stub
       to isOnTheAir() { return false } # XXX stub
-      to negotiable() { return ["BOGUS_PLACEHOLDER"] } # XXX stub
+      to negotiable() { return negotiable } # XXX stub
+      
+      to onTheAir() {
+        onTheAir := true
+        return negotiable
+      }
       
       to __printOn(out :TextWriter) {
-        out.write("<Off the Air>")  # XXX stub
+        if (onTheAir) {
+          out.write(`<On the Air $negotiable>`)
+        } else {
+          out.write("<Off the Air>")
+        }
       }
     }
     
     def identityMgr {
-       # XXX stub
        to __printOn(out :TextWriter) {
          out.write("<identityMgr Off the Air>")  # XXX stub
        }
+       
+       to makeKnown(ref) {
+         if (onTheAir) {
+           def swissBase := entropy.nextSwiss()
+           def swissNumber := swissTable.registerNewSwiss(ref, swissBase)
+           def sr := getSturdyRef(`//foo/${swissBase.cryptoHash()}`) # XXX should be properly encoded
+           return [sr, def timeout {}, swissBase]
+         } else {
+           throw(`<SecurityException: introducer not yet identified>`) # XXX wording
+         }
+       }
+       
+       # XXX other ops
     }
     
     def <captp> {
