@@ -31,13 +31,13 @@ This is an InStream transformer which, unlike mapStream (XXX naming irregularity
 Upward closure
 
   ? def p; def s := transformIn(List, fn x {x}, def testStream { to close() { stderr.println("close") } })
-  # value: <-<_>-<testStream>
+  # value: <-<__main$_>-<testStream>
   ? s.close()
   # stderr: close
   #         
   
   ? def p; def s := transformIn(List, fn x {x}, def testStream { to fail(p) { stderr.println(p) } })
-  # value: <-<_>-<testStream>
+  # value: <-<__main$_>-<testStream>
   ? s.fail("ding")
   # stderr: ding
   #         
@@ -125,4 +125,4 @@ Bad estimator
   >                              to estimate(o) { return 0 } }, 
   >                      "abcdef".asStream())
   > s.takeAtMost(1)
-  # problem: <_> estimated chunk size 0, which cannot be correct
+  # problem: <__main$_> estimated chunk size 0, which cannot be correct

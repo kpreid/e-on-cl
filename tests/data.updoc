@@ -8,22 +8,22 @@
   # value: 1
   
   ? fn {} :Data
-  # problem: <_> is not Data because <_> is not
+  # problem: <__main$_> is not Data because <__main$_> is not
   
   ? [1] :Data
   # value: [1]
   
   ? [fn {}] :Data
-  # problem: [<_>] is not Data because <_> is not
+  # problem: [<__main$_>] is not Data because <__main$_> is not
   
   ? {def x := [1, x, 2]} :Data
   # value: [1, <***CYCLE***>, 2]
   
   ? {def x := [1, x, fn {}]} :Data
-  # problem: [1, <***CYCLE***>, <_>] is not Data because <_> is not
+  # problem: [1, <***CYCLE***>, <__main$_>] is not Data because <__main$_> is not
 
   ? {[def x := fn {}, x]} :Data
-  # problem: [<_>, <_>] is not Data because <_> is not
+  # problem: [<__main$_>, <__main$_>] is not Data because <__main$_> is not
   
   ? <shared> :Data
   # value: <shared:*>

@@ -506,10 +506,10 @@ CatchExpr
   
   ? e`try { a } catch b { c }`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["attempt", e`a`] => <3>
   #         => <3> => <4>
-  #         <4>.withHide(<_>) => f(<5>)
+  #         <4>.withHide(<...lisp$_>) => f(<5>)
   #             <5>.withSubnode["pattern", epatt`b`] => <6>
   #             <6>.withSubnode["catcher", e`c`] => <7>
   #         => <7> => <8>
@@ -543,22 +543,22 @@ EscapeExpr
 
   ? e`escape a { b }`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["ejectorPattern", epatt`a`] => <3>
   #             <3>.withSubnode["body", e`b`] => <4>
   #         => <4> => <5>
-  #         <5>.withHide(<_>) => f(<6>)
+  #         <5>.withHide(<...lisp$_>) => f(<6>)
   #         => <6> => <7>
   
   # value: <7>
 
   ? e`escape a { b } catch c { d }`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["ejectorPattern", epatt`a`] => <3>
   #             <3>.withSubnode["body", e`b`] => <4>
   #         => <4> => <5>
-  #         <5>.withHide(<_>) => f(<6>)
+  #         <5>.withHide(<...lisp$_>) => f(<6>)
   #             <6>.withSubnode["optCatchPattern", epatt`c`] => <7>
   #             <7>.withSubnode["optCatchBody", e`d`] => <8>
   #         => <8> => <9>
@@ -572,10 +572,10 @@ FinallyExpr
 
   ? e`try { a } finally { b }`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["attempt", e`a`] => <3>
   #         => <3> => <4>
-  #         <4>.withHide(<_>) => f(<5>)
+  #         <4>.withHide(<...lisp$_>) => f(<5>)
   #             <5>.withSubnode["unwinder", e`b`] => <6>
   #         => <6> => <7>
   
@@ -588,7 +588,7 @@ HideExpr
 
   ? e`{ a }`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["block", e`a`] => <3>
   #         => <3> => <4>
   
@@ -601,11 +601,11 @@ IfExpr
 
   ? e`if (a) { b } else { c }`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["test", e`a`] => <3>
   #             <3>.withSubnode["then", e`b`] => <4>
   #         => <4> => <5>
-  #         <5>.withHide(<_>) => f(<6>)
+  #         <5>.withHide(<...lisp$_>) => f(<6>)
   #             <6>.withSubnode["else", e`c`] => <7>
   #         => <7> => <8>
   
@@ -668,11 +668,11 @@ ObjectExpr
   ? e`def x implements a, b {}`.asKernelE().walkScopes(makeReporter())
   # stdout: 
   #         <1>.withSubnode["pattern", epatt`x`] => <2>
-  #         <2>.withHide(<_>) => f(<3>)
+  #         <2>.withHide(<...lisp$_>) => f(<3>)
   #             <3>.withSubnodeIndex["auditorExprs", 0, e`a`] => <4>
   #             <4>.withSubnodeIndex["auditorExprs", 1, e`b`] => <5>
   #         => <5> => <6>
-  #         <6>.withScript(<_>) => f(<7>)
+  #         <6>.withScript(<...lisp$_>) => f(<7>)
   #             <7>.withSubnode["script", e??`{
   #             }`] => <8>
   #         => <8> => <9>
@@ -720,7 +720,7 @@ EMethod
   
   ? ::"method".walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnodeIndex["patterns", 0, epatt`c`] => <3>
   #             <3>.withSubnode["optResultGuard", e`def dd := d`] => <4>
   #             <4>.withSubnode["body", e`c
@@ -739,7 +739,7 @@ EMatcher
   
   ? matcher.walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withHide(<_>) => f(<2>)
+  #         <1>.withHide(<...lisp$_>) => f(<2>)
   #             <2>.withSubnode["pattern", epatt`f`] => <3>
   #             <3>.withSubnode["body", e`f
   #             def gg := g`] => <4>

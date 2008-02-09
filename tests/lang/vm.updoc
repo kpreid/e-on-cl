@@ -423,10 +423,10 @@ Bug: incorrect scoping of the pattern of a matcher. (This can't happen any more 
   # value: <makeMatcherClosure>
   
   ? def match_c1 := makeMatcherClosure.first()
-  # value: <_>
+  # value: <...makeMatcherClosure$_>
   
   ? def match_c2 := makeMatcherClosure.second()
-  # value: <_>
+  # value: <...makeMatcherClosure$_>
   
   ? match_c1()
   # value: ["first", []]
@@ -466,6 +466,13 @@ Plumbing
   ? def x extends y match msg {}
   # problem: (line 1)@17: expecting "{", found 'match'
   XXX will be 'syntax error', wording to change, gain file position info
+
+ObjectExpr printing
+
+When the ObjectExpr's name pattern is an IgnorePattern, the object's FQN prefix is used to provide a name.
+
+  ? def foo() { return def _ {} }; foo()
+  # value: <...foo$_>
 
 Alleged type
 
@@ -652,7 +659,7 @@ Trinary DefineExpr
  Returning "ejector"
   XXX in Java-E this creates a note in the trace that the ejector returned and proceeds as if the ejector was null
   ? def x :String exit def _(_) :void {} := 9
-  # problem: optEjector <_> returned: null
+  # problem: optEjector <__main$_> returned: null
   
  Scoping
   ? {def y := 0; {def ==0 exit (def y := null) := y}}

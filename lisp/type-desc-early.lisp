@@ -10,7 +10,7 @@
   " Drops any package or containing class prefixes and any \"__C\" or \"__T\"
     suffixes prior to the last \"significant\" name.
     
-    A \"significant\" name is any name that doesn't begin with a digit
+    A \"significant\" name is any name that doesn't begin with a digit or \"_\"
     (ruling out anonymous objects and classes) and that isn't \"self\"."
   (let* ((last-sep (or (position-if (lambda (x) (member x '(#\. #\$))) fq-name :from-end t)
                        -1))
@@ -22,12 +22,19 @@
         (setf result (subseq result 0 suffix-start))))
     (if (and (> (length result) 0)
              (or (string= "self" result)
-                 (digit-char-p (aref result 0))))
+                 (string= "_" result)
+                 (digit-char-p (aref result 0)))
+             (plusp last-sep))
       ; result so far is not "significant"
-      (concatenate 'string "..."
-                           (simplify-fq-name (subseq fq-name 0 last-sep))
-                           (list (aref fq-name last-sep))
-                           result)
+      (let* ((parent-full (subseq fq-name 0 last-sep))
+             (parent-simp (simplify-fq-name parent-full)))
+        (concatenate 'string (if (or (string= parent-full parent-simp)
+                                     (without-prefix parent-simp "...")) 
+                               ""
+                               "...")
+                             parent-simp
+                             (list (aref fq-name last-sep))
+                             result))
       (if (string= result "") ; sanity check
         fq-name
         result))))

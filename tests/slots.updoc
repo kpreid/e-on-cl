@@ -83,7 +83,7 @@ Guarded
   ? makeGuardedSlot(int, null, def _(p) :any { print(p); return [p] })
   # stdout: problem: the Null null doesn't coerce to an int
   
-  # problem: optEjector <_> returned: [problem: the Null null doesn't coerce to an int]
+  # problem: optEjector <__main$_> returned: [problem: the Null null doesn't coerce to an int]
 
   ? def v :GuardedSlot := makeGuardedSlot(int, 1, null)
   # value: <var 1 :int>

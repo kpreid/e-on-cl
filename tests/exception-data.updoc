@@ -38,4 +38,4 @@
   # value: "{"
 
   ? defineException([], def _(_,_):void{})([].asMap()) :ParseError
-  # problem: <_> is not DeepFrozen
+  # problem: <__main$_> is not DeepFrozen

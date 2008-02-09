@@ -5,7 +5,7 @@
   # value: <memoize>
   
   ? memoize(def _ {})
-  # problem: <_> is not DeepFrozen
+  # problem: <__main$_> is not DeepFrozen
   
   ? def f implements DeepFrozen {
   >   to run(a, b) :any { return a + b }

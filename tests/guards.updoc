@@ -106,7 +106,7 @@ nullOk parameterized
   
   nullOk[...] will not transform null (is this correct behavior?)--
   ? {def t :nullOk[float64] := def _ { to __conformTo(_) :any {} }; t}
-  # problem: the "__main$_" <_> doesn't coerce to a float64
+  # problem: the "__main$_" <__main$_> doesn't coerce to a float64
   
   --but its subguard may coerce
   ? {def t :nullOk[float64] := 144; t}
