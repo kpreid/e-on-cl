@@ -1,0 +1,42 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+
+trickleIn wraps an input stream to produce maximally eventual behavior: no prompt responses are given, and chunks alternate between 0 and 1 elements.
+  
+  ? def ALL := EIO.getALL()
+
+  ? def trickleIn :DeepFrozen := <import:org.cubik.cle.io.trickleIn>
+  # value: <trickleIn>
+  
+  ? def s := trickleIn([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].asStream())
+  # value: <-trickling-[0, 1, 2, 3, 4, ...].asStream()
+
+  ? interp.waitAtTop(def x := s.takeAtMost(1)); x
+  # value: <Promise>
+  
+  ? x
+  # value: []
+
+  ? interp.waitAtTop(def x := s.takeAtMost(1)); x
+  # value: <Promise>
+  
+  ? x
+  # value: [0]
+
+  ? interp.waitAtTop(def x := s.takeAtMost(1))
+  ? x
+  # value: []
+
+  ? interp.waitAtTop(def x := s.takeAtMost(1))
+  ? x
+  # value: [1]
+
+  ? interp.waitAtTop(def x := s.takeAtMost(1))
+  ? x
+  # value: []
+
+  ? interp.waitAtTop(def x := s.takeAtMost(1))
+  ? x
+  # value: [2]
