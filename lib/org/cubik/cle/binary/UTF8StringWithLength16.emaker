@@ -1,4 +1,4 @@
-# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2007-2008 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
@@ -19,16 +19,18 @@ def UTF8StringWithLength16 extends String implements DeepFrozen, ExitViaHere { #
       out.reserve().resolve(data)
     }
   }
-  to takingFrom(ins) { # , schedule
+  to takingFrom(ins, schedule) {
     # XXX verify stream's byte size
-    def readShort := Short.takingFrom(ins)
-    return def taker() :UTF8StringWithLength16 {
-      def size := readShort()
-      # XXX unnecessarily non-streaming; fixable with a "substream of N of the characters from this stream"
-      def data := EIO.takeRange(size, size, ins)
-      def ta := EIO.takeAll(utf_8.decode(data.asStream(), [].asMap()))
-      # workaround for bug in takeRange
-      return if (ta == []) { "" } else { ta }
+    def readShort := Short.takingFrom(ins, schedule)
+    return def taker() :(schedule.result(UTF8StringWithLength16)) {
+      return schedule.whenResolved(readShort(), fn size {
+        # XXX unnecessarily non-streaming; fixable with a "substream of N of the characters from this stream"
+        schedule.whenResolved(EIO.takeRange(size, size, ins), fn data {
+          def ta := EIO.takeAll(utf_8.decode(data.asStream(), [].asMap()))
+          # workaround for bug in takeRange
+          if (ta == []) { "" } else { ta }
+        })
+      })
     }
   }
 }

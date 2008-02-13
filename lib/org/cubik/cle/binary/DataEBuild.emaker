@@ -1,4 +1,4 @@
-# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2007-2008 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
@@ -27,7 +27,7 @@ def DataEBuild extends any implements DeepFrozen, ExitViaHere { # implements Bin
       }
     }
   }
-  to takingFrom(ins) { # , schedule
+  to takingFrom(ins, schedule) {
     return def taker() :DataEBuild {
       def storage := deBytecodeKit.recognizeStream(ins, deBytecodeKit.makeBuilder())
       return fn b { deBytecodeKit.recognize(storage, b) }

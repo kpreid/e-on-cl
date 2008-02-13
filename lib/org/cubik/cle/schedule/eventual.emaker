@@ -1,0 +1,22 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def Schedule := <import:org.cubik.cle.schedule.Schedule>
+
+def ::"eventual" implements DeepFrozen, Schedule {
+  to whenResolved(ref, reactor) {
+    return Ref.whenResolved(ref, reactor)
+  }
+  to loop(continueFn) {
+    return when (def again := continueFn <- ()) -> {
+      if (again) {
+        ::"eventual".loop(continueFn)
+      } else {
+        null
+      }
+    }
+  }
+  to result(g) { return vow[g] }
+}

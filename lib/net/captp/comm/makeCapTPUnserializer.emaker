@@ -9,12 +9,13 @@ def messageDescs := <import:net.captp.protocol.messageDescs>
 def makeAppendStream := <import:org.cubik.cle.io.makeAppendStream>
 def typeEncodings := <import:net.captp.protocol.paramTypes>[<import:org.cubik.cle.binary.*>]
 def [=> OpCode] | _ := typeEncodings
+def now := <import:org.cubik.cle.schedule.now>
 
 # XXX parser bug: shouldn't need line continuation here
 def msgDecoders := accum [].asMap() for [verb, opCode, decoders] \
                                         in messageDescs[typeEncodings] {
   _.with(opCode, def decodeMsg(ins, rec) implements DeepFrozen {
-    E.send(rec, verb, accum [] for i => decoder in decoders { _.with(decoder.takingFrom(ins)()) })
+    E.send(rec, verb, accum [] for i => decoder in decoders { _.with(decoder.takingFrom(ins, now)()) })
   })
 }
 
@@ -35,7 +36,7 @@ def makeCapTPUnserializer(receiver) implements ExitViaHere, DeepFrozen {
           traceln(`CapTP unserializer for $receiver discarding broken message of length ${buffer.size()} (${Ref.optProblem(t)})`)
         } else {
           def ds := buffer.snapshot().asStream()
-          def opcode := OpCode.takingFrom(ds)()
+          def opcode := OpCode.takingFrom(ds, now)()
           def handler := msgDecoders.fetch(opcode, fn{throw(`Unrecognized CapTP opcode: $opcode`)})
           handler(ds, receiver)
         }

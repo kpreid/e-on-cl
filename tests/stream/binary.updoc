@@ -1,16 +1,20 @@
-# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2007-2008 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
   ? pragma.syntax("0.9")
 
 Utilities for reading and writing binary representations on streams. 
 
-Note that there is currently an 8-bits-per-byte assumption baked in, but this WILL CHANGE, as will the assumption that the stream is immediately readable/writable.
+Note that there is currently an 8-bits-per-byte assumption baked in, but this WILL CHANGE.
 
 Also, the chosen names for these binary types are not perfect, and suggestions for improving them are welcome.
 
   ? def <bin> := <import:org.cubik.cle.binary.*>
   # value: <import:org.cubik.cle.binary.*>
+  
+  ? def now := <import:org.cubik.cle.schedule.now>; null
+  ? def ::"eventual" := <import:org.cubik.cle.schedule.eventual>; null
+  ? def trickleIn := <import:org.cubik.cle.io.trickleIn>; null
   
   ? def stdoutS := <import:org.cubik.cle.io.makeWriterStream>(List[0..255], E.call, def testW {
   >   to write(chunk :List) {
@@ -22,12 +26,14 @@ Also, the chosen names for these binary types are not perfect, and suggestions f
   >   to fail(p) { stdout.print(p) }
   > }); null
 
-UnsignedInteger
+UnsignedInteger:
 
   ? def UnsignedInteger :DeepFrozen := <bin:UnsignedInteger>
   # value: <UnsignedInteger>
   
-  ? def take := UnsignedInteger[8].takingFrom([1, 250].asStream())
+Reading, immediate
+
+  ? def take := UnsignedInteger[8].takingFrom([1, 250].asStream(), now)
   # value: <taker>
   
   ? take()
@@ -36,7 +42,7 @@ UnsignedInteger
   ? take()
   # value: 250
   
-  ? def take := UnsignedInteger[16].takingFrom([2, 5, 0, 10].asStream())
+  ? def take := UnsignedInteger[16].takingFrom([2, 5, 0, 10].asStream(), now)
   # value: <taker>
   
   ? take()
@@ -44,6 +50,31 @@ UnsignedInteger
   
   ? take()
   # value: 10
+
+Reading, eventual
+
+  ? def take := UnsignedInteger[16].takingFrom(trickleIn([2, 5, 0, 10].asStream()), now)
+  # value: <taker>
+  
+  ? take()
+  # problem: not synchronously callable: <Promise>.iterate(<...taker$_$_>)
+
+  ? def take := UnsignedInteger[16].takingFrom(trickleIn([2, 5, 0, 10].asStream()), ::"eventual")
+  # value: <taker>
+  
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: 517
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: 10
+
+Writing, immediate
   
   ? def write := UnsignedInteger[8].writingTo(stdoutS)
   # value: <writer>
@@ -60,12 +91,14 @@ UnsignedInteger
   ? write(517)
   # stdout: 2 5 
 
-SignedInteger
+SignedInteger:
 
   ? def SignedInteger :DeepFrozen := <bin:SignedInteger>
   # value: <SignedInteger>
 
-  ? def take := SignedInteger[8].takingFrom([1, 250].asStream())
+Reading, immediate
+
+  ? def take := SignedInteger[8].takingFrom([1, 250].asStream(), now)
   # value: <taker>
 
   ? take()
@@ -74,7 +107,7 @@ SignedInteger
   ? take()
   # value: -6
 
-  ? def take := SignedInteger[16].takingFrom([10, 5, 255, 10].asStream())
+  ? def take := SignedInteger[16].takingFrom([10, 5, 255, 10].asStream(), now)
   # value: <taker>
 
   ? take()
@@ -82,6 +115,31 @@ SignedInteger
 
   ? take()
   # value: -246
+
+Reading, eventual
+
+  ? def take := SignedInteger[16].takingFrom(trickleIn([10, 5, 255, 10].asStream()), now)
+  # value: <taker>
+
+  ? take()
+  # problem: not synchronously callable: <Promise>.iterate(<...taker$_$_>)
+
+  ? def take := SignedInteger[16].takingFrom(trickleIn([10, 5, 255, 10].asStream()), ::"eventual")
+  # value: <taker>
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: 2565
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: -246
+
+Writing, immediate
 
   ? def write := SignedInteger[8].writingTo(stdoutS)
   # value: <writer>
@@ -103,12 +161,14 @@ SignedInteger
   
 XXX test consequences if bit size isn't a multiple of stream byte size
 
-WholeNum
+WholeNum:
 
   ? def WholeNum :DeepFrozen := <bin:WholeNum>
   # value: <WholeNum>
-  
-  ? def take := WholeNum.takingFrom(def s := [0, 127, 130, 1, 99].asStream())
+
+Reading, immediate
+
+  ? def take := WholeNum.takingFrom(def s := [0, 127, 130, 1, 99].asStream(), now)
   # value: <takeWholeNum>
   
   ? take()
@@ -122,7 +182,32 @@ WholeNum
   
   ? s
   # value: [99].asStream()
+
+Reading, eventual
+
+  ? def take := WholeNum.takingFrom(trickleIn(def s := [0, 130, 1].asStream()), now)
+  # value: <takeWholeNum>
+
+  ? take()
+  # problem: <Promise> doesn't coerce to a ConstList
+
+  ? def take := WholeNum.takingFrom(trickleIn(def s := [0, 130, 1].asStream()), ::"eventual")
+  # value: <takeWholeNum>
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
   
+  ? r
+  # value: 0
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: 257
+
+Writing, immediate
+
   ? def write := WholeNum.writingTo(stdoutS)
   # value: <writeWholeNum>
 
@@ -132,17 +217,19 @@ WholeNum
   ? write(128)
   # stdout: 129 0 
   
-UTF8StringWithLength16
+UTF8StringWithLength16:
 
   ? def UTF8StringWithLength16 :DeepFrozen := <bin:UTF8StringWithLength16>
   # value: <UTF8StringWithLength16>
+
+Reading, immediate
 
   ? def take := UTF8StringWithLength16.takingFrom(def s := [
   >   0, 0,
   >   0, 2, 32, 33,
   >   0, 3, 226, 128, 162,
   >   226, 128, 162,
-  > ].asStream())
+  > ].asStream(), now)
   # value: <taker>
   
   ? take()
@@ -156,7 +243,47 @@ UTF8StringWithLength16
   
   ? s
   # value: [226, 128, 162].asStream()
+
+Reading, eventual
+
+  ? def take := UTF8StringWithLength16.takingFrom(trickleIn(def s := [0, 0].asStream()), now)
+  # value: <taker>
   
+  ? take()
+  # problem: not synchronously callable: <Promise>.iterate(<...taker$_$_>)
+
+  ? def take := UTF8StringWithLength16.takingFrom(trickleIn(def s := [
+  >   0, 0,
+  >   0, 2, 32, 33,
+  >   0, 3, 226, 128, 162,
+  >   226, 128, 162,
+  > ].asStream()), ::"eventual")
+  # value: <taker>
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: ""
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: " !"
+
+  ? interp.waitAtTop(def r := take()); r
+  # value: <Promise>
+  
+  ? r
+  # value: "•"
+
+  ? s
+  # value: [226, 128, 162].asStream()
+
+
+Writing, immediate
+
   ? def write := UTF8StringWithLength16.writingTo(stdoutS)
   # value: <writer>
 
@@ -169,26 +296,28 @@ UTF8StringWithLength16
   ? write("\u2022")
   # stdout: 0 3 226 128 162 
 
-Float64
+Float64:
 
   ? def Float64 :DeepFrozen := <bin:Float64>
   # value: <Float64>
 
   XXX not actually implemented yet
 
-Character32
+Character32:
 
   ? def Character32 :DeepFrozen := <bin:Character32>
   # value: <Character32>
 
   XXX not actually implemented yet
 
-DataEBuild
+DataEBuild:
 
   ? def DataEBuild :DeepFrozen := <bin:DataEBuild>
   # value: <DataEBuild>
   
-  ? def take := DataEBuild.takingFrom(def s := [2, 99, 1, 45].asStream())
+Reading, immediate
+
+  ? def take := DataEBuild.takingFrom(def s := [2, 99, 1, 45].asStream(), now)
   # value: <taker>
   
   ? def rc := take()
@@ -202,7 +331,30 @@ DataEBuild
   
   ? rc(deSubgraphKit.makeBuilder())
   # value: 99
-  
+
+x XXX This is not yet implemented; we need to modify deBytecodeKit to support it.
+xReading, eventual
+x
+x  ? def take := DataEBuild.takingFrom(trickleIn([2, 99, 1, 45].asStream()), now)
+x  # value: <taker>
+x
+x  ? def rc := take()
+x  # problem: not synchronously callable: <Promise>.iterate(<...taker$_$_>)
+x  
+x  ? def take := DataEBuild.takingFrom(trickleIn([2, 99, 1, 45].asStream()), ::"eventual")
+x  # value: <taker>
+x
+x  ? interp.waitAtTop(def rc := take()); rc
+x  # value: <Promise>
+x  
+x  # value: <...taker$_>
+x  
+x  ? rc(deSubgraphKit.makeBuilder())
+x  # value: 99
+
+
+Writing, immediate
+
   ? def write := DataEBuild.writingTo(stdoutS)
   # value: <writer>
   
@@ -214,7 +366,7 @@ DataEBuild
   ? b.buildLiteral(98)
   # problem: builder for <extentRC> past its dynamic extent
 
-XXX eventual operations
+XXX support eventual writing
 XXX byte-width options
 XXX consequences of hitting EOF in the middle of a read
 XXX better printOns for writers and takers
