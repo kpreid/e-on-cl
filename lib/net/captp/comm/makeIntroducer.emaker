@@ -34,7 +34,17 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
             out.write("<sturdyRef>")
           }
         }
-        to getRcvr() { throw("introducer not yet identified") }
+        to getRcvr() {
+          if (onTheAir) {
+            if (uriBody =~ `//foo/@swissNumberStr`) {
+              return swissTable.lookupSwiss(__makeInt(swissNumberStr))
+            } else {
+              throw("remote sturdyref unimplemented")
+            }
+          } else {
+            throw("introducer not yet identified")
+          }
+        }
         to _uriBody() { return uriBody } # XXX should be opaque
       }
       srMap[uriBody] := sturdyRef

@@ -82,11 +82,20 @@ Introducer, on the air:
 
 IdentityMgr, on the air:
 
-  XXX sr1 :SturdyRef1
-  ? def [sr, timeout, swissBase] := identityMgr.makeKnown(40)
+  XXX sr :SturdyRef1
+  ? def [srLocal, timeout, swissBase] := identityMgr.makeKnown(40)
   # value: [<sturdyRef to 40>, <timeout>, 10000001]
+  
+  ? <captp>.optUnget(sr)
+  # value: //foo/jctrw2x2nejbk3bfsneugza5ub2korsd
 
   ... XXX other operations
+
+Local SturdyRef, on the air:
+
+  ? srLocal.getRcvr()
+  # value: 40
+  XXX this matches EoJ (value is available immediately); but do we want to expose that the ref is local? (if not, then "to 40" print must be removed too)
 
 XXX operations to test: 
   getLocatorUnum's result's role
