@@ -595,6 +595,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|or| (a (b 'integer))
     (logior a b))
   
+  (:|toOctetsUnsigned| (this)
+    "Produce a list of integers representing the integer (which must be nonnegative) in base 256."
+    ;; XXX write tests
+    (cond ((plusp this) (ironclad:integer-to-octets this :big-endian t))
+          ((zerop this) #.(make-array 1 :element-type '(unsigned-byte 8) :initial-element 0))
+          (t            (error "(~A).toOctetsUnsigned(): nonnegative numbers only" this))))
   (:|cryptoHash| (this)
     "Unsigned integer interpretation of the SHA-1 hash of the smallest possible octet array holding the big-endian two's complement representation of this integer."
     (octets-to-unsigned-integer 1 

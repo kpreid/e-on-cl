@@ -48,6 +48,37 @@ right shift
   > for y in [-2, -1, 0, 1, 2, 3, 4, 5, 32, 64] { 
   >   interp.pushTestStep(`$x >> $y`, [["value", E.toQuote((x / 2 ** y).floor())]]) }}
 
+toOctetsUnsigned (produce list of integers representing the nonnegative input integer in base 256)
+
+  ? 0.toOctetsUnsigned()
+  # value: [0]
+  ? 10.toOctetsUnsigned()
+  # value: [10]
+  ? (-10).toOctetsUnsigned()
+  # problem: (-10).toOctetsUnsigned(): nonnegative numbers only
+  ? 10000001.toOctetsUnsigned()
+  # value: [152, 150, 129]
+  ? 10000002.toOctetsUnsigned()
+  # value: [152, 150, 130]
+  ? 10000003.toOctetsUnsigned()
+  # value: [152, 150, 131]
+  ? 10000004.toOctetsUnsigned()
+  # value: [152, 150, 132]
+  ? 10000005.toOctetsUnsigned()
+  # value: [152, 150, 133]
+  ? (2 ** 6).toOctetsUnsigned()
+  # value: [64]
+  ? (2 ** 7).toOctetsUnsigned()
+  # value: [128]
+  ? (2 ** 8).toOctetsUnsigned()
+  # value: [1, 0]
+  ? (2 ** 14).toOctetsUnsigned()
+  # value: [64, 0]
+  ? (2 ** 15).toOctetsUnsigned()
+  # value: [128, 0]
+  ? (2 ** 16).toOctetsUnsigned()
+  # value: [1, 0, 0]
+
 bitLength (two's complement, not including sign bit)
 
   ? for i in -5..5 { print(i.bitLength(), " ") }
@@ -55,6 +86,8 @@ bitLength (two's complement, not including sign bit)
 
 cryptoHash (Unsigned integer interpretation of the SHA-1 hash of the smallest possible octet array holding the big-endian two's complement representation of the integer.)
 
+  ? 0.cryptoHash()
+  # value: 523292266480032572263097387253846278739400489039
   ? 10.cryptoHash()
   # value: 992120700831975926627035735038122334788054782716
   ? (-10).cryptoHash()
@@ -83,10 +116,10 @@ cryptoHash (Unsigned integer interpretation of the SHA-1 hash of the smallest po
   # value: 1073030966911870318295978990948578847662666698388
   ? (2 ** 8).cryptoHash()
   # value: 81117187455401937957276750042111964595127455290
-  ? (2 ** 15).cryptoHash()
-  # value: 993476404410663933716582440343802929274263197432
   ? (2 ** 14).cryptoHash()
   # value: 1062234139915614777785861401976703160164837074038
+  ? (2 ** 15).cryptoHash()
+  # value: 993476404410663933716582440343802929274263197432
   ? (2 ** 16).cryptoHash()
   # value: 850838329774993908800802690288778964578933554047
   ? (-2 ** 6).cryptoHash()
