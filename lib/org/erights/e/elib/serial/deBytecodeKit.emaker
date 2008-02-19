@@ -17,11 +17,11 @@ def makeAppendStream := <import:org.cubik.cle.io.makeAppendStream>
 
 def now := <import:org.cubik.cle.schedule.now>
 
-def [=> WholeNum,
-     => UnsignedInteger,
-     => UTF8StringWithLength16, 
-     => Float64, 
-     => Character32] | _ := 
+def [=> wholeNumCoding,
+     => unsignedIntegerCoding,
+     => utf8StringWithLength16Coding, 
+     => float64Coding, 
+     => character32Coding] | _ := 
   <import:org.cubik.cle.binary.*>
 
 def byte := 0..255
@@ -79,11 +79,11 @@ def deBytecodeKit implements DeepFrozen {
 
     to makeStreamBuilder(baos) :near { # baos :OutStream -- XXX DeepFrozen
       
-        def writeWholeNum := WholeNum.writingTo(baos)
-        def writeByte := UnsignedInteger[8].writingTo(baos)
-        def writeUTF := UTF8StringWithLength16.writingTo(baos)
-        def writeChar := Character32.writingTo(baos)
-        def writeDouble := Float64.writingTo(baos)
+        def writeWholeNum := wholeNumCoding.writingTo(baos)
+        def writeByte := unsignedIntegerCoding[8].writingTo(baos)
+        def writeUTF := utf8StringWithLength16Coding.writingTo(baos)
+        def writeChar := character32Coding.writingTo(baos)
+        def writeDouble := float64Coding.writingTo(baos)
 
         # The index of the next temp variable
         var nextTemp := 0
@@ -173,11 +173,11 @@ def deBytecodeKit implements DeepFrozen {
      *
      */
     to recognizeStream(ins, builder) :(builder.getRootType()) { # ins :InStream
-        def takeWholeNum := WholeNum.takingFrom(ins, now)
-        def takeByte := UnsignedInteger[8].takingFrom(ins, now)
-        def takeUTF := UTF8StringWithLength16.takingFrom(ins, now)
-        def takeDouble := Float64.takingFrom(ins, now)
-        def takeChar := Character32.takingFrom(ins, now)
+        def takeWholeNum := wholeNumCoding.takingFrom(ins, now)
+        def takeByte := unsignedIntegerCoding[8].takingFrom(ins, now)
+        def takeUTF := utf8StringWithLength16Coding.takingFrom(ins, now)
+        def takeDouble := float64Coding.takingFrom(ins, now)
+        def takeChar := character32Coding.takingFrom(ins, now)
         def stack := [].diverge()
 
         while (true) {

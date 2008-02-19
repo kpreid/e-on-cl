@@ -5,15 +5,16 @@ pragma.syntax("0.9")
 
 def utf_8 := <import:org.cubik.cle.charsets>["UTF-8"]
 
-def UnsignedInteger := <import:org.cubik.cle.binary.UnsignedInteger>
+def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 
-def Short := UnsignedInteger[16]
+def shortCoding := unsignedIntegerCoding[16]
 
-def UTF8StringWithLength16 extends String implements DeepFrozen, ExitViaHere { # implements Binary
+def utf8StringWithLength16Coding implements DeepFrozen, ExitViaHere { # implements Binary
+  to asType() { return String }
   to writingTo(out) { # , schedule
     # XXX verify stream's byte size
-    def writeShort := Short.writingTo(out)
-    return def writer(value :UTF8StringWithLength16) {
+    def writeShort := shortCoding.writingTo(out)
+    return def writer(value :String) {
       def data := EIO.takeAll(utf_8.encode(value.asStream(), [].asMap()))
       writeShort(data.size()) # may fail
       out.reserve().resolve(data)
@@ -21,8 +22,8 @@ def UTF8StringWithLength16 extends String implements DeepFrozen, ExitViaHere { #
   }
   to takingFrom(ins, schedule) {
     # XXX verify stream's byte size
-    def readShort := Short.takingFrom(ins, schedule)
-    return def taker() :(schedule.result(UTF8StringWithLength16)) {
+    def readShort := shortCoding.takingFrom(ins, schedule)
+    return def taker() :(schedule.result(String)) {
       return schedule.whenResolved(readShort(), fn size {
         # XXX unnecessarily non-streaming; fixable with a "substream of N of the characters from this stream"
         schedule.whenResolved(EIO.takeRange(size, size, ins), fn data {

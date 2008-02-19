@@ -4,8 +4,10 @@
 pragma.syntax("0.9")
 
 def deBytecodeKit := <elib:serial.deBytecodeKit>
+def DataEBuild := any
 
-def DataEBuild extends any implements DeepFrozen, ExitViaHere { # implements Binary
+def dataEBuildCoding implements DeepFrozen, ExitViaHere { # implements Binary
+  to asType() { return DataEBuild }
   to writingTo(out) { # , schedule
     return def writer(value :DataEBuild) {
       var done := false

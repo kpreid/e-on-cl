@@ -6,9 +6,11 @@ pragma.enable("one-method-object")
 
 def dataBits := 7
 
-def UnsignedInteger implements DeepFrozen, ExitViaHere {
+def unsignedIntegerCoding implements DeepFrozen, ExitViaHere {
   to get(bitCount :(int >= 0)) {
-    return def UnsignedIntegerSpecific extends (0..!(2**bitCount)) implements DeepFrozen { # implements Binary
+    def UnsignedIntegerSpecific := (0..!(2**bitCount))
+    return def unsignedIntegerSpecificCoding implements DeepFrozen { # implements Binary
+      to asType() { return UnsignedIntegerSpecific }
       to writingTo(out) { # , schedule
         def byteCount := bitCount // 8
         def mask := (2**8-1)

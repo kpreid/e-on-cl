@@ -3,21 +3,23 @@
 
 pragma.syntax("0.9")
 
-def UnsignedInteger := <import:org.cubik.cle.binary.UnsignedInteger>
+def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 
-def SignedInteger implements DeepFrozen, ExitViaHere {
+def signedIntegerCoding implements DeepFrozen, ExitViaHere {
   to get(bitCount :(int >= 0)) {
-    def UnsignedIntegerSpecific := UnsignedInteger[bitCount]
+    def unsignedIntegerSpecificCoding := unsignedIntegerCoding[bitCount]
     def valueBitCount := bitCount - 1
-    return def SignedIntegerSpecific extends ((-(2**valueBitCount))..!(2**valueBitCount)) implements DeepFrozen { # implements Binary
+    def SignedIntegerSpecific := ((-(2**valueBitCount))..!(2**valueBitCount))
+    return def signedIntegerSpecificCoding implements DeepFrozen { # implements Binary
+      to asType() { return char }
       to writingTo(out) { # , schedule
-        def writeU := UnsignedIntegerSpecific.writingTo(out)
+        def writeU := unsignedIntegerSpecificCoding.writingTo(out)
         return def writer(value :SignedIntegerSpecific) {
           writeU(value & (2**bitCount-1))
         }
       }
       to takingFrom(ins, schedule) {
-        def takeU := UnsignedIntegerSpecific.takingFrom(ins, schedule)
+        def takeU := unsignedIntegerSpecificCoding.takingFrom(ins, schedule)
         def signMask := (1 << (bitCount-1))
         return def taker() :(schedule.result(SignedIntegerSpecific)) {
           return schedule.whenResolved(takeU(), fn u {

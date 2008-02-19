@@ -4,20 +4,21 @@
 pragma.syntax("0.9")
 
 
-def UnsignedInteger := <import:org.cubik.cle.binary.UnsignedInteger>
+def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 
-def u64 := UnsignedInteger[64]
+def u64 := unsignedIntegerCoding[64]
 
-def Character32 extends char implements DeepFrozen, ExitViaHere { # implements Binary
+def float64Coding implements DeepFrozen, ExitViaHere { # implements Binary
+  to asType() { return float64 }
   to writingTo(out) { # , schedule
     # XXX consult stream's byte size
-    return def writer(n :Character32) {
+    return def writer(n :float64) {
       throw("Unimplemented")
     }
   }
   to takingFrom(ins, schedule) {
     # XXX consult stream's byte size
-    return def taker() :Character32 {
+    return def taker() :float64 {
       throw("Unimplemented")
     }
   }

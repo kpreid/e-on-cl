@@ -5,18 +5,18 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 def paramTypes implements DeepFrozen, ExitViaHere {
-  to get([=> SignedInteger,
-          => UTF8StringWithLength16,
-          => DataEBuild] | _) {
+  to get([=> signedIntegerCoding,
+          => utf8StringWithLength16Coding,
+          => dataEBuildCoding] | _) {
     return [
-      "OpCode"      => SignedInteger[8],
-      "IncomingPos" => SignedInteger[32],
-      "AnswerPos"   => SignedInteger[32],
-      "ExportPos"   => SignedInteger[32],
-      "MsgName"     => UTF8StringWithLength16,
-      "MsgCount"    => SignedInteger[64],
-      "WireDelta"   => SignedInteger[8],
-      "Obj"         => DataEBuild,
+      "OpCode"      => signedIntegerCoding[8],
+      "IncomingPos" => signedIntegerCoding[32],
+      "AnswerPos"   => signedIntegerCoding[32],
+      "ExportPos"   => signedIntegerCoding[32],
+      "MsgName"     => utf8StringWithLength16Coding,
+      "MsgCount"    => signedIntegerCoding[64],
+      "WireDelta"   => signedIntegerCoding[8],
+      "Obj"         => dataEBuildCoding,
     ]
   }
 }
