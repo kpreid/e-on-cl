@@ -18,6 +18,7 @@ Minor bugs:
     - option #2: remove static assignment-to-final catching
   - The Updoc parser is sloppy and in need of tests.
   - <import>.optUncall fails on unsettled arguments; should return null.
+  - Keywords should be lowercase-only.
 
 Internal bugs:
 
