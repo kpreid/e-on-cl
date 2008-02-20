@@ -261,6 +261,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|previous| (this)
     "Return the previous character in the total ordering of characters. Throws an exception if this is the first character."
     (char-nearby this -1))
+  (:|add| (this (offset 'integer))
+    (code-char (+ (char-code this) offset)))
+  (:|subtract| (this (offset '(or character integer)))
+    (if (characterp offset)
+      (- (char-code this) (char-code offset))
+      (code-char (- (char-code this) offset))))
   (:|toUpperCase/0| 'char-upcase)
   (:|toLowerCase/0| 'char-downcase))
 

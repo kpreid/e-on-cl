@@ -1,12 +1,88 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+Other tests of characters (those which are related to behavior of strings) may be found in literals.updoc.
+
   ? pragma.syntax("0.9")
+
+  ? 'a' :DeepFrozen
+  # value: 'a'
+
+  ? E.toString('a')
+  # value: "a"
+
+  ? E.toQuote('a')
+  # value: "'a'"
+
+next/previous
+ 
+  ? 'a'.next()
+  # value: 'b'
   
+  ? 'b'.previous()
+  # value: 'a'
+  
+  ? pragma.enable("accumulator")
+  
+  ? accum ' ' for x in 1..32 { _.previous() }
+  # value: '\u0000'
+  
+  ? accum ' ' for x in 1..32 { _.previous() }.previous()
+  # problem: there is no character before '\u0000'
+  
+  XXX test last-character.next()
+  
+comparison
+ 
+  ? 'a' < 'b'
+  # value: true
+  
+  ? 'b' < 'a'
+  # value: false
+  
+  ? 'b' < 'b'
+  # value: false
+  
+  ? 'Q' > ' '
+  # value: true
+  
+  ? ' ' <=> ' '
+  # value: true
+
+  ? ' ' <=> '4'
+  # value: false
+
+add, subtract
+
+  ? 'a' + 1
+  # value: 'b'
+  
+  ? 'a' + 'b'
+  # problem: the char 'b' doesn't coerce to an int
+  
+  ? 'b' - 'a'
+  # value: 1
+  
+  ? 'a' - 'b'
+  # value: -1
+  
+  ? 'b' - 1
+  # value: 'a'
+  
+  ? 'a' + def foo {}
+  # problem: the "__main$foo" <foo> doesn't coerce to an int
+  
+  ? 'a' - def foo {}
+  # problem: the "__main$foo" <foo> doesn't coerce to an any[char, int]
+
+Character <-> codepoint
+
   ? def getCharacter :DeepFrozen := <import:org.cubik.cle.prim.getCharacter>
   # value: <getCharacter>
   
 XXX tests of getCharacter
+
 XXX tests of characters (move from literals.updoc)
 XXX do we really want to diverge from makeFoo naming scheme?
-XXX idea: objects which provide collection/loader interfaces (get/optUnget/optUncall), one for Unicode codepoints and one for Unicode names
+    idea: objects which provide collection/loader interfaces (get/optUnget/optUncall), one for Unicode codepoints and one for Unicode names
+    or: eliminate getCharacter/makeCharacter and use only '\u0000' + n
