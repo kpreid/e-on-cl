@@ -1,0 +1,96 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? pragma.syntax("0.9")
+  > pragma.enable("call-pattern")
+
+  ? def asWaterkenBase32 := <import:net.captp.util.asWaterkenBase32>
+  # value: <asWaterkenBase32>
+  
+  ? def octets := 99999999.toOctetsUnsigned()
+  # value: [5, 245, 224, 255]
+
+  ? asWaterkenBase32(octets)
+  # value: "ax26b7y"
+
+  ? def asWaterkenBase32(r) := "ax26b7y"; r
+  # value: [5, 245, 224, 255]
+  
+  
+Decoding error cases
+
+  ? escape e { def asWaterkenBase32(r) exit e := 9; r }
+  # value: problem: the int 9 doesn't coerce to a String
+
+  ? escape e { def asWaterkenBase32(r) exit e := "$"; r }
+  # value: problem: Not a base32 character: $
+
+  x ? escape e { def asWaterkenBase32(r) exit e := "a"; r }
+  x # value: problem: ...
+  XXX I don't know whether the above should be a failure, or be [0] or []
+
+  ? escape e { def asWaterkenBase32(r) exit e := "aoyh3"; r }
+  # value: problem: invalid base32: nonzero padding
+
+
+Misc. encoding and decoding tests
+
+  ? asWaterkenBase32([])
+  # value: ""
+
+  ? asWaterkenBase32([0])
+  # value: "aa"
+
+  ? asWaterkenBase32([1])
+  # value: "ae"
+
+  ? asWaterkenBase32([255])
+  # value: "74"
+
+  ? asWaterkenBase32([1, 0])
+  # value: "aeaa"
+
+  ? asWaterkenBase32([3, 176, 125])
+  # value: "aoyh2"
+
+  ? asWaterkenBase32([21, 186, 25])
+  # value: "cw5bs"
+
+  ? asWaterkenBase32([3, 164, 5])
+  # value: "aosak"
+
+  ? asWaterkenBase32([1, 163, 237, 58, 41, 157])
+  # value: "agr62orjtu"
+
+  ? asWaterkenBase32([61, 38, 51, 225, 136, 29, 35, 25, 147, 101, 214, 182])
+  # value: "hutdhymidurrte3f223a"
+
+  ? def asWaterkenBase32(r) := ""; r
+  # value: []
+
+  ? def asWaterkenBase32(r) := "aa"; r
+  # value: [0]
+
+  ? def asWaterkenBase32(r) := "ae"; r
+  # value: [1]
+
+  ? def asWaterkenBase32(r) := "74"; r
+  # value: [255]
+
+  ? def asWaterkenBase32(r) := "aeaa"; r
+  # value: [1, 0]
+
+  ? def asWaterkenBase32(r) := "aoyh2"; r
+  # value: [3, 176, 125]
+
+  ? def asWaterkenBase32(r) := "cw5bs"; r
+  # value: [21, 186, 25]
+
+  ? def asWaterkenBase32(r) := "aosak"; r
+  # value: [3, 164, 5]
+
+  ? def asWaterkenBase32(r) := "agr62orjtu"; r
+  # value: [1, 163, 237, 58, 41, 157]
+
+  ? def asWaterkenBase32(r) := "hutdhymidurrte3f223a"; r
+  # value: [61, 38, 51, 225, 136, 29, 35, 25, 147, 101, 214, 182]

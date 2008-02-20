@@ -1,0 +1,66 @@
+# Copyright 2002-2007 Waterken Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+# Translated to E by Kevin Reid in 2008
+
+pragma.syntax("0.9")
+pragma.enable("one-method-object")
+
+def Octets := List[0..!(2**8)]
+
+def at(v) {
+  return if (v < 26) { 'a' + v } else { '2' + v - 26 }
+}
+def locate(c, ej) {
+  return switch (c) {
+    match _ :('a'..'z') { c - 'a' }
+    #match _ :('A'..'Z') { c - 'A' } # XXX test
+    match _ :('2'..'7') { c - '2' + 26 }
+    match _ { throw.eject(ej, `Not a base32 character: $c`) }
+  }
+}
+
+def asWaterkenBase32 {
+  to run(data :Octets) :String {
+    def dataSize := data.size()
+    # XXX length computation: (dataSize * 8 // 5 + 1)
+    return __makeTwine.fromValuesOf(def _.iterate(f) {
+      var buffer :int := 0
+      var bufferSize :int := 0
+      for b in data {
+        buffer <<= 8
+        buffer |= b & 0xFF
+        bufferSize += 8
+        while (bufferSize >= 5) {
+          bufferSize -= 5
+          f(null, at((buffer >> bufferSize) & 0x1F))
+        }
+      }
+      if (0 != bufferSize) {
+        buffer <<= 5 - bufferSize
+        f(null, at(buffer & 0x1F))
+      }        
+    })
+  }
+  to "match__run/1"(specimen, ejector) :Tuple[Octets] {
+    def chars :String exit ejector := specimen
+    def inSize :int := chars.size()
+    def outSize := inSize * 5 // 8
+    return [__makeList.fromValuesOf(def _.iterate(f) { # XXX use size calculation, specialization
+      var buffer := 0
+      var bufferSize := 0
+      var j := 0
+      for c in chars {
+        buffer <<= 5;
+        buffer |= locate(c, ejector)
+        bufferSize += 5;
+        if (bufferSize >= 8) {
+          bufferSize -= 8;
+          f(null, (buffer >> bufferSize) & 0xFF)
+          j += 1
+        }
+      }
+      if (0 != (buffer & ((1 << bufferSize) - 1))) { throw.eject(ejector, "invalid base32: nonzero padding"); }
+      for _ in j..!outSize { f(0) }
+    })]
+  }
+}
