@@ -2,10 +2,14 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
+pragma.enable("call-pattern")
 
 def scheme := "captp"
 
 def makeSwissTable := <import:net.captp.tables.makeSwissTable>
+def asWaterkenBase32 := <import:net.captp.util.asWaterkenBase32>
+def now := <import:org.cubik.cle.schedule.now>
+def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 
 def makeIntroducer implements ExitViaHere, DeepFrozen {
   to makePair(config :Map,
@@ -26,9 +30,9 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
       if (srMap.maps(uriBody)) { return srMap[uriBody] }
       def sturdyRef implements SturdyRef {
         to __printOn(out :TextWriter) {
-          if (uriBody =~ `//foo/@swissNumberStr`) {
+          if (uriBody =~ `//foo/@_`) {
             out.write("<sturdyRef to ")
-            out.quote(swissTable.lookupSwiss(__makeInt(swissNumberStr)))
+            out.quote(sturdyRef.getRcvr())
             out.write(">")
           } else {
             out.write("<sturdyRef>")
@@ -36,8 +40,9 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
         }
         to getRcvr() {
           if (onTheAir) {
-            if (uriBody =~ `//foo/@swissNumberStr`) {
-              return swissTable.lookupSwiss(__makeInt(swissNumberStr))
+            if (uriBody =~ `//foo/@{asWaterkenBase32(swissNumberBytes)}`) {
+              # XXX silly way to turn bytes into int; should be __makeInt.fromDigits(1, swissNumberBytes, 256) once that is implemented
+              return swissTable.lookupSwiss(unsignedIntegerCoding[swissNumberBytes.size() * 8].takingFrom(swissNumberBytes.asStream(), now)())
             } else {
               throw("remote sturdyref unimplemented")
             }
@@ -84,7 +89,7 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
          if (onTheAir) {
            def swissBase := entropy.nextSwiss()
            def swissNumber := swissTable.registerNewSwiss(ref, swissBase)
-           def sr := getSturdyRef(`//foo/${swissBase.cryptoHash()}`) # XXX should be properly encoded
+           def sr := getSturdyRef(`//foo/${asWaterkenBase32(swissNumber.toOctetsUnsigned())}`) # XXX should have a vatid+searchpath
            return [sr, def timeout {}, swissBase]
          } else {
            throw(`<SecurityException: introducer not yet identified>`) # XXX wording

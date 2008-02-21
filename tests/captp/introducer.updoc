@@ -82,14 +82,14 @@ Introducer, on the air:
 
 IdentityMgr, on the air:
 
-  XXX sr :SturdyRef1
+  XXX srLocal :SturdyRef1
   ? def [srLocal, timeout, swissBase] := identityMgr.makeKnown(40)
   # value: [<sturdyRef to 40>, <timeout>, 10000001]
   
-  ? <captp>.optUnget(sr)
-  # value: //foo/jctrw2x2nejbk3bfsneugza5ub2korsd
+  ? <captp>.optUnget(srLocal)
+  # value: "//foo/ilwgeqhf4lvtx2bsmcmvvxboztdgl7da"
 
-  ... XXX other operations
+  ... XXX other operations (and 'foo' is of course a placeholder)
 
 Local SturdyRef, on the air:
 
