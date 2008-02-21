@@ -4,7 +4,7 @@
   ? pragma.syntax("0.9")
   > pragma.enable("call-pattern")
 
-  ? def asWaterkenBase32 := <import:net.captp.util.asWaterkenBase32>
+  ? def asWaterkenBase32 :DeepFrozen := <import:net.captp.util.asWaterkenBase32>
   # value: <asWaterkenBase32>
   
   ? def octets := 99999999.toOctetsUnsigned()
