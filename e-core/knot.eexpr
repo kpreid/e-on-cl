@@ -57,7 +57,7 @@ def scopeToRightInvertibleLoader(scope) implements DeepFrozenStamp {
 }
 
 def makePathLoader implements DeepFrozenStamp {
-  to run(name :String, fetchpath :ConstList) {
+  to run(self, name :String, fetchpath :ConstList) {
     def loader {
       to __printOn(tw :TextWriter) {
         tw.print("<", name, ":*>")
@@ -65,10 +65,9 @@ def makePathLoader implements DeepFrozenStamp {
       to fetch(fqn :String, absentThunk) {
         return \
           if (fqn.run(fqn.size() - 2, fqn.size()) == ".*") {
-            # XXX in the <import> case, this reveals the unwrapped path-loader. TODO: make makePathLoader take a self argument
             getSafeScope().fetch("import__uriGetter", throw) \
               ["org.erights.e.elang.interp.makePackageLoader"] \
-                .run(loader, name + ":", fqn)
+                .run(self, name + ":", fqn)
           } else {
             for sub in fetchpath {
               escape next { return sub.fetch(fqn, next) }
@@ -79,11 +78,11 @@ def makePathLoader implements DeepFrozenStamp {
       to get(fqn) {
         return loader.fetch(fqn,
           def getFailureThunk() { 
-            throw(E.toQuote(loader) + " can't find " + E.toQuote(fqn)) })
+            throw(E.toQuote(self) + " can't find " + E.toQuote(fqn)) })
       }
       to optUncall(specimen) {
         for sub ? sub.__respondsTo("optUnget", 1) in fetchpath {
-          def uncall := ungetToUncall(loader, sub.optUnget(specimen))
+          def uncall := ungetToUncall(self, sub.optUnget(specimen))
           if (uncall != null) {
             return uncall 
           }
@@ -92,7 +91,7 @@ def makePathLoader implements DeepFrozenStamp {
       }
       to optUnget(specimen) {
         # xxx this is how Java-E does it, and claims a justification, but *what*?
-        return uncallToUnget(loader, loader.optUncall(specimen))
+        return uncallToUnget(self, self.optUncall(specimen))
       }
     }
     return loader

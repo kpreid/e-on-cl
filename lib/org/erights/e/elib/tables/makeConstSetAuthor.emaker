@@ -12,7 +12,7 @@ def makeConstSetAuthor(TransparentStamp) {
   
   interface ConstSetGuard guards ConstSetGuardStamp extends Guard {}
   
-  def ConstSet implements ConstSetGuardStamp {
+  def ConstSet implements DeepFrozen, ConstSetGuardStamp {
     # XXX should reuse standard-coerce from the Lisp side
     to coerce(specimen, optEjector) {
       if (__auditedBy(ConstSetStamp, specimen)) {

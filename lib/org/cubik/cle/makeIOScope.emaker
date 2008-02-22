@@ -158,7 +158,7 @@ def makeIOScope implements DeepFrozen, ExitViaHere {
         })
     }
     
-    bind <unsafe> := makePathLoader("unsafe", [
+    bind <unsafe> := makePathLoader(<unsafe>, "unsafe", [
       unsafeImports,
       def unsafeInheritLoader {
         to fetch(fqn :String, absentThunk) :any {

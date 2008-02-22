@@ -157,6 +157,12 @@ simple__quasiParser
   ? `1 + 1 = ${1 + 1}`
   # value: "1 + 1 = 2"
 
+  The simple__quasiParser should cache its template parses. If they are the same, then it presumably is doing so.
+  ? simple__quasiParser.valueMaker("x${1}") == simple__quasiParser.valueMaker("x${1}")
+  # value: true
+  ? simple__quasiParser.matchMaker("x${1}") == simple__quasiParser.matchMaker("x${1}")
+  # value: true
+
   XXX more tests
 
 require

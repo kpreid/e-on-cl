@@ -122,4 +122,20 @@ safeScope
   ? safeScope.with("pi", 3.14159)["pi"]
   # value: 3.14159
 
+Everything in the safeScope should be DeepFrozen, on general principles and because otherwise the magic lazy-eval-slots are incoherent; testing this.
+
+  ? for `&@noun` => &thing in safeScope { 
+  >    if (!DeepFrozen.isDeepFrozen(thing)) { println(`$noun ($thing) ought to be DeepFrozen`) }
+  > }
+  > print("ok")
+  # stdout: near (near) ought to be DeepFrozen
+  #         opaque__uriGetter (<opaque__uriGetter0>) ought to be DeepFrozen
+  #         rcvr (rcvr) ought to be DeepFrozen
+  #         rx__quasiParser (<makePerlMatchMaker>) ought to be DeepFrozen
+  #         term__quasiParser (<term__quasiParser>) ought to be DeepFrozen
+  #         vow (vow) ought to be DeepFrozen
+  #         ok
+  
+  XXX fix things until the above test produces no errors
+
 XXX scope#get/1 with funny/nonexistent keys

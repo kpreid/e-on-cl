@@ -552,25 +552,22 @@
     (make-scope "__defaultSafeScopeRoots.thisShouldNotBeVisible$"
       `(("&import__uriGetter"  ,(make-lazy-apply-slot (lambda ()
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles
-          (let ((real-loader 
-                  (efuncall +the-make-path-loader+ "import" (vector 
-                    (efuncall +scope-to-right-invertible-loader+ +shared-safe-loader+) ; XXX unnecessarily repeating work
-                    +sharable-importer+ ;; first so that anything the sharable importer contains is agreed upon by this
-                    (make-primitive-loader)
-                    (make-safe-extern-loader)
-                    (make-transparent-loader)
-                    emaker-importer
-                    +vm-node-type-importer+
-                    +vm-node-maker-importer+))))
-            (e-lambda |importLoaderMagic|
-                (:stamped +deep-frozen-stamp+)
-              (:|__printOn| (tw) (e. real-loader |__printOn| tw))
-              (:|optUncall| (specimen)
-                (substitute |importLoaderMagic| real-loader 
-                            (ref-shorten (e. real-loader |optUncall| specimen)) 
-                            :test #'samep))
-              (otherwise (mverb &rest args)
-                (apply #'e-call-dispatch real-loader mverb args)))))))))))
+          (with-result-promise (self)
+            (let ((real-loader 
+                    (efuncall +the-make-path-loader+ self "import" (vector 
+                      (efuncall +scope-to-right-invertible-loader+ +shared-safe-loader+) ; XXX unnecessarily repeating work
+                      +sharable-importer+ ;; first so that anything the sharable importer contains is agreed upon by this
+                      (make-primitive-loader)
+                      (make-safe-extern-loader)
+                      (make-transparent-loader)
+                      emaker-importer
+                      +vm-node-type-importer+
+                      +vm-node-maker-importer+))))
+              (e-lambda "$importLoader"
+                  (:stamped +deep-frozen-stamp+)
+                (:|__printOn| (tw) (e. real-loader |__printOn| tw))
+                (otherwise (mverb &rest args)
+                  (apply #'e-call-dispatch real-loader mverb args))))))))))))
 
 (defobject +validate-for+ "$__validateFor"
     (:stamped +deep-frozen-stamp+)
@@ -697,7 +694,7 @@
           ; The ValueGuard and Guard guards do not currently reject anything, but this may change (e.g. DeepFrozen)
           ("&Guard"       ,(lazy-import "org.erights.e.elib.slot.type.Guard"))
           ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
-          ("&__makeGuard" ,(typical-lazy "def stubMakeGuard(_) :any { return def stubBaseGuard {} }"))
+          ("&__makeGuard" ,(typical-lazy "pragma.enable(\"function-implements\"); def stubMakeGuard(_) :any implements DeepFrozen { return def stubBaseGuard {} }"))
       
           ; --- utility: guards ---
           ("&notNull"   ,(lazy-import "org.erights.e.elang.interp.notNull"))

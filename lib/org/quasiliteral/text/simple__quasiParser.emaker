@@ -2,17 +2,8 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 pragma.syntax("0.9")
-
 pragma.enable("accumulator")
-
-# --- ---
-
-def getOrMake(cache, compile, templateTwine :Twine) {
-  def templateString :String := templateTwine
-  return cache.fetch(templateString, fn {
-    cache[templateString] := compile(templateTwine)
-  })
-}
+pragma.enable("function-implements")
 
 # --- ---
 
@@ -22,7 +13,7 @@ def templateSpecialSplitter := makeFirstCharSplitter("$@")
 def closeBraceSplitter := makeFirstCharSplitter(# {
                                                 "}")
 
-def parse(var template, builder) {
+def parse(var template, builder) implements DeepFrozen {
   while (true) {
     def specialIndex := templateSpecialSplitter.findInFrom(template, 0)
 
@@ -81,7 +72,7 @@ def parse(var template, builder) {
 def makeSeqExpr := <elang:evm.makeSeqExpr>
 def makeLiteralExpr := <elang:evm.makeLiteralExpr>
 
-def compileValue(template) {
+def compileValue(template) implements DeepFrozen {
   
   var printExprs := []
   var maxIndex := -1
@@ -104,7 +95,7 @@ def compileValue(template) {
     pragma.disable("explicit-result-guard")
 
     def makeTextWriter := <elib:oldeio.makeTextWriter>
-    def simpleValueMaker {
+    def simpleValueMaker implements DeepFrozen {
       to substitute(holeValues) {
         def [tw, sb] := makeTextWriter.makeBufferingPair()
         ${makeSeqExpr(null, printExprs, null)}
@@ -119,13 +110,13 @@ def compileValue(template) {
   `.eval(safeScope)
 }
 
-def compileMatch(template) {
+def compileMatch(template) implements DeepFrozen {
   # xxx compile-to-E the matcher also, like we do the valueMaker above?
   var vmatchers := []
   
   parse(template, def _ {
     to text(myString :String) {
-      vmatchers with= def stringMatcher {
+      vmatchers with= def stringMatcher implements DeepFrozen {
         to run(_, specimen, optEjector, _) {
           if (specimen.startsWith(myString)) {
             return [[], specimen.run(myString.size())]
@@ -141,7 +132,7 @@ def compileMatch(template) {
     }
     
     to valueHole(holeIndex :int) {
-      vmatchers with= def valueMatcher {
+      vmatchers with= def valueMatcher implements DeepFrozen {
         to run(holeValues, specimen, optEjector, _) {
           def myString := E.toString(holeValues[holeIndex])
           # XXX this is duplicated with stringMatcher
@@ -161,7 +152,7 @@ def compileMatch(template) {
     }
     
     to matchHole(holeIndex :int) {
-      vmatchers with= def holeMatcher {
+      vmatchers with= def holeMatcher implements DeepFrozen {
         to run(holeValues, specimen, optEjector, nextPart) {
           if (nextPart != null) {
             def nextString := nextPart.getString(holeValues)
@@ -182,7 +173,7 @@ def compileMatch(template) {
 
   def matchers := vmatchers
 
-  def matchMaker {
+  def matchMaker implements DeepFrozen {
     to matchBind(holeValues :List[any], var specimen, optEjector) :List[Twine] {
       specimen := String.coerce(specimen, optEjector)
       var bindings := []
@@ -203,14 +194,13 @@ def compileMatch(template) {
 
 # --- ---
 
-def valueMakerCache := [].asMap().diverge(String, any)
-def matchMakerCache := [].asMap().diverge(String, any)
+def memoize := <import:org.cubik.cle.memoize>
 
-def simple__quasiParser0 implements ExitViaHere {
+memoize.interning(def simple__quasiParser0 implements DeepFrozen, ExitViaHere {
   to valueMaker(s) {
-    return getOrMake(valueMakerCache, compileValue, s)
+    return compileValue(s)
   }
   to matchMaker(s) {
-    return getOrMake(matchMakerCache, compileMatch, s)
+    return compileMatch(s)
   }
-}
+})
