@@ -37,7 +37,7 @@ Get/information operations, off the air:
   # value: ["BOGUS_PLACEHOLDER"]
   XXX have some real values
 
-SturdyRef operations work even when off the air, except for the ref's getRcvr:
+SturdyRef operations work even when off the air, except for the ref's getRcvr. Basic string/SturdyRef conversions:
 
   ? def sr := <captp>.sturdyFromURI("captp://*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd")
   # value: <sturdyRef>
@@ -59,6 +59,42 @@ SturdyRef operations work even when off the air, except for the ref's getRcvr:
   
   ? <captp>.optUnget("foo")
   ? <captp>.optUncall("foo")
+
+URI parsing errors, rejection, etc.
+
+  ? <captp>.sturdyFromURI("gobbledegook")
+  # problem: Malformed CapTP URI: expected "captp"... ($-hole 0), found "gobbledegook"
+
+  ? <captp>.sturdyFromURI("captp://foo")
+  # problem: Malformed CapTP URI: expected "//*"..., found "//foo"
+
+  ? <captp>.sturdyFromURI("captp://*foo")
+  # problem: Malformed CapTP URI: expected "@"..., found foo
+
+  ? <captp>.sturdyFromURI("captp://*foo@bar")
+  # problem: Malformed CapTP URI: expected "/"..., found bar
+
+  ? <captp>.sturdyFromURI("captp://*foo@bar/")
+  # problem: Malformed CapTP URI: <such-that-error: $<SameExpr swissNumberBytes, [], true>$ was false for []>
+  XXX poorly phrased error
+
+  ? <captp>.sturdyFromURI("captp://*foo@bar/baz")
+  # problem: Malformed CapTP URI: invalid base32: nonzero padding
+
+  ? <captp>.sturdyFromURI("captp://*aa@bar/baz")
+  # problem: Malformed CapTP URI: invalid base32: nonzero padding
+
+  ? <captp>.sturdyFromURI("captp://*aa@bar/aa")
+  # value: <sturdyRef>
+
+  ? <captp>.sturdyFromURI("captp://*0@bar/0")
+  # problem: Malformed CapTP URI: Not a base32 character: 0
+
+  ? <captp>.sturdyFromURI("captp://*0@bar/aa")
+  # value: <sturdyRef>
+
+  ? <captp>.sturdyFromURI("captp://*aa@bar/0")
+  # problem: Malformed CapTP URI: Not a base32 character: 0
   
 IdentityMgr, off the air:
 
@@ -87,7 +123,7 @@ IdentityMgr, on the air:
   # value: [<sturdyRef to 40>, <timeout>, 10000001]
   
   ? <captp>.optUnget(srLocal)
-  # value: "//foo/ilwgeqhf4lvtx2bsmcmvvxboztdgl7da"
+  # value: "//*foo@/ilwgeqhf4lvtx2bsmcmvvxboztdgl7da"
 
   ... XXX other operations (and 'foo' is of course a placeholder)
 
