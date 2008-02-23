@@ -10,6 +10,7 @@ def makeSwissTable := <import:net.captp.tables.makeSwissTable>
 def asWaterkenBase32 := <import:net.captp.util.asWaterkenBase32>
 def now := <import:org.cubik.cle.schedule.now>
 def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
+def makeLocatorUnum := <import:net.captp.comm.makeLocatorUnum>
 
 def makeIntroducer implements ExitViaHere, DeepFrozen {
   to makePair(config :Map,
@@ -22,15 +23,18 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
     
     def negotiable := ["BOGUS_PLACEHOLDER"]
     
-    var onTheAir := false
+    # resolved when we become identified
+    def myVatID
+    
+    def locatorUnum := makeLocatorUnum(myVatID, swissTable, def capTPMgr {})
     
     def srMap := [].asMap().diverge() # XXX either make sturdyrefs selfless and remove this table, or make it weak
-    def getSturdyRef(vatIDStr, searchPathStr, swissNumber) {
-      def key := [vatIDStr, searchPathStr, swissNumber]
+    def getSturdyRef(vatID, searchPathStr, swissNumber) {
+      def key := [vatID, searchPathStr, swissNumber]
       if (srMap.maps(key)) { return srMap[key] }
       def sturdyRef implements SturdyRef {
         to __printOn(out :TextWriter) {
-          if (vatIDStr == "foo") {
+          if (__equalizer.sameYet(vatID, myVatID)) {
             out.write("<sturdyRef to ")
             out.quote(sturdyRef.getRcvr())
             out.write(">")
@@ -39,41 +43,39 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
           }
         }
         to getRcvr() {
-          if (onTheAir) {
-            if (vatIDStr == "foo") {
-              return swissTable.lookupSwiss(swissNumber)
-            } else {
-              throw("remote sturdyref unimplemented")
-            }
-          } else {
-            throw("introducer not yet identified")
-          }
+          # XXX stub search path
+          return locatorUnum.getRcvr([], vatID, swissNumber, null)
         }
         to _uriBody() { # XXX should be opaque
-          return `//*$vatIDStr@@$searchPathStr/${asWaterkenBase32(swissNumber.toOctetsUnsigned())}`
+          return `//*$vatID@@$searchPathStr/${asWaterkenBase32(swissNumber.toOctetsUnsigned())}`
         }
       }
       srMap[key] := sturdyRef
       return sturdyRef
     }
     
-    def locatorUnum {} # XXX stub
-    
     def introducer {
       to getLocatorUnum() { return locatorUnum }
       to getNetConfig() { throw("XXX no net config object yet") } # XXX stub
-      to getVatID() { throw("introducer not yet identified") } # XXX stub
-      to hasIdentity() { return false } # XXX stub
-      to isOnTheAir() { return false } # XXX stub
+      to getVatID() {
+        # XXX would it be ok to return the promise?
+        if (Ref.isResolved(myVatID)) {
+          return myVatID
+        } else {
+          throw("introducer not yet identified")
+        }
+      }
+      to hasIdentity() { return Ref.isResolved(myVatID) }
+      to isOnTheAir() { return Ref.isResolved(myVatID) } # XXX stub?
       to negotiable() { return negotiable } # XXX stub
       
       to onTheAir() {
-        onTheAir := true
+        bind myVatID := "foo"
         return negotiable
       }
       
       to __printOn(out :TextWriter) {
-        if (onTheAir) {
+        if (Ref.isResolved(myVatID)) {
           out.write(`<On the Air $negotiable>`)
         } else {
           out.write("<Off the Air>")
@@ -87,10 +89,10 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
        }
        
        to makeKnown(ref) {
-         if (onTheAir) {
+         if (Ref.isResolved(myVatID)) {
            def swissBase := entropy.nextSwiss()
            def swissNumber := swissTable.registerNewSwiss(ref, swissBase)
-           def sr := getSturdyRef("foo", "", swissNumber) # XXX non-stub vatid+searchpath
+           def sr := getSturdyRef(myVatID, "", swissNumber) # XXX non-stub searchpath
            return [sr, def timeout {}, swissBase]
          } else {
            throw(`<SecurityException: introducer not yet identified>`) # XXX wording
@@ -102,12 +104,12 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
     
     def <captp> {
       to get(uriBody :String) {
-        def `//*@vatIDStr@@@searchPathStr/@{asWaterkenBase32(swissNumberBytes ? (swissNumberBytes != []))}` \
+        def `//*@vatID@@@searchPathStr/@{asWaterkenBase32(swissNumberBytes ? (swissNumberBytes != []))}` \
           exit fn p { throw(`Malformed CapTP URI: ${if (`$p` =~ `problem: @t`) {t} else {p}}`) } \
           := uriBody
         # XXX silly way to turn bytes into int; should be __makeInt.fromDigits(1, swissNumberBytes, 256) once that is implemented
         def swissNumber := unsignedIntegerCoding[swissNumberBytes.size() * 8].takingFrom(swissNumberBytes.asStream(), now)()
-        return getSturdyRef(vatIDStr, searchPathStr, swissNumber)
+        return getSturdyRef(vatID, searchPathStr, swissNumber)
       }
       to sturdyFromURI(uri :String) {
         # XXX unnecessary printing

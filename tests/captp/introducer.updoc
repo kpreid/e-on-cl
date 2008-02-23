@@ -18,7 +18,7 @@
 
 Get/information operations, off the air:
   
-  ? introducer.getLocatorUnum()
+  ? def locatorUnum := introducer.getLocatorUnum()
   # value: <locatorUnum>
   
   ? introducer.getNetConfig()
@@ -114,7 +114,19 @@ Going on the air
   
 Introducer, on the air:
 
-  ... XXX operations
+  ? introducer.getNetConfig()
+  # problem: XXX no net config object yet
+
+  ? def vatID :String := introducer.getVatID(); null
+
+  ? introducer.hasIdentity()
+  # value: true
+
+  ? introducer.isOnTheAir()
+  # value: true
+
+  ? introducer.negotiable()
+  # value: ["BOGUS_PLACEHOLDER"]
 
 IdentityMgr, on the air:
 
@@ -122,16 +134,17 @@ IdentityMgr, on the air:
   ? def [srLocal, timeout, swissBase] := identityMgr.makeKnown(40)
   # value: [<sturdyRef to 40>, <timeout>, 10000001]
   
-  ? <captp>.optUnget(srLocal)
-  # value: "//*foo@/ilwgeqhf4lvtx2bsmcmvvxboztdgl7da"
-
-  ... XXX other operations (and 'foo' is of course a placeholder)
+  ? <captp>.optUnget(srLocal).replaceAll(vatID, "vid")
+  # value: "//*vid@/ilwgeqhf4lvtx2bsmcmvvxboztdgl7da"
 
 Local SturdyRef, on the air:
 
   ? srLocal.getRcvr()
   # value: 40
   XXX this matches EoJ (value is available immediately); but do we want to expose that the ref is local? (if not, then "to 40" print must be removed too)
+  
+  ? locatorUnum.getRcvr([], introducer.getVatID(), swissBase.cryptoHash(), null)
+  # value: 40
 
 XXX operations to test: 
   getLocatorUnum's result's role

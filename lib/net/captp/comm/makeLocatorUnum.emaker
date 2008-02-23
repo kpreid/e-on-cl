@@ -15,11 +15,11 @@ def VatID := <import:net.captp.protocol.VatID>
  * 
  * The LocatorUnum is the only Unum built into E itself. It represents the pervasive vatID/swissNumber lookup service built jointly out of all vats and VLSes. It is used only by SturdyRefs to establish their authority to perform a lookup, and to enable SturdyRefs to maintain this authority as they are copied between vats.
  * 
- * The locatorUnum instance should be a graph exit in every connection in the CapTP system; it does not itself provide __optUncall (which would reveal the Introducer). [XXX is this paragraph correct? -- kpreid]
+ * The locatorUnum instance should be a graph exit in every connection in the CapTP system; it does not itself provide __optUncall (which would reveal the swiss table and CapTPMgr).
  *
  * @author Mark S. Miller
  */
-def makeLocatorUnum(introducer) implements DeepFrozen, ExitViaHere {
+def makeLocatorUnum(myVatID, swissTable, capTPMgr) implements DeepFrozen, ExitViaHere {
 
     return def locatorUnum {
 
@@ -46,15 +46,17 @@ def makeLocatorUnum(introducer) implements DeepFrozen, ExitViaHere {
             if (true) { # XXX was "Trace.captp.debug && Trace.ON" in EoJ
                 traceln(`$locatorUnum.getRcvr($searchPath, $vatID, $swissNum, $optFarVine)`)
             }
-            if (vatID == introducer.getVatID()) {
+            if (!Ref.isResolved(myVatID)) {
+                throw("introducer not yet identified")
+            } else if (vatID == myVatID) {
 
                 #if we are following into the local vat, do a local lookup.
                 #If not found, it'll throw an IndexOutOfBoundsException
                 # XXX switch to ejector for sealed-throw rules
-                return introducer.getSwissTable().lookupSwiss(swissNum)
+                return swissTable.lookupSwiss(swissNum)
             }
             # XXX we currently have no connection objects in E-on-CL, so the below code won't do anything useful. Once we have a CapTPMgr we'll see what the interface for retrieving the remote nonce locator is
-            def optProxyConn := introducer.getCapTPMgr() \
+            def optProxyConn := capTPMgr \
               .getOrMakeProxyConnection(searchPath, vatID)
             def remoteNonceLocator := optProxyConn.getRemoteNonceLocator()
             return E.send(remoteNonceLocator, "lookupSwiss", swissNum, optFarVine)
