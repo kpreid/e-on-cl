@@ -86,7 +86,12 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
       }
       
       to onTheAir() {
-        bind hub := makeHub(def makeConnection {}, def outgoingConnect {})
+        if (!introducer.isOnTheAir()) {
+          if (!introducer.hasIdentity()) {
+            introducer.newVatIdentity()
+          }
+          bind hub := makeHub(def makeConnection {}, def outgoingConnect {})
+        }
         return negotiable
       }
       

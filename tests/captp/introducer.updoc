@@ -148,6 +148,9 @@ Going on the air
   ? introducer.onTheAir()
   # value: ["BOGUS_PLACEHOLDER"]
   
+  ? introducer.onTheAir() # idempotent
+  # value: ["BOGUS_PLACEHOLDER"]
+
   ? introducer
   # value: <On the Air ["BOGUS_PLACEHOLDER"]>
   
@@ -186,14 +189,37 @@ Local SturdyRef, on the air:
   ? locatorUnum.getRcvr([], introducer.getVatID(), swissBase.cryptoHash(), null)
   # value: 40
 
+------------------------------------------------------------------------------
+
+This instance will be used to test onTheAir/0 without having set an identity first (in which case an identity is generated, but not revealed).
+
+  ? def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), pseudoEntropy, def fakeTimer {})
+  # value: [<Off the Air>, <identityMgr Off the Air>, <captp__uriGetter>]
+
+  ? introducer.onTheAir()
+  # value: ["BOGUS_PLACEHOLDER"]
+
+  ? introducer.onTheAir() # idempotent
+  # value: ["BOGUS_PLACEHOLDER"]
+
+  ? introducer.isOnTheAir()
+  # value: true
+
+  ? introducer.hasIdentity()
+  # value: true
+
+  (Testing that this doesn't fail.)
+  ? identityMgr.makeKnown(38372)
+  # value: [<sturdyRef to 38372>, <timeout>, 10000002]
+
+XXX test that resulting VatID is random (or at least not equal to other generated identities)
+
+------------------------------------------------------------------------------
+
 XXX operations to test: 
-  getLocatorUnum's result's role
-  getNetConfig
-  getVatID hasIdentity isOnTheAir once introduced
-  newVatIdentity/0
-  onTheAir/0
+  setVatIdentity/1 with a known keypair and confirm that the VatID etc. is as expected
+  getNetConfig/0
   setNetConfig/1
   setReferenceMonitor/1
   setVatIdentity/1
-  sturdyFromURI/get on malformed URI strings
-XXX test identityMgr
+XXX test all identityMgr operations
