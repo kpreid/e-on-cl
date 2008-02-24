@@ -12,6 +12,8 @@
 
   ? def makeIntroducer :DeepFrozen := <import:net.captp.comm.makeIntroducer>
   # value: <makeIntroducer>
+
+The introducer has two irreversible state changes: becoming identified (newVatIdentity or setVatIdentity) and going on the air (onTheAir). We shall use the first instance to test the case of newVatIdentity followed by onTheAir.
   
   ? def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), pseudoEntropy, def fakeTimer {})
   # value: [<Off the Air>, <identityMgr Off the Air>, <captp__uriGetter>]
@@ -99,10 +101,47 @@ URI parsing errors, rejection, etc.
 IdentityMgr, off the air:
 
   ? identityMgr.makeKnown(40)
-  # problem: <SecurityException: introducer not yet identified>
+  # problem: introducer not yet identified
   XXX explain why this doesn't succeed
   
   ... XXX other operations
+
+------------------------------------------------------------------------------
+
+Becoming identified
+
+  ? def keyPair := introducer.newVatIdentity()
+  # value: <keyPair>
+  
+  ? introducer
+  # value: <Off the Air>
+  
+  ? introducer.newVatIdentity()
+  # problem: <Off the Air> is already identified
+  
+  ? introducer.setVatIdentity(keyPair)
+  # problem: <Off the Air> is already identified
+  
+  ? introducer.getNetConfig()
+  # problem: XXX no net config object yet
+
+  ? def vatID :String := introducer.getVatID(); null
+
+  ? introducer.hasIdentity()
+  # value: true
+
+  ? introducer.isOnTheAir()
+  # value: false
+
+  ? sr.getRcvr()
+  # problem: Must first be onTheAir
+
+  ? locatorUnum.getRcvr([], "outside2", 1234, null)
+  # problem: Must first be onTheAir
+
+XXX test local sturdyrefs, identityMgr at this point
+
+------------------------------------------------------------------------------
 
 Going on the air
 
@@ -117,7 +156,8 @@ Introducer, on the air:
   ? introducer.getNetConfig()
   # problem: XXX no net config object yet
 
-  ? def vatID :String := introducer.getVatID(); null
+  ? introducer.getVatID() == vatID
+  # value: true
 
   ? introducer.hasIdentity()
   # value: true

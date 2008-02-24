@@ -11,6 +11,9 @@ def asWaterkenBase32 := <import:net.captp.util.asWaterkenBase32>
 def now := <import:org.cubik.cle.schedule.now>
 def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 def makeLocatorUnum := <import:net.captp.comm.makeLocatorUnum>
+def makeHub := <import:net.captp.comm.makeHub>
+
+def KeyPair := any # XXX stub
 
 def makeIntroducer implements ExitViaHere, DeepFrozen {
   to makePair(config :Map,
@@ -26,7 +29,9 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
     # resolved when we become identified
     def myVatID
     
-    def locatorUnum := makeLocatorUnum(myVatID, swissTable, def capTPMgr {})
+    def hub
+    
+    def locatorUnum := makeLocatorUnum(myVatID, swissTable, hub)
     
     def srMap := [].asMap().diverge() # XXX either make sturdyrefs selfless and remove this table, or make it weak
     def getSturdyRef(vatID, searchPathStr, swissNumber) {
@@ -66,16 +71,27 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
         }
       }
       to hasIdentity() { return Ref.isResolved(myVatID) }
-      to isOnTheAir() { return Ref.isResolved(myVatID) } # XXX stub?
+      to isOnTheAir() { return Ref.isResolved(hub) }
       to negotiable() { return negotiable } # XXX stub
       
-      to onTheAir() {
+      to newVatIdentity() :KeyPair {
+        introducer.setVatIdentity(def keyPair {})
+        return keyPair
+      }
+      to setVatIdentity(keyPair :KeyPair) :void {
+        if (Ref.isResolved(myVatID)) {
+          throw(`$introducer is already identified`) # XXX stub
+        }
         bind myVatID := "foo"
+      }
+      
+      to onTheAir() {
+        bind hub := makeHub(def makeConnection {}, def outgoingConnect {})
         return negotiable
       }
       
       to __printOn(out :TextWriter) {
-        if (Ref.isResolved(myVatID)) {
+        if (introducer.isOnTheAir()) {
           out.write(`<On the Air $negotiable>`)
         } else {
           out.write("<Off the Air>")
@@ -89,14 +105,11 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
        }
        
        to makeKnown(ref) {
-         if (Ref.isResolved(myVatID)) {
-           def swissBase := entropy.nextSwiss()
-           def swissNumber := swissTable.registerNewSwiss(ref, swissBase)
-           def sr := getSturdyRef(myVatID, "", swissNumber) # XXX non-stub searchpath
-           return [sr, def timeout {}, swissBase]
-         } else {
-           throw(`<SecurityException: introducer not yet identified>`) # XXX wording
-         }
+         def myVatID1 := introducer.getVatID() # checks for being identified
+         def swissBase := entropy.nextSwiss()
+         def swissNumber := swissTable.registerNewSwiss(ref, swissBase)
+         def sr := getSturdyRef(myVatID1, "", swissNumber) # XXX non-stub searchpath
+         return [sr, def timeout {}, swissBase]
        }
        
        # XXX other ops

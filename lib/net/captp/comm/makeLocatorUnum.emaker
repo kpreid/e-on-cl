@@ -19,7 +19,7 @@ def VatID := <import:net.captp.protocol.VatID>
  *
  * @author Mark S. Miller
  */
-def makeLocatorUnum(myVatID, swissTable, capTPMgr) implements DeepFrozen, ExitViaHere {
+def makeLocatorUnum(myVatID, swissTable, hub) implements DeepFrozen, ExitViaHere {
 
     return def locatorUnum {
 
@@ -55,11 +55,13 @@ def makeLocatorUnum(myVatID, swissTable, capTPMgr) implements DeepFrozen, ExitVi
                 # XXX switch to ejector for sealed-throw rules
                 return swissTable.lookupSwiss(swissNum)
             }
-            # XXX we currently have no connection objects in E-on-CL, so the below code won't do anything useful. Once we have a CapTPMgr we'll see what the interface for retrieving the remote nonce locator is
-            def optProxyConn := capTPMgr \
-              .getOrMakeProxyConnection(searchPath, vatID)
-            def remoteNonceLocator := optProxyConn.getRemoteNonceLocator()
-            return E.send(remoteNonceLocator, "lookupSwiss", swissNum, optFarVine)
+            if (!Ref.isResolved(hub)) {
+                throw("Must first be onTheAir")
+            }
+            def outgoingConn := hub[searchPath, vatID]
+            # XXX should be called getRemoteNonceLocator/0 (since EoJ does and there's nothing wrong with the name)
+            def remoteNonceLocator := outgoingConn.nonceLocator()
+            return remoteNonceLocator <- lookupSwiss(swissNum, optFarVine)
         }
     }
 }
