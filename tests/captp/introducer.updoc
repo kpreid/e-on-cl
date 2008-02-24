@@ -8,6 +8,8 @@
   > def pseudoEntropy {
   >   to nextSwiss() { return (i += 1) }
   > }
+  > /** start a new series */
+  > def resetEntropy() { i := (i // 10000000 + 1) * 10000000 }
   > null
 
   ? def makeIntroducer :DeepFrozen := <import:net.captp.comm.makeIntroducer>
@@ -110,7 +112,7 @@ IdentityMgr, off the air:
 
 Becoming identified
 
-  ? def keyPair := introducer.newVatIdentity()
+  ? def keyPair_first := introducer.newVatIdentity()
   # value: <keyPair>
   
   ? introducer
@@ -119,13 +121,13 @@ Becoming identified
   ? introducer.newVatIdentity()
   # problem: <Off the Air> is already identified
   
-  ? introducer.setVatIdentity(keyPair)
+  ? introducer.setVatIdentity(keyPair_first)
   # problem: <Off the Air> is already identified
   
   ? introducer.getNetConfig()
   # problem: XXX no net config object yet
 
-  ? def vatID :String := introducer.getVatID(); null
+  ? def vatID_first :String := introducer.getVatID(); null
 
   ? introducer.hasIdentity()
   # value: true
@@ -159,7 +161,7 @@ Introducer, on the air:
   ? introducer.getNetConfig()
   # problem: XXX no net config object yet
 
-  ? introducer.getVatID() == vatID
+  ? introducer.getVatID() == vatID_first
   # value: true
 
   ? introducer.hasIdentity()
@@ -175,10 +177,10 @@ IdentityMgr, on the air:
 
   XXX srLocal :SturdyRef1
   ? def [srLocal, timeout, swissBase] := identityMgr.makeKnown(40)
-  # value: [<sturdyRef to 40>, <timeout>, 10000001]
+  # value: [<sturdyRef to 40>, <timeout>, 10000003]
   
-  ? <captp>.optUnget(srLocal).replaceAll(vatID, "vid")
-  # value: "//*vid@/ilwgeqhf4lvtx2bsmcmvvxboztdgl7da"
+  ? <captp>.optUnget(srLocal).replaceAll(vatID_first, "vid")
+  # value: "//*vid@/bbdp6dt6i4erul4fp575vvsdwk4i2rob"
 
 Local SturdyRef, on the air:
 
@@ -193,7 +195,8 @@ Local SturdyRef, on the air:
 
 This instance will be used to test onTheAir/0 without having set an identity first (in which case an identity is generated, but not revealed).
 
-  ? def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), pseudoEntropy, def fakeTimer {})
+  ? resetEntropy()
+  > def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), pseudoEntropy, def fakeTimer {})
   # value: [<Off the Air>, <identityMgr Off the Air>, <captp__uriGetter>]
 
   ? introducer.onTheAir()
@@ -210,10 +213,25 @@ This instance will be used to test onTheAir/0 without having set an identity fir
 
   (Testing that this doesn't fail.)
   ? identityMgr.makeKnown(38372)
-  # value: [<sturdyRef to 38372>, <timeout>, 10000002]
+  # value: [<sturdyRef to 38372>, <timeout>, 20000002]
+  
+  ? def vatID_second :String := introducer.getVatID()
+  > vatID_second != vatID_first
+  # value: true
 
-XXX test that resulting VatID is random (or at least not equal to other generated identities)
+------------------------------------------------------------------------------
 
+This instance is given the identity of the first, and we confirm that it produces the same VatID.
+
+  ? resetEntropy()
+  > def [introducer, identityMgr, <captp>] := makeIntroducer.makePair([].asMap(), pseudoEntropy, def fakeTimer {})
+  # value: [<Off the Air>, <identityMgr Off the Air>, <captp__uriGetter>]
+
+  ? introducer.setVatIdentity(keyPair_first)
+  
+  ? introducer.getVatID() == vatID_first
+  # value: true
+  
 ------------------------------------------------------------------------------
 
 XXX operations to test: 

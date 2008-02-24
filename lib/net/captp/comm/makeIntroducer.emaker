@@ -75,14 +75,15 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
       to negotiable() { return negotiable } # XXX stub
       
       to newVatIdentity() :KeyPair {
-        introducer.setVatIdentity(def keyPair {})
+        def nid := asWaterkenBase32(entropy.nextSwiss().cryptoHash().toOctetsUnsigned()) # XXX stub
+        introducer.setVatIdentity(def keyPair { to _getVatID() { return nid } }) # XXX stub
         return keyPair
       }
       to setVatIdentity(keyPair :KeyPair) :void {
         if (Ref.isResolved(myVatID)) {
           throw(`$introducer is already identified`) # XXX stub
         }
-        bind myVatID := "foo"
+        bind myVatID := keyPair._getVatID() # XXX stub
       }
       
       to onTheAir() {
