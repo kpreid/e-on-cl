@@ -12,6 +12,7 @@ def now := <import:org.cubik.cle.schedule.now>
 def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 def makeLocatorUnum := <import:net.captp.comm.makeLocatorUnum>
 def makeHub := <import:net.captp.comm.makeHub>
+def makeBrand := <elib:sealing.makeBrand>
 
 def KeyPair := any # XXX stub
 
@@ -33,6 +34,8 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
     
     def locatorUnum := makeLocatorUnum(myVatID, swissTable, hub)
     
+    def [sturdyRefPartsSealer, sturdyRefPartsUnsealer] := makeBrand("SturdyRef transparency")
+    def sturdyRefPartsBrand := sturdyRefPartsUnsealer.getBrand()
     def srMap := [].asMap().diverge() # XXX either make sturdyrefs selfless and remove this table, or make it weak
     def getSturdyRef(vatID, searchPathStr, swissNumber) {
       def key := [vatID, searchPathStr, swissNumber]
@@ -47,12 +50,14 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
             out.write("<sturdyRef>")
           }
         }
+        to __optSealedDispatch(brand) {
+          return if (brand == sturdyRefPartsBrand) {
+            sturdyRefPartsSealer.seal(key)
+          }
+        }
         to getRcvr() {
           # XXX stub search path
           return locatorUnum.getRcvr([], vatID, swissNumber, null)
-        }
-        to _uriBody() { # XXX should be opaque
-          return `//*$vatID@@$searchPathStr/${asWaterkenBase32(swissNumber.toOctetsUnsigned())}`
         }
       }
       srMap[key] := sturdyRef
@@ -140,16 +145,17 @@ def makeIntroducer implements ExitViaHere, DeepFrozen {
       }
       
       to sturdyToURI(sr) { # XXX guard
-        return `$scheme:${sr._uriBody()}`
+        return `$scheme:${<captp>.optUnget(sr)}`
       }
       to optUnget(specimen) {
-        if (specimen =~ sr :SturdyRef) {
-          return sr._uriBody()
+        # XXX appropriate to allow imitators? could reject by requiring noncoercing DeepFrozen
+        if (sturdyRefPartsUnsealer.amplify(specimen) =~ [[vatID, searchPathStr, swissNumber]]) {
+          return `//*$vatID@@$searchPathStr/${asWaterkenBase32(swissNumber.toOctetsUnsigned())}`
         }
       }
       to optUncall(specimen) {
-        if (specimen =~ sr :SturdyRef) {
-          return [introducer, "get", sr._uriBody()]
+        if (<captp>.optUnget(specimen) =~ uriBody :notNull) {
+          return [<captp>, "get", [uriBody]]
         }
       }
     }

@@ -59,7 +59,7 @@ SturdyRef operations work even when off the air, except for the ref's getRcvr. B
   # value: "//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"
   
   ? <captp>.optUncall(sr)
-  # value: [<Off the Air>, "get", "//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"]
+  # value: [<captp__uriGetter>, "get", ["//*gehdu662wssibp5lmuxmiwqkpadeign6@192.168.0.6:60334/jctrw2x2nejbk3bfsneugza5ub2korsd"]]
   
   ? <captp>.optUnget("foo")
   ? <captp>.optUncall("foo")
