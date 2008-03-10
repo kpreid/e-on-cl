@@ -50,22 +50,25 @@
     (unless (equal o (list (component-pathname c)))
       o)))
 
+(defun same-enclosing-directory (file-pathnames)
+  "Find the directory which all of the named files are in."
+  (loop with wild-path = nil
+        for file in file-pathnames
+        do (if wild-path
+             (assert (pathname-match-p file wild-path))
+             (setf wild-path (make-pathname :defaults file
+                                            :name :wild
+                                            :type :wild
+                                            :version :wild)))
+        finally (assert wild-path)
+                (return (make-pathname :defaults wild-path
+                                       :name nil
+                                       :type nil
+                                       :version nil))))
+
 (defmethod perform ((op compile-op) (component antlr-source-file))
   (let* ((output-files (output-files op component))
-         (output-dir
-           (loop with wild-path = nil
-                 for output-file in output-files
-                 do (if wild-path
-                      (assert (pathname-match-p output-file wild-path))
-                      (setf wild-path (make-pathname :defaults output-file
-                                                     :name :wild
-                                                     :type :wild
-                                                     :version :wild)))
-                 finally (assert wild-path)
-                         (return (make-pathname :defaults wild-path
-                                                :name nil
-                                                :type nil
-                                                :version nil))))
+         (output-dir (same-enclosing-directory output-files))
          (code (run-shell-command "java -classpath ~S antlr.Tool -o ~S ~S"
                                   (namestring e.knot::*antlr-jar*)
                                   ;; XXX should be native-namestring when
@@ -95,13 +98,16 @@
       ())))
 
 (defmethod perform ((op compile-op) (component antlr-java-source-file))
-  (let* ((code (run-shell-command "javac -classpath ~S:~S ~S"
+  (let* ((output-dir (same-enclosing-directory (output-files op component)))
+         (code (run-shell-command "javac -classpath ~S:~S:~S -d ~S ~S"
                                   (namestring e.knot::*antlr-jar*)
+                                  (namestring output-dir)
                                   (namestring (make-pathname
                                                 :defaults (component-pathname component)
                                                 :name nil
                                                 :type nil
                                                 :version nil))
+                                  (namestring output-dir)
                                   (namestring (component-pathname component)))))
       (unless (= code 0)
         (case (operation-on-failure op)
