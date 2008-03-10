@@ -143,7 +143,7 @@
   (format t "~&# ~A: ~A~%" (first answer) (second answer)))
 
 (defun make-updoc-handler (&key file out err print-steps 
-                                (dead-names (e. #() |asMap|)))
+                                (dead-names +empty-const-map+))
   ;; XXX too much state - ick
   (let ((new-answers nil)
         (step nil)

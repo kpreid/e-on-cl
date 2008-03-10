@@ -808,9 +808,12 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
         (copy-seq keys)))))
 
 
-; --- --- Interfaces --- ---
+;;; --- --- Interfaces --- ---
 
-; --- ConstMap maker ---
+;;; --- ConstMap maker ---
+
+(defglobal +empty-const-map+
+  (make-instance 'genhash-const-map-impl :keys #() :values #()))
 
 (defobject +the-make-const-map+ "org.erights.e.elib.tables.makeConstMap"
     (:stamped +deep-frozen-stamp+

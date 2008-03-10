@@ -277,7 +277,7 @@
 (defobject +the-make-text-writer+ "org.erights.e.elib.oldeio.makeTextWriter"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
-  (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| (e. #() |asMap|)))
+  (:|makeBufferingPair| () (e. +the-make-text-writer+ |makeBufferingPair| +empty-const-map+))
   (:|makeBufferingPair| ((options 'e.elib.tables:const-map))
     "Return a tuple of a TextWriter and a StringBuffer from which the output of the TextWriter is readable."
     ; xxx arbitrary initial size figure. CLISP didn't like an initial size of 0 (adjust-array signaled the error "index too large")

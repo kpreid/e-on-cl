@@ -32,7 +32,7 @@
 
 
 (deftest mapping-bind.trivial
-  (mapping-bind (e. #() |asMap|)
+  (mapping-bind +empty-const-map+
                 ()
     "ok")
   "ok")

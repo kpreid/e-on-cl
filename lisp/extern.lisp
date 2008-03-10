@@ -303,7 +303,7 @@
 
 (defobject +spawn+ "org.cubik.cle.prim.spawn" ()
   (:|run| (file args)
-    (efuncall +spawn+ file args (e. #() |asMap|)))
+    (efuncall +spawn+ file args +empty-const-map+))
   (:|run| (file (args 'vector) options)
     (mapping-bind options
                   ((in-o "stdin" t) ;; XXX using t for these isn't right

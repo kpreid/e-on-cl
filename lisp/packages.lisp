@@ -222,6 +222,7 @@
     :+the-make-traversal-key+
     :+the-make-flex-map+
     :+the-make-const-map+
+    :+empty-const-map+
     :+the-map-guard+
     :+the-any-map-guard+
     :+the-make-list+

@@ -559,7 +559,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   
   (:|toString| (this)
     "this.toString([].asMap())"
-    (e. this |toString| (e. #() |asMap|)))
+    (e. this |toString| +empty-const-map+))
   (:|toString| (this options)
     "General number printing. The only option currently defined is \"base\", which must be an integer from 2 to 36, and defaults to 10."
     ; XXX won't work with non-integers
