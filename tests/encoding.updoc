@@ -4,14 +4,14 @@
   ? pragma.enable("dot-props")
   > def ALL := EIO::ALL
 
-  ? def charsets := <import:org.cubik.cle.charsets>
+  ? def charsets :DeepFrozen := <import:org.cubik.cle.charsets>
   # value: <IANA 'charsets'>
   
   ? def ascii :DeepFrozen := charsets["US-ASCII"]
   # value: <US-ASCII encoding>
   
-  x ? ascii == charsets["us-ascii"]
-  x # value: true
+  ? ascii == charsets["us-ascii"]
+  # value: true
   
   ? def s := ascii.decode([97, 112, 112, 108, 101, 115, 32, 97, 110, 100, 32, 111, 114, 97, 110, 103, 101, 115].asStream(), [].asMap())
   # value: <-from ASCII-[97, 112, 112, 108, 101, ...].asStream()

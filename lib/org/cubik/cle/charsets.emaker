@@ -3,11 +3,16 @@
 
 pragma.syntax("0.9")
 
-/** near-stub for now. To offer encoding objects corresponding to the IANA charset registry.
+def imports := <import:org.cubik.cle.charenc.*>
+
+/** Supplies encoding objects named according to the IANA charset registry.
 
 http://www.iana.org/assignments/character-sets */
-def charsets extends <import:org.cubik.cle.charenc.*> implements ExitViaHere {
+def charsets implements DeepFrozen, ExitViaHere {
   to __printOn(tw :TextWriter) {
     tw.write("<IANA 'charsets'>")
+  }
+  to get(name :String) {
+    return imports[name.toUpperCase()]
   }
 }
