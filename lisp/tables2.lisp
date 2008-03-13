@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elib.tables)
@@ -824,6 +824,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
     ; XXX we provide the sugared Map guard instead of the primitive one - is this really appropriate?
     (eelt (vat-safe-scope *vat*) "Map"))
   (:|fromPairs| ((pairs 'vector))
+    ;; we need to construct the column vectors anyway, so there is no cost to this implementation
     (loop
       with keys   = (make-array (length pairs))
       with values = (make-array (length pairs))
@@ -836,7 +837,14 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
   (:|fromColumns| ((keys 'vector)
                    (values 'vector))
     ; XXX Java-E uses the valueType of keys and values
-    (make-instance 'genhash-const-map-impl :keys keys :values values))
+    (let ((table (make-generic-hash-table :test 'samep)))
+      (loop for i from 0
+            for key across keys
+            do
+        (if (hashref key table)
+          (error "~A already in under-construction ConstMap as ~A" (e-quote key) (e-quote (aref values (hashref key table))))
+          (setf (hashref key table) i)))
+      (make-instance 'genhash-const-map-impl :keys keys :values values :table table)))
   (:|fromProperties| (props)
     "Java-E compatibility. Makes a ConstMap from whatever we're providing that imitates a Java properties(?) object."
     ; XXX this should probably become coercion to ConstMap

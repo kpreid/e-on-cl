@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elib)
@@ -22,8 +22,12 @@
 ;; type-specifier-to-guard is defined earlier, in elib.lisp
 
 (defun message-pairs-to-map-including-miranda-messages (pairs)
-  (e. (e. +the-make-const-map+ |fromPairs| 
-        (coerce pairs 'vector))
+  "PAIRS may contain duplicate keys, in which case the later one takes precedence"
+  (e. (e. +the-make-const-map+ |fromIteratable| 
+        (e-lambda nil () (:|iterate| (f)
+          (loop for pair in pairs do
+            (efuncall f (aref pair 0) (aref pair 1)))))
+        +e-false+)
       |or|
       (message-types-to-map +miranda-message-descs+)))
 

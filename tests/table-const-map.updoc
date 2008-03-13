@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 ? def cm := ["a" => "b", 'c' => 'd']
@@ -31,9 +31,6 @@ XXX this ordering matches the Java-E implementation, but is surprising
 
 ? cm.with(5, 6)
 # value: ["a" => "b", 'c' => 'd', 5 => 6]
-
-? __makeMap.asType() == Map
-# value: true
 
 sortKeys
 
@@ -100,7 +97,35 @@ sameness is order-dependent
   ? [1 => 10, 2 => 20] == [2 => 20, 1 => 10]
   # value: false
 
-__makeMap.fromIteratable
+--- makeConstMap ---
+
+  ? __makeMap :DeepFrozen == <import:org.erights.e.elib.tables.makeConstMap>
+  # value: true
+
+  ? __makeMap.asType() == Map
+  # value: true
+
+fromColumns
+
+  ? __makeMap.fromColumns([1, 2], [10, 20])
+  # value: [1 => 10, 2 => 20]
+
+  ? __makeMap.fromColumns([1, 1], [10, 20])
+  # problem: 1 already in under-construction ConstMap as 10
+
+  XXX coercions, accepting strings, etc.
+
+fromPairs
+
+  ? __makeMap.fromPairs([[1, 10], [2, 20]])
+  # value: [1 => 10, 2 => 20]
+
+  ? __makeMap.fromPairs([[1, 10], [1, 20]])
+  # problem: 1 already in under-construction ConstMap as 10
+
+  XXX coercions, accepting strings, etc.
+
+fromIteratable
 
   ? __makeMap.fromIteratable("abc", true) 
   # value: [0 => 'a', 1 => 'b', 2 => 'c']
@@ -125,10 +150,6 @@ __makeMap.fromIteratable
   
   ? map
   # value: [].asMap()
-  
-  XXX disabling of assocfunc
-  XXX key conflicts
 
 XXX test all map methods
 XXX specific tests for keyType, valueType
-XXX what if map maker gets duplicate entries
