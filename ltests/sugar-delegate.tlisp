@@ -5,7 +5,7 @@
 
 (defmacro with-vat-1 (&body b)
   `(block nil
-     (with-vat ()
+     (with-vat (:label ,(format nil "with-vat-1 form: ~S" b))
        (return (progn ,@b)))))
 
 (defclass sugar-call-test () ())
