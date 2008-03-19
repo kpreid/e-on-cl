@@ -83,3 +83,15 @@ makeList
 
   ? makeConstList.unrecognized()
   # problem: no such method: org.erights.e.elib.tables.makeConstList#unrecognized/0
+
+  ? def PList := makeConstList.asType()
+  # value: ConstList
+  
+  ? PList == List
+  # value: false
+  XXX this should be true -- make List.emaker into a sugar
+  
+  ? for x :PList in [[1,2], "ab", null, def x {}, {def p;p}] { println(x) }
+  # stdout: [1, 2]
+  #         ab
+  #         

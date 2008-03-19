@@ -478,6 +478,8 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defobject +the-make-list+ "org.erights.e.elib.tables.makeConstList"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
+  (:|asType| ()
+    (type-specifier-to-guard 'vector))
   (:|fromValuesOf| (iteratable)
     ; XXX write tests for this
     (e.elib.tables:vector-from-iteratable '(vector t) 't iteratable))
