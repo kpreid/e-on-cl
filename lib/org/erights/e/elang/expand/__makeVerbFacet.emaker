@@ -6,9 +6,11 @@
 #   removed unused 'sendSpreader'
 # 2006-05-07:
 #   made DeepFrozen
-#   removed unnecessary use of simple__quasiParser
 # 2007-03-24:
 #   added ExitViaHere
+# 2008-03-18
+#   removed uses of simple__quasiParser, for efficiency and fewer bootstrap
+#   dependencies
 #
 # I would like to see these changes merged back to E-on-Java.
 #
@@ -36,33 +38,37 @@ def makeVerbFacet(kind :String, recipient, verb, caller) :near implements DeepFr
         }
 
         to __printOn(out :TextWriter) :void {
-            out.print(`<$kind ${E.toQuote(verb)} facet>`)
+            out.write("<")
+            out.print(kind)
+            out.print(" ")
+            out.quote(verb)
+            out.print(" facet>")
         }
 
-        match [`run`, args] {
+        match [=="run", args] {
             caller(recipient, verb, args)
         }
 
         # XXX The rest of this is a kludge, until we repair the __respondsTo
         # and __getAllegedType behaviors regarding match clauses.
 
-        match [`__respondsTo`, [`run`, arity]] {
+        match [=="__respondsTo", [=="run", arity]] {
             recipient.__respondsTo(verb, arity)
         }
-        match [`__respondsTo`, _] {
+        match [=="__respondsTo", _] {
             false
         }
-        match [`__getAllegedType`, []] {
+        match [=="__getAllegedType", []] {
             def oldMsgs := recipient.__getAllegedType().getMessageTypes()
             var newMsgs := []
-            for oldMsg ? (oldMsg.getVerb() =~ `$verb`) in oldMsgs {
+            for oldMsg ? (oldMsg.getVerb() == verb) in oldMsgs {
                 newMsgs with= __makeMessageDesc(oldMsg.getDocComment(),
                                                 "run",
                                                 oldMsg.getParams(),
                                                 oldMsg.getOptResultGuard())
             }
             __makeProtocolDesc("",
-                               `${meta.context().getFQNPrefix()}Sub__T`,
+                               meta.context().getFQNPrefix() + "Sub__T",
                                [],
                                [],
                                newMsgs)
