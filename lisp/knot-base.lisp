@@ -21,6 +21,13 @@
                       :initform (error "local-definitions unspecified")
                       :reader local-definitions)))
 
+(defmethod print-object ((scope scope) stream)
+  (print-unreadable-object (scope stream :type t :identity t)
+    (format stream "~S, ~S bound, ~S locals"
+      (scope-fqn-prefix scope)
+      (hash-table-count (slot-table scope))
+      (hash-table-count (local-definitions scope)))))
+
 (def-fqn scope "org.erights.e.elang.scope.scope") ; XXX should we have a non-elang fqn?
 
 (defun scope-slot-ordering (scope)
