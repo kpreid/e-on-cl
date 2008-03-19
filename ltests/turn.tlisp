@@ -103,7 +103,20 @@
         (top-loop))
       (vr-remove-io-handler handler))
     (values)))
-    
+
+(defclass wrong-vat-example (vat-checking) ())
+(deftest wrong-vat-catch
+  (let ((x (block nil
+             (with-vat (:label "wrong-vat-catch a")
+               (return (make-instance 'wrong-vat-example))))))
+    (handler-case
+      (block nil
+        (with-vat (:label "wrong-vat-catch b")
+          (return (e. x |__getAllegedType|))))
+      (simple-error (c)
+        (cl-ppcre:regex-replace-all "\\{.*?\\}" (princ-to-string c) "{.}"))))
+  "#<E.LISP-TEST.TURN::WRONG-VAT-EXAMPLE {.}>, which belongs to vat #<E.ELIB:VAT \"wrong-vat-catch a\" {.}>, was called (:|__getAllegedType/0| NIL) from vat #<E.ELIB:VAT \"wrong-vat-catch b\" {.}>.")
+
 ;;; --- Running multiple vats ---
 
 (deftest two-vats

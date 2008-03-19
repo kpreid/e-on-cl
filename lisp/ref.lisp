@@ -207,7 +207,9 @@ If there is no current vat at initialization time, captures the current vat at t
   (declare (ignore mverb args))
   (with-accessors ((expected-vat vat-checking-expected-vat)) rec
     (if (slot-boundp rec 'vat-checking-expected-vat)
-      (assert (eq *vat* expected-vat))
+      (assert (eq *vat* expected-vat) ()
+        "~S, which belongs to vat ~S, was called (~S ~S) from vat ~S."
+        rec expected-vat mverb args *vat*)
       (when *vat*
         (setf expected-vat *vat*)))))
 
