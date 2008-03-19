@@ -32,8 +32,7 @@
             :accessor vat-in-turn
             :type t
             :documentation "Whether some type of top-level turn is currently being executed in this vat; if not NIL, is a label for the turn. Used for consistency checking.")
-   (safe-scope :initform (e.knot:make-safe-scope)
-               :accessor vat-safe-scope)
+   (safe-scope :accessor vat-safe-scope)
    (label :initarg :label
           :initform nil
           :type (or null string)
@@ -49,8 +48,9 @@
 
 (defmethod initialize-instance :after ((vat vat) &rest initargs)
   (declare (ignore initargs))
-  (setf (vat-comm-handler vat)
-    (make-comm-handler-promise vat)))
+  (let ((*vat* vat))
+    (setf (vat-safe-scope vat)   (e.knot:make-safe-scope)
+          (vat-comm-handler vat) (make-comm-handler-promise vat))))
 
 (defmethod print-object ((vat vat) stream)
   (print-unreadable-object (vat stream :type t :identity t)
