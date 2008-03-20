@@ -33,24 +33,39 @@ function lisp_extra_push {
   LISP_EXTRA[${#LISP_EXTRA[@]}]=$1
 }
 
+# Which startup argument syntax to use
+LISPTYPE=
+
 # --- Option parsing ---
 
 OPTION_PARSING_ENDED=
+
+function missing {
+  echo "$0: missing argument to option"
+  DO_USAGE=t
+}
 
 # Interpret our own command-line options
 # modified from rune-template.txt
 while [ $(($# >= 1)) = 1 ]; do
     case $1 in
         --lisp | -l)  shift
-                      if [ $(($# < 1)) = 1 ]; then usage; fi
+                      if [ $(($# < 1)) = 1 ]; then missing;break; fi
                       LISP="$1"
                       shift;;
 
         -l*)          LISP="${1#-l}"; shift;;
                       
+        --type | -t)  shift
+                      if [ $(($# < 1)) = 1 ]; then missing;break; fi
+                      LISPTYPE="$1"
+                      shift;;
+
+        -t*)          LISPTYPE="${1#-t}"; shift;;
+                      
         --lisp-option | -L)
                       shift
-                      if [ $(($# < 1)) = 1 ]; then usage; fi
+                      if [ $(($# < 1)) = 1 ]; then missing;break; fi
                       lisp_extra_push "$1"
                       shift;;
 
@@ -73,11 +88,8 @@ while [ $(($# >= 1)) = 1 ]; do
     esac
 done
 
-# I'm feeling too lazy to look up the syntax for logical and
-if [ "$OPTION_PARSING_ENDED" ]; then
-  if [ "$LOADQUIET" = nil ]; then
-    echo "; $0: assuming '$1' ends my options" >&2
-  fi
+if [ "$OPTION_PARSING_ENDED" -a "$LOADQUIET" = nil ]; then
+  echo "; $0: assuming '$1' ends my options" >&2
 fi
 
 # --- Usage ---
@@ -91,7 +103,11 @@ $0:
 
   Command line options:
     --lisp|-l <path> Specifies the path to the Common Lisp 
-                     implementation.
+                     implementation. If not specified, searches for one
+                     of: $LISPS
+    --type|-t <type> Specifies type of CL implementation; may be one of:
+                     sbcl cmucl openmcl ecl clisp gcl abcl abcl-jar
+                     Guessed from program name if not specified.
     --lisp-option|-L <arg>
                      Pass an extra argument to the command specified by
                      --lisp.
@@ -105,9 +121,8 @@ $0:
   An unrecognized argument or "--" terminates clrune option parsing;
   that and all further arguments are passed to the Lisp level.
 
-  clrune supports starting SBCL, OpenMCL, CLISP, GCL, and ABCL; however,
-  ABCL will not be searched for (use the --lisp option to give the path
-  to j.jar).
+  ABCL-specific note: ABCL will not be searched for; use the --lisp 
+  option to give the path to j.jar or abcl.jar explicitly.
   
   Now attempting to start Lisp to give further usage help...
 
@@ -125,14 +140,19 @@ fi
 
 # --- Startup ---
 
-# Choose the argument format appropriate to the CL implementation
-# XXX we should eventually have support for independently specifying the type
-LISPTYPE=`basename $LISP`
-if [ "$LISPTYPE" = lisp ]; then
-  LISPTYPE=cmucl
-fi
-if [ "$LISPTYPE" = j.jar -o "$LISPTYPE" = abcl.jar ]; then
-  LISPTYPE=abcl-jar
+if [ "$LISPTYPE" = "" ]; then
+  case "`basename $LISP`" in
+    j.jar | abcl.jar) LISPTYPE=abcl-jar ;;
+    *sbcl*) LISPTYPE=sbcl ;;
+    *openmcl*) LISPTYPE=openmcl ;;
+    *ecl*) LISPTYPE=ecl ;;
+    *clisp*) LISPTYPE=clisp ;;
+    *abcl*) LISPTYPE=abcl ;;
+    *gcl*) LISPTYPE=gcl ;;
+    lisp | *cmu*) LISPTYPE=cmucl ;;
+    *) echo "$0: Could not guess lisp type from name '`basename $LISP`'. Specify it with the --type/-t <type> option."
+       exit 254;;
+  esac
 fi
 
 HERE=`dirname $0`
