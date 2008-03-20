@@ -198,6 +198,43 @@ XXX enable this and the similar below as soon as we support var patterns
 
 XXX test that redefinitions of __equalizer are rejected
 
+--- rangeSupersetOf
+
+  ? def FinalSlot := __makeFinalSlot.asType(); null
+
+  ? DeepFrozen.rangeSupersetOf(DeepFrozen)
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(int)
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(char)
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(float64)
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(String)
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(Twine)
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(FinalSlot[int])
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(List[int])
+  # value: true
+
+  ? DeepFrozen.rangeSupersetOf(any)
+  # value: false
+  ? [DeepFrozen.rangeSupersetOf(def Foo {})]
+  # value: [null]
+  ? DeepFrozen.rangeSupersetOf(FinalSlot[any])
+  # value: false
+  ? DeepFrozen.rangeSupersetOf(List[any])
+  # value: false
+  ? [DeepFrozen.rangeSupersetOf(FinalSlot[Foo])]
+  # value: [null]
+  ? [DeepFrozen.rangeSupersetOf(List[Foo])]
+  # value: [null]
+
+XXX try some spoofing guards
+XXX primitive union and intersections
+
 -- DeepFrozenness checks of various imports
 
   ? __auditedBy :DeepFrozen; null

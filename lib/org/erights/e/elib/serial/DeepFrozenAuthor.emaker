@@ -307,6 +307,39 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
       return specimen
     }
     
+    to rangeSupersetOf(guard) {
+      
+      # All the string tests below are so that we don't force the lazy-loading of those various guards (in case there's a loading dependency cycle) unless we have a guard specimen which might be one of them. Kludge, but AFAIK non-dangerous...
+      # All of this is a temporary mechanism anyway, to get guard-based auditing started. We need a more general way of accepting guards.
+      def t := guard.__getAllegedType().getFQName()
+      
+      if (guard == DeepFrozen) { return true }
+      if (guard == String) { return true } # XXX should be asking some built-in type-property-database
+      if (guard == Twine) { return true }
+      if (guard == any) { return false }
+      if (t.startOf("FinalSlot", 0) != -1) {
+        escape fail {
+          # XXX this should somehow be generalized to any guard of a Selfless type which completely guards its members' state components
+          def [valueGuard] := __makeFinalSlot.asType()."match__get/1"(guard, fail)
+          return DeepFrozen.rangeSupersetOf(valueGuard)
+        }
+      }
+      if (t.startOf("List", 0) != -1) {
+        escape fail {
+          # ditto
+          def [valueGuard] := List."match__get/1"(guard, fail)
+          return DeepFrozen.rangeSupersetOf(valueGuard)
+        }
+      }
+      if (t.startOf("rderedSpace", 0) != -1) {
+        if (guard == int) { return true } # late to try to avoid depending on ordered-region too soon
+        if (guard == float64) { return true }
+        if (guard == char) { return true }
+      }
+      # XXX should have a way to interrogate a primitive-type guard about whether its instances are DeepFrozen, or Selfless
+      return null
+    }
+    
     /** Audits as DeepFrozen, but does not throw an exception if the object is unacceptable. */
     to optionally() {
       return OptionallyDeepFrozen

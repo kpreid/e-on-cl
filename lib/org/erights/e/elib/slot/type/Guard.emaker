@@ -5,6 +5,7 @@ pragma.syntax("0.9")
 
 def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
 
+def Guard := 
 <import:org.cubik.cle.makeAdvisoryInterface>(
 # XXX what is a ValueGuardTemplate?
 /**
@@ -35,4 +36,7 @@ interface "org.erights.e.elib.slot.Guard" {
     
     /** XXX document this */
     to getTheTrivialValue() :any
+    
+    /** Optional interface. True if the other guard's coercion results are all possible coercion results of this guard; false if any are not; null if the answer is unknown. */
+    to rangeSupersetOf(other :Guard) :nullOk[boolean]
 })
