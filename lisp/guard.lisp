@@ -99,3 +99,39 @@
      (make-instance ',(class-name (class-of object))
                     :type-specifier ',(guard-to-type-specifier object))))
 
+;;; --- Same guard ---
+
+(defclass same-guard ()
+  ((allowed :initarg :allowed
+            :reader %same-guard-allowed)))
+(def-fqn same-guard "org.erights.e.elib.slot.Same$Same1")
+
+(def-vtable same-guard
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (or (eql auditor +selfless+)
+        (eql auditor +transparent-stamp+)))
+  (:|__optUncall| (this) (vector (e-import "org.erights.e.elib.slot.Same")
+                                 "get"
+                                 (vector (%same-guard-allowed this))))
+  (:|__printOn| (this (tw +the-text-writer-guard+))
+    ;; XXX use E-syntax printer for get expr
+    (e. tw |quote| (e-import "org.erights.e.elib.slot.Same"))
+    (e. tw |write| "[")
+    (e. tw |quote| (%same-guard-allowed this))
+    (e. tw |write| "]")
+    nil)
+  (:|getAllowed/0| '%same-guard-allowed)
+  (:|coerce| (this specimen ejector)
+    (setf specimen (ref-shorten specimen))
+    ;; XXX to be reviewed: does it make sense to have a samep version?
+    (if (same-yet-p specimen (%same-guard-allowed this))
+      specimen
+      (eject-or-ethrow ejector (to-condition 'simple-error "~A is not ~A" (e-quote specimen) (e-quote (%same-guard-allowed this)))))))
+
+(defobject +make-same-guard+ "org.cubik.cle.prim.makeSameGuard"
+    (:stamped +deep-frozen-stamp+
+     :stamped +standard-graph-exit-stamp+
+     :doc "This is the internal primitive maker -- import org.erights.e.elib.slot.Same instead.")
+  (:|asType| () (type-specifier-to-guard 'same-guard))
+  (:|run| (x) (make-instance 'same-guard :allowed x)))

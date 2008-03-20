@@ -1,0 +1,27 @@
+# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def SameAuthor(DeepFrozenStamp, makeSameGuard) {
+  def SameGuard := makeSameGuard.asType()
+
+  /** .. Note that these guards expose the object they test for! If using this to test against a private reference, do not expose it! */
+  def Same implements DeepFrozenStamp {
+    to __printOn(out :TextWriter) {
+      out.print("Same")
+    }
+  
+    # to asType() { return SameGuard }
+
+    to "match__get/1"(specimen, ejector) {
+      def ofKind := SameGuard.coerce(specimen, ejector)
+      return [ofKind.getAllowed()]
+    }
+
+    to get(allowed) {
+      return makeSameGuard(allowed)
+    }
+  }
+  return Same
+}

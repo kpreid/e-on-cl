@@ -313,6 +313,10 @@
     (:|makeBrand|
       (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
                 elib:+deep-frozen-stamp+))
+
+    (:|Same|
+      (efuncall (e-import "org.erights.e.elib.slot.SameAuthor") 
+                +deep-frozen-stamp+ e.elib::+make-same-guard+))
     
     (:|memoize|
       (efuncall (e-import "org.cubik.cle.memoizeAuthor")

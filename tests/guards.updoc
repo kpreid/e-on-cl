@@ -291,6 +291,48 @@ ValueGuard
   ? [ValueGuard, ValueGuard == Guard]
   # value: [Guard, true]
 
+Same
+
+  ? def Same :DeepFrozen := <elib:slot.Same>
+  # value: Same
+  
+  ? Same.__respondsTo("coerce", 2)
+  # value: false
+  
+  ? def S1 :DeepFrozen := Same[1.0]
+  # value: Same[1.0]
+  
+  ? S1 == Same[1.0]
+  # value: true
+  
+  ? S1.__optUncall()[0] == Same
+  # value: true
+  
+  ? E.call(E, "call", S1.__optUncall()) == S1
+  # value: true
+  
+  ? testGuardMany([0, 1, 1.0, Ref.broken(""), Ref.promise()[0],
+  >                def _ { to __conformTo(_) :any { return 1 } }
+  >               ], S1)
+  # value: [1.0]
+  
+  quoting check
+  ? Same["a"]
+  # value: Same["a"]
+  
+  ? S1.getAllowed()
+  # value: 1.0
+  
+  ? pragma.enable("call-pattern")
+  ? def Same[v] := S1; v
+  # value: 1.0
+
+  ? def Same[v] := any[1.0]; v
+  # problem: the "org.erights.e.elib.slot.makeUnionGuard$makeUnionGuard$unionGuard" any[1.0] doesn't coerce to a Same1
+  
+  ? def Same[v] := def _ { to __conformTo(_) :any { return S1 } }; v
+  # value: 1.0
+
 Union guards
 
   ? any[int, float64]
