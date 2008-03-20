@@ -247,7 +247,9 @@ XXX produce a nice error for this?
 #             IgnoreP.
 #             MethodObject
 #               null
-#               []
+#               Auditors
+#                 null
+#                 []
 #               []
 #               []
 
@@ -260,7 +262,9 @@ XXX produce a nice error for this?
 #             IgnoreP.
 #             MethodObject
 #               null
-#               []
+#               Auditors
+#                 null
+#                 []
 #               []
 #               []
 
@@ -297,7 +301,9 @@ XXX source position
 #           FunctionObject
 #             []
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             false
 
@@ -311,7 +317,9 @@ XXX source position
 #             null
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             [] ETo
 #               null
 #               b
@@ -332,7 +340,9 @@ XXX source position
 #           FunctionObject
 #             []
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             true
 
@@ -346,7 +356,9 @@ XXX source position
 #             null
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             [] ETo
 #               null
 #               b
@@ -380,7 +392,9 @@ XXX source position
 #           FunctionObject
 #             []
 #             NounE. void
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             false
 
@@ -396,7 +410,9 @@ XXX source position
 #           FunctionObject
 #             []
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             true
 
@@ -418,7 +434,9 @@ XXX test resulting pragma state directly?
 #           FunctionObject
 #             []
 #             NounE. b
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             true
 
@@ -434,7 +452,9 @@ XXX test resulting pragma state directly?
 #           FunctionObject
 #             []
 #             NounE. b
-#             [] NounE. c
+#             Auditors
+#               null
+#               [] NounE. c
 #             NullE.
 #             true
 
@@ -449,7 +469,9 @@ Testing discrimination between functions and call patterns:
 #           FunctionObject
 #             []
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             true
 
@@ -462,7 +484,9 @@ Testing discrimination between functions and call patterns:
 #           FunctionObject
 #             []
 #             null
-#             [] NounE. b
+#             Auditors
+#               null
+#               [] NounE. b
 #             NullE.
 #             true
 
@@ -475,7 +499,9 @@ Testing discrimination between functions and call patterns:
 #           FunctionObject
 #             []
 #             NounE. b
-#             []
+#             Auditors
+#               null
+#               []
 #             NullE.
 #             true
 
@@ -547,7 +573,9 @@ Parentheses disable modPow form
 #             IgnoreP.
 #             MethodObject
 #               null
-#               []
+#               Auditors
+#                 null
+#                 []
 #               []
 #               []
 #           NounE. a
@@ -649,7 +677,9 @@ one-method-object
 #             b
 #             []
 #             NounE. c
-#             []
+#             Auditors
+#               null
+#               []
 #             NounE. d
 #             true
 
@@ -661,7 +691,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             []
 #             []
 
@@ -671,7 +703,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             []
 #             []
 
@@ -681,7 +715,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             []
 #             []
 
@@ -691,7 +727,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             []
 #             []
 
@@ -701,7 +739,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             [] EMethod
 #               null
 #               b
@@ -716,7 +756,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             [] EMethod
 #               
 #               b
@@ -731,7 +773,9 @@ one-method-object
 #           IgnoreP.
 #           MethodObject
 #             null
-#             []
+#             Auditors
+#               null
+#               []
 #             [] EMethod
 #               a
 #               b

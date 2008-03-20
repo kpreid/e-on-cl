@@ -216,6 +216,8 @@
 (defun noun-to-resolver-noun (noun)
   (make-instance '|NounExpr| :elements (list (concatenate 'string (e. noun |getName|) "__Resolver"))))
 
+(defglobal +no-auditors+ (mn '|Auditors| nil #()))
+
 ;;; --- ---
 
 (defgeneric expand-accum-body (body accum-var))
@@ -506,7 +508,7 @@
             (mn '|ObjectExpr|
               nil
               (mn '|IgnorePattern|)
-              #()
+              +no-auditors+
               (mn '|EScript| 
                 (vector (mn '|EMethod| 
                   nil "run" (vector (mn '|FinalPattern| key-var nil)
@@ -554,7 +556,7 @@
   (mn '|ObjectExpr|
       nil
       (mn '|IgnorePattern|)
-      #()
+      +no-auditors+
       (mn '|EScript| (vector (mn '|EMethod| nil "run" |patterns| nil |body|)) 
                              #())))
 
@@ -779,7 +781,7 @@
 (defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil doc-comment)
                                      (|name| t |Pattern|)
                                      (|parent| t (or null |EExpr|))
-                                     (|auditors| t (e-list |EExpr|))
+                                     (|auditors| t |Auditors|)
                                      (|script| t e.elang::|EScriptoid|))
                                     ()
   (etypecase |name|
@@ -953,7 +955,7 @@
   (mn '|ObjectExpr|
       nil
       (mn '|IgnorePattern|)
-      #()
+      +no-auditors+
       (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
                              #())))
 
@@ -1060,7 +1062,7 @@
   (let ((resolution (gennoun "resolution")))
     (mn '|ObjectHeadExpr|
       nil |name|
-      (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard| #()
+      (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard| +no-auditors+
         (mn '|TryExpr| 
           (mn '|SeqExpr|
             (mn '|DefineExpr|
@@ -1087,7 +1089,7 @@
       (mn '|ObjectExpr|
         nil
         (mn '|IgnorePattern|)
-        #()
+        +no-auditors+
         (mn '|EScript| 
           (vector (mn '|EMethod| 
             nil "run" #() (mn '|NounExpr| "boolean")
@@ -1301,7 +1303,7 @@
                                 (list (mn '|MapPatternRest| |tailPatt|)))))))
 
 (defemacro |MethodObject| (|ObjectTail|) ((|parent| t (or null |EExpr|))
-                                          (|auditors| t (e-list |EExpr|))
+                                          (|auditors| t |Auditors|)
                                           (|methods| t (e-list |EMethodoid|))
                                           (|matchers| t (e-list |EMatcher|)))
                                          ()
@@ -1311,7 +1313,7 @@
     ((|verb| nil string)
      (|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
-     (|auditors| t (e-list |EExpr|))
+     (|auditors| t |Auditors|)
      (|body| t |EExpr|)
      (|isEasyReturn| nil e-boolean))
     (&whole node)
@@ -1325,7 +1327,7 @@
 (defemacro |FunctionObject| (|OneMethodObject|) 
     ((|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
-     (|auditors| t (e-list |EExpr|))
+     (|auditors| t |Auditors|)
      (|body| t |EExpr|)
      (|isEasyReturn| nil e-boolean))
     (&whole node)
@@ -1365,7 +1367,7 @@
         (vector (mn '|ETo| doc (e. node |getVerb|) kernel-patterns kernel-guard |body| |isEasyReturn|))
         #()))))
 
-(defemacro |PlumbingObject| (|ObjectTail|) ((|auditors| t (e-list |EExpr|))
+(defemacro |PlumbingObject| (|ObjectTail|) ((|auditors| t |Auditors|)
                                             (|matcher| t |EMatcher|))
                                            ()
   (vector nil |auditors| |matcher|))

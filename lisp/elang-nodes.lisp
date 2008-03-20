@@ -199,7 +199,7 @@
 (define-node-class |ObjectExpr|      (|EExpr|)
   ((:|docComment| nil doc-comment)
    (:|pattern| t |Pattern|) 
-   (:|auditorExprs| t (e-list |EExpr|)) 
+   (:|auditors| t |Auditors|) 
    (:|script| t |EScriptoid|)))
 (define-node-class |SeqExpr|         (|EExpr|)
   ((:|subs| t (e-list |EExpr|)))
@@ -214,6 +214,10 @@
    (:|patterns| t (e-list |Pattern|))
    (:|optResultGuard| t (or null |EExpr|))
    (:|body| t |EExpr|)))
+
+(define-node-class |Auditors|         (|ENode|)
+  ((:|as| t (or null |EExpr|))
+   (:|implements| t (e-list |EExpr|))))
 
 (defclass |EScriptoid| (|ENode|) ())
 (define-node-class |EScript|         (|EScriptoid|)
@@ -545,7 +549,19 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
               :doc-comment doc-comment
               :params (map 'vector #'pattern-to-param-desc patterns)
               :opt-result-guard (opt-guard-expr-to-safe-opt-guard opt-result-guard)))))))
-     
+
+(defun unpack-auditors (auditors)
+  (assert (typep auditors '|Auditors|))
+  (destructuring-bind (opt-as implements) (node-visitor-arguments auditors)
+    (if opt-as
+      (values (concatenate 'vector (list opt-as) implements)
+              t)
+      (values implements
+              nil))))
+
+(def-vtable |Auditors|
+  (:|flatten| (this) (values (unpack-auditors this))))
+
 ; --- analysis ---
 
 ; XXX pattern-opt-noun and pattern-to-param-desc are looking similar - perhaps pattern-opt-noun should be defined as a wrapper
@@ -895,7 +911,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |ObjectExpr|
   (seq :|pattern|
-       (hide (flatten :|auditorExprs|))
+       (hide :|auditors|)
        (script :|script|)))
 
 (def-scope-rule |SeqExpr|
@@ -934,6 +950,10 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (hide (seq (flatten :|patterns|)
              :|optResultGuard|
              :|body|)))
+
+(def-scope-rule |Auditors|
+  (seq :|as|
+       (flatten :|implements|)))
 
 (def-scope-rule |EScript|
   (seq (flatten :|methods|)
@@ -1088,8 +1108,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (this-reject-usage t   :|optEjectorExpr| :|pattern|))
 
 (define-kernel-e-check-method |ObjectExpr|
-  (this-reject-usage nil :|auditorExprs| :|script|)
-  (this-reject-usage t   :|pattern|      :|auditorExprs|)
+  (this-reject-usage nil :|auditors| :|script|)
+  (this-reject-usage t   :|pattern|  :|auditors|)
   (check-property-types
     (:|script| (or |EScript| |EMatcher|))))
 

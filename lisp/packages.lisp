@@ -402,6 +402,7 @@
     :|.DollarHole.|
     
     :|AssignExpr|
+    :|Auditors|
     :|CallExpr|
     :|CatchExpr|
     :|DefineExpr|
@@ -473,7 +474,7 @@
     :pattern-opt-noun
     :pattern-to-param-desc
     
-    :slot-symbol-var-name ;; XXX stale
+    :unpack-auditors
     ))
 
 

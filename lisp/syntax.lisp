@@ -378,18 +378,13 @@ XXX make precedence values available as constants"
           (:|visitObjectExpr| (opt-original 
                                (doc-comment 'doc-comment) 
                                pattern
-                               (auditors 'vector)
+                               auditors
                                script)
             (declare (ignore opt-original))
             (e. +e-printer+ |printDocComment| tw doc-comment)
             (e. tw |print| "def ")
             (subprint pattern nil)
-            (when (> (length auditors) 0)
-              (e. tw |print| " implements ")
-              (loop for sep = "" then ", "
-                    for sub across (e-coerce auditors 'vector)
-                    do (e. tw |print| sep)
-                       (subprint sub nil)))
+            (subprint auditors nil)
             (e. tw |print| " ")
             (subprint script nil))
           
@@ -406,6 +401,19 @@ XXX make precedence values available as constants"
             (precedential (+precedence-slot-expr+)
               (e. tw |print| "&")
               (subprint noun +precedence-in-slot-expr+)))
+          
+          (:|visitAuditors| (opt-original (opt-as '(or null |EExpr|))
+                                          (implements 'vector))
+            (declare (ignore opt-original))
+            (when opt-as
+              (e. tw |write| " as ")
+              (subprint opt-as nil))
+            (when (plusp (length implements))
+              (e. tw |write| " implements ")
+              (loop for sep = "" then ", "
+                    for sub across implements
+                    do (e. tw |print| sep)
+                       (subprint sub nil))))
           
           (:|visitEScript| (opt-original (methods 'vector) (matchers 'vector))
             (declare (ignore opt-original))

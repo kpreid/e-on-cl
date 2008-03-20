@@ -227,7 +227,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
                    _ & !(_maps(p.staticScope().outNames(), noun)) }
       }
 
-      def precedingExprs := [objectExpr.getPattern()] + objectExpr.getAuditorExprs()
+      def precedingExprs := [objectExpr.getPattern(), objectExpr.getAuditors()]
       
       # The matcher is irrelevant provided that our method exists
       if (objectExpr.getScript() =~ script :Really[EScript]) {
@@ -242,7 +242,7 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
             
             def optResultGuard := methd.getOptResultGuard()
             if (optResultGuard != null) {
-              requireDF(expressionWillHaveValue(optResultGuard, &any, objectExpr.getAuditorExprs()), 
+              requireDF(expressionWillHaveValue(optResultGuard, &any, [objectExpr.getAuditors()]), 
                 fn{label + ": __optSealedDispatch result guard is not any"})
             }
             

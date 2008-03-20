@@ -21,6 +21,13 @@ auditors actually invoked
   ? timesCalled
   # value: 1
   
+  ? def auditSample_as as approver {
+  > }
+  # value: <auditSample_as>
+  
+  ? timesCalled
+  # value: 2
+  
 objectExpr
 
   ? def exprTest {
@@ -52,6 +59,9 @@ __auditedBy
   ? __auditedBy(approver, auditSample)
   # value: true
 
+  ? __auditedBy(approver, auditSample_as)
+  # value: true
+
   ? __auditedBy(x1, exprTest)
   # value: false
 
@@ -70,6 +80,9 @@ auditor that returns false
   # value: <noop>
   
   ? __auditedBy(noop, def x5 implements noop {})
+  # value: false
+
+  ? __auditedBy(noop, def x5_as as noop {})
   # value: false
 
 auditor that returns funny value

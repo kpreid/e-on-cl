@@ -343,7 +343,7 @@ ObjectExpr
   # value: 13
   
   ? { def x implements x {} }
-  # problem: <misleading-actual-usage-error: a ObjectExpr's auditorExprs ([e`x`]) may not use definitions from its pattern (epatt`x`)>
+  # problem: <misleading-actual-usage-error: a ObjectExpr's auditors (e??` implements x`) may not use definitions from its pattern (epatt`x`)>
   
   
  Apparent usage of 'implements' in the script is rejected (this test once tested that it was actual usage and allowed)
@@ -356,7 +356,7 @@ ObjectExpr
   #                      null
   #                  }
   #              }
-  #          }`) may not appear to use definitions from its auditorExprs ([e`def x {
+  #          }`) may not appear to use definitions from its auditors (e??` implements def x {
   #              
   #              method audit(_) :any {
   #                  escape __return {
@@ -364,7 +364,11 @@ ObjectExpr
   #                      null
   #                  }
   #              }
-  #          }`])>
+  #          }`)>
+
+ Scope of as and implements
+  ? def foo as (def x {to audit(_) {return true}}) implements x {}
+  # value: <foo>
   
 Matcher
 

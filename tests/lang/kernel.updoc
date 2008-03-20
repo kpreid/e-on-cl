@@ -267,8 +267,15 @@ ObjectExpr, EScript
 
   ? def makeEMatcher := <import:org.erights.e.elang.evm.makeEMatcher>
   # value: <makeEMatcher>
+  
+  ? def makeAuditors := <import:org.erights.e.elang.evm.makeAuditors>
+  # value: <makeAuditors>
 
-  ? def emptyObject := makeObjectExpr(null, "foo", makeFinalPattern(null, makeNounExpr(null, "bar", null), null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
+  ? def emptyAuditors := makeAuditors(null, null, [], null)
+  # value: e??``
+  XXX write tests for Auditors
+
+  ? def emptyObject := makeObjectExpr(null, "foo", makeFinalPattern(null, makeNounExpr(null, "bar", null), null, null), emptyAuditors, def emptyScript := makeEScript(null, [], [], null), null)
   # value: e`/** foo */
   #        def bar {
   #        }`
@@ -279,8 +286,8 @@ ObjectExpr, EScript
   ? emptyObject.getPattern()
   # value: epatt`bar`
   
-  ? emptyObject.getAuditorExprs()
-  # value: []
+  ? emptyObject.getAuditors()
+  # value: e??``
   
   ? emptyObject.getScript()
   # value: e??`{
@@ -293,7 +300,7 @@ ObjectExpr, EScript
   # value: <[] := [] =~ ["bar"] + var []>
   
   Implements expression is not visible
-  ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null)], emptyScript, null).staticScope()
+  ? makeObjectExpr(null, "foo", makeIgnorePattern(null, null), makeAuditors(null, null, [makeDefineExpr(null, makeFinalPattern(null, nounA, null, null), null, nounB, null)], null), emptyScript, null).staticScope()
   # value: <[] := ["b"] =~ [] + var []>
   
   ? def thunkScript := makeEScript(null, [makeEMethod(null, null, "run", [], null, makeNounExpr(null, "foo", null), null)], [], null)
@@ -308,7 +315,7 @@ ObjectExpr, EScript
   ? thunkScript.staticScope()
   # value: <[] := ["foo"] =~ [] + var []>
   
-  ? def fooThunk := makeObjectExpr(null, null, makeFinalPattern(null, makeNounExpr(null, "fooThunk", null), null, null), [], thunkScript, null)
+  ? def fooThunk := makeObjectExpr(null, null, makeFinalPattern(null, makeNounExpr(null, "fooThunk", null), null, null), emptyAuditors, thunkScript, null)
   # value: e`def fooThunk {
   #            
   #            method run() {
@@ -326,12 +333,12 @@ ObjectExpr, EScript
   # value: true
 
   printing implements
-  ? makeObjectExpr(null, null, makeFinalPattern(null, makeNounExpr(null, "audited", null), null, null), [makeNounExpr(null, "auditor", null)], emptyScript, null)
+  ? makeObjectExpr(null, null, makeFinalPattern(null, makeNounExpr(null, "audited", null), null, null), makeAuditors(null, null, [makeNounExpr(null, "auditor", null)], null), emptyScript, null)
   # value: e`def audited implements auditor {
   #        }`
   
   printing _
-  ? makeObjectExpr(null, null, makeIgnorePattern(null, null), [], def emptyScript := makeEScript(null, [], [], null), null)
+  ? makeObjectExpr(null, null, makeIgnorePattern(null, null), emptyAuditors, def emptyScript := makeEScript(null, [], [], null), null)
   # value: e`def _ {
   #        }`
 
@@ -367,7 +374,7 @@ ObjectExpr, EScript
   #        }`
   
   Plumbing print:
-  ? makeObjectExpr(null, null, makeIgnorePattern(null, null), [], matcher, null)
+  ? makeObjectExpr(null, null, makeIgnorePattern(null, null), emptyAuditors, matcher, null)
   # value: e`def _ match _ {
   #            1
   #        }`
@@ -665,19 +672,18 @@ ObjectExpr
   > }`.asKernelE().staticScope()
   # value: <[] := ["g", "e", "d", "b", "a"] =~ ["x"] + var []>
   
-  ? e`def x implements a, b {}`.asKernelE().walkScopes(makeReporter())
+  ? e`def x as a implements b {}`.asKernelE().walkScopes(makeReporter())
   # stdout: 
   #         <1>.withSubnode["pattern", epatt`x`] => <2>
   #         <2>.withHide(<...lisp$_>) => f(<3>)
-  #             <3>.withSubnodeIndex["auditorExprs", 0, e`a`] => <4>
-  #             <4>.withSubnodeIndex["auditorExprs", 1, e`b`] => <5>
-  #         => <5> => <6>
-  #         <6>.withScript(<...lisp$_>) => f(<7>)
-  #             <7>.withSubnode["script", e??`{
-  #             }`] => <8>
-  #         => <8> => <9>
+  #             <3>.withSubnode["auditors", e??` as a implements b`] => <4>
+  #         => <4> => <5>
+  #         <5>.withScript(<...lisp$_>) => f(<6>)
+  #             <6>.withSubnode["script", e??`{
+  #             }`] => <7>
+  #         => <7> => <8>
   
-  # value: <9>
+  # value: <8>
   
 Plumbing ObjectExpr
 
@@ -994,9 +1000,11 @@ These tests check the arguments which nodes give to visitors.
   #             NounExpr e`obj1`...
   #               obj1
   #             null
-  #           _list null...
-  #             NounExpr e`auditor`...
-  #               auditor
+  #           Auditors e??` implements auditor`...
+  #             null
+  #             _list null...
+  #               NounExpr e`auditor`...
+  #                 auditor
   #           EScript e??`{...
   #             _list null...
   #               EMethod e??`...
@@ -1028,7 +1036,9 @@ These tests check the arguments which nodes give to visitors.
   #             NounExpr e`obj2`...
   #               obj2
   #             null
-  #           _list null...
+  #           Auditors e??``...
+  #             null
+  #             _list null...
   #           EMatcher e??`match plumbingPatt {...
   #             FinalPattern epatt`plumbingPatt`...
   #               NounExpr e`plumbingPatt`...

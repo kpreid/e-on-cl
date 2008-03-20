@@ -379,46 +379,70 @@
         ;; if we reach here, the ejector was used
         ,remaining-code))))
 
-(define-sequence-expr |ObjectExpr| (layout result doc-comment pattern auditor-exprs script
-    &aux (auditor-vars (loop for nil across auditor-exprs collect (gensym "AUDITOR")))
-         (object-var (gensym (or (pattern-opt-noun pattern) "G")))
+(defgeneric object-binding (pattern layout object-var opt-as-auditor-var))
+
+(defmethod object-binding ((pattern |IgnorePattern|) layout object-var opt-as-auditor-var)
+  (values '() layout))
+
+(defmethod object-binding ((pattern |FinalPattern|) layout object-var opt-as-auditor-var)
+  (destructuring-bind (noun-expr opt-guard) (node-visitor-arguments pattern)
+    (let ((noun (e. noun-expr |getName|)))
+      (assert (null opt-guard))
+      (values
+        '()
+        (scope-layout-bind layout noun
+          (if #+#:XXX-guard-based-auditing opt-as-auditor-var
+              #-#:XXX-guard-based-auditing nil
+            (make-instance 'direct-def-binding :symbol object-var
+                                               :noun noun
+                                               :guard-var opt-as-auditor-var)
+            (make-instance 'direct-def-binding :symbol object-var
+                                               :noun noun)))))))
+
+(define-sequence-expr |ObjectExpr| (layout result doc-comment pattern auditors script
+    &aux (object-var (gensym (or (pattern-opt-noun pattern) "G")))
          (needs-self-reference (or (e.elang::usesp pattern script))))
-  (assert (or (and (typep pattern '|FinalPattern|)
-                   (null (e. pattern |getOptGuardExpr|)))
-              (typep pattern '|IgnorePattern|)) 
-    (pattern)
-    "Non-final object-naming patterns are not yet supported.")
-  (assert (not (e.elang::usesp pattern auditor-exprs)))
-  ;; note that each of these reassigns the layout variable
-  (let* ((pattern-seq (updating-sequence-patt pattern layout object-var nil))
-         (auditors-seq 
-          (let ((layout layout))
-            ;; auditor exprs are disallowed from mentioning the object
-            (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
-                  for auditor-var-cell on auditor-vars
-                  append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (every #'inlinable auditor-expr-tail)))))
-         (object-form (object-form +seq-object-generators+
-                                   layout 
-                                   (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditor-exprs script))
-                                   auditor-vars)))
-    (values
-      (if needs-self-reference
-        (append
-          ;; XXX assuming that final patterns keep the specimen var (rather than taking its value). todo: instead of using the regular compiler for these patterns, make our own binding types which understand the reassignment. this will also be usable to fix the object name being available (with the initial bogus value) in auditing environments.
-          `((,object-var 'the-compiler-is-broken-if-you-have-this))
-          pattern-seq
-          auditors-seq
-          `((,result
-              (setf ,object-var
-                    ,object-form))))
-        ;; if the object doesn't refer to itself, we don't need any assignment gimmicks
-        ;; ASSUMPTION: the auditors cannot reference the pattern (checked by assert above)
-        ;; ASSUMPTION: reordering is OK, because side effects are only within one sequence (the object-form's execution of auditors)
-        (append auditors-seq
-                `((,object-var ,object-form))
-                pattern-seq
-                `((,result ,object-var))))
-      layout)))
+  (multiple-value-bind (auditor-exprs as-p) (unpack-auditors auditors)
+    (let ((auditor-vars (loop for nil across auditor-exprs collect (gensym "AUDITOR"))))
+      (assert (not (e.elang::usesp pattern auditor-exprs)))
+      (let* ((pattern-seq 
+               (multiple-value-bind (c l) 
+                   (object-binding pattern layout object-var 
+                                   (when as-p (elt auditor-vars 0)))
+                 (setf layout l)
+                 c))
+             (auditors-seq 
+              (let ((layout layout))
+                ;; auditor exprs are disallowed from mentioning the object.
+                ;; if first expr is an 'as' then it must not be inlined since
+                ;; its var is the binding's guard var.
+                (loop for (auditor-expr . auditor-expr-tail) on (coerce auditor-exprs 'list)
+                      for auditor-var-cell on auditor-vars
+                      for inline-ok = (not as-p) then t
+                      append (updating-sequence-expr auditor-expr layout (car auditor-var-cell) :may-inline (and inline-ok (every #'inlinable auditor-expr-tail))))))
+             (object-form (object-form +seq-object-generators+
+                                       layout 
+                                       (make-instance '|ObjectExpr| :elements (list doc-comment pattern auditors script))
+                                       auditor-vars)))
+        (values
+          ;; ASSUMPTION: the auditors cannot reference the pattern (checked by assert above (and Kernel-E rules?)). This allows us to put the pattern after the auditors, which is necessary for the 'as' guard reference and for the non-self-referencing optimized case
+          (if needs-self-reference
+            ;; if the object refers to itself, we need to establish its binding before evaluating it
+            (append
+              `((,object-var 'the-compiler-is-broken-if-you-have-this))
+              auditors-seq
+              pattern-seq
+              `((,result
+                  (setf ,object-var
+                        ,object-form))))
+            ;; if the object doesn't refer to itself, we don't need any assignment gimmicks
+            ;; ASSUMPTION: reordering is OK, because side effects are only within one sequence (the object-form's execution of auditors)
+            (append auditors-seq
+                    `((,object-var ,object-form))
+                    pattern-seq
+                    `((,result ,object-var))))
+          layout))))
+  )
 
 (define-sequence-expr |SeqExpr| (layout result &rest subs)
   (values
