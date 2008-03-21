@@ -67,6 +67,8 @@
             :depends-on ("ref" "elib" "vat"))
      (:file "guard"
             :depends-on ("elib" "sugar" "type-desc-early" "miranda"))
+     (:file "slots"
+            :depends-on ("vat" "sugar" "elib"))
      (:file "elib-guts" 
             ; the non-load-order-depended-on portion of elib
             :depends-on ("elib" "sugar" "queues"))
@@ -97,14 +99,16 @@
             :depends-on ("elib" "sugar"))
      (:file "knot-base"
             :depends-on ("elib" "sugar"
-                         "elib-values" #|making tracer does e-print, needing string vtable to be established|#))
+                         "elib-values" #|making tracer does e-print, needing string vtable to be established|#
+                         "slots" #| for e-simple-slot |#))
      (:file "knot"
             :depends-on ("knot-base" "extern" "tables2" "comm" "sugar"
                          "elib-guts" #| XXX determine the necessity of this - violates elib-guts's description |#
                          "elang-nodes" #| +the-make-static-scope+ |#
                          "print" #| constructing global tracers |#
                          "random" #| entropy |#
-                         "proxy" #| +the-make-proxy+ |#))
+                         "proxy" #| +the-make-proxy+ |#
+                         "slots" #| slot makers |#))
      (:file "elang-nodes"
             :depends-on ("elib" 
                          "util"
@@ -119,7 +123,7 @@
             :depends-on ("packages"
                          "elang-nodes"
                          "sugar"
-                         "elib-guts" #| needs e-simple-slot class definition - XXX violates elib-guts's description |#))
+                         "slots"))
      (:file "compiler-seq"
             :depends-on ("compiler-base"))
      (:file "compiler-entry"
