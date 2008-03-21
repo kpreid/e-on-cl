@@ -18,6 +18,25 @@
   (:|run| (value)
     (make-instance 'e-simple-slot :value value)))
 
+(defobject +the-make-coerced-slot+ "org.erights.e.elib.slot.makeCoercedSlot"
+    (:stamped +deep-frozen-stamp+
+     :stamped +pass-by-construction+)
+  (:|__optUncall| ()
+    (import-uncall "org.erights.e.elib.slot.makeCoercedSlot"))
+  (:|asType| () (type-specifier-to-guard 'coerced-slot))
+  (:|run| (guard specimen ejector)
+    (make-instance 'coerced-slot :guard guard
+                                 :specimen specimen
+                                 :ejector ejector))
+  (:|attempt| (guard specimen)
+    (escape-bind (ej)
+      (make-instance 'coerced-slot :guard guard
+                                   :specimen specimen
+                                   :ejector ej)
+      (problem)
+        (declare (ignore problem))
+        (e. +the-make-simple-slot+ |run| specimen))))
+
 (defobject +the-make-var-slot+ "org.erights.e.elib.slot.makeVarSlot"
     (:stamped +deep-frozen-stamp+
      :stamped +pass-by-construction+)
@@ -32,11 +51,23 @@
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeGuardedSlot"))
   (:|asType| () (type-specifier-to-guard 'e-guarded-slot))
-  (:|run| (guard value opt-ejector)
-    (make-instance 'e-guarded-slot :value value
+  (:|run| (guard value ejector)
+    (make-instance 'e-guarded-slot :specimen value
                                    :guard guard
-                                   :opt-ejector opt-ejector)))
-    
+                                   :ejector ejector)))
+
+(defclass initially-coercing-slot () ())
+
+(defmethod shared-initialize :around ((slot initially-coercing-slot) slot-names &rest initargs &key (specimen nil specimen-supplied) guard (ejector +the-thrower+) &allow-other-keys)
+  "If the initargs include :specimen, the result of coercing it is supplied as :value."
+  (declare (ignore slot-names))
+  (if specimen-supplied
+    (apply #'call-next-method slot slot-names
+      :value (e. guard |coerce| specimen ejector)
+      initargs)
+    (call-next-method)))
+
+
 (defclass e-simple-slot () 
   ((value :initarg :value :reader simple-slot-value))
   (:documentation "A normal immutable slot."))
@@ -72,6 +103,49 @@
 
 (defmethod make-load-form ((a e-simple-slot) &optional environment)
   (make-load-form-saving-slots a :environment environment))  
+
+
+(defclass coerced-slot (initially-coercing-slot) 
+  ((value :initarg :value :reader coerced-slot-value)
+   (guard :initarg :guard :reader coerced-slot-guard)))
+
+(defmethod print-object ((slot coerced-slot) stream)
+  ; xxx make readable under read-eval?
+  (print-unreadable-object (slot stream :type nil :identity nil)
+    (format stream "& ~W :~W" (coerced-slot-value slot)
+                              (coerced-slot-guard slot))))
+
+(def-vtable coerced-slot
+  (audited-by-magic-verb (this auditor)
+    (declare (ignore this))
+    (or (eql auditor +pass-by-construction+)))
+  (:|__optUncall| (this)
+    `#(,+the-make-coerced-slot+ "attempt" #(,(coerced-slot-guard this) ,(coerced-slot-value this))))
+  (:|__printOn| (this (tw +the-text-writer-guard+))
+    (e. tw |write| "<& ")
+    (e. tw |quote| (coerced-slot-value this))
+    (e. tw |write| " :")
+    (e. tw |quote| (coerced-slot-guard this))
+    (e. tw |write| ">")
+    nil)
+  (:|get| (this)
+    "Returns the constant value of this slot."
+    (coerced-slot-value this))
+  (:|getGuard| (this)
+    "Returns the guard which the value of this slot is guaranteed to have passed."
+    (coerced-slot-guard this))
+  (:|put| (this new-value)
+    "Always fails."
+    (declare (ignore new-value))
+    (error "not an assignable slot: ~A" (e-quote this)))
+  (:|isFinal| (this)
+    "Returns true."
+    (declare (ignore this))
+    +e-true+))
+
+(defmethod make-load-form ((a coerced-slot) &optional environment)
+  (make-load-form-saving-slots a :environment environment))  
+
 
 (defclass base-closure-slot (vat-checking)
   ((getter :initarg :getter
@@ -118,17 +192,8 @@
   (print-unreadable-object (slot stream :type nil :identity nil)
     (format stream "var & ~W" (e. slot |get|))))
 
-(defclass e-guarded-slot (base-closure-slot) 
+(defclass e-guarded-slot (initially-coercing-slot base-closure-slot)
   ((guard :initarg :guard :reader guarded-slot-guard)))
-
-(defmethod shared-initialize :around ((slot e-guarded-slot) slot-names &rest initargs &key (value nil value-supplied) guard opt-ejector &allow-other-keys)
-  "if this slot is initialized with a value, it is coerced; if initialized with a getter and setter, it is assumed to be correct"
-  (declare (ignore slot-names))
-  (if value-supplied
-    (apply #'call-next-method slot slot-names
-      :value (e. guard |coerce| value opt-ejector)
-      initargs)
-    (call-next-method)))
 
 (def-vtable e-guarded-slot
   (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
@@ -155,6 +220,7 @@
 
 ;; XXX this is duplicated with information in the maker functions
 (def-fqn e-simple-slot  "org.erights.e.elib.slot.finalSlot")
+(def-fqn coerced-slot   "org.erights.e.elib.slot.coercedSlot")
 (def-fqn e-var-slot     "org.erights.e.elib.slot.varSlot")
 (def-fqn e-guarded-slot "org.erights.e.elib.slot.guardedSlot")
 

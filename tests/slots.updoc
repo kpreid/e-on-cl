@@ -101,3 +101,49 @@ Guarded
   ? v
   # value: <var 2 :int>
 
+Coerced
+
+A CoercedSlot is like a FinalSlot in that it has a single unchanging value; it is like a VarSlot in that it has a guard and guarantees that the value passed the guard.
+
+  ? def makeCoercedSlot :DeepFrozen := <eslot:makeCoercedSlot>
+  # value: <makeCoercedSlot>
+
+  ? def CoercedSlot := makeCoercedSlot.asType()
+  # value: CoercedSlot
+  
+  ? 1 :CoercedSlot
+  # problem: the int 1 doesn't coerce to a CoercedSlot
+  
+  No parameterization yet
+  ? CoercedSlot[int]
+  # problem: no such method: org.cubik.cle.native.e.elib.cl-type-guard#get/1
+  
+  ? makeCoercedSlot(int, null, def _(p) :any { print(p); return [p] })
+  # stdout: problem: the Null null doesn't coerce to an int
+  
+  # problem: optEjector <__main$_> returned: [problem: the Null null doesn't coerce to an int]
+
+  ? def v :CoercedSlot := makeCoercedSlot(int, 1, null)
+  # value: <& 1 :int>
+  
+  ? v.isFinal()
+  # value: true
+  
+  ? v.getGuard()
+  # value: int
+  
+  ? v == makeCoercedSlot(int, 1, null)
+  # value: false
+  -- could be true, but not implemented -- need selectively-transparent selflessness
+  
+  ? v.__optUncall()
+  # value: [<makeCoercedSlot>, "attempt", [int, 1]]
+  
+  ? makeCoercedSlot.attempt(int, 1)
+  # value: <& 1 :int>
+  
+  ? makeCoercedSlot.attempt(float64, 1)
+  # value: <& 1.0 :float64>
+  
+  ? [makeCoercedSlot.attempt(String, 1) =~ failed :FinalSlot, failed]
+  # value: [true, <& 1>]

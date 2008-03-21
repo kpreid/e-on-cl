@@ -158,6 +158,7 @@
     :e-guarded-slot
     :native-e-slot
     :+the-make-simple-slot+
+    :+the-make-coerced-slot+
     :+the-make-var-slot+
     :+the-make-guarded-slot+
     

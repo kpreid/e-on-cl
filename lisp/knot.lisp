@@ -258,6 +258,7 @@
     ;; simple makers
     (:|getCharacter|     +the-get-character+)
     (:|makeArray|        e.elib.tables:+the-make-array+)
+    (:|makeCoercedSlot|  +the-make-coerced-slot+)
     (:|makeConstList|    +the-make-list+)
     (:|makeFinalSlot|    +the-make-simple-slot+)
     (:|makeFlexMap|      elib:+the-make-flex-map+)
@@ -617,6 +618,7 @@
 
         ; --- data constructors (shared) ---
         ("__makeFinalSlot"     ,elib:+the-make-simple-slot+)
+        ("__makeCoercedSlot"   ,elib:+the-make-coerced-slot+)
         ("__makeVarSlot"       ,elib:+the-make-var-slot+)
         ("__makeGuardedSlot"   ,elib:+the-make-guarded-slot+)
         ("__makeInt"           ,elib:+the-make-int+)
