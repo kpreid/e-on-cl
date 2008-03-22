@@ -20,9 +20,16 @@
         (funcall target 'e.elib:selfish-hash-magic-verb))
       (sxhash target)))
 
-(declaim (inline selflessp transparentp))
-(defun transparentp (a)
-  (approvedp +transparent-stamp+ a))
+(declaim (inline selflessp transparentp semitransparentp spread))
+
+(defun spread (portrayal)
+  "assumes a properly formed portrayal"
+  (e-coercef portrayal 'vector)
+  ;; XXX should kill the vat in the event of a malformed portrayal
+  (concatenate 'vector (list (aref portrayal 0) 
+                             (aref portrayal 1))
+                       (aref portrayal 2)))
+
 (defun selflessp (a)
   ;; NOTE: This is the implementation of the test for the Selfless guard.
   (or (approvedp +selfless+ a)
@@ -30,12 +37,20 @@
       ;; XXX should this instead be implemented by some mechanism for approvedp to dispatch on nonnear refs?
       (typep a 'elib::resolved-handler-ref)))
 
+(defun transparentp (a)
+  (approvedp +transparent-stamp+ a))
 (defun spread-uncall (a)
-  "assumes the object produces a properly formed uncall"
-  (let ((unspread (e. a |__optUncall|)))
-    (e-coercef unspread 'vector)
-    ;; XXX should kill the vat in the event of a malformed uncall
-    (concatenate 'vector `#(,(aref unspread 0) ,(aref unspread 1)) (aref unspread 2))))
+  (spread (e. a |__optUncall|)))
+
+(defun semitransparentp (a)
+  (approvedp +semitransparent-stamp+ a))
+(defun semiamplify (a)
+  (spread
+    (semitransparent-result-box-contents
+      (e. a |__optSealedDispatch| +semitransparent-result-box-brand+))))
+
+;; this ought to be with the GF definition, but can't be because def-shorten-methods isn't available there
+(def-shorten-methods semitransparent-result-box-contents 1)
 
 (declaim (inline %examine-reference))
 (defun %examine-reference (original path opt-fringe
@@ -172,18 +187,16 @@
                       (car sofar)
                       (cdr sofar)))
   
-              (opt-same-spread (left right sofar)
+              (opt-same-spread (left right sofar leftv rightv)
                 "returns e-boolean or nil"
-                (declare (type (cons list list) sofar))
-                (equalizer-trace "enter opt-same-spread ~S ~S ~S" left right sofar)
-                (let ((leftv  (spread-uncall left))
-                      (rightv (spread-uncall right))
-                      (not-different-result +e-true+))
-                  (declare (simple-vector leftv rightv))
-                  (when (/= (length leftv) (length rightv))
-                    ; Early exit, and precondition for the following loop.
-                    (equalizer-trace "exit opt-same-spread lengths ~S ~S" (length leftv) (right leftv))
-                    (return-from opt-same-spread +e-false+))
+                (declare (type (cons list list) sofar)
+                         (type vector leftv rightv))
+                (equalizer-trace "enter opt-same-spread ~S ~S ~S ~S ~S" left right sofar leftv rightv)
+                (when (/= (length leftv) (length rightv))
+                  ; Early exit, and precondition for the following loop.
+                  (equalizer-trace "exit opt-same-spread lengths ~S ~S" (length leftv) (length rightv))
+                  (return-from opt-same-spread +e-false+))
+                (let ((not-different-result +e-true+))
                   (loop with sofarther = (push-sofar left right sofar)
                         for i below (length leftv)
                         for new-left = (aref leftv i)
@@ -248,7 +261,11 @@
                     (if (and left-selfless right-selfless)
                       (cond
                         ((and (transparentp left) (transparentp right))
-                          (opt-same-spread left right sofar))
+                          (opt-same-spread left right sofar
+                            (spread-uncall left) (spread-uncall right)))
+                        ((and (semitransparentp left) (semitransparentp right))
+                          (opt-same-spread left right sofar
+                            (semiamplify left) (semiamplify right)))
                         ((elib::opt-same-dispatch left right))
                         (t
                           ; missing sameness definition, consider unsettled

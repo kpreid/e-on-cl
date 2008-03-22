@@ -18,6 +18,13 @@
   (:|run| (value)
     (make-instance 'e-simple-slot :value value)))
 
+(defobject +unsafe-make-coerced-slot+ "org.erights.e.elib.slot.unsafeMakeCoercedSlot"
+    (:stamped +deep-frozen-stamp+)
+  (:|asType| () (type-specifier-to-guard 'coerced-slot))
+  (:|run| (guard value)
+    (make-instance 'coerced-slot :guard guard
+                                 :value value)))
+
 (defobject +the-make-coerced-slot+ "org.erights.e.elib.slot.makeCoercedSlot"
     (:stamped +deep-frozen-stamp+
      :stamped +pass-by-construction+)
@@ -118,7 +125,13 @@
 (def-vtable coerced-slot
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
-    (or (eql auditor +pass-by-construction+)))
+    (or (eql auditor +pass-by-construction+)
+        (eql auditor +selfless+)
+        (eql auditor +semitransparent-stamp+)))
+  (:|__optSealedDispatch| (this brand)
+    (when (samep brand +semitransparent-result-box-brand+)
+      (make-instance 'semitransparent-result-box :value
+        `#(,+unsafe-make-coerced-slot+ "run" #(,(coerced-slot-guard this) ,(coerced-slot-value this))))))
   (:|__optUncall| (this)
     `#(,+the-make-coerced-slot+ "attempt" #(,(coerced-slot-guard this) ,(coerced-slot-value this))))
   (:|__printOn| (this (tw +the-text-writer-guard+))

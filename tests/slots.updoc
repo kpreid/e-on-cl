@@ -133,8 +133,10 @@ A CoercedSlot is like a FinalSlot in that it has a single unchanging value; it i
   # value: int
   
   ? v == makeCoercedSlot(int, 1, null)
-  # value: false
-  -- could be true, but not implemented -- need selectively-transparent selflessness
+  # value: true
+  
+  ? (def r1 := makeCoercedSlot(any, r1, null)) == (def r2 := makeCoercedSlot(any, r2, null))
+  # value: true
   
   ? v.__optUncall()
   # value: [<makeCoercedSlot>, "attempt", [int, 1]]

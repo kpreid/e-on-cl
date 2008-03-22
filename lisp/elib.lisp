@@ -191,6 +191,27 @@ While this is a process-wide object, its stamps should not be taken as significa
                  (lambda (s) (approvedp +transparent-stamp+ s))
                  (lambda () +transparent-guard+)))))
 
+(defglobal +semitransparent-stamp+ (e-lambda
+    "org.erights.e.elib.serial.SemitransparentStamp"
+    (:doc "Objects with this stamp, if also Selfless, are compared by amplifying with the Semitransparent brand; the sealed box should contain a portrayal. XXX this may be renamed.")
+  (audited-by-magic-verb (auditor)
+    (setf auditor (ref-shorten auditor))
+    ;; see TransparentStamp comments
+    (cond 
+      ((eql auditor +transparent-stamp+)     nil)
+      ((eql auditor +deep-frozen-stamp+)     t)
+      ((eql auditor +thread-sharable-stamp+) t)))
+  (:|audit| (audition)
+    (declare (ignore audition))
+    +e-true+)))
+(defglobal +semitransparent-result-box-brand+ (e-lambda 
+    "org.erights.e.elib.serial.SemitransparentBoxBrand" 
+    (:stamped +deep-frozen-stamp+
+     :stamped +thread-sharable-stamp+)))
+(defgeneric semitransparent-result-box-contents (box))
+(defclass semitransparent-result-box ()
+  ((value :initarg :value :reader semitransparent-result-box-contents)))
+
 (defglobal +pass-by-construction+ (e-lambda 
     "org.erights.e.elib.serial.PassByConstruction"
     (:stamped +deep-frozen-stamp+

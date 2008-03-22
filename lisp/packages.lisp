@@ -196,6 +196,10 @@
     :+selfless+
     :+transparent-guard+
     :+transparent-stamp+
+    :+semitransparent-stamp+
+    :+semitransparent-result-box-brand+
+    :semitransparent-result-box-contents
+    :semitransparent-result-box
     
     :+thread-sharable-stamp+
     :+pass-by-construction+
