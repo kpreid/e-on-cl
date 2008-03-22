@@ -204,7 +204,6 @@ If there is no current vat at initialization time, captures the current vat at t
   (call-next-method))
 
 (defmethod e-call-dispatch :before ((rec vat-checking) mverb &rest args)
-  (declare (ignore mverb args))
   (with-accessors ((expected-vat vat-checking-expected-vat)) rec
     (if (slot-boundp rec 'vat-checking-expected-vat)
       (assert (eq *vat* expected-vat) ()
