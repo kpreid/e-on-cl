@@ -20,7 +20,7 @@
         (funcall target 'e.elib:selfish-hash-magic-verb))
       (sxhash target)))
 
-(declaim (inline selflessp transparentp semitransparentp spread))
+(declaim (inline selflessp spread))
 
 (defun spread (portrayal)
   "assumes a properly formed portrayal"
@@ -37,20 +37,18 @@
       ;; XXX should this instead be implemented by some mechanism for approvedp to dispatch on nonnear refs?
       (typep a 'elib::resolved-handler-ref)))
 
-(defun transparentp (a)
-  (approvedp +transparent-stamp+ a))
-(defun spread-uncall (a)
-  (spread (e. a |__optUncall|)))
-
-(defun semitransparentp (a)
-  (approvedp +semitransparent-stamp+ a))
-(defun semiamplify (a)
-  (spread
-    (semitransparent-result-box-contents
-      (e. a |__optSealedDispatch| +semitransparent-result-box-brand+))))
-
 ;; this ought to be with the GF definition, but can't be because def-shorten-methods isn't available there
 (def-shorten-methods semitransparent-result-box-contents 1)
+
+(declaim (inline opt-spread-equalizer-uncall))
+(defun opt-spread-equalizer-uncall (specimen)
+  "Given a Selfless reference, return the spread portrayal to use for comparing it, or nil if none is found."
+  (cond ((approvedp +transparent-stamp+ specimen)
+         (spread (e. specimen |__optUncall|)))
+        ((approvedp +semitransparent-stamp+ specimen)
+         (spread (semitransparent-result-box-contents
+                   (e. specimen |__optSealedDispatch|
+                       +semitransparent-result-box-brand+))))))
 
 (declaim (inline %examine-reference))
 (defun %examine-reference (original path opt-fringe
@@ -70,15 +68,20 @@
     (if (selflessp short)
       (progn
         (funcall selfless-early)
-        (if (transparentp short)
-          (loop with result = transparent-seed
-                for a across (spread-uncall short)
-                for i from 0
-                do (setf result (funcall transparent-op result a (when opt-fringe (cons i path))))
-                   (when (funcall transparent-shortcut result)
-                     (return result))
-                finally (return result))
-          (funcall nontransparent-op short path)))
+        (let ((spread-uncall (opt-spread-equalizer-uncall short)))
+          (if spread-uncall
+            (loop with result = transparent-seed
+                  for a across spread-uncall
+                  for i from 0
+                  do (setf result (funcall transparent-op result a
+                                    (when opt-fringe (cons i path))))
+                     (locally
+                       (declare #+sbcl (sb-ext:muffle-conditions
+                                        sb-ext:code-deletion-note))
+                       (when (funcall transparent-shortcut result)
+                         (return result)))
+                  finally (return result))
+            (funcall nontransparent-op short path))))
       (if (ref-is-resolved short)
         (funcall when-resolved-selfish short)
         (progn
@@ -259,17 +262,18 @@
                   (let ((left-selfless (selflessp left))
                         (right-selfless (selflessp right)))
                     (if (and left-selfless right-selfless)
-                      (cond
-                        ((and (transparentp left) (transparentp right))
-                          (opt-same-spread left right sofar
-                            (spread-uncall left) (spread-uncall right)))
-                        ((and (semitransparentp left) (semitransparentp right))
-                          (opt-same-spread left right sofar
-                            (semiamplify left) (semiamplify right)))
-                        ((elib::opt-same-dispatch left right))
-                        (t
-                          ; missing sameness definition, consider unsettled
-                          nil))
+                      (let ((spread-l (opt-spread-equalizer-uncall left))
+                            (spread-r (opt-spread-equalizer-uncall right)))
+                        ; xxx we could squeeze out a little bit more efficiency
+                        ; by short-circuiting if spread-l is nil
+                        (cond
+                          ((and spread-l spread-r)
+                            (opt-same-spread left right sofar 
+                                             spread-l spread-r))
+                          ((elib::opt-same-dispatch left right))
+                          (t
+                            ; missing sameness definition, consider unsettled
+                            nil)))
                       (progn
                         ; Resolved, uneql, and not both selfless, so they
                         ; can't be the same.

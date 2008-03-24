@@ -1,6 +1,9 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+  ? def makeCoercedSlot := <elib:slot.makeCoercedSlot>; null
+  XXX we should define our semitransparent type here, not rely on CoercedSlot being this incidentally
+
 Premises
 
   ? def a {}
@@ -11,6 +14,12 @@ Premises
   
   ? __equalizer
   # value: <equalizer>
+  
+  ? def semiA1 := makeCoercedSlot(any, 1, null)
+  > def semiA2 := makeCoercedSlot(any, 1, null)
+  > def semiB := makeCoercedSlot(any, 2, null)
+  > def semiU := makeCoercedSlot(any, Ref.promise()[0], null)
+  >null
   
 Algorithm checking
   
@@ -70,6 +79,25 @@ Algorithm checking
   
   ? [__equalizer.optSame(['a', 'b', 'c'], "a" + "bc")]
   # value: [false]
+  
+  ? [__equalizer.optSame(semiA1, semiA2)]
+  # value: [true]
+
+  ? [__equalizer.optSame(semiA1, semiB)]
+  # value: [false]
+
+  ? [__equalizer.optSame(semiA1, semiU)]
+  # value: [null]
+
+isSettled
+
+  ? __equalizer.isSettled(semiA1)
+  # value: true
+
+  ? __equalizer.isSettled(semiU)
+  # value: false
+
+  XXX move other isSettled tests to this file
 
 User-level conveniences etc.  We assume that they derive from optSame properly.
 
