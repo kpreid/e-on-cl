@@ -88,6 +88,16 @@ Algorithm checking
 
   ? [__equalizer.optSame(semiA1, semiU)]
   # value: [null]
+  
+Former bug: the sofar list was sometimes being filled with the right-side reference only (broken swap), so a cycle on the right would be assumed to be a cycle on the left as well. The test is done with two sets of references because whether the swap occurs depends on the hash-values involved.
+
+  ? def l1 := [[[l1]]]
+  > def c1 := [[[[[['a']]]]]]
+  > def l2 := [[[l2]]]
+  > def c2 := [[[[[['b']]]]]]
+  > [c1 == l1, c1 == l2, c2 == l1, c2 == l2,
+  >  l1 == c1, l1 == c2, l2 == c1, l2 == c2]
+  # value: [false, false, false, false, false, false, false, false]
 
 isSettled
 

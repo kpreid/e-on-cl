@@ -167,8 +167,8 @@
   "not multiple-evaluation safe"
   `(when (< (sxhash ,b) 
             (sxhash ,a))
-     (setf ,a ,b 
-           ,b ,a)))
+     (psetf ,a ,b 
+            ,b ,a)))
 
 ;; xxx *Currently*, the equalizer being returned from a maker function is left over from when equalizers used buffer vectors. Future changes, such as parameterization, might make the maker useful again later so I haven't bothered to change it.
 
