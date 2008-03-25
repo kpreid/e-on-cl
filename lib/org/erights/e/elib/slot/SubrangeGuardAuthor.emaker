@@ -1,0 +1,84 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("call-pattern")
+
+def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def FinalSlot := <elib:slot.makeFinalSlot>.asType()
+
+def [=> makeNounExpr, => makeEMethod, => makeEScript] | _ := <elang:evm.*>
+def EScript := makeEScript.asType()
+
+# XXX duplicated from DeepFrozenAuthor
+/** Non-coercing guard wrapper. */
+def Really as DeepFrozen {
+  to get(guard) {
+    return def reallyGuard {
+      to coerce(specimen, optEjector) {
+        def coerced := guard.coerce(specimen, optEjector)
+        if (coerced != specimen) {
+          throw.eject(optEjector, E.toQuote(coerced) + " must be same as original specimen " + E.toQuote(specimen))
+        }
+        return coerced
+      }
+    }
+  }
+}
+
+def SubrangeGuardAuthor(TransparentStamp) {
+  return def SubrangeGuard implements DeepFrozen, ExitViaHere {
+    to __printOn(out :TextWriter) {
+      out.write("SubrangeGuard")
+    }
+
+    to get(superrangeGuard) {
+      def SubrangeGuard1 implements EventuallyDeepFrozen, Selfless, TransparentStamp {
+
+        method __optSealedDispatch(brand) :any {
+          if (brand == EventuallyDeepFrozen.getPeekBrand()) {
+            EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
+          }
+        }
+      
+        to __optUncall() { return [SubrangeGuard, "get", [superrangeGuard]] }
+
+        to coerce(specimen, optEjector) {
+          if (__auditedBy(SubrangeGuard1, specimen)) {
+            return specimen
+          } else if (__auditedBy(SubrangeGuard1,
+                      def c := specimen.__conformTo(SubrangeGuard1))) {
+            return c
+          } else {
+            throw(`$specimen isn't approved as a SubrangeGuard[$superrangeGuard]`)
+          }
+        }
+    
+        to __printOn(out :TextWriter) {
+          out.quote(SubrangeGuard)
+          out.print("[")
+          out.quote(superrangeGuard)
+          out.print("]")
+        }
+        
+        to audit(audition) {
+          def expr := audition.getObjectExpr()
+          def ::"methods" := (expr.getScript() :EScript).getMethods()
+          for makeEMethod(_, _, =="coerce", [_, _], makeNounExpr(_, noun, _), _, _) in ::"methods" {
+            def resultGuardSlot :Really[FinalSlot] := audition.getSlot(noun)
+            def resultGuard := resultGuardSlot[]
+            require(
+              resultGuard == superrangeGuard \
+                || superrangeGuard.__respondsTo("rangeSupersetOf", 1) \
+                     && superrangeGuard.rangeSupersetOf(resultGuard),      
+              fn{ `${audition.getFQName()} does not have a result guard of $superrangeGuard, but $resultGuard` })
+            return true
+          }
+          throw("no coerce/2 method found")
+        }
+      }
+    
+      return SubrangeGuard1
+    }
+  }
+}

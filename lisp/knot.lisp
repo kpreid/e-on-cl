@@ -326,6 +326,7 @@
 (defglobal +transparent-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"
     "org.erights.e.elib.slot.finalSlotGuardSugar"
+    "org.erights.e.elib.slot.SubrangeGuard"
     "org.quasiliteral.astro.makeAstroTag"
     "org.quasiliteral.term.makeTerm"))
 
