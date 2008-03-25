@@ -19,7 +19,8 @@
          (jlayout-sym (gensym "SCOPE-JLAYOUT"))
          (param-syms (mapcar (lambda (x) (make-symbol (string x))) param-names))
          (fqn (concatenate 'string "org.erights.e.elang.evm.make"
-                                   (symbol-name class-sym))))
+                                   (symbol-name class-sym)))
+         (run-param-count (+ 2 (length param-types))))
   `(setf 
     (get ',class-sym 'static-maker)
     (e-lambda 
@@ -36,7 +37,7 @@
         ',(map 'vector #'as-e-boolean subnode-flags))
       (,(locally
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-          (e-util:mangle-verb "run" (+ 2 (length param-types))))
+          (e-util:mangle-verb "run" run-param-count))
         ((,span-sym '(or null source-span))
           ,@(mapcar (lambda (s ty) `(,s ',ty)) param-syms param-types)
           (,jlayout-sym 'null))
@@ -46,7 +47,13 @@
           :elements
           ,(if rest-p
             `(list* ,@(butlast param-syms) (coerce ,(car (last param-syms)) 'list))
-            `(list ,@param-syms)))))))
+            `(list ,@param-syms))))
+      (,(mangle-verb (format nil "match__run/~A" run-param-count) 2)
+          (specimen ejector)
+        (let ((node (e-coerce specimen ',class-sym ejector)))
+          (concatenate 'vector (list (node-source-span node))
+                               (node-visitor-arguments node)
+                               '(nil)))))))
 
 (defun %setup-node-class (node-type rest-slot property-names dnm-types normal-prop-count)
   (let ((fqn (concatenate 'string "org.erights.e.elang.evm." (symbol-name node-type)))

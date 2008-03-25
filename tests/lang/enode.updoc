@@ -105,6 +105,20 @@ Check that the special loaders handle the nonexistent cases:
   ? node.getOptSpan()
   # value: <data:text/plain,foo#:span::1:0::1:2>
 
+--- Makers ---
+
+Call patterns
+  ? pragma.enable("call-pattern")
+
+  ? def makeNounExpr(a, b, c) := node
+  # value: e`foo`
+  
+  ? [a, b, c]
+  # value: [<data:text/plain,foo#:span::1:0::1:2>, "foo", null]
+  
+  ? def makeNounExpr(_, _, _) := "foo"
+  # problem: the String "foo" doesn't coerce to a NounExpr
+
 --- Selflessness of nodes ---
 
   ? makeNounExpr(null, "aardvark", null).__optUncall()
