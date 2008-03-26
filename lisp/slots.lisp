@@ -15,6 +15,8 @@
   (:|__optUncall| ()
     (import-uncall "org.erights.e.elib.slot.makeFinalSlot"))
   (:|asType| () (type-specifier-to-guard 'e-simple-slot))
+  (:|match__run/1/2| (specimen ejector)
+    (vector (e. (e-coerce specimen 'e-simple-slot ejector) |get|)))
   (:|run| (value)
     (make-instance 'e-simple-slot :value value)))
 

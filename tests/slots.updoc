@@ -41,6 +41,15 @@ Final
   ? def FinalSlot[x] := 1; x
   # problem: Not stamped by org.erights.e.elib.slot.finalSlotGuardSugarAuthor$finalSlotGuardSugarAuthor$FinalSlotPGuard__T
 
+  ? def makeFinalSlot(x) := makeFinalSlot(1); x
+  # value: 1
+  
+  ? def makeFinalSlot(x) := def _ { to __conformTo(_) { return makeFinalSlot(1) }}; x
+  # value: 1
+  
+  ? def makeFinalSlot(x) := def _ extends makeFinalSlot(1) {}
+  # problem: the "__main$_" <__main$_> doesn't coerce to a FinalSlot
+
 XXX test coercion by FinalSlot guard and guard call pattern
 
 makeVarSlot
