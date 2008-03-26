@@ -46,6 +46,14 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   ? f22 :DeepFrozen
   # problem: <f22> is not DeepFrozen
 
+Non-transparent Selfless
+
+  ? <elib:slot.makeCoercedSlot>(float64, 1, throw) :DeepFrozen
+  # value: <& 1.0 :float64>
+
+  ? [<elib:slot.makeCoercedSlot>(any, def _ {}, throw)] :DeepFrozen
+  # problem: [<& <__main$_> :any>] is not DeepFrozen because <& <__main$_> :any> contains references that are unsettled or not DeepFrozen
+
 Broken references are DeepFrozen if the exception is
 
   ? Ref.broken("a") :DeepFrozen

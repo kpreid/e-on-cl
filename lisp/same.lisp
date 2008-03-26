@@ -23,12 +23,13 @@
 (declaim (inline selflessp spread))
 
 (defun spread (portrayal)
-  "assumes a properly formed portrayal"
-  (e-coercef portrayal 'vector)
-  ;; XXX should kill the vat in the event of a malformed portrayal
-  (concatenate 'vector (list (aref portrayal 0) 
-                             (aref portrayal 1))
-                       (aref portrayal 2)))
+  "assumes a properly formed portrayal, or nil"
+  (setf portrayal (ref-shorten portrayal))
+  (when portrayal
+    (e-coercef portrayal 'vector)
+    (concatenate 'vector (list (aref portrayal 0) 
+                               (aref portrayal 1))
+                         (aref portrayal 2))))
 
 (defun selflessp (a)
   ;; NOTE: This is the implementation of the test for the Selfless guard.
@@ -40,15 +41,20 @@
 ;; this ought to be with the GF definition, but can't be because def-shorten-methods isn't available there
 (def-shorten-methods semitransparent-result-box-contents 1)
 
+(declaim (inline semitransparent-opt-uncall))
+(defun semitransparent-opt-uncall (specimen)
+  ;; in a function because it's used by DeepFrozen too
+  (when (approvedp +semitransparent-stamp+ specimen)
+    (semitransparent-result-box-contents
+      (e. specimen |__optSealedDispatch|
+          +semitransparent-result-box-brand+))))
+
 (declaim (inline opt-spread-equalizer-uncall))
 (defun opt-spread-equalizer-uncall (specimen)
   "Given a Selfless reference, return the spread portrayal to use for comparing it, or nil if none is found."
   (cond ((approvedp +transparent-stamp+ specimen)
          (spread (e. specimen |__optUncall|)))
-        ((approvedp +semitransparent-stamp+ specimen)
-         (spread (semitransparent-result-box-contents
-                   (e. specimen |__optSealedDispatch|
-                       +semitransparent-result-box-brand+))))))
+        ((spread (semitransparent-opt-uncall specimen)))))
 
 (declaim (inline %examine-reference))
 (defun %examine-reference (original path opt-fringe

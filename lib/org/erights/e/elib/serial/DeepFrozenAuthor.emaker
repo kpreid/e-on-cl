@@ -68,7 +68,25 @@ def exprShorten(expr) {
 
 def emptyStatic := <import:org.cubik.cle.prim.makeStaticScope>.getEmptyScope()
 
-def DeepFrozenAuthor(DeepFrozenStamp) {
+def selflessTransparentUncaller {
+  to optUncall(specimen) {
+    if (Selfless.passes(specimen) & Transparent.passes(specimen)) {
+      def p := specimen.__optUncall()
+      requireDF(p != null, fn { "broken Transparent object: " + E.toQuote(specimen) })
+      return p
+    }
+  }
+}
+
+def selflessCrashUncaller {
+  to optUncall(specimen) {
+    if (Selfless.passes(specimen)) {
+      throw("don't know how to deal with Selfless object " + E.toQuote(specimen))
+    }
+  }  
+}
+
+def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
 
   def DeepFrozen0
   def OptionallyDeepFrozen
@@ -85,12 +103,41 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
   def &peekSealer := def _{to get() { return getPeekBrandKit().getSealer() } }
   def &peekUnsealer := def _{ to get() { return getPeekBrandKit().getUnsealer() } }
   def &peekBrand := def _{ to get() { return getPeekBrandKit().getBrand() } }
-
+  
+  def selflessSemitransparentUncaller {
+    to optUncall(s) {
+      if (Selfless.passes(s)) {
+        return semitransparentUncaller.optUncall(s)
+      }
+    }
+  }
+  
+  def eventuallyUncaller {
+    to optUncall(specimen) {
+      if (__auditedBy(EventuallyDeepFrozen, specimen)) {
+        # The auditor ensures that this will not fail.
+        def state := peekUnsealer.unseal(specimen.__optSealedDispatch(peekBrand))
+        
+        # Using the uncall of the state is just an easy way to transform it into a portrayal to adapt to the uncaller protocol.
+        return state.__optUncall()
+      }
+    }
+  }
+  
+  # [uncaller, isTransparent], where isTransparent means it's OK to reveal the components to the caller
+  def descenders := [
+    # An object which is Selfless by definition has no mutable state (because that would give it an identity) that is not a 'separate' reference; by these uncallers we handle those cases.
+    [selflessTransparentUncaller, true],
+    [selflessSemitransparentUncaller, false],
+    [selflessCrashUncaller, false],
+    [eventuallyUncaller, false],
+  ]
+  
   def rtrace(msgThunk) {
     #traceln(if (msgThunk =~ msg :String) {msg} else {msgThunk()})
   }
 
-  # XXX sofar should be a set instead, but those aren't implemented yet
+  # XXX sofar should be a set instead, but they're nonprimitive
   def requireDeepFrozen(specimen, sofar, optEjector, root) :void {
     rtrace(fn{ "requireDeepFrozen " + E.toQuote(specimen) + ", " + E.toQuote(sofar.getKeys()) + ", " + E.toQuote(optEjector) + ", " + E.toQuote(root) })
     def specimenKey := __equalizer.makeTraversalKey(specimen)
@@ -105,57 +152,47 @@ def DeepFrozenAuthor(DeepFrozenStamp) {
         rtrace("--rDF atomic")
         return
 
-      } else if (Selfless.passes(specimen)) {
-        # An object which is Selfless by definition has no mutable state (because that would give it an identity) that is not exposed as a 'separate' reference via its uncall or other mechanism.
-        
-        # we can't use :__Portrayal here because that's a cyclic dependency on E-implemented guards which want to be DeepFrozen-audited
-        if (Transparent.passes(specimen) && (def uncall := specimen.__optUncall()) != null) {
-          def sub(_, component) {
-            requireDeepFrozen(component, sofarther, optEjector, root)
-          }
-          
-          sub(null, uncall[0])
-          sub(null, uncall[1])
-          ConstList.coerce(uncall[2], throw).iterate(sub)
-          
-          rtrace("--rDF selfless")
-          return
-        } else {
-          throw("don't know how to deal with non-Transparent Selfless object " + E.toQuote(specimen) + " returned null from __optUncall and is not stamped DeepFrozen")
-        }
-        
-      } else if (__auditedBy(EventuallyDeepFrozen, specimen)) {
-        rtrace("-rDF entering EventuallyDeepFrozen case")
-        # translucent
-        
-        # XXX For efficiency, we should allow the object to carry a cached flag indicating that it has been proven deep-frozen.
-        # We can tell it to set the flag if and only if this entire requireDeepFrozen operation completes; or, more precisely, once the specimen has been accepted and we have reached a point where sofar is empty. If sofar is not empty, it is possible that the specimen contains a reference to something whose DeepFrozenness is still being checked.
-        
-        
-        # The auditor ensures that this will not fail.
-        def state := peekUnsealer.unseal(specimen.__optSealedDispatch(peekBrand))
-        
-        escape ejectorForTranslucent {
-          # using optEjector in the recursion would lead to revealing to our client some contents of the object being checked
-          for component in state.getValues() {
-            requireDeepFrozen(component, sofarther, ejectorForTranslucent, root)
-          }
-        } catch p {
-          # XXX make the fallthrough else below eject a typed exception that we use in generating this message, so the client can know whether this is unsettled ('change your code to wait longer') or definitely not DeepFrozen ('sorry, hopeless')
-          # xxx future extensions: make this exception contain (sealed) the full details of what chain of subobjects led to the non-DeepFrozen object.
-          rtrace(fn{"--rDF exiting and discarding subexception for privacy: " + E.toQuote(p)})
-          traceln("DeepFrozen not-yet-eventually: " + E.toQuote(p))
-          throw.eject(optEjector, E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " contains references that are unsettled or not DeepFrozen")
-        }
-        rtrace("--rDF amplified")
-        return
-
       } else if (Ref.isBroken(specimen)) {
         rtrace("--rDF broken")
         requireDeepFrozen(Ref.optProblem(specimen), sofarther, optEjector, root)
         return
       
       } else {
+        # XXX For efficiency, we should allow the object to carry a cached flag indicating that it has now been proven deep-frozen, instead of having to traverse it every time.
+        # We can tell it to set the flag if and only if the entire requireDeepFrozen operation completes; or, more precisely, once the specimen has been accepted and we have reached a point where sofar is empty. If sofar is not empty, it is possible that the specimen contains a reference to something whose DeepFrozenness is still being checked.
+                
+        # try various ways to inspect the state of the object
+        for [uncaller, isTransparent] in descenders {
+          def portrayal := uncaller.optUncall(specimen)
+          if (portrayal == null) { continue }
+          
+          rtrace("--rDF chose uncaller " + E.toQuote(uncaller))
+          
+          # ejectorForTranslucent is used when the components we are descending into are private and so should not be used
+          escape ejectorForTranslucent {
+
+            def ejectorForParts := if (isTransparent) { optEjector } else { ejectorForTranslucent }
+            def sub(_, component) {
+              requireDeepFrozen(component, sofarther, ejectorForParts, root)
+            }
+
+            sub(null, portrayal[0])
+            sub(null, portrayal[1])
+            ConstList.coerce(portrayal[2], throw).iterate(sub)
+
+            rtrace("--rDF uncall walked")
+            return
+          } catch p {
+            # XXX make the fallthrough else below eject a typed exception that we use in generating this message, so the client can know whether this is unsettled ('change your code to wait longer') or definitely not DeepFrozen ('sorry, hopeless')
+            # xxx future extensions: make this exception contain (sealed) the full details of what chain of subobjects led to the non-DeepFrozen object.
+            rtrace(fn{"--rDF exiting and discarding subexception for privacy: " + E.toQuote(p)})
+            traceln("DeepFrozen private component failed: " + E.toQuote(p))
+            throw.eject(optEjector, E.toQuote(root) + " is not DeepFrozen because " + E.toQuote(specimen) + " contains references that are unsettled or not DeepFrozen")
+          }
+          rtrace("--rDF amplified")
+          return
+        }
+        
         rtrace("--rDF opaque")
         throw.eject(optEjector, 
           if (__equalizer.sameYet(specimen, root)) {

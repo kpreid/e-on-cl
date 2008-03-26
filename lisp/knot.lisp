@@ -305,7 +305,10 @@
     
     (:|DeepFrozen|
       (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
-                elib:+deep-frozen-stamp+))
+                elib:+deep-frozen-stamp+
+                (e-lambda "semitransparentUncaller" ()
+                  (:|optUncall| (specimen)
+                    (e.elib.same-impl::semitransparent-opt-uncall specimen)))))
     
     (:|makeBaseGuard|
       (efuncall (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
