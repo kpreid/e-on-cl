@@ -162,7 +162,9 @@
                      (-unused-)
                        (declare (ignore -unused-))
                        (push noun needed-nouns)
-                       (cons noun (first (push (make-symbol noun) needed-syms)))))
+                       (cons noun (make-instance 'lexical-slot-binding :symbol
+                                    (first (push (make-symbol noun)
+                                                 needed-syms))))))
                  all-nouns))))
          (*efasl-program*
            `(setf *efasl-result*

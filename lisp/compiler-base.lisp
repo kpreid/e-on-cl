@@ -186,25 +186,24 @@
 
 ; --- Scope layout noun bindings ---
 
-(defgeneric binding-get-code      (binding)
-  (:documentation "Return a form which evaluates to the value of the binding."))
+(defgeneric binding-get-code (binding)
+  (:documentation "Return a form which evaluates to the value of the binding.")
+  (:method (binding)
+    `(e. ,(binding-get-slot-code binding) |get|)))
+
 (defgeneric binding-get-slot-code (binding)
   (:documentation "Return a form which evaluates to the slot of the binding."))
-(defgeneric binding-set-code      (binding value-form)
-  (:documentation "Return a form which will set the value of the binding to the result of evaluating value-form."))
+
+(defgeneric binding-set-code (binding value-form)
+  (:documentation "Return a form which will set the value of the binding to the result of evaluating value-form.")
+  (:method (binding value-form)
+    `(e. ,(binding-get-slot-code binding) |put| ,value-form)))
 
 
-; slot bindings - represented as symbols for historical reasons - xxx change that?
-
-(defmethod binding-get-code ((binding symbol))
-  `(e. ,binding |get|))
-
-(defmethod binding-get-slot-code ((binding symbol))
-  binding)
-
-(defmethod binding-set-code ((binding symbol) value-form)
-  `(e. ,binding |put| ,value-form))
-
+(defclass lexical-slot-binding ()
+  ((symbol :initarg :symbol
+           :type symbol
+           :reader binding-get-slot-code)))
 
 
 (defclass direct-def-binding () 
@@ -217,8 +216,8 @@
          :reader binding-get-source-noun)))
 
 (defmethod binding-get-slot-code ((binding direct-def-binding))
-  ; requires that e-simple-slot be selfless (which it is now)
-  `(make-instance 'elib:e-simple-slot :value ,(binding-get-code binding)))
+  ;; For this to be correct, e-simple-slot must be selfless.
+  `(make-instance 'e-simple-slot :value ,(binding-get-code binding)))
 
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
   ;; xxx eventually this should be able to point at the source position of the assignment
@@ -274,8 +273,8 @@
   `',(binding-value binding))
 
 (defmethod binding-get-slot-code ((binding value-binding))
-  ; requires that e-simple-slot be selfless (which it is now)
-  `',(make-instance 'elib:e-simple-slot :value (binding-value binding)))
+  ;; For this to be correct, e-simple-slot must be selfless.
+  `',(make-instance 'e-simple-slot :value (binding-value binding)))
 
 (defmethod binding-set-code ((binding value-binding) value-form)
   ; XXX This should probably be a different message. The current one is just imitating a previous implementation.
@@ -286,16 +285,10 @@
 
 (defclass slot-binding ()
   ((slot :initarg :slot
-         :reader %slot-binding-variable)))
+         :reader %slot-binding-slot)))
   
-(defmethod binding-get-code ((binding slot-binding))
-  `(e. ',(%slot-binding-variable binding) |get|))
-
 (defmethod binding-get-slot-code ((binding slot-binding))
-  `',(%slot-binding-variable binding))
-
-(defmethod binding-set-code ((binding slot-binding) value-form)
-  `(e. ,(%slot-binding-variable binding) |put| ,value-form))
+  `',(%slot-binding-slot binding))
 
 
 (defgeneric binding-for-slot (slot))
@@ -303,7 +296,7 @@
 (defmethod binding-for-slot ((slot t))
   (make-instance 'slot-binding :slot slot))
 
-(defmethod binding-for-slot ((slot elib:e-simple-slot))
+(defmethod binding-for-slot ((slot e-simple-slot))
   ; could be extended to cover any DeepFrozen slot
   (make-instance 'value-binding :value (e. slot |get|)))
 

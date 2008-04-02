@@ -530,14 +530,17 @@
   (if guard-var
     (values
       `((,slot-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
-      (scope-layout-bind layout noun slot-var))
+      (scope-layout-bind layout noun 
+        (make-instance 'lexical-slot-binding :symbol specimen-var)))
     (if (symbolp specimen-var)
       (values
         '()
-        (scope-layout-bind layout noun specimen-var))
+        (scope-layout-bind layout noun
+          (make-instance 'lexical-slot-binding :symbol specimen-var)))
       (values
         `((,slot-var ,specimen-var))
-        (scope-layout-bind layout noun slot-var)))))
+        (scope-layout-bind layout noun
+          (make-instance 'lexical-slot-binding :symbol slot-var))))))
 
 (defun sequence-binding-pattern (fn specimen ejector-spec layout noun-expr opt-guard-expr
     &aux (guardv (gensym "FINAL-GUARD")))

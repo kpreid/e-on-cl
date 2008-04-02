@@ -545,6 +545,7 @@
     :binding-get-slot-code
     :binding-set-code
     
+    :lexical-slot-binding
     :direct-def-binding
     :direct-var-binding
     :value-binding
