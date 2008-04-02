@@ -97,6 +97,8 @@
             :depends-on ("sockets" "sugar"))
      (:file "comm"
             :depends-on ("elib" "sugar"))
+     (:file "environment"
+            :depends-on ("elib"))
      (:file "knot-base"
             :depends-on ("elib" "sugar"
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#
@@ -129,7 +131,7 @@
      (:file "compiler-entry"
             :depends-on ("compiler-base"
                          "sugar" 
-                         "knot-base" #| for scopes |#
+                         "environment"
                          "knot" #| for +lisp+ |#))
      (:file "rune"
             :depends-on ("elib" "compiler-entry" "knot" "syntax"))
