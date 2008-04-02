@@ -16,9 +16,18 @@ Also used as the result of operations likely to be chained, e.g. [].with(1).with
 (defgeneric evaluate-lazy-ref (ref))
 
 (defmethod %ref-shorten ((ref lazy-ref))
+  ;; XXX make robust against errors (convert to broken or kill vat)
   (let ((value (ref-shorten (evaluate-lazy-ref ref))))
     (change-class ref 'resolved-ref :target value)
     value))
+
+
+(defclass thunk-lazy-ref (lazy-ref)
+  ((tlr-thunk :initarg :thunk :reader tlr-thunk)))
+
+(defmethod evaluate-lazy-ref ((ref thunk-lazy-ref))
+  (funcall (tlr-thunk ref)))
+
 
 (defclass with-node (lazy-ref)
   ((base :initarg :base :reader with-node-base)))

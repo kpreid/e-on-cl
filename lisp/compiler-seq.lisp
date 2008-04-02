@@ -391,8 +391,7 @@
       (values
         '()
         (scope-layout-bind layout noun
-          (if #+#:XXX-guard-based-auditing opt-as-auditor-var
-              #-#:XXX-guard-based-auditing nil
+          (if opt-as-auditor-var
             (make-instance 'direct-def-binding :symbol object-var
                                                :noun noun
                                                :guard-var opt-as-auditor-var)
@@ -506,7 +505,7 @@
   (if guard-var
     (values
       `((,coerced-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
-      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :noun noun)))
+      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :guard-var guard-var :noun noun)))
     (if (symbolp specimen-var) ;; XXX really means no-side-effects-p
       (values
         '()
@@ -531,7 +530,8 @@
     (values
       `((,slot-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
       (scope-layout-bind layout noun 
-        (make-instance 'lexical-slot-binding :symbol specimen-var)))
+        (make-instance 'lexical-slot-binding :symbol specimen-var
+                                             :guard-var guard-var)))
     (if (symbolp specimen-var)
       (values
         '()

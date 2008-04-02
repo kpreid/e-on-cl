@@ -182,6 +182,7 @@
     
     :lazy-ref 
     :evaluate-lazy-ref
+    :thunk-lazy-ref
     :with-node :with-node-base
     
     :+the-void-guard+

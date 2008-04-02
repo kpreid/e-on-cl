@@ -199,17 +199,26 @@
   (:method (binding value-form)
     `(e. ,(binding-get-slot-code binding) |put| ,value-form)))
 
+(defgeneric binding-audit-guard-code (binding)
+  (:documentation "Return a form which evaluates to the guard which should be exposed by an audition."))
+
 
 (defclass lexical-slot-binding ()
   ((symbol :initarg :symbol
            :type symbol
-           :reader binding-get-slot-code)))
+           :reader binding-get-slot-code)
+   (guard-var :initarg :guard-var
+              :initform '+the-any-guard+
+              :reader binding-audit-guard-code)))
 
 
 (defclass direct-def-binding () 
   ((symbol :initarg :symbol
            :type symbol
            :reader binding-get-code)
+   (guard-var :initarg :guard-var
+              :initform '+the-any-guard+
+              :reader binding-audit-value-guard-code)
    (noun :initarg :noun ;; XXX this ought to be on a general binding class
          :initform (error ":noun not supplied for a direct-def-binding")
          :type string
@@ -223,6 +232,15 @@
   ;; xxx eventually this should be able to point at the source position of the assignment
   (declare (ignore value-form))
   (error "shouldn't happen: unassignable binding in compiler: ~A" (binding-get-source-noun binding)))
+
+(defun final-binding-guard-ref (value-guard)
+  (when value-guard
+    (make-instance 'thunk-lazy-ref :thunk (lambda ()
+      (e. (load-time-value (type-specifier-to-guard 'e-simple-slot)) |get|
+        value-guard)))))
+
+(defmethod binding-audit-guard-code ((binding direct-def-binding))
+  `(final-binding-guard-ref ,(binding-audit-value-guard-code binding)))
 
 
 (defclass direct-var-binding ()
@@ -245,11 +263,14 @@
      (error (ref-opt-problem ,(%var-binding-broken-flag binding)))
      ,(%var-binding-symbol binding)))
 
+(defun dvb-slot-type (binding)
+  (if (%binding-guard-code binding)
+    'e-guarded-slot
+    'e-var-slot))
+
 (defmethod binding-get-slot-code ((binding direct-var-binding))
   `(or ,(%var-binding-broken-flag binding)
-       (make-instance ',(if (%binding-guard-code binding)
-                          'elib:e-guarded-slot
-                          'elib:e-var-slot)
+       (make-instance ',(dvb-slot-type binding)
          :getter (lambda () ,(%var-binding-symbol binding))
          :setter ,(let ((x (gensym)))
                     `(lambda (,x)
@@ -264,8 +285,20 @@
         `(setf ,(%var-binding-symbol binding) (e. ,(%binding-guard-code binding) |coerce| ,value-form nil))
         `(setf ,(%var-binding-symbol binding) ,value-form))))
 
+(defmethod binding-audit-guard-code ((binding direct-var-binding))
+  `',(type-specifier-to-guard (dvb-slot-type binding)))
 
-(defclass value-binding ()
+
+(defclass constant-guard-binding ()
+  ((cgb-guard :initarg :audit-slot-guard
+              :initform +the-any-guard+
+              :reader %binding-audit-slot-guard)))
+
+(defmethod binding-audit-guard-code ((binding constant-guard-binding))
+  `',(%binding-audit-slot-guard binding))
+
+
+(defclass value-binding (constant-guard-binding)
   ((value :initarg :value
           :reader binding-value)))
   
@@ -283,7 +316,7 @@
   (error "not an assignable slot: <& ~A>" (e-quote (binding-value binding))))
 
 
-(defclass slot-binding ()
+(defclass slot-binding (constant-guard-binding)
   ((slot :initarg :slot
          :reader %slot-binding-slot)))
   
@@ -548,7 +581,16 @@
                  :error (lambda (specimen) (format nil "~A is not an E Audition" (e-quote specimen)))
                  :test-shortened nil)))
 
-(defun make-audition (fqn this-expr meta-state)
+(defun guard-table-form (nouns layout)
+  (let ((tv (gensym "AGT")))
+    `(let ((,tv (make-hash-table :test #'equal)))
+       (setf ,@(loop for noun in nouns
+                     collect `(gethash ',noun ,tv)
+                     collect (binding-audit-guard-code
+                               (scope-layout-noun-binding layout noun))))
+       ,tv)))
+
+(defun make-audition (fqn this-expr guard-table meta-state)
   (let (audition 
         (approvers '())
         (audition-ok t))
@@ -582,10 +624,17 @@
                   (e-is-true (e. other-auditor |audit| audition)))
             (push other-auditor approvers))
           nil)
+        (:|getGuard| (noun)
+          "Returns a guard which the named slot in the audited object's environment has passed."
+          (assert audition-ok ()
+            "~A is out of scope" (e-quote audition))
+          (or (gethash noun guard-table)
+              (error "~A is not a free variable in ~A"
+                     (e-quote noun) (e-quote fqn))))
         (:|getSlot| (slot-name)
-          "Returns the named slot in the audited object's lexical scope.
+          "Returns the named slot in the audited object's environment.
 
-XXX This is an excessively large authority and will probably be replaced."
+XXX This is deprecated in favor of getGuard, and will be removed as soon as possible."
           (assert audition-ok ()
             "~A is out of scope" (e-quote audition))
           ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
@@ -635,10 +684,11 @@ The scope layout provided should include the binding for the object's name patte
          (type-desc (e. this-expr |asTypeDesc| (scope-layout-fqn-prefix layout)))
          (fqn (e. type-desc |getFQName|))
          (self-fsym (make-symbol fqn))
+         (outer-nouns (map 'list #'ref-shorten (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|)))
          (inner-layout
            (scope-layout-nest
              (make-instance 'object-scope-layout
-               :nouns (map 'list #'ref-shorten (e. (e. (e. this-expr |staticScope|) |namesUsed|) |getKeys|))
+               :nouns outer-nouns
                :object-expr this-expr
                :rest (make-instance 'prefix-scope-layout 
                        :fqn-prefix (concatenate 'string fqn "$")
@@ -656,6 +706,7 @@ The scope layout provided should include the binding for the object's name patte
           `(multiple-value-bind (,audition-sym ,finisher-sym ,checker-sym) 
               (make-audition ',fqn 
                             ',this-expr
+                            ,(guard-table-form outer-nouns inner-layout)
                             ,(e.compiler.seq::leaf-sequence 
                               (make-instance '|MetaStateExpr| :elements '()) inner-layout))
             ,@(loop for auditor-form in auditor-forms collect

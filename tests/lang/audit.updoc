@@ -147,6 +147,72 @@ audition.ask
   ? __auditedBy(approver, x3)
   # value: true
 
+audition.getGuard
+
+This section includes tests that the proper guards appear on each of the various binding types in the compiler.
+
+  ? def CheckGuard {
+  >   to get(noun, guard) {
+  >     return def guardCheckingAuditor {
+  >       to audit(audition) :boolean {
+  >         if (audition.getGuard(noun) == guard) {
+  >           return true
+  >         } else {
+  >           throw(`$noun: expected $guard, got ${audition.getGuard(noun)}`)
+  >         }
+  >       }
+  >     }
+  >   }
+  > }
+  # value: <CheckGuard>
+  
+  ? def FinalSlot := <elib:slot.makeFinalSlot>.asType(); null
+  ? def VarSlot := <elib:slot.makeVarSlot>.asType(); null
+  ? def GuardedSlot := <elib:slot.makeGuardedSlot>.asType(); null
+  
+  ? {def x := 1; def doesNotGuardX implements CheckGuard["x", FinalSlot[int]] { to f() { return x } }}
+  # problem: x: expected FinalSlot[int], got FinalSlot[any]
+  
+  ? {def x :int := 1; def guardsX implements CheckGuard["x", FinalSlot[int]] { to f() { return x } }}
+  # value: <guardsX>
+
+  ? {var x := 1; def varX implements CheckGuard["x", VarSlot] { to f() { return x } }}
+  # value: <varX>
+
+  x # ? {var x :int := 1; def guardsVarX implements CheckGuard["x", GuardedSlot[int]] { to f() { return x } }}
+  x # value: <guardsVarX>
+  XXX the above should work, but we don't have parameterization for GuardedSlot yet. Interim:
+  ? {var x :int := 1; def guardedX implements CheckGuard["x", GuardedSlot] { to f() { return x } }}
+  # value: <guardedX>
+
+  ? def doesNotMentionX implements CheckGuard["x", FinalSlot[int]] {}
+  # problem: "x" is not a free variable in "__main$doesNotMentionX"
+  
+  ? {def x {}; def objDefX implements CheckGuard["x", FinalSlot[any]] { to f() { return x } }}
+  # value: <objDefX>
+  
+  ? {def x as approver {}; def asBoundX implements CheckGuard["x", FinalSlot[approver]] { to f() { return x } }}
+  # value: <asBoundX>
+  
+  ? {def &x := "foo"; def defaultSlotGuardX implements CheckGuard["x", any] { to f() { return x } }}
+  # value: <defaultSlotGuardX>
+  
+  ? {def &x :(def g extends any {}) := "foo"; def slotGuardX implements CheckGuard["x", g] { to f() { return x } }}
+  # value: <slotGuardX>
+
+  ? def outerTestScope := safeScope.with("CheckGuard", CheckGuard) \
+  >                         .with("FinalSlot", FinalSlot) \
+  >                         .with("x", 1).withSlot("y", 2)
+  > null
+
+  ? e`def outerValueGuardX implements CheckGuard["x", any] { to f() { return x } }`.eval(outerTestScope)
+  # value: <outerValueGuardX>
+
+  ? e`def outerSlotGuardX implements CheckGuard["x", any] { to f() { return x } }`.eval(outerTestScope)
+  # value: <outerSlotGuardX>
+
+  XXX should test scope with guards, but that isn't implemented yet.
+
 audition.getSlot
 
   ? def slotCheckingAuditor {
@@ -161,11 +227,11 @@ audition.getSlot
   > }
   # value: <slotCheckingAuditor>
   
-  ? {def x := 1; def x4 implements slotCheckingAuditor { to f() :any { x } }}
+  ? {def x := 1; def x4s implements slotCheckingAuditor { to f() :any { x } }}
   # problem: Bad!
   
-  ? {def x := 2; def x5 implements slotCheckingAuditor { to f() :any { x } }}
-  # value: <x5>
+  ? {def x := 2; def x5s implements slotCheckingAuditor { to f() :any { x } }}
+  # value: <x5s>
 
 --- Audition guard, and usage example
 
@@ -239,9 +305,11 @@ audition.getSlot
   #            to getObjectExpr()
   #            /** Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor */
   #            to ask(::"other-auditor")
-  #            /** Returns the named slot in the audited object's lexical scope.
+  #            /** Returns a guard which the named slot in the audited object's environment has passed. */
+  #            to getGuard(noun)
+  #            /** Returns the named slot in the audited object's environment.
   #            
-  #            XXX This is an excessively large authority and will probably be replaced. */
+  #            XXX This is deprecated in favor of getGuard, and will be removed as soon as possible. */
   #            to getSlot(::"slot-name")
   #        }
 
