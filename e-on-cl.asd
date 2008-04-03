@@ -98,7 +98,7 @@
      (:file "comm"
             :depends-on ("elib" "sugar"))
      (:file "environment"
-            :depends-on ("elib"))
+            :depends-on ("elib" "sugar"))
      (:file "knot-base"
             :depends-on ("elib" "sugar"
                          "elib-values" #|making tracer does e-print, needing string vtable to be established|#

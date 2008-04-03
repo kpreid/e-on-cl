@@ -1,19 +1,11 @@
 # Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-Outer scope methods part 1.
+  ? def makeCoercedSlot := <elib:slot.makeCoercedSlot>
+  > def mkBinding(g, v) { return makeCoercedSlot(g, v, null) }
+  # value: <mkBinding>
 
- getFQNPrefix/0
-
-  ? safeScope.getFQNPrefix()
-  # value: "__safe$"
-  
- withPrefix/1
-  
-  ? safeScope.withPrefix("the.quick.brown.fox$").getFQNPrefix()
-  # value: "the.quick.brown.fox$"
-
-making scopes
+--- Making scopes ---
 
   ? var x := 22
   # value: 22
@@ -27,16 +19,29 @@ making scopes
   ? makeScope.asType() == <type:org.erights.e.elang.scope.Scope>
   # value: true
 
-  ? def aScope := makeScope.fromState(["false" => false, "&y" => &x], "testScope$")
+  ? def aScope := makeScope("testScope$", [
+  >   "false" => mkBinding(def aGuard extends any {}, &false), 
+  >   "y" => mkBinding(any, &x),
+  >  ], [
+  >   "anInner" => mkBinding(any, &true),
+  >  ])
   # value: <scope testScope$>
-  
-  Not supported: run/2 outer/2
-  XXX asSlottedState, asMixedState
-  
-Outer scope methods part 2, and checking that aScope has the expected contents.
 
- checking fromState
+ Wrong binding type
+ 
+  ? makeScope("oops$", ["x" => &false], [].asMap())
+  # problem: the FinalSlot <& false> doesn't coerce to a CoercedSlot
+  
+  ? makeScope("oops$", [].asMap(), ["x" => &false])
+  # problem: the FinalSlot <& false> doesn't coerce to a CoercedSlot
+  
+--- Methods ---
 
+ getFQNPrefix/0
+
+  ? safeScope.getFQNPrefix()
+  # value: "__safe$"
+  
   ? aScope.getFQNPrefix()
   # value: "testScope$"
   
@@ -52,11 +57,12 @@ Outer scope methods part 2, and checking that aScope has the expected contents.
   
   ? [x *= x, aScope["y"]]
   # value: [484, 484]
-  
+
  iterate/1
  
   ? for k => v in aScope { println(`$v <= $k`) }
-  # stdout: <& false> <= &false
+  # stdout: <& true> <= &anInner
+  #         <& false> <= &false
   #         <var 484> <= &y
   #         
 
@@ -78,29 +84,77 @@ Outer scope methods part 2, and checking that aScope has the expected contents.
  getState/0
  
   ? aScope.getState()
-  # value: ["&false" => <& false>, "&y" => <var 484>]
+  # value: ["&anInner" => <& true>, "&false" => <& false>, "&y" => <var 484>]
   
  put/2
   
   ? [aScope["y"] //= 2, x]
   # value: [242, 242]
   
-  XXX bindings/0 bindings/1
-  Not supported: newContext/1 getScopeLayout/0 update/1
-
  or/1
  
   XXX write regular tests - this is just because I found that a ref-shorten/coerce was missing
   ? def p; bind p := safeScope; safeScope | p
   # value: <scope __safe$>
+
+ withPrefix/1
   
- selflessness
+  ? safeScope.withPrefix("the.quick.brown.fox$").getFQNPrefix()
+  # value: "the.quick.brown.fox$"
+  
+ withBinding/2
+ 
+  ? aScope.withBinding("new", &false)
+  # problem: the FinalSlot <& false> doesn't coerce to a CoercedSlot
+
+  ? def ext := aScope.withBinding("new", mkBinding(any, &false))
+  # value: <scope testScope$>
+  
+  ? ext["new"]
+  # value: false
+  
+  ? ext["y"]
+  # value: 242
+
+--- Slots facet ---
+
+  ? for k => v in aScope.slots() { println(`$v <= $k`) }
+  # stdout: <& true> <= anInner
+  #         <& false> <= false
+  #         <var 242> <= y
+  #         
+  
+  ? aScope.slots().fetch("y", fn {print("fail"); 11})
+  # value: <var 242>
+  
+  ? aScope.slots().fetch("z", fn {print("fail"); 11})
+  # stdout: fail
+  
+  # value: 11
+  
+--- Bindings facet ---
+
+  ? for k => v in aScope.bindings() { println(`$v <= $k`) }
+  # stdout: <& <& true> :any> <= anInner
+  #         <& <& false> :<aGuard>> <= false
+  #         <& <var 242> :any> <= y
+  #         
+  
+  ? aScope.bindings().fetch("y", fn {print("fail"); 11})
+  # value: <& <var 242> :any>
+  
+  ? aScope.bindings().fetch("z", fn {print("fail"); 11})
+  # stdout: fail
+  
+  # value: 11
+  
+--- Selflessness ---
  
   ? aScope :PassByCopy
   # value: <scope testScope$>
   
   ? aScope.__optUncall()
-  # value: [<makeScope>, "_make", [["false" => false, "&y" => <var 242>], "testScope$", ["false", "y"]]]
+  # value: [<makeScope>, "run", ["testScope$", ["false" => <& <& false> :<aGuard>>, "y" => <& <var 242> :any>], ["anInner" => <& <& true> :any>]]]
   
   ? aScope == E.call(E, "call", aScope.__optUncall())
   # value: true

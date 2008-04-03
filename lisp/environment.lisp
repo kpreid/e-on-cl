@@ -7,84 +7,104 @@
 
 ; --- Scope objects ---
 
-(defclass scope () 
+(defclass scope ()
   ((fqn-prefix :initarg :fqn-prefix 
                :initform "__unnamed_outer"
                :type string
                :reader scope-fqn-prefix)
-   (slot-table :initarg :slot-table
-               :type hash-table
-               :initform (error "slot-table unspecified")
-               :reader slot-table)
-   (slot-ordering-cache :initform nil :type (or null (vector string))
-                        :accessor slot-ordering-cache)
-   (local-definitions :initarg :local-definitions
+   (table :initarg table
+          :type hash-table
+          :initform (error "table unspecified")
+          :reader %scope-table)
+   (local-definitions :initarg local-definitions
                       :type hash-table
                       :initform (error "local-definitions unspecified")
-                      :reader local-definitions)))
+                      :accessor local-definitions)
+   (slot-ordering-cache :initform nil :type (or null (vector string))
+                        :accessor %slot-ordering-cache)))
 
 (defmethod print-object ((scope scope) stream)
   (print-unreadable-object (scope stream :type t :identity t)
     (format stream "~S, ~S bound, ~S locals"
       (scope-fqn-prefix scope)
-      (hash-table-count (slot-table scope))
+      (hash-table-count (%scope-table scope))
       (hash-table-count (local-definitions scope)))))
 
 (def-fqn scope "org.erights.e.elang.scope.scope") ; XXX should we have a non-elang fqn?
 
-(defun scope-slot-ordering (scope)
-  (with-accessors ((slot-table slot-table) (slot-ordering-cache slot-ordering-cache)) scope
+(defun scope-noun-ordering (scope)
+  (with-accessors ((table %scope-table)
+                   (slot-ordering-cache %slot-ordering-cache))
+                  scope
     (or slot-ordering-cache
         (setf slot-ordering-cache
           (sort (map-from-hash 'vector
-                  (lambda (noun slot) (declare (ignore slot)) noun)
-                  slot-table)
+                  (lambda (noun binding) (declare (ignore binding)) noun)
+                  table)
                 #'string<)))))
 
+(defun make-binding (slot guard)
+  (make-instance 'coerced-slot :value slot :guard guard))
+
 (defun make-scope (fqn-prefix init-list &optional local-definitions)
+  (let ((table (make-hash-table :test #'equal
+                                :size (length init-list)))
+        (l-d-table (make-hash-table :test #'equal
+                                    :size (if local-definitions
+                                            (length local-definitions)
+                                            (length init-list)))))
+    (loop for (varspec value opt-guard) in init-list do
+      (multiple-value-bind (noun slot)
+          (if (eql 0 (position #\& varspec))
+            (values (subseq varspec 1) value)
+            (values varspec (make-instance 'elib:e-simple-slot :value value)))
+        (setf (gethash noun table) (make-binding slot (or opt-guard +the-any-guard+)))
+        (unless local-definitions
+          (setf (gethash noun l-d-table) t))))
+    (when local-definitions
+      (loop for noun across local-definitions do
+        (setf (gethash noun l-d-table) t)))
   (make-instance 'scope
     :fqn-prefix fqn-prefix
-    :slot-table
-      (let ((table (make-hash-table :test #'equal 
-                                    :size (length init-list))))
-        (loop for (varspec value) in init-list do
-          (if (eql 0 (position #\& varspec))
-            (setf (gethash (subseq varspec 1) table) 
-                  value)
-            (setf (gethash varspec table) 
-                  (make-instance 'elib:e-simple-slot :value value))))
-        table)
-    :local-definitions
-      (if local-definitions
-        (let ((table (make-hash-table :test #'equal 
-                                      :size (length local-definitions))))
-          (loop for noun across local-definitions do
-            (setf (gethash noun table) t))
-          table)
-        (let ((table (make-hash-table :test #'equal 
-                                      :size (length init-list))))
-          (loop for (varspec value) in init-list do
-            (if (eql 0 (position #\& varspec))
-              (setf (gethash (subseq varspec 1) table) t)
-              (setf (gethash varspec table) t)))
-          table))))
+    'table table
+    'local-definitions l-d-table)))
+
+(defun make-exposing-scope (fqn-prefix init-list)
+  (make-scope fqn-prefix
+    (loop for record in init-list collect
+      (destructuring-bind (noun value) record
+        (list noun value 
+              (make-instance 'same-guard :allowed
+                (make-instance 'e-simple-slot :value value)))))))
+
+(defun with-slot-exposed (scope noun slot)
+  (with-binding scope noun
+                (make-instance 'coerced-slot
+                  :value slot
+                  :guard (make-instance 'same-guard :allowed slot))))
 
 (defobject +the-make-scope+ "org.erights.e.elang.scope.makeScope"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
   (:|asType| ()
     (type-specifier-to-guard 'scope))
-  (:|_make| ((state +the-any-map-guard+)
-             (fqn-prefix 'string)
-             (local-definitions 'vector))
-    "XXX this is the uncall constructor, in need of a better interface"
-    (make-scope fqn-prefix
-                (loop with (keys values) = (coerce (e. state |getPair|) 'list)
-                      for key across keys
-                      for value across values
-                      collect (list (e-coerce key 'string) value))
-                (map 'vector (lambda (k) (e-coerce k 'string)) 
-                             local-definitions)))
+  (:|run| ((fqn-prefix 'string)
+           nonlocal-bindings
+           local-bindings)
+    "Make a Scope from its FQN prefix and maps of rebindable nouns and local nouns to bindings."
+    (let* ((l-size (e. local-bindings |size|))
+           (size (+ (e. nonlocal-bindings |size|) l-size))
+           (binding-table (make-hash-table :test #'equal :size size))
+           (l-d-table     (make-hash-table :test #'equal :size l-size)))
+      (e. nonlocal-bindings |iterate| (efun ((k 'string) (v 'coerced-slot))
+        (setf (gethash k binding-table) v)))
+      (e. local-bindings |iterate| (efun ((k 'string) (v 'coerced-slot))
+        (setf (gethash k l-d-table) t
+              (gethash k binding-table) v)))
+      (make-instance 'scope
+        :fqn-prefix fqn-prefix
+        'table binding-table
+        'local-definitions l-d-table)))
   (:|fromState| ((state +the-any-map-guard+)
                  (fqn-prefix 'string))
     "XXX document"
@@ -100,34 +120,48 @@
         when (funcall test noun)
         do (setf (gethash noun destination) slot)))
 
+(defglobal +empty-equal-hash-table+ (make-hash-table :test #'equal))
+
+(defun with-binding (scope new-noun new-binding)
+  (when (gethash new-noun (local-definitions scope))
+    (error "~A already in scope" (e-quote new-noun)))
+  ; xxx support efficient accumulation?
+  (let ((table (%scope-table scope))
+        (local-definitions (local-definitions scope)))
+    (make-instance 'scope 
+      :fqn-prefix (scope-fqn-prefix scope)
+      'table
+        (let ((new-table (make-hash-table :test #'equal 
+                                          :size (1+ (hash-table-count table)))))
+          (copy-hash-table-entries table new-table)
+          (setf (gethash new-noun new-table) new-binding)
+          new-table)
+      'local-definitions
+        (let ((new-table (make-hash-table :test #'equal 
+                                          :size (1+ (hash-table-count local-definitions)))))
+          (copy-hash-table-entries local-definitions new-table)
+          (setf (gethash new-noun new-table) t)
+          new-table))))
+
 (def-vtable scope
   (audited-by-magic-verb (this auditor)
     (declare (ignore this))
     (or (eql auditor +selfless+)
         (eql auditor +transparent-stamp+)))
-
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| "<scope " (scope-fqn-prefix this) ">")
     nil)
   (:|__optUncall| (this)
-    (let ((slot-table (slot-table this)))
-      `#(,+the-make-scope+
-         "_make" 
-         #(,(e. +the-make-const-map+ |fromPairs|
-              (map 'vector
-                (lambda (noun &aux (slot (gethash noun slot-table)))
-                  (if (and (typep slot 'e-simple-slot) 
-                           (not (e-is-true (e. noun |startsWith| "&"))))
-                    (vector noun (e. slot |get|))
-                    (vector (concatenate 'string "&" noun) slot)))
-                (scope-slot-ordering this)))
-           ,(scope-fqn-prefix this)
-           ,(sort (map-from-hash 'vector
-                    (lambda (noun junk) (declare (ignore junk)) noun)
-                    (local-definitions this))
-                  #'string<)))))
+    (let ((bindings (%scope-table this))
+          (nl-map +empty-const-map+)
+          (l-map +empty-const-map+))
+      (loop for noun across (scope-noun-ordering this) do
+        (if (gethash noun (local-definitions this))
+          (setf l-map  (e. l-map  |with| noun (gethash noun bindings)))
+          (setf nl-map (e. nl-map |with| noun (gethash noun bindings)))))
+      `#(,+the-make-scope+ "run" #(,(scope-fqn-prefix this) ,nl-map ,l-map))))
   (:|or| (inner (outer 'scope))
-    "Return a scope which maps all nouns either scope does, preferring this scope's slots. The FQN prefix will be that of this scope."
+    "Return a scope which maps all nouns either scope does, preferring this scope's bindings. The FQN prefix will be that of this scope."
     (flet ((overlay (accessor)
              (let ((new-table (make-hash-table 
                                 :test #'equal 
@@ -139,13 +173,13 @@
           new-table)))
     (make-instance 'scope
       :fqn-prefix        (scope-fqn-prefix inner)
-      :slot-table        (overlay 'slot-table)
-      :local-definitions (overlay 'local-definitions))))
+      'table             (overlay '%scope-table)
+      'local-definitions (overlay 'local-definitions))))
   (:|fetchSlot| (this (noun 'string) absent-thunk)
     "Return this scope's slot for the given noun string, or the result of absent-thunk if it has no slot."
-    (multiple-value-bind (slot present) (gethash noun (slot-table this))
+    (multiple-value-bind (binding present) (gethash noun (%scope-table this))
       (if present
-        slot
+        (eelt binding)
         (efuncall absent-thunk))))
   (:|fetch| (scope (noun 'string) absent-thunk)
     ;; nonprimitive; could be sugar, except that it's used by the knot's
@@ -156,59 +190,57 @@
             (efun () (return (efuncall absent-thunk))))
           |get|)))
   (:|iterate| (scope afunc)
-    "Iterate over the bindings in this scope, as \"&\" + noun => slot."
-    (let ((slot-table (slot-table scope)))
-      (loop for noun across (scope-slot-ordering scope) do
+    "Iterate over the bindings in this scope, as \"&\" + noun => slot. Tentatively deprecated in favor of #slots/0."
+    (let ((bindings (%scope-table scope)))
+      (loop for noun across (scope-noun-ordering scope) do
         (efuncall afunc (concatenate 'string "&" noun) 
-                        (gethash noun slot-table)))
+                        (eelt (gethash noun bindings))))
       nil))
+  (:|bindings| (scope)
+    (e-lambda "$scopeBindings" () 
+      (:|fetch| ((noun 'string) absent-thunk)
+        "Return this scope's binding for the given noun string, or the result of absent-thunk if it has no such binding."
+        (multiple-value-bind (binding present) (gethash noun (%scope-table scope))
+          (if present
+            binding
+            (efuncall absent-thunk))))
+      (:|iterate| (f)
+        (loop with table = (%scope-table scope)
+              for noun across (scope-noun-ordering scope)
+              do (efuncall f noun (gethash noun table))))))
   (:|nestOuter| (scope)
     (make-instance 'scope 
       :fqn-prefix (scope-fqn-prefix scope)
-      :slot-table (slot-table scope)
-      :local-definitions (make-hash-table :test #'equal)))
+      'table (%scope-table scope)
+      'local-definitions (make-hash-table :test #'equal)))
   (:|withSlot| (scope (new-noun 'string) new-slot)
     "Return a scope which has 'new-slot' bound to 'new-noun', and this scope's other bindings and FQN prefix."
-    (when (gethash new-noun (local-definitions scope))
-      (error "~A already in scope" (e-quote new-noun)))
-    ; xxx support efficient accumulation?
-    (let ((slot-table (slot-table scope)))
-      (make-instance 'scope 
-        :fqn-prefix (scope-fqn-prefix scope)
-        :slot-table
-          (let ((new-table (make-hash-table :test #'equal 
-                                            :size (1+ (hash-table-count slot-table)))))
-            (copy-hash-table-entries slot-table new-table)
-            (setf (gethash new-noun new-table) new-slot)
-            new-table)
-        :local-definitions
-          (let ((new-table (make-hash-table :test #'equal 
-                                            :size (1+ (hash-table-count slot-table)))))
-            (copy-hash-table-entries (local-definitions scope) new-table)
-            (setf (gethash new-noun new-table) t)
-            new-table))))
+    (with-binding scope new-noun (make-binding new-slot +the-any-guard+)))
+  (:|withBinding| (scope (new-noun 'string) (new-binding 'coerced-slot))
+    "Return a scope which has 'new-binding' bound to 'new-noun', and this scope's other bindings and FQN prefix."
+    (with-binding scope new-noun new-binding))
   (:|withPrefix| (scope (new 'string))
     "Return a scope which is identical to this scope, except for having the given FQN prefix."
     (make-instance 'scope 
       :fqn-prefix new
-      :slot-table (slot-table scope)
-      :local-definitions (local-definitions scope)))
+      'table (%scope-table scope)
+      'local-definitions (local-definitions scope)))
   (:|getFQNPrefix/0| 'scope-fqn-prefix)
   
   (:|without| (scope (removed-noun 'string))
     "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."
-    (let ((slot-table (slot-table scope)))
+    (let ((table (%scope-table scope)))
       (make-instance 'scope 
         :fqn-prefix (scope-fqn-prefix scope)
-        :slot-table
+        'table
           (let ((new-table (make-hash-table :test #'equal 
-                                            :size (1+ (hash-table-count slot-table)))))
-            (copy-hash-table-entries slot-table new-table
+                                            :size (1+ (hash-table-count table)))))
+            (copy-hash-table-entries table new-table
               :test (lambda (noun) (string/= noun removed-noun)))
             new-table)
-        :local-definitions
+        'local-definitions
           (let ((new-table (make-hash-table :test #'equal 
-                                            :size (1+ (hash-table-count slot-table)))))
+                                            :size (1+ (hash-table-count table)))))
             (copy-hash-table-entries (local-definitions scope) new-table
               :test (lambda (noun) (string/= noun removed-noun)))
             new-table)))))

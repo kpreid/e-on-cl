@@ -34,6 +34,20 @@ def scopeSugar extends sugarRoot implements DeepFrozen, ExitViaHere {
     self.fetchSlot(noun, fn{ throw("binding not in scope: " + E.toQuote(noun)) })
   }
   
+  /** Return a facet which acts as a collection of this scope's slots. */
+  to instance_slots(self) {
+    return def scopeSlots {
+      to fetch(noun, absent) {
+        return self.fetchSlot(noun, absent)
+      }
+      to iterate(f) {
+        for noun => binding in self.bindings() {
+          f(noun, binding[])
+        }
+      }
+    }
+  }
+  
   /** Return a ConstMap containing the bindings in this scope, as \"&\" + noun => slot. */
   method instance_getState(self) { 
     __makeMap.fromIteratable(self, true)

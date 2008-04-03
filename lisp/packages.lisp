@@ -154,6 +154,7 @@
     :static-maker
     
     :e-simple-slot
+    :coerced-slot
     :e-var-slot
     :e-guarded-slot
     :native-e-slot
