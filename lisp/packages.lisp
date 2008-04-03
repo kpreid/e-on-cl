@@ -360,6 +360,7 @@
   (:export
     :scope
     :make-scope
+    :+the-make-scope+
     :require-node-fits-scope
     
     :+the-make-path-loader+
@@ -551,7 +552,10 @@
     :direct-def-binding
     :direct-var-binding
     :value-binding
+    
     :binding-for-slot
+    :to-compiler-binding
+    :binding-reify-code
     
     ;; ejector specifier tags
     :nil

@@ -324,14 +324,24 @@
   `',(%slot-binding-slot binding))
 
 
-(defgeneric binding-for-slot (slot))
+(defgeneric binding-for-slot (slot guard))
 
-(defmethod binding-for-slot ((slot t))
-  (make-instance 'slot-binding :slot slot))
+(defmethod binding-for-slot ((slot t) guard)
+  (make-instance 'slot-binding :slot slot :audit-slot-guard guard))
 
-(defmethod binding-for-slot ((slot e-simple-slot))
-  ; could be extended to cover any DeepFrozen slot
-  (make-instance 'value-binding :value (e. slot |get|)))
+(defmethod binding-for-slot ((slot e-simple-slot) guard)
+  (make-instance 'value-binding :value (eelt slot) :audit-slot-guard guard))
+
+(defun to-compiler-binding (binding)
+  "Given a runtime scope binding (a CoercedSlot), compute an equivalent compiler binding."
+  (e-coercef binding 'coerced-slot)
+  (binding-for-slot (eelt binding) (e. binding |getGuard|)))
+
+(defun binding-reify-code (binding)
+  "Given a compiler binding, produce a form which returns the equivalent CoercedSlot."
+  `(make-instance 'coerced-slot
+                  :value ,(binding-get-slot-code binding)
+                  :guard ,(binding-audit-guard-code binding)))
 
 ;;; --- ejector-specifier utilities ---
 

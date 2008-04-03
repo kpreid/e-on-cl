@@ -40,25 +40,23 @@
     ; XXX call something on the Scope maker, don't make one directly
     ;; XX pass local-definitions information
     (locally (declare (notinline make-instance))
-      (e.knot:make-scope
+      (efuncall e.knot:+the-make-scope+
         ',(scope-layout-fqn-prefix final-layout)
-        (list
+        +empty-const-map+
+        (e. +the-make-const-map+ |fromPairs| (vector
           ,@(loop for noun across rebound collect
-            `(list ',(format nil "&~A" noun)
-                   ,(binding-get-slot-code
-                     (scope-layout-noun-binding final-layout noun)))))))
+              `(vector ',noun
+                       ,(binding-reify-code
+                          (scope-layout-noun-binding final-layout noun))))))))
     |or|
     ,initial-scope-form))
 
 (defun outer-scope-to-layout (outer-scope)
   (make-instance 'prefix-scope-layout :fqn-prefix (e. outer-scope |getFQNPrefix|) :rest
-    (scope-layout-nest ; XXX this is wrong; scopes should have scope-box marks just as scope layouts do (see Scope#nestOuter)
-      ; XXX decide what the official interface to getting slots from a Scope is
+    (scope-layout-nest ; XXX this is wrong; we should use the local/nonlocal info from the scope
       (let (layout)
-        (e. outer-scope |iterate| (efun (k v)
-          (setf k (ref-shorten k))
-          (assert (char= #\& (char k 0)))
-          (push (cons (subseq k 1) (binding-for-slot v)) layout)))
+        (e. (e. outer-scope |bindings|) |iterate| (efun ((noun 'string) (binding 'coerced-slot))
+          (push (cons noun (to-compiler-binding binding)) layout)))
         (nreverse layout)))))
 
 (defun e-to-cl (expr outer-scope)

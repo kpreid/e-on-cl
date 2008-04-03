@@ -313,6 +313,28 @@ evalToPair
   ? e`x`.eval(newScope)
   # value: "leftward"
 
+Binding guard preservation
+
+  ? def [_, newScope] := e`
+  >   def x :String := ""
+  >   def &y :(def g extends any {}) := &x
+  > `.evalToPair(safeScope)
+  > newScope.bindings().fetch("x", throw).getGuard()
+  # value: FinalSlot[String]
+  XXX bindings facet should provide get/1
+
+  ? newScope.bindings().fetch("y", throw).getGuard()
+  # value: <g>
+  
+  ? e`escape r { 
+  >     def _ implements (def _ { 
+  >       to audit(a) { r([a.getGuard("x"), a.getGuard("y")]) }}
+  >     ) { 
+  >       to f() { x;y }
+  >     }
+  >   }`.eval(newScope)
+  # value: [FinalSlot[String], <g>]
+
 --- Printing ---
 
   Bug test: nested code was not being printed with the indenting TextWriter, resulting in only the first line being indented
