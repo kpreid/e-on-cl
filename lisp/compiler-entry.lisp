@@ -130,15 +130,16 @@
        string))
 
 (defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
-  "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a list containing the nouns used by the expression and a function which, when called with an OuterScope object followed by slots for each of the nouns, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope."
+  "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a function which, when called with a Scope object, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope; opt-scope need not be complete."
   (require-kernel-e expr nil)
   (when opt-scope
     ;; XXX this is wrongish: we should execute the check *always*
     (e.knot:require-node-fits-scope expr opt-scope +the-thrower+))
   (let* ((all-nouns (map 'list #'ref-shorten (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector)))
-         (needed-nouns '())
-         (needed-syms '())
+         (extractions '())
          (initial-scope-var (gensym "INITIAL-SCOPE"))
+         (bindings-var (gensym "BINDINGS"))
+         (opt-bindings (when opt-scope (e. opt-scope |bindings|)))
          (layout
            (make-instance 'prefix-scope-layout :fqn-prefix fqn-prefix
                                                :rest
@@ -146,35 +147,41 @@
                (mapcar
                  (lambda (noun)
                    (escape-bind (fail)
-                       (let* ((slot (if opt-scope
-                                      (e. opt-scope |fetchSlot| noun fail)
-                                      (efuncall fail)))
-                              (value (progn
-                                       (unless (typep slot 'e-simple-slot)
-                                         (efuncall fail))
-                                       (ref-shorten (e. slot |get|)))))
-                         (unless (typep value 'externalizable-for-efasl)
-                           ;; xxx in principle, this can be extended to any externalizable value 
-                           (efuncall fail))
-                         (cons noun (make-instance 'value-binding :value value)))
+                       (progn
+                         (unless opt-scope (efuncall fail))
+                         (let* ((binding (e. opt-bindings |fetch| noun fail))
+                                (slot (ref-shorten (eelt binding))))
+                           (unless (and (typep slot 'e-simple-slot)
+                                        (typep (ref-shorten (e. slot |get|))
+                                               'externalizable-for-efasl)
+                                        (typep (ref-shorten
+                                                 (e. binding |getGuard|))
+                                               'externalizable-for-efasl))
+                             (efuncall fail))
+                           (cons noun (to-compiler-binding binding))))
                      (-unused-)
                        (declare (ignore -unused-))
-                       (push noun needed-nouns)
-                       (cons noun (make-instance 'lexical-slot-binding :symbol
-                                    (first (push (make-symbol noun)
-                                                 needed-syms))))))
+                       (let ((binding-sym (make-symbol (format nil "~A-binding" noun)))
+                             (slot-sym (make-symbol noun))
+                             (guard-sym (make-symbol (format nil "~A-guard" noun))))
+                         (push `(,guard-sym (e. ,binding-sym |getGuard|)) extractions)
+                         (push `(,slot-sym (eelt ,binding-sym)) extractions)
+                         (push `(,binding-sym (e. ,bindings-var |fetch| ',noun +the-thrower+)) extractions)
+                         (cons noun (make-instance 'lexical-slot-binding :symbol slot-sym :guard-var guard-sym)))))
                  all-nouns))))
          (*efasl-program*
            `(setf *efasl-result*
-                  (list
-                    ',needed-nouns
-                    (lambda (,initial-scope-var ,@needed-syms)
-                      ;; XXX we shouldn't need to reference the compiler
-                      ;; implementation here
-                      ,(e.elang.compiler.seq:sequence-e-to-cl
-                         expr 
-                         layout
-                         initial-scope-var))))))
+                  (lambda (,initial-scope-var
+                           &aux (,bindings-var
+                                 (e. ,initial-scope-var |bindings|))
+                                ,@extractions)
+                    (declare (ignorable ,@(mapcar #'first extractions)))
+                    ;; XXX we shouldn't need to reference the compiler
+                    ;; implementation here
+                    ,(e.elang.compiler.seq:sequence-e-to-cl
+                       expr 
+                       layout
+                       initial-scope-var)))))
     (e. e.knot:+sys-trace+ |doing|
       (format nil "compiling ~A" output-file)
       (efun ()
@@ -194,8 +201,7 @@
     (during ("CL load ~A" (file-namestring file))
       (load file :verbose nil :print nil))
     (during ("execute ~A" (file-namestring file))
-      (destructuring-bind (names function) *efasl-result*
-        (apply function scope (mapcar (lambda (n) (e. scope |fetchSlot| n +the-thrower+)) names))))))
+      (funcall *efasl-result* scope))))
 
 ;;; --- ASDF-integrated compilation ---
 

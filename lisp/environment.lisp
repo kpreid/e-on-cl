@@ -72,10 +72,12 @@
 (defun make-exposing-scope (fqn-prefix init-list)
   (make-scope fqn-prefix
     (loop for record in init-list collect
-      (destructuring-bind (noun value) record
-        (list noun value 
+      (destructuring-bind (varspec value) record
+        (list varspec value 
               (make-instance 'same-guard :allowed
-                (make-instance 'e-simple-slot :value value)))))))
+                (if (eql 0 (position #\& varspec))
+                  value
+                  (make-instance 'e-simple-slot :value value))))))))
 
 (defun with-slot-exposed (scope noun slot)
   (with-binding scope noun

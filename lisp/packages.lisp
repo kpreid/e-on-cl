@@ -190,6 +190,7 @@
     :+the-any-guard+
     :+the-text-writer-guard+
     :+the-exception-guard+
+    :same-guard :+make-same-guard+
     
     :approvedp
     :+the-audit-checker+

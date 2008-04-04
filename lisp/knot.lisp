@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.knot)
@@ -139,12 +139,21 @@
 ;; CLISP has trouble with complex fasls - '*** - PRINT: not enough stack space for carrying out circularity analysis' - so we won't try to compile. XXX better to handle compilation failure?
 (defconstant +compile-emakers+ #+clisp nil #-clisp t)
 
+(defun make-deep-frozen-value-binding (value)
+  ;; XXX should replace uses of this with more specific guards, once they exist
+  (make-instance 'coerced-slot
+    :guard (make-instance 'thunk-lazy-ref :thunk (lambda ()
+             (e. (load-time-value (type-specifier-to-guard 'e-simple-slot)) |get|
+               (e-import "org.cubik.cle.prim.DeepFrozen"))))
+    :value (make-instance 'e-simple-slot :value
+             value)))
+
 (defun scope-for-fqn (scope fqn)
-  (let* ((&trace (make-instance 'e-simple-slot :value (make-tracer :label fqn)))
+  (let* ((&&trace (make-deep-frozen-value-binding (make-tracer :label fqn)))
          (scope (e. scope |nestOuter|))
          (scope (e. scope |withPrefix| (concatenate 'string fqn "$")))
-         (scope (e. scope |withSlot| "trace" &trace))
-         (scope (e. scope |withSlot| "traceln" &trace))
+         (scope (e. scope |withBinding| "trace" &&trace))
+         (scope (e. scope |withBinding| "traceln" &&trace))
          (scope (e. scope |nestOuter|)))
     scope))
 
@@ -540,7 +549,7 @@
             (let* ((exit-stamp (e-lambda "org.cubik.cle.prim.ExitViaHereStamp"
                                    (:stamped +deep-frozen-stamp+)
                                  (:|audit/1| (constantly +e-true+))))
-                   (scope (e. (vat-safe-scope *vat*) |withSlot| "ExitViaHere" (make-instance 'e-simple-slot :value exit-stamp)))
+                   (scope (e. (vat-safe-scope *vat*) |withBinding| "ExitViaHere" (make-deep-frozen-value-binding exit-stamp)))
                    (result (loop for f in load-functions
                                  do (block continue
                                        (return (funcall f fqn (efun () (return-from continue)) scope)))
@@ -596,7 +605,7 @@
 
 (defglobal +shared-safe-scope+
   (labels ((prim (name) (e. +shared-safe-loader+ |fetch| name +the-thrower+)))
-    (make-scope "__shared"
+    (make-exposing-scope "__shared"
       `(("shared__uriGetter"  ,+sharable-importer+)
       
         ; --- primitive: values not available as literals ---
@@ -654,8 +663,8 @@
         )))
   "Environment containing only objects which are common across vats, and are therefore safe for sharing, file compilation, etc.")
 
-(defun make-union-scope (prefix base desc)
-  (e. (make-scope prefix desc) |or| base))
+(defun make-union-exposing-scope (prefix base desc)
+  (e. (make-exposing-scope prefix desc) |or| base))
 
 (defun make-safe-scope (&optional (fqn-prefix "__safe$") (roots (default-safe-scope-roots))
     &aux (&<import> (e. roots |fetchSlot| "import__uriGetter" +the-thrower+)))
@@ -664,7 +673,7 @@
                (make-lazy-eval-slot safe-scope-vow source))
              (lazy-import (fqn)
                (make-lazy-apply-slot (lambda () (eelt (e. &<import> |get|) fqn)))))
-      (make-union-scope fqn-prefix +shared-safe-scope+
+      (make-union-exposing-scope fqn-prefix +shared-safe-scope+
       
         `(; --- self-referential / root ---
           ("safeScope"  ,safe-scope-vow)
