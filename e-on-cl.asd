@@ -132,7 +132,7 @@
             :depends-on ("compiler-base"
                          "sugar" 
                          "environment"
-                         "knot" #| for +lisp+ |#))
+                         "knot" #| for +lisp+ and +shared-safe-scope+ |#))
      (:file "rune"
             :depends-on ("elib" "compiler-entry" "knot" "syntax"))
      
