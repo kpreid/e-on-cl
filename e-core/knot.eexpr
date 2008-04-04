@@ -39,8 +39,8 @@ def uncallToUnget (loader, portrayal) {
 
 def scopeToRightInvertibleLoader(scope) implements DeepFrozenStamp {
   def inversion := __makeMap.fromIteratable(def _.iterate(f) {
-    for ampNoun => slot in scope {
-      f(slot[], ampNoun.run(1, ampNoun.size()))
+    for noun => binding in scope.bindings() {
+      f(binding[][], noun)
     }
   }, false)
   return def invertibleScopeLoader {
