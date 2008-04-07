@@ -817,6 +817,33 @@ SlotExpr, SlotPattern, AssignExpr
   ? perverse
   # value: 104
 
+BindingExpr, BindingPattern
+
+  ? def makeCoercedSlot := <elib:slot.makeCoercedSlot>
+  > def CoercedSlot := makeCoercedSlot.asType()
+  > def FinalSlot := __makeFinalSlot.asType()
+  > null
+
+  ? def foo :int := 1
+  # value: 1
+  
+  ? def binding := &&foo
+  # value: <& <& 1> :FinalSlot[int]>
+  
+  ? binding == binding :CoercedSlot
+  # value: true
+  
+  ? def &&bar := binding
+  > bar
+  # value: 1
+  
+  ? def &&baz := makeCoercedSlot(FinalSlot[int], __makeFinalSlot(2), null)
+  > baz
+  # value: 2
+  
+  ? (&&baz).getGuard()
+  # value: FinalSlot[int]
+
 ListPattern
 
   ? [1, 2, 3] =~ [lp_a, lp_b, lp_c :tfloat64]

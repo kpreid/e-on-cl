@@ -132,6 +132,29 @@ There must also be at least one preceding digit.
 ? t("pragma.enable(\"noun-string\"); ::\"a\"")
 # stdout: SeqE. [] NounE. a
 
+--- SlotExpr, BindingExpr ---
+
+? t("&a")
+# stdout: SlotE. NounE. a
+
+? t("&a :b")
+# stdout: CoerceE.
+#           SlotE. NounE. a
+#           NounE. b
+
+? t("&&a")
+# stdout: BindingE. NounE. a
+
+? t("&(&a)")
+# stdout: SlotE. SlotE. NounE. a
+-- currently meaningless, but it parses.
+
+? t("&&a :b")
+# stdout: CoerceE.
+#           BindingE. NounE. a
+#           NounE. b
+-- this does not parse as a guarded BindingExpr.
+
 --- Function syntax ---
 
 ? t("pragma.enable(\"anon-lambda\"); fn { a }")
@@ -892,6 +915,27 @@ XXX incomplete tests; borrow when-fn examples from syntax-sugar
 #               NounE. c
 #               null
 #             NounE. d
+
+--- BindingPattern, SlotPattern ---
+
+? tp("&a")
+# stdout: SlotP.
+#           NounE. a
+#           null
+
+? tp("&a :b")
+# stdout: SlotP.
+#           NounE. a
+#           NounE. b
+
+? tp("&&a")
+# stdout: BindingP. NounE. a
+
+? tp("&(&a)")
+# problem: (line 1)@2: unexpected token: <"(" @ 1:2>
+
+? tp("&&a :b")
+# problem: (line 1)@5: unexpected token: <":" @ 1:5>
 
 --- CallPattern, FunCallPattern, GetPattern ---
 

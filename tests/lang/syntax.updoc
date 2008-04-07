@@ -217,6 +217,11 @@ node visitor
 XXX move print tests to here from mixed up in enode.updoc
 XXX print tests for all nodes
 
+BindingExpr
+
+  ? e`&&a`
+  # value: e`&&a`
+
 Catch
 
   ? e`try { a } catch b { c }`.asKernelE()
@@ -280,6 +285,14 @@ ListPattern
   ? epatt`[]`
   # value: epatt`[]`
 
+SlotPattern
+
+  ? epatt`&foo`
+  # value: epatt`&foo`
+
+  ? epatt`&state :Lamport`
+  # value: epatt`&state :Lamport`
+
 xTesting printing of nodes with no specific print code yet:
 x
 x  ? <import:org.cubik.cle.prim.parser>.run("{[a.run()]}")
@@ -339,7 +352,7 @@ Universal precedence-proper print-parenthesization tester:
   >   e`a`.asKernelE(),
   >   e`def o {}`.asKernelE(),
   >   e`a; b`.asKernelE(),
-  >   e`&a`.asKernelE(),
+  >   e`&&a`.asKernelE(),
   > ]; null
   
   ? for inner in innerNodes {

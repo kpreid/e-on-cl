@@ -167,6 +167,8 @@
 (define-node-class |AssignExpr|      (|EExpr|)
   ((:|noun|   t |EExpr|)
    (:|rValue| t |EExpr|)))
+(define-node-class |BindingExpr|     (|EExpr|)
+  ((:|noun| t |EExpr|)))
 (define-node-class |CallExpr|        (|EExpr|)
   ((:|recipient| t |EExpr|)
    (:|verb| nil string) 
@@ -211,8 +213,6 @@
 (define-node-class |SeqExpr|         (|EExpr|)
   ((:|subs| t (e-list |EExpr|)))
   :rest-slot t)
-(define-node-class |SlotExpr|        (|EExpr|)
-  ((:|noun| t |EExpr|)))
 
 (defclass |EMethodoid| (|ENode|) ()) ;; to support "to"
 (define-node-class |EMethod|         (|EMethodoid|)
@@ -248,10 +248,9 @@
 (define-node-class |NounPattern|     (|Pattern|)
   ())
 
+(define-node-class |BindingPattern|  (|NounPattern|)
+  ((:|noun| t |EExpr|)))
 (define-node-class |FinalPattern|    (|NounPattern|)
-  ((:|noun| t |EExpr|) 
-   (:|optGuardExpr| t (or null |EExpr|))))
-(define-node-class |SlotPattern|     (|NounPattern|)
   ((:|noun| t |EExpr|) 
    (:|optGuardExpr| t (or null |EExpr|))))
 (define-node-class |VarPattern|      (|NounPattern|)
@@ -537,6 +536,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (defun pattern-qualified-name (pattern)
   (concatenate 'string "$" (or (pattern-opt-noun pattern) "_")))
 
+(def-vtable |BindingPattern|
+  (:|getOptGuardExpr/0| (constantly nil)))
+
 (def-vtable |ObjectExpr|
   (:|asTypeDesc| (object-expr fqn-prefix)
     (e. +the-make-type-desc+ |run|
@@ -728,7 +730,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       (:|withVarPattern| ((node '|ENode|))
         "Experimental: for ENode#walkScopes"
         (extend-ss self node :var-names (e. (e. node |getNoun|) |getName|)))
-      (:|withSlotPattern| ((node '|ENode|))
+      (:|withBindingPattern| ((node '|ENode|))
         "Experimental: for ENode#walkScopes"
         (extend-ss self node :var-names (e. (e. node |getNoun|) |getName|)))
       (:|withMetaState| ()
@@ -800,7 +802,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
       (make node :read-names (e. node |getName|)))
     (:|scopeVar| ((node '|ENode|))
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
-    (:|scopeSlot| ((node '|ENode|))
+    (:|scopeBinding| ((node '|ENode|))
       (make node :var-names (e. (e. node |getNoun|) |getName|)))
     (:|scopeMeta| ()     +has-meta-static-scope+)
     (:|getEmptyScope| () +empty-static-scope+)))
@@ -876,6 +878,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
   (seq (! (e. environment |withAssignment| (:get :|noun|)))
        :|rValue|))
 
+(def-scope-rule |BindingExpr|
+  (! (e. environment |withNounUse| (:get :|noun|))))
+
 (def-scope-rule |CallExpr|
   (seq :|recipient| (flatten :|args|)))
 
@@ -924,9 +929,9 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 (def-scope-rule |SeqExpr|
   (flatten :|subs|))
 
-(def-scope-rule |SlotExpr|
-  (! (e. environment |withNounUse| (:get :|noun|))))
 
+(def-scope-rule |BindingPattern|
+  (! (e. environment |withBindingPattern| node)))
 
 (def-scope-rule |FinalPattern|
   (seq :|optGuardExpr|
@@ -937,10 +942,6 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
 
 (def-scope-rule |ListPattern|
   (flatten :|subs|))
-
-(def-scope-rule |SlotPattern|
-  (seq :|optGuardExpr|
-       (! (e. environment |withSlotPattern| node))))
 
 (def-scope-rule |VarPattern|
   (seq :|optGuardExpr|
@@ -1079,8 +1080,8 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
                (:|withVarPattern| (node)
                  (check-type node |VarPattern|)
                  (make (remove (e. (e. node |getNoun|) |getName|) finals :test #'string=)))
-               (:|withSlotPattern| (node)
-                 (check-type node |SlotPattern|)
+               (:|withBindingPattern| (node)
+                 (check-type node |BindingPattern|)
                  (make (remove (e. (e. node |getNoun|) |getName|) finals :test #'string=)))
                (:|withMetaState| () |kernelScopeChecker|)
                (:|withSubnode| (key node)

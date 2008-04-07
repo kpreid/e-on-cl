@@ -59,6 +59,7 @@ tokens {
     AccumExpr;
     AndExpr;
     BinaryExpr;
+    BindingExpr;
     CallExpr;
     CatchExpr;
     CoerceExpr;
@@ -120,6 +121,7 @@ tokens {
 
     // patterns
     BindPattern;
+    BindingPattern;
     CallPattern;
     FinalPattern;
     FunCallPattern;
@@ -427,7 +429,9 @@ tryExpr:        "try"^ block catcherList ("finally"! block | filler)
 
 bindPatt:       "bind"^ nounExprOrHole optGuard {##.setType(BindPattern);} ;
 varPatt:        "var"^  nounExprOrHole optGuard {##.setType(VarPattern);}  ;
-slotPatt:       "&"^    nounExprOrHole optGuard {##.setType(SlotPattern);} ;
+reifyPatt:      "&"^    nounExprOrHole optGuard {##.setType(SlotPattern);}
+            |   "&&"^   nounExprOrHole          {##.setType(BindingPattern);}
+            ;
 
 // those patterns which may replace a "def" keyword
 keywordPatt:    varPatt | bindPatt ;
@@ -690,13 +694,15 @@ pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;
 //      (-3).pow(2)  or -(3.pow(2))
 // to disambiguate which you mean.
 prefix:         postfix
-            |  slotExpr
+            |  reifyExpr
             |  ("!" | "~" | "*" | "+")  postfix    {##=#([PrefixExpr],##);}
             |  "-" prim                            {##=#([PrefixExpr],##);}
             ;
 
-// extracted because of its use in 'map'
-slotExpr: "&"!  postfix                        {##=#([SlotExpr],##);} ;
+// extracted because of their use in 'map'
+reifyExpr:      "&"!  postfix                     {##=#([SlotExpr],##);}
+            |   "&&"! postfix                     {##=#([BindingExpr],##);}
+            ;
 
 // Calls and sends are left associative.
 postfix:        call
@@ -752,7 +758,7 @@ assocs:    (assoc (","! assocs)?)? ;
 
 assoc:          seq "=>"^ seq {##.setType(MapExprAssoc);}
             |   "=>"^ ( nounExprOrHole
-                      | slotExpr
+                      | reifyExpr
                       | "def" nounExprOrHole
                         {throwSemanticHere("Reserved syntax: forward export");}
                       ) {##.setType(MapExprExport);}
@@ -835,7 +841,7 @@ eqPatt:         (IDENT QUASIOPEN) =>
                                                   {##=#([CallPattern],##);} 
                           )
             |   keywordPatt
-            |   slotPatt
+            |   reifyPatt
             ;
 
 // namePatts are patterns that have an inherent name, and so can be used in
@@ -844,7 +850,7 @@ eqPatt:         (IDENT QUASIOPEN) =>
 // cannot be used as an alternative in eqPatt.
 namePatt:       nounExpr optGuard    {##=#([FinalPattern],##);}
             |   keywordPatt
-            |   slotPatt
+            |   reifyPatt
             ;
 
 justNoun:       IDENT

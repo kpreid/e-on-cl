@@ -756,6 +756,7 @@
           ("&__mapExtract"   ,(lazy-import "org.erights.e.elang.expand.makeViaExtractor"))
           ("&__matchSame"    ,(lazy-import "org.erights.e.elang.expand.makeViaSame"))
           ("&__quasiMatcher" ,(lazy-import "org.erights.e.elang.expand.makeViaQuasi"))
+          ("&__slotToBinding",(lazy-import "org.erights.e.elang.expand.slotToBinding"))
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
           ("&__suchThat"     ,(lazy-import "org.erights.e.elang.expand.suchThat"))
           ("&__switchFailed" ,(lazy-import "org.erights.e.elang.expand.__switchFailed"))

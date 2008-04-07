@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def broken := Ref.broken("boolean flow expression failed")
+def broken := <import:org.cubik.cle.prim.makeCoercedSlot>(any, Ref.broken("boolean flow expression failed"), null)
 
 def booleanFlow implements DeepFrozen, ExitViaHere {
   to broken() { return broken }

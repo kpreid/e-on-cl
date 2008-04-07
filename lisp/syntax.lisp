@@ -221,7 +221,7 @@ XXX make precedence values available as constants"
                       (subprint expr +precedence-outer+)
                       (e. tw |write| #|(|# ")"))))
                 (noun-pattern-printer (tag)
-                  (lambda (opt-original noun-expr opt-guard-expr)
+                  (lambda (opt-original noun-expr &optional opt-guard-expr)
                     (declare (ignore opt-original))
                     (e. tw |print| tag)
                     (subprint noun-expr nil)
@@ -265,6 +265,12 @@ XXX make precedence values available as constants"
                            (subprint arg +precedence-outer+))
                   (e. tw |print| #|(|# ")")))))
 
+          (:|visitBindingExpr| (opt-original noun)
+            (declare (ignore opt-original))
+            (precedential (+precedence-slot-expr+)
+              (e. tw |print| "&&")
+              (subprint noun +precedence-in-slot-expr+)))
+          
           (:|visitCallExpr| (opt-original rec verb args)
             (declare (ignore opt-original))
             (subprint rec +precedence-call-rec+)
@@ -464,6 +470,7 @@ XXX make precedence values available as constants"
             (subprint rest-patt nil))
           
           (:|visitFinalPattern/3| (noun-pattern-printer ""))
+          (:|visitBindingPattern/2| (noun-pattern-printer "&&"))
           (:|visitSlotPattern/3| (noun-pattern-printer "&"))
           (:|visitVarPattern/3| (noun-pattern-printer "var "))
 

@@ -66,6 +66,11 @@ def exprShorten(expr) {
     }
 }
 
+def makeCoercedSlot := <import:org.cubik.cle.prim.makeCoercedSlot>
+def lazyB(f) {
+  return makeCoercedSlot(any, def _ { to get() { return f() }}, null)
+}
+
 def emptyStatic := <import:org.cubik.cle.prim.makeStaticScope>.getEmptyScope()
 
 def selflessTransparentUncaller {
@@ -100,9 +105,9 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
     kit
   }
   
-  def &peekSealer := def _{to get() { return getPeekBrandKit().getSealer() } }
-  def &peekUnsealer := def _{ to get() { return getPeekBrandKit().getUnsealer() } }
-  def &peekBrand := def _{ to get() { return getPeekBrandKit().getBrand() } }
+  def &&peekSealer := lazyB(fn { getPeekBrandKit().getSealer() })
+  def &&peekUnsealer := lazyB(fn { getPeekBrandKit().getUnsealer() })
+  def &&peekBrand := lazyB(fn { getPeekBrandKit().getBrand() })
   
   def selflessSemitransparentUncaller {
     to optUncall(s) {

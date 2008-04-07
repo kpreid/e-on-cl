@@ -9,11 +9,11 @@ def <vm> := <import:org.erights.e.elang.evm.type.*> # XXX shouldn't be .type.
 
 <import:org.cubik.cle.makeAdvisoryInterface>(
 interface StaticWalkEnvironment {
-  to withNounUse(_ :any[<vm:NounExpr>, <vm:SlotExpr>]) :StaticWalkEnvironment
+  to withNounUse(_ :any[<vm:NounExpr>, <vm:BindingExpr>]) :StaticWalkEnvironment
 
   to withFinalPattern(_ :(<vm:FinalPattern>)) :StaticWalkEnvironment
   to withVarPattern(_ :(<vm:VarPattern>)) :StaticWalkEnvironment
-  to withSlotPattern(_ :(<vm:SlotPattern>)) :StaticWalkEnvironment
+  to withBindingPattern(_ :(<vm:BindingPattern>)) :StaticWalkEnvironment
 
   to withAssignment(_ :(<vm:NounExpr>)) :StaticWalkEnvironment
 

@@ -138,8 +138,8 @@ Call patterns
   ? def makeVarPattern := <vm:makeVarPattern>
   # value: <makeVarPattern>
 
-  ? def makeSlotPattern := <vm:makeSlotPattern>
-  # value: <makeSlotPattern>
+  ? def makeBindingPattern := <vm:makeBindingPattern>
+  # value: <makeBindingPattern>
 
  empty scope
 
@@ -186,7 +186,7 @@ Call patterns
   ? def varI := makeStaticScope.scopeVar(makeVarPattern(null, makeNounExpr(null, "i", null), null, null))
   # value: <[] := [] =~ [] + var ["i"]>
   
-  ? makeStaticScope.scopeSlot(makeSlotPattern(null, makeNounExpr(null, "i", null), null, null))
+  ? makeStaticScope.scopeBinding(makeBindingPattern(null, makeNounExpr(null, "i", null), null))
   # value: <[] := [] =~ [] + var ["i"]>
   
   ? varI.varNames()

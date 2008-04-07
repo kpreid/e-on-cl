@@ -105,6 +105,7 @@
                          "slots" #| for e-simple-slot |#))
      (:file "knot"
             :depends-on ("knot-base" "extern" "tables2" "comm" "sugar"
+                         "environment" #| making scopes |#
                          "elib-guts" #| XXX determine the necessity of this - violates elib-guts's description |#
                          "elang-nodes" #| +the-make-static-scope+ |#
                          "print" #| constructing global tracers |#

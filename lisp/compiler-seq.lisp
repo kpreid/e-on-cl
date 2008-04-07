@@ -161,6 +161,13 @@
                            ,value-var)))))
     layout))
 
+(define-sequence-expr |BindingExpr| (layout result noun-expr)
+  (check-type noun-expr |NounExpr|)
+  (values
+    `((,result
+       ,(binding-reify-code (scope-layout-noun-binding layout (first (node-elements noun-expr))))))
+    layout))
+
 (define-sequence-expr |CallExpr| (layout result recipient verb &rest args
     &aux (rec-var (gensym "REC"))
          (arg-vars (loop for nil in args collect (gensym "ARG"))))
@@ -213,8 +220,8 @@
   (null (ref-shorten (e. node |getOptGuardExpr|))))
 (defmethod pattern-has-no-side-effects ((node |VarPattern|))
   (null (ref-shorten (e. node |getOptGuardExpr|))))
-(defmethod pattern-has-no-side-effects ((node |SlotPattern|))
-  (null (ref-shorten (e. node |getOptGuardExpr|))))
+(defmethod pattern-has-no-side-effects ((node |BindingPattern|))
+  t)
 
 (define-sequence-expr |EscapeExpr| (layout result ejector-patt body opt-catch-pattern opt-catch-body
     &aux (outer-block (gensym "ESCAPE"))
@@ -452,13 +459,6 @@
                                            result)))
     layout))
 
-(define-sequence-expr |SlotExpr| (layout result noun-expr)
-  (check-type noun-expr |NounExpr|)
-  (values
-    `((,result
-       ,(binding-get-slot-code (scope-layout-noun-binding layout (first (node-elements noun-expr))))))
-    layout))
-
 ;;; --- Patterns ---
 
 (define-sequence-patt |IgnorePattern| (layout specimen ejector-spec)
@@ -524,25 +524,21 @@
               `((,value-var ,specimen-var))))
     (scope-layout-bind layout noun (make-instance 'direct-var-binding :value-symbol value-var :guard-symbol guard-var :broken-symbol broken-var :noun noun))))
 
-(defun slot-sequence-binding (noun layout specimen-var ejector-spec guard-var
-    &aux (slot-var (gensym (concatenate 'string "&" noun))))
-  (if guard-var
-    (values
-      `((,slot-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
-      (scope-layout-bind layout noun 
-        (make-instance 'lexical-slot-binding :symbol specimen-var
-                                             :guard-var guard-var)))
-    (if (symbolp specimen-var)
-      (values
-        '()
-        (scope-layout-bind layout noun
-          (make-instance 'lexical-slot-binding :symbol specimen-var)))
-      (values
-        `((,slot-var ,specimen-var))
-        (scope-layout-bind layout noun
-          (make-instance 'lexical-slot-binding :symbol slot-var))))))
+(defun binding-sequence-binding (noun layout specimen-var ejector-spec syntactic-guard-var
+    &aux (binding-var (gensym (concatenate 'string "&&" noun)))
+         (slot-var (gensym (concatenate 'string "&" noun)))
+         (guard-var (gensym (concatenate 'string "&" noun "-guard"))))
+  (assert (null syntactic-guard-var))
+  (values
+    ; XXX this code feels like it should be merged with the compiled-file wrapper
+    `((,binding-var (e-coerce ,specimen-var 'coerced-slot))
+      (,slot-var (eelt ,binding-var))
+      (,guard-var (e. ,binding-var |getGuard|)))
+    (scope-layout-bind layout noun
+      (make-instance 'lexical-slot-binding :symbol slot-var
+                                           :guard-var guard-var))))
 
-(defun sequence-binding-pattern (fn specimen ejector-spec layout noun-expr opt-guard-expr
+(defun sequence-binding-pattern (fn specimen ejector-spec layout noun-expr &optional opt-guard-expr
     &aux (guardv (gensym "FINAL-GUARD")))
   (check-type noun-expr |NounExpr|)
   (let ((noun (first (node-elements noun-expr))))
@@ -558,8 +554,8 @@
 (define-sequence-patt |FinalPattern| (layout specimen ejector-spec &rest noun-details)
   (apply #'sequence-binding-pattern #'final-sequence-binding specimen ejector-spec layout noun-details))
 
-(define-sequence-patt |SlotPattern| (layout specimen ejector-spec &rest noun-details)
-  (apply #'sequence-binding-pattern #'slot-sequence-binding specimen ejector-spec layout noun-details))
+(define-sequence-patt |BindingPattern| (layout specimen ejector-spec &rest noun-details)
+  (apply #'sequence-binding-pattern #'binding-sequence-binding specimen ejector-spec layout noun-details))
 
 (define-sequence-patt |VarPattern| (layout specimen ejector-spec &rest noun-details)
   (apply #'sequence-binding-pattern #'var-sequence-binding specimen ejector-spec layout noun-details))

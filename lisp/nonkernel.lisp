@@ -44,6 +44,7 @@
     :|RangeExpr|
     :|SameExpr|
     :|SendExpr|
+    :|SlotExpr|
     :|SwitchExpr|
     :|ThunkExpr|
     :|TryExpr|
@@ -63,6 +64,7 @@
     :|MapPattern|
     :|QuasiPattern|
     :|SamePattern|
+    :|SlotPattern|
     :|SuchThatPattern|
     :|TailPattern|
     
@@ -335,7 +337,7 @@
          (result-var (gennoun "ok"))
          (success-list (apply #'mn '|ListExpr| 
                          (mn '|NounExpr| "true")
-                         (map 'list (lambda (noun) (mn '|SlotExpr| noun))
+                         (map 'list (lambda (noun) (mn '|BindingExpr| noun))
                               both-nouns)))
          (failure-list (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow")
                                        "failureList"
@@ -344,7 +346,7 @@
       (mn '|DefineExpr|
         (apply #'mn '|ListPattern|
                (mn '|FinalPattern| result-var nil)
-               (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
+               (map 'list (lambda (noun) (mn '|BindingPattern| noun))
                           both-nouns))
         nil
         (expand-conditional-core node kernel-left kernel-right success-list failure-list left-map right-map))
@@ -372,7 +374,7 @@
                (apply #'mn '|SeqExpr| 
                  (nconc
                    (map 'list (lambda (noun) 
-                                (mn '|DefineExpr| (mn '|SlotPattern| noun nil)
+                                (mn '|DefineExpr| (mn '|BindingPattern| noun)
                                                   nil
                                                   broken))
                               failed-nouns)
@@ -667,20 +669,21 @@
                 (kdef specimen ejector kernel-pattern)
                 (apply #'mn '|ListExpr|
                   (node-quote +e-true+)
-                  (map 'list (lambda (noun) (mn '|SlotExpr| noun))
+                  (map 'list (lambda (noun) (mn '|BindingExpr| noun))
                              pattern-nouns)))
               (mn '|FinalPattern| problem nil)
               (mn '|SeqExpr|
                 (kdef (mn '|CallExpr| (mn '|NounExpr| "Ref") "broken" problem) 
                       nil 
-                      (mn '|FinalPattern| broken nil))
+                      (mn '|SlotPattern| broken nil))
                 (apply #'mn '|ListExpr|
                   (node-quote +e-false+)
-                  (make-list (length pattern-nouns) :initial-element broken))))
+                  (make-list (length pattern-nouns) :initial-element
+                    (mn '|BindingExpr| broken)))))
             nil
             (apply #'mn '|ListPattern|
               (mn '|FinalPattern| result nil)
-              (map 'list (lambda (noun) (mn '|SlotPattern| noun nil))
+              (map 'list (lambda (noun) (mn '|BindingPattern| noun))
                          pattern-nouns)))
       result)))
 
@@ -711,12 +714,17 @@
 (defgeneric map-export-name (expr)
   (:method ((e |NounExpr|))
     (e. e |getName|))
-  (:method ((e |SlotExpr|))
-    (format nil "&~A" (e. (e. e |getNoun|) |getName|))))
+  (:method ((e |BindingExpr|))
+    (format nil "&&~A" (e. (e. e |getNoun|) |getName|)))
+  (:method ((e t))
+    (map-export-name
+      (e-macroexpand-1 e
+        (lambda ()
+          (error "Don't know how to use ~S as a map export key" e))))))
 (def-shorten-methods map-export-name 1)
 
 (defmethod expand-map-expr-part ((part |MapExprExport|))
-  (let ((key-value (e-macroexpand-all (e. part |getKeyValue|))))
+  (let ((key-value (e. part |getKeyValue|)))
     (mn '|ListExpr| (mn '|LiteralExpr| (map-export-name key-value))
                     key-value)))
 
@@ -778,6 +786,16 @@
     (t
      (error "Assignment can only be done to nouns and collection elements (not ~A)" (e-quote |place|) #| XXX ejector? |#))))
 
+(defgeneric super-binding (parent)
+  (:method ((parent |NounExpr|))
+    (mn '|DefrecExpr| (mn '|BindingPattern| (mn '|NounExpr| "super"))
+                      nil
+                      (mn '|BindingExpr| parent)))
+  (:method ((parent |EExpr|))
+    (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
+                      nil
+                      parent)))
+
 (defemacro |NKObjectExpr| (|EExpr|) ((|docComment| nil doc-comment)
                                      (|name| t |Pattern|)
                                      (|parent| t (or null |EExpr|))
@@ -801,9 +819,7 @@
           nil
           (mn '|HideExpr|
             (mn '|SeqExpr|
-              (mn '|DefrecExpr| (mn '|FinalPattern| (mn '|NounExpr| "super") nil)
-                                nil
-                                |parent|)
+              (super-binding (e-macroexpand |parent|))
               (mn '|NKObjectExpr| |docComment| |name| nil |auditors|
                                   (mn '|EScript|
                                     ;; XXX this does the wrong thing for plumbing
@@ -917,6 +933,15 @@
     |recipient| 
     (mn '|LiteralExpr| |verb|)
     (apply #'mn '|CallExpr| (mn '|NounExpr| "__makeList") "run" (coerce |args| 'list))))
+
+(defemacro |SlotExpr| (|EExpr|) ((|noun| t |EExpr|))
+                                ()
+  (let ((kernel-noun (e-macroexpand-all |noun|)))
+    (if (typep kernel-noun '|NounExpr|)
+      (mn '|GetExpr| (mn '|BindingExpr| kernel-noun))
+      (error "& of ~A is currently undefined" (class-name (class-of |noun|))))))
+(defmethod map-export-name ((e |SlotExpr|))
+  (format nil "&~A" (e. (e. e |getNoun|) |getName|)))
 
 (defemacro |SwitchExpr| (|EExpr|) ((|specimen| t |EExpr|)
                                    (|matchers| nil (e-list |EMatcher|)))
@@ -1186,13 +1211,26 @@
   ((:|keyValue| t |Pattern|)))
 
 (defmethod map-pattern-key ((keyer |MapPatternImport|))
-  (let ((key-value (e-macroexpand-all (e. keyer |getKeyValue|))))
-    (mn '|LiteralExpr|
-      (etypecase key-value
-        ((or |FinalPattern| |VarPattern|) (e. (e. key-value |getNoun|) |getName|))
-        (|SlotPattern| (format nil "&~A" (e. (e. key-value |getNoun|) |getName|)))))))
+  (mn '|LiteralExpr| (map-pattern-import-literal (e. keyer |getKeyValue|))))
 (defmethod map-pattern-value ((keyer |MapPatternImport|))
   (e. keyer |getKeyValue|))
+
+(defun noun-expr-name (expr)
+  (setf expr (e-macroexpand-all expr))
+  (check-type expr |NounExpr|)
+  (e. expr |getName|))
+(defgeneric map-pattern-import-literal (kv)
+  (:method ((kv |FinalPattern|))
+    (noun-expr-name (e. kv |getNoun|)))
+  (:method ((kv |VarPattern|))
+    (noun-expr-name (e. kv |getNoun|)))
+  ;(:method ((kv |BindingPattern|))
+  ;  (format nil "&&~A" (noun-expr-name (e. kv |getNoun|))))
+  (:method ((kv t))
+    (map-pattern-import-literal
+      (e-macroexpand-1 kv
+        (lambda ()
+          (error "Don't know how to use ~S as a map-pattern key" kv))))))
 
 (define-node-class |MapPatternPart| (|ENode|) ())
 
@@ -1276,6 +1314,18 @@
                     (if (e-is-true |invert|) "different" "run")
                     |value|)
     (mn '|IgnorePattern|)))
+
+(defemacro |SlotPattern| (|NounPattern|) ((|noun| t |EExpr|) 
+                                          (|optGuardExpr| t (or null |EExpr|)))
+                                         ()
+  (mn '|ViaPattern|
+    (if |optGuardExpr|
+      (mn '|FunCallExpr| (mn '|NounExpr| "__slotToBinding") |optGuardExpr|)
+      (mn '|NounExpr| "__slotToBinding"))
+    (mn '|BindingPattern| |noun|)))
+
+(defmethod map-pattern-import-literal ((kv |SlotPattern|))
+  (format nil "&~A" (noun-expr-name (e. kv |getNoun|))))
 
 (defemacro |SuchThatPattern| (|Pattern|) ((|pattern| t |Pattern|) 
                                           (|test| t |EExpr|))

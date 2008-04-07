@@ -412,6 +412,8 @@
     
     :|AssignExpr|
     :|Auditors|
+    :|BindingExpr|
+    :|BindingPattern|
     :|CallExpr|
     :|CatchExpr|
     :|DefineExpr|
@@ -444,8 +446,6 @@
     :|QuasiPatternNode|
     :|QuasiPatternPatt|
     :|SeqExpr|
-    :|SlotExpr|
-    :|SlotPattern|
     :|VarPattern|
     :|ViaPattern|)
   #+sbcl (:lock t))

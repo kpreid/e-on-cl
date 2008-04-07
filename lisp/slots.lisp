@@ -120,9 +120,14 @@
 
 (defmethod print-object ((slot coerced-slot) stream)
   ; xxx make readable under read-eval?
-  (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "& ~W :~W" (coerced-slot-value slot)
-                              (coerced-slot-guard slot))))
+  (handler-case
+      (let ((v (coerced-slot-value slot))
+            (g (coerced-slot-guard slot)))
+        (print-unreadable-object (slot stream :type nil :identity nil)
+          (format stream "& ~W :~W" v g)))
+    (unbound-slot ()
+      (print-unreadable-object (slot stream :type t :identity t)
+        (format stream "uninitialized")))))
 
 (def-vtable coerced-slot
   (audited-by-magic-verb (this auditor)

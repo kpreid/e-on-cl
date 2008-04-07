@@ -153,13 +153,13 @@ Where headings are in quotes, it indicates that the names are those I invented f
 'ConditionalExpr' (aka 'AndExpr' and 'OrExpr')
 
   ? t("(def a := b) || (def c := d)")
-  # value: e`def [ok__1, &c, &a] := if (def a := b) {
-  #            def &c := __booleanFlow.broken()
-  #            __makeList.run(true, &c, &a)
+  # value: e`def [ok__1, &&c, &&a] := if (def a := b) {
+  #            def &&c := __booleanFlow.broken()
+  #            __makeList.run(true, &&c, &&a)
   #        } else {
   #            if (def c := d) {
-  #                def &a := __booleanFlow.broken()
-  #                __makeList.run(true, &c, &a)
+  #                def &&a := __booleanFlow.broken()
+  #                __makeList.run(true, &&c, &&a)
   #            } else {
   #                __booleanFlow.failureList(2)
   #            }
@@ -167,9 +167,9 @@ Where headings are in quotes, it indicates that the names are those I invented f
   #        ok__1`
   
   ? t("(def a := b) && (def c := d)")
-  # value: e`def [ok__1, &c, &a] := if (def a := b) {
+  # value: e`def [ok__1, &&c, &&a] := if (def a := b) {
   #            if (def c := d) {
-  #                __makeList.run(true, &c, &a)
+  #                __makeList.run(true, &&c, &&a)
   #            } else {
   #                __booleanFlow.failureList(2)
   #            }
@@ -181,10 +181,10 @@ Where headings are in quotes, it indicates that the names are those I invented f
   Bug test: temporary names inside a ConditionalExpr would fail
   NOTE: the exporting of ares__2 here is useless; however, our current expansion system doesn't attempt to determine that. '
   ? t("(a[] := true) && true")
-  # value: e`def [ok__1, &ares__2] := if (a.put(def ares__2 := true)
+  # value: e`def [ok__1, &&ares__2] := if (a.put(def ares__2 := true)
   #        ares__2) {
   #            if (true) {
-  #                __makeList.run(true, &ares__2)
+  #                __makeList.run(true, &&ares__2)
   #            } else {
   #                __booleanFlow.failureList(1)
   #            }
@@ -195,13 +195,13 @@ Where headings are in quotes, it indicates that the names are those I invented f
 
   Bug test: reusing names would cause them to be failure-bound on both sides
   ? t("(def x := 1; true) || (def x := 2; true)")
-  # value: e`def [ok__1, &x] := if (def x := 1
+  # value: e`def [ok__1, &&x] := if (def x := 1
   #        true) {
-  #            __makeList.run(true, &x)
+  #            __makeList.run(true, &&x)
   #        } else {
   #            if (def x := 2
   #            true) {
-  #                __makeList.run(true, &x)
+  #                __makeList.run(true, &&x)
   #            } else {
   #                __booleanFlow.failureList(1)
   #            }
@@ -438,20 +438,25 @@ Where headings are in quotes, it indicates that the names are those I invented f
   # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("a", a)))`
 
   ? t("[=> &a]")
-  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("&a", &a)))`
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("&a", (&&a).get())))`
+
+  ? t("[=> &&a]")
+  # value: e`__makeMap.fromPairs(__makeList.run(__makeList.run("&&a", &&a)))`
 
 MatchBindExpr
   
-  ? t("left =~ [rA, &rB, [rC]]")
+  ? t("left =~ [rA, &&rB, [rC]]")
   # value: e`def sp__1 := left
-  #        def [ok__2, &rB, &rC, &rA] := escape fail__3 {
-  #            def [rA, &rB, [rC]] exit fail__3 := sp__1
-  #            __makeList.run(true, &rB, &rC, &rA)
+  #        def [ok__2, &&rB, &&rC, &&rA] := escape fail__3 {
+  #            def [rA, &&rB, [rC]] exit fail__3 := sp__1
+  #            __makeList.run(true, &&rB, &&rC, &&rA)
   #        } catch problem__4 {
-  #            def b__5 := Ref.broken(problem__4)
-  #            __makeList.run(false, b__5, b__5, b__5)
+  #            def via (__slotToBinding) &&b__5 := Ref.broken(problem__4)
+  #            __makeList.run(false, &&b__5, &&b__5, &&b__5)
   #        }
   #        ok__2`
+  
+  XXX the failure case is similar to __booleanFlow.failureList
 
   XXX rewrite the following to use <te>; they were just copied in from vm.updoc from when MatchBindExpr was kernel
 
@@ -509,12 +514,12 @@ MatchBindExpr
 
   ? t("a !~ b")
   # value: e`(def sp__1 := a
-  #        def [ok__2, &b] := escape fail__3 {
+  #        def [ok__2, &&b] := escape fail__3 {
   #            def b exit fail__3 := sp__1
-  #            __makeList.run(true, &b)
+  #            __makeList.run(true, &&b)
   #        } catch problem__4 {
-  #            def b__5 := Ref.broken(problem__4)
-  #            __makeList.run(false, b__5)
+  #            def via (__slotToBinding) &&b__5 := Ref.broken(problem__4)
+  #            __makeList.run(false, &&b__5)
   #        }
   #        ok__2).not()`
 
@@ -567,7 +572,7 @@ MatchBindExpr
   parent
   ? t("def a extends b {}")
   # value: e`def a := {
-  #            def super := b
+  #            def &&super := &&b
   #            def a {
   #                match message__1 {
   #                    E.callWithPair(super, message__1)
@@ -579,7 +584,7 @@ MatchBindExpr
   ? t("def bind a extends b {}")
   # value: e`def via (__bind.run(a__Resolver)) a__1 := {
   #            def a := {
-  #                def super := b
+  #                def &&super := &&b
   #                def a {
   #                    match message__2 {
   #                        E.callWithPair(super, message__2)
@@ -591,13 +596,24 @@ MatchBindExpr
   XXX The following expansion would be better. Right now, the code doesn't know that if we're inside a bind-expansion then reintroducing the name outside the super-expansion is unnecessary.
 
     value: e`def via (__bind.run(a__Resolver)) a__1 := {
-               def super := b
+               def &&super := &&b
                def a {
                    match message__2 {
                        E.callWithPair(super, message__2)
                    }
                }
            }`
+
+  non-NounExpr parent
+  ? t("def a extends b() {}")
+  # value: e`def a := {
+  #            def super := b.run()
+  #            def a {
+  #                match message__1 {
+  #                    E.callWithPair(super, message__1)
+  #                }
+  #            }
+  #        }`
    
   parent with reference to name
   ? t("def a extends b(a) {}")
@@ -690,6 +706,17 @@ MatchBindExpr
 
   ? t("a <- (b)")
   # value: e`E.send(a, "run", __makeList.run(b))`
+
+SlotExpr
+
+  ? t("&a")
+  # value: e`(&&a).get()`
+
+  ? t("&(&a)")
+  # problem: & of SlotExpr is currently undefined
+
+  ? t("&(a.b())")
+  # problem: & of CallExpr is currently undefined
 
 'SwitchExpr'
   
@@ -1113,6 +1140,20 @@ XXX now that CdrPattern is nonkernel, merge with TailPattern?
 
   ? te("pragma.enable(\"trinary-define\"); escape e { def !=1 exit e := Ref.promise()[0] }")
   # value: problem: <Promise> is not yet different from 1
+
+SlotExpr
+
+  ? tp("&a")
+  # value: epatt`via (__slotToBinding) &&a`
+
+  ? tp("&a :b")
+  # value: epatt`via (__slotToBinding.run(b)) &&a`
+  
+  ? te("def &a := __makeFinalSlot(1); a")
+  # value: 1
+
+  ? te("def &a :(__makeFinalSlot.asType()[float64]) := __makeFinalSlot(1); a")
+  # value: 1.0
 
 'SuchThatPattern'
 

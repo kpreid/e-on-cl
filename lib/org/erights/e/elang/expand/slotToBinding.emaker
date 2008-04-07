@@ -1,0 +1,17 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+
+def makeCoercedSlot := <import:org.erights.e.elib.slot.makeCoercedSlot>
+
+def slotToBinding implements DeepFrozen, ExitViaHere {
+  to run(guard) {
+    return def guardedSlotToBinding(specimen, ejector) {
+      return makeCoercedSlot(guard, specimen, ejector)
+    }
+  }
+  to run(specimen, ejector) {
+    return makeCoercedSlot(any, specimen, throw)
+  }
+}

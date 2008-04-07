@@ -426,18 +426,6 @@ VarPattern
   ? makeVarPattern(null, makeNounExpr(null, "*bip*", null), null, null)
   # value: epatt`var ::"*bip*"`
 
-
-SlotPattern
-
-  ? def makeSlotPattern := <elang:evm.makeSlotPattern>
-  # value: <makeSlotPattern>
-
-  ? makeSlotPattern(null, makeNounExpr(null, "foo", null), null, null)
-  # value: epatt`&foo`
-
-  ? makeSlotPattern(null, makeNounExpr(null, "state", null), makeNounExpr(null, "Lamport", null), null)
-  # value: epatt`&state :Lamport`
-
 --- node scope computation ---
 
   ? def StaticWalkEnvironment := <elang:evm.StaticWalkEnvironment>
@@ -492,6 +480,17 @@ AssignExpr
   #         <2>.withSubnode["rValue", e`b`] => <3>
   
   # value: <3>
+  
+BindingExpr
+
+  ? e`&&any`.asKernelE().staticScope()
+  # value: <[] := ["any"] =~ [] + var []>
+
+  ? e`&&a`.asKernelE().walkScopes(makeReporter())
+  # stdout: 
+  #         <1>.withNounUse[e`a`] => <2>
+  
+  # value: <2>
   
 CallExpr
 
@@ -765,17 +764,17 @@ SeqExpr
   
   # value: <3>
 
-SlotExpr
+BindingPattern
 
-  ? e`&any`.asKernelE().staticScope()
-  # value: <[] := ["any"] =~ [] + var []>
-
-  ? e`&a`.asKernelE().walkScopes(makeReporter())
+  ? epatt`&&a`.asKernelE().staticScope()
+  # value: <[] := [] =~ [] + var ["a"]>
+  
+  ? epatt`&&a`.asKernelE().walkScopes(makeReporter())
   # stdout: 
-  #         <1>.withNounUse[e`a`] => <2>
+  #         <1>.withBindingPattern[epatt`&&a`] => <2>
   
   # value: <2>
-  
+
 FinalPattern
 
   ? epatt`a`.asKernelE().staticScope()
@@ -816,26 +815,6 @@ ListPattern
   
   # value: <3>
   
-SlotPattern
-
-  ? epatt`&a`.asKernelE().staticScope()
-  # value: <[] := [] =~ [] + var ["a"]>
-  ? epatt`&a :b`.asKernelE().staticScope()
-  # value: <[] := ["b"] =~ [] + var ["a"]>
-  
-  ? epatt`&a`.asKernelE().walkScopes(makeReporter())
-  # stdout: 
-  #         <1>.withSlotPattern[epatt`&a`] => <2>
-  
-  # value: <2>
-
-  ? epatt`&a :b`.asKernelE().walkScopes(makeReporter())
-  # stdout: 
-  #         <1>.withSubnode["optGuardExpr", e`b`] => <2>
-  #         <2>.withSlotPattern[epatt`&a :b`] => <3>
-  
-  # value: <3>
-
 ViaPattern
 
   ? epatt`via (def aa := a) b`.asKernelE().staticScope()
@@ -1057,10 +1036,10 @@ These tests check the arguments which nodes give to visitors.
   #               second
   #         
   
-  ? e`&slotNoun`.asKernelE().welcome(makeVisitor(0))
-  # stdout: SlotExpr e`&slotNoun`...
-  #           NounExpr e`slotNoun`...
-  #             slotNoun
+  ? e`&&bindingNoun`.asKernelE().welcome(makeVisitor(0))
+  # stdout: BindingExpr e`&&bindingNoun`...
+  #           NounExpr e`bindingNoun`...
+  #             bindingNoun
   #         
   
   ? epatt`_`.asKernelE().welcome(makeVisitor(0))
@@ -1092,12 +1071,10 @@ These tests check the arguments which nodes give to visitors.
   #             guard
   #         
   
-  ? epatt`&slotNoun :guard`.asKernelE().welcome(makeVisitor(0))
-  # stdout: SlotPattern epatt`&slotNoun :guard`...
-  #           NounExpr e`slotNoun`...
-  #             slotNoun
-  #           NounExpr e`guard`...
-  #             guard
+  ? epatt`&&bindingNoun`.asKernelE().welcome(makeVisitor(0))
+  # stdout: BindingPattern epatt`&&bindingNoun`...
+  #           NounExpr e`bindingNoun`...
+  #             bindingNoun
   #         
 
 --- getOptPrincipalNoun ---
@@ -1108,9 +1085,9 @@ These tests check the arguments which nodes give to visitors.
   ? <vm:makeVarPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
   # value: "foo"
 
-  ? <vm:makeSlotPattern>(null, <vm:makeNounExpr>(null, "foo", null), null, null).getOptPrincipalNoun()
+  ? <vm:makeBindingPattern>(null, <vm:makeNounExpr>(null, "foo", null), null).getOptPrincipalNoun()
   # value: "foo"
-  XXX should be &foo?
+  XXX should be &&foo?
   
   ? (def listPatt := <vm:makeListPattern>(null, [simplest], null)).getOptPrincipalNoun()
 
