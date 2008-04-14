@@ -378,22 +378,6 @@
 (defmethod binding-audit-guard-code ((binding (eql +throw-binding+)))
   `(final-binding-guard-ref +the-any-guard+))
 
-; (defun eject-code (ejector-specifier condition-code)
-;   (ecase (first ejector-specifier)
-;     ((ejector)   `(eject-or-ethrow ,(second ejector-specifier) ,condition-code))
-;     ((eject-function)
-;                  (destructuring-bind (label-form function-form) (rest ejector-specifier)
-;                    `(elib:%ejector-throw ,label-form ,function-form ,condition-code)))
-;     ((nil)       `(error ,condition-code))))
-; 
-; (defun opt-ejector-make-code (ejector-specifier)
-;   "Given an ejector specifier, return a form which returns an Ejector or Throw." ; XXX introduce 'does-not-return-function' concept
-;   (ecase (car ejector-specifier)
-;     ((ejector)   (cadr ejector-specifier))
-;     ((eject-function)
-;                  `(ejector ,@(rest ejector-specifier)))
-;     ((nil)       `+the-thrower+)))
-
 ;;; --- support for (scope-layout-noun-binding nil *) ---
 
 (define-condition unbound-noun (program-error)
