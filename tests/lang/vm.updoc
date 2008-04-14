@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
   ? pragma.syntax("0.9")
@@ -925,7 +925,19 @@ ViaPattern
   ? def f(via (any.coerce) a) :any {}.__getAllegedType().getMessageTypes()["run/1"]
   # value: to run(a) :any
 
-Miscellaneous scoping
+
+--- Ejector identities ---
+
+A previous version of the compiler implemented an optimization to avoid allocating ejectors when not needed; it did this by allocating ejectors exactly when they needed to be reified by a ViaPattern or guarded pattern. This resulted in distinct ejector objects being created, which has been declared incorrect (kpreid & MarkM agree as of 2008-04-13).
+
+  ? def e1
+  > def e2
+  > try { throw("bean") } catch via (fn s,bind e1{s}) \
+  >                             via (fn s,bind e2{s}) \
+  >                             _ { e1 == e2 }
+  # value: true
+
+--- Miscellaneous scoping ---
 
   ? def outerDefined := 44
   # value: 44

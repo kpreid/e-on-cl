@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elang.compiler.seq)
@@ -6,7 +6,7 @@
 (defgeneric sequence-expr (node layout result)
   (:documentation "Compile an E expression into a series of LET* binding clauses, and return the clauses and the updated scope layout. The symbol in RESULT will be bound to the return value of the node."))
 
-(defgeneric sequence-patt (node layout specimen ejector-spec)
+(defgeneric sequence-patt (node layout specimen ejector-binding)
   (:documentation "Compile an E pattern into a series of LET* binding clauses, and return the clauses and the updated scope layout. The result will evaluate the SPECIMEN form exactly once, unless it is a symbol."))
 
 (defgeneric inline-expr (node layout)
@@ -81,11 +81,26 @@
         ,general-form)
       general-form)))
 
-(defmacro updating-sequence-patt (node layout specimen ejector-spec
+(defmacro updating-sequence-patt (node layout specimen ejector-binding
     &aux (cv (gensym)) (lv (gensym)))
-  `(multiple-value-bind (,cv ,lv) (sequence-patt ,node ,layout ,specimen ,ejector-spec)
+  `(multiple-value-bind (,cv ,lv) (sequence-patt ,node ,layout ,specimen ,ejector-binding)
     (setf ,layout ,lv)
     ,cv))
+
+(defmacro updating-block-pattern-entry (node layout specimen label exit-operator
+    &aux (bindingv (gensym)) (bseqv (gensym)) (nodev (gensym)))
+  `(let ((,nodev ,node))
+     (multiple-value-bind (,bindingv ,bseqv) (ejector-binding ,label ,exit-operator ,nodev)
+       (append ,bseqv (updating-sequence-patt ,nodev ,layout ,specimen ,bindingv)))))
+
+(defun ejector-binding (label exit-operator pattern)
+  (if (pattern-reifies-ejector pattern)
+    (let ((g (gensym label)))
+      (values
+        (make-instance 'direct-def-binding :symbol g)
+        `((,g (ejector ,label (lambda (v) (,exit-operator v)))))))
+    (make-instance 'block-binding :operator exit-operator
+                                  :label label)))
 
 ;;; --- ---
 
@@ -192,7 +207,7 @@
               (robust-block (,pattern-eject-block "catch-pattern")
                 ,(with-nested-scope-layout (layout)
                   (sequence-to-form 
-                    (updating-sequence-patt catch-pattern layout `(transform-condition-for-e-catch ,condition-var) `(eject-function "catch-pattern" (lambda (v) (,pattern-eject-block v))))
+                    (updating-block-pattern-entry catch-pattern layout `(transform-condition-for-e-catch ,condition-var) "catch-pattern" pattern-eject-block)
                     `(return-from ,catch-outer ,(leaf-sequence catch-body layout)))))
               (%catch-expr-resignal ,condition-var))))))
     layout))
@@ -207,7 +222,10 @@
             (updating-sequence-expr value layout value-var :may-inline (not opt-ejector))
             (unless (eql value-var result)
               `((,result ,value-var)))
-            (updating-sequence-patt pattern layout result (when opt-ejector `(ejector ,ej))))
+            (updating-sequence-patt pattern layout result
+                                    (if opt-ejector
+                                      (make-instance 'direct-def-binding :symbol ej)
+                                      +throw-binding+)))
     layout))
 
 (defgeneric pattern-has-no-side-effects (node)
@@ -244,10 +262,9 @@
                   (append (updating-sequence-patt 
                             ejector-patt 
                             layout 
-                            ;; the following is a form, not an ejector-spec
                             `(ejector ',(pattern-opt-noun ejector-patt) 
                                       (lambda (v) (,ejector-block v)))
-                            nil)
+                            +throw-binding+)
                           (updating-sequence-expr body layout inner-result-var)))
                 inner-result-var)))
       `((,result 
@@ -259,16 +276,15 @@
                (declare (ignorable ,catch-value-var))
                ,(sequence-to-form 
                   (with-nested-scope-layout (layout)
-                    (append (updating-sequence-patt 
+                    (append (updating-block-pattern-entry 
                               opt-catch-pattern 
                               layout
                               catch-value-var
-                              `(eject-function 
-                                 ',(format nil "~A catch block pattern" 
-                                               (pattern-opt-noun ejector-patt)) 
-                                 (lambda (v) 
-                                   (declare (ignore v))
-                                   (,outer-block ,catch-value-var))))
+                              (format nil "~A catch block pattern" 
+                                          (pattern-opt-noun ejector-patt)) 
+                              `(lambda (v)
+                                 (declare (ignore v))
+                                 (,outer-block ,catch-value-var)))
                             (updating-sequence-expr opt-catch-body layout result)))
                   result))
              (body-form outer-block))))))
@@ -359,7 +375,7 @@
                         append (updating-sequence-patt arg-patt
                                                        layout
                                                        arg-var
-                                                       nil))
+                                                       +throw-binding+))
                   (when opt-result-guard
                     (updating-sequence-expr opt-result-guard layout guard-var :may-inline (inlinable body)))
                   (updating-sequence-expr body layout result-var :may-inline t))
@@ -380,7 +396,7 @@
           ,(sequence-to-form
              (append
                `((,pair-var (vector (unmangle-verb ,mverb-var) (coerce ,args-var 'vector))))
-               (updating-sequence-patt pattern layout pair-var `(eject-function ,ej-name (lambda (v) (,pattern-eject-block v))))
+               (updating-block-pattern-entry pattern layout pair-var ej-name pattern-eject-block)
                (updating-sequence-expr body layout result-var :may-inline t))
              `(return-from ,matcher-block ,result-var)))
         ;; if we reach here, the ejector was used
@@ -461,8 +477,20 @@
 
 ;;; --- Patterns ---
 
-(define-sequence-patt |IgnorePattern| (layout specimen ejector-spec)
-  (declare (ignore specimen ejector-spec))
+(defgeneric pattern-reifies-ejector (pattern)
+  (:documentation "Whether the given pattern needs a reified ejector; that is, whether it invokes BINDING-GET-CODE on its EJECTOR-BINDING.")
+  (:method ((p |IgnorePattern|))  nil)
+  (:method ((p |BindingPattern|)) nil)
+  (:method ((p |ViaPattern|))     t)
+  (:method ((p |ListPattern|))
+    ;; XXX look into making the coerce-to-list such that it doesn't use a reified ejector
+    #+(or) (some #'pattern-reifies-ejector (e. p |getSubs|))
+    t)
+  (:method ((p |FinalPattern|)) (not (null (e. p |getOptGuardExpr|))))
+  (:method ((p |VarPattern|))   (not (null (e. p |getOptGuardExpr|)))))
+
+(define-sequence-patt |IgnorePattern| (layout specimen ejector-binding)
+  (declare (ignore specimen ejector-binding))
   (values '() layout))
 
 (defun %make-list-pattern-arity-error (has wants)
@@ -470,41 +498,41 @@
     :format-control "a ~A size list doesn't match a ~A size list pattern"
     :format-arguments (list has wants)))
 
-(define-sequence-patt |ListPattern| (layout specimen ejector-spec &rest patterns
+(define-sequence-patt |ListPattern| (layout specimen ejector-binding &rest patterns
     &aux (coerced (gensym "ELIST"))
          (pattern-arity (length patterns)))
   (values
     (append `((,coerced 
-               (let ((,coerced (e-coerce-native ,specimen 'vector ,(opt-ejector-make-code ejector-spec))))
+               (let ((,coerced (e-coerce-native ,specimen 'vector ,(binding-get-code ejector-binding))))
                  (if (eql (length ,coerced) ,pattern-arity)
                    ,coerced
-                   ,(eject-code ejector-spec `(%make-list-pattern-arity-error (length ,coerced) ',pattern-arity))))))
+                   ,(eject-via-binding-code ejector-binding `(%make-list-pattern-arity-error (length ,coerced) ',pattern-arity))))))
             (loop for patt in patterns
                   for i from 0
                   append (updating-sequence-patt patt
                                                  layout
                                                  `(aref ,coerced ',i)
-                                                 ejector-spec)))
+                                                 ejector-binding)))
     layout))
 
-(define-sequence-patt |ViaPattern| (layout specimen ejector-spec function pattern
+(define-sequence-patt |ViaPattern| (layout specimen ejector-binding function pattern
     &aux (function-var (gensym "VFN"))
          (post-specimen-var (gensym "VSP")))
   (values
     (append (updating-sequence-expr function layout function-var)
             `((,post-specimen-var 
                (efuncall ,function-var ,specimen
-                                       ,(opt-ejector-make-code ejector-spec))))
-            (updating-sequence-patt pattern layout post-specimen-var ejector-spec))
+                                       ,(binding-get-code ejector-binding))))
+            (updating-sequence-patt pattern layout post-specimen-var ejector-binding))
     layout))
 
 ;;; --- Binding patterns ---
 
-(defun final-sequence-binding (noun layout specimen-var ejector-spec guard-var
+(defun final-sequence-binding (noun layout specimen-var ejector-binding guard-var
     &aux (coerced-var (make-symbol noun)) #| must be deterministic |#)
   (if guard-var
     (values
-      `((,coerced-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
+      `((,coerced-var (e. ,guard-var |coerce| ,specimen-var ,(binding-get-code ejector-binding))))
       (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :guard-var guard-var :noun noun)))
     (if (symbolp specimen-var) ;; XXX really means no-side-effects-p
       (values
@@ -514,20 +542,21 @@
         `((,coerced-var ,specimen-var))
         (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :noun noun))))))
 
-(defun var-sequence-binding (noun layout specimen-var ejector-spec guard-var
+(defun var-sequence-binding (noun layout specimen-var ejector-binding guard-var
     &aux (value-var (gensym (concatenate 'string "var " noun)))
          (broken-var (gensym "BROKEN")))
   (values
     (append `((,broken-var nil))
             (if guard-var
-              `((,value-var (e. ,guard-var |coerce| ,specimen-var ,(opt-ejector-make-code ejector-spec))))
+              `((,value-var (e. ,guard-var |coerce| ,specimen-var ,(binding-get-code ejector-binding))))
               `((,value-var ,specimen-var))))
     (scope-layout-bind layout noun (make-instance 'direct-var-binding :value-symbol value-var :guard-symbol guard-var :broken-symbol broken-var :noun noun))))
 
-(defun binding-sequence-binding (noun layout specimen-var ejector-spec syntactic-guard-var
+(defun binding-sequence-binding (noun layout specimen-var ejector-binding syntactic-guard-var
     &aux (binding-var (gensym (concatenate 'string "&&" noun)))
          (slot-var (gensym (concatenate 'string "&" noun)))
          (guard-var (gensym (concatenate 'string "&" noun "-guard"))))
+  (declare (ignore ejector-binding))
   (assert (null syntactic-guard-var))
   (values
     ; XXX this code feels like it should be merged with the compiled-file wrapper
@@ -538,7 +567,7 @@
       (make-instance 'lexical-slot-binding :symbol slot-var
                                            :guard-var guard-var))))
 
-(defun sequence-binding-pattern (fn specimen ejector-spec layout noun-expr &optional opt-guard-expr
+(defun sequence-binding-pattern (fn specimen ejector-binding layout noun-expr &optional opt-guard-expr
     &aux (guardv (gensym "FINAL-GUARD")))
   (check-type noun-expr |NounExpr|)
   (let ((noun (first (node-elements noun-expr))))
@@ -546,16 +575,16 @@
       (append (if opt-guard-expr
                 (updating-sequence-expr opt-guard-expr layout guardv :may-inline nil)
                 `())
-              (multiple-value-bind (seq layout2) (funcall fn noun layout specimen ejector-spec (if opt-guard-expr guardv))
+              (multiple-value-bind (seq layout2) (funcall fn noun layout specimen ejector-binding (if opt-guard-expr guardv))
                 (setf layout layout2)
                 seq))
       layout)))
 
-(define-sequence-patt |FinalPattern| (layout specimen ejector-spec &rest noun-details)
-  (apply #'sequence-binding-pattern #'final-sequence-binding specimen ejector-spec layout noun-details))
+(define-sequence-patt |FinalPattern| (layout specimen ejector-binding &rest noun-details)
+  (apply #'sequence-binding-pattern #'final-sequence-binding specimen ejector-binding layout noun-details))
 
-(define-sequence-patt |BindingPattern| (layout specimen ejector-spec &rest noun-details)
-  (apply #'sequence-binding-pattern #'binding-sequence-binding specimen ejector-spec layout noun-details))
+(define-sequence-patt |BindingPattern| (layout specimen ejector-binding &rest noun-details)
+  (apply #'sequence-binding-pattern #'binding-sequence-binding specimen ejector-binding layout noun-details))
 
-(define-sequence-patt |VarPattern| (layout specimen ejector-spec &rest noun-details)
-  (apply #'sequence-binding-pattern #'var-sequence-binding specimen ejector-spec layout noun-details))
+(define-sequence-patt |VarPattern| (layout specimen ejector-binding &rest noun-details)
+  (apply #'sequence-binding-pattern #'var-sequence-binding specimen ejector-binding layout noun-details))

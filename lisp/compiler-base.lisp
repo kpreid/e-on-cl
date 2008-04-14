@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elang.compiler)
@@ -220,8 +220,8 @@
               :initform '+the-any-guard+
               :reader binding-audit-value-guard-code)
    (noun :initarg :noun ;; XXX this ought to be on a general binding class
-         :initform (error ":noun not supplied for a direct-def-binding")
-         :type string
+         :initform nil
+         :type (or null string)
          :reader binding-get-source-noun)))
 
 (defmethod binding-get-slot-code ((binding direct-def-binding))
@@ -343,23 +343,56 @@
                   :value ,(binding-get-slot-code binding)
                   :guard ,(binding-audit-guard-code binding)))
 
-;;; --- ejector-specifier utilities ---
+;;; --- Ejector bindings ---
 
-(defun eject-code (ejector-specifier condition-code)
-  (ecase (first ejector-specifier)
-    ((ejector)   `(eject-or-ethrow ,(second ejector-specifier) ,condition-code))
-    ((eject-function)
-                 (destructuring-bind (label-form function-form) (rest ejector-specifier)
-                   `(elib:%ejector-throw ,label-form ,function-form ,condition-code)))
-    ((nil)       `(error ,condition-code))))
+;; A block-binding is a special binding for an *unreified* ejector. It cannot be referenced normally; the compiler uses it when it is recognizable that an ejector is only ever used in ways that can be compiled into direct uses of the underlying block.
 
-(defun opt-ejector-make-code (ejector-specifier)
-  "Given an ejector specifier, return a form which returns an Ejector or Throw." ; XXX introduce 'does-not-return-function' concept
-  (ecase (car ejector-specifier)
-    ((ejector)   (cadr ejector-specifier))
-    ((eject-function)
-                 `(ejector ,@(rest ejector-specifier)))
-    ((nil)       `+the-thrower+)))
+(defgeneric eject-via-binding-code (binding condition-form)
+  (:method ((binding t) condition-form)
+    `(eject-or-ethrow ,(binding-get-code binding) ,condition-form)))
+
+(defclass block-binding ()
+  ((operator :initarg :operator :reader block-binding-operator)
+   (label :initarg :label :reader block-binding-label)))
+
+(defmethod binding-audit-guard-code ((binding block-binding))
+  `(final-binding-guard-ref +the-any-guard+))
+
+(defmethod eject-via-binding-code ((binding block-binding) condition-form)
+  `(%ejector-throw ,(block-binding-label binding)
+                   (lambda (v) (,(block-binding-operator binding) v))
+                   ,condition-form))
+
+
+(defconstant +throw-binding+ '+throw-binding+)
+
+(defmethod eject-via-binding-code ((binding (eql +throw-binding+)) condition-form)
+  `(efuncall +the-thrower+ ,condition-form))
+
+(defmethod binding-get-code ((binding (eql +throw-binding+)))
+  '+the-thrower+)
+
+(defmethod binding-get-slot-code ((binding (eql +throw-binding+)))
+  '(load-time-value (make-instance 'e-simple-slot :value +the-thrower+)))
+
+(defmethod binding-audit-guard-code ((binding (eql +throw-binding+)))
+  `(final-binding-guard-ref +the-any-guard+))
+
+; (defun eject-code (ejector-specifier condition-code)
+;   (ecase (first ejector-specifier)
+;     ((ejector)   `(eject-or-ethrow ,(second ejector-specifier) ,condition-code))
+;     ((eject-function)
+;                  (destructuring-bind (label-form function-form) (rest ejector-specifier)
+;                    `(elib:%ejector-throw ,label-form ,function-form ,condition-code)))
+;     ((nil)       `(error ,condition-code))))
+; 
+; (defun opt-ejector-make-code (ejector-specifier)
+;   "Given an ejector specifier, return a form which returns an Ejector or Throw." ; XXX introduce 'does-not-return-function' concept
+;   (ecase (car ejector-specifier)
+;     ((ejector)   (cadr ejector-specifier))
+;     ((eject-function)
+;                  `(ejector ,@(rest ejector-specifier)))
+;     ((nil)       `+the-thrower+)))
 
 ;;; --- support for (scope-layout-noun-binding nil *) ---
 
