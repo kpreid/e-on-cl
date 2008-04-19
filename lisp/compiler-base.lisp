@@ -212,7 +212,16 @@
               :reader binding-audit-guard-code)))
 
 
-(defclass direct-def-binding () 
+(defclass final-binding ()
+  ()
+  (:documentation "Bindings which have a constant value, and generate FinalSlots when necessary."))
+  
+(defmethod binding-get-slot-code ((binding final-binding))
+  ;; For this to be correct, e-simple-slot must be selfless.
+  `(make-instance 'e-simple-slot :value ,(binding-get-code binding)))
+
+
+(defclass direct-def-binding (final-binding)
   ((symbol :initarg :symbol
            :type symbol
            :reader binding-get-code)
@@ -223,10 +232,6 @@
          :initform nil
          :type (or null string)
          :reader binding-get-source-noun)))
-
-(defmethod binding-get-slot-code ((binding direct-def-binding))
-  ;; For this to be correct, e-simple-slot must be selfless.
-  `(make-instance 'e-simple-slot :value ,(binding-get-code binding)))
 
 (defmethod binding-set-code ((binding direct-def-binding) value-form)
   ;; xxx eventually this should be able to point at the source position of the assignment

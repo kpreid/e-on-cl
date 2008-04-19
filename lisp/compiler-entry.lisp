@@ -118,6 +118,7 @@
 
 (defvar *efasl-program*)
 (defvar *efasl-result*)
+(defvar *efasl-env-bindings*)
 
 (deftype externalizable-for-efasl ()
   '(or bit-vector
@@ -129,6 +130,33 @@
        pathname
        string))
 
+(defclass ltv-binding ()
+  ((env-noun :initarg :env-noun
+             :reader binding-env-noun)))
+
+(defclass ltv-slot-binding  (ltv-binding)
+  ())
+(defclass ltv-final-binding (ltv-binding final-binding)
+  ())
+
+(defun ltv-binding-get-binding-code (binding)
+  `(e. *efasl-env-bindings* |fetch| ',(binding-env-noun binding)
+                                    +the-thrower+))
+
+(defmethod binding-audit-guard-code ((binding ltv-binding))
+  `(load-time-value
+     (e. ,(ltv-binding-get-binding-code binding)
+         |getGuard|)))
+
+(defmethod binding-get-slot-code ((binding ltv-slot-binding))
+  `(load-time-value (eelt ,(ltv-binding-get-binding-code binding))))
+
+(defmethod binding-get-code ((binding ltv-final-binding))
+  `(load-time-value 
+     (let ((slot (eelt ,(ltv-binding-get-binding-code binding))))
+       (check-type slot e-simple-slot)
+       (eelt slot))))
+
 (defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
   "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a function which, when called with a Scope object, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope; opt-scope need not be complete."
   (require-kernel-e expr nil)
@@ -138,7 +166,6 @@
   (let* ((all-nouns (map 'list #'ref-shorten (e-coerce (e. (e. (e. expr |staticScope|) |namesUsed|) |getKeys|) 'vector)))
          (extractions '())
          (initial-scope-var (gensym "INITIAL-SCOPE"))
-         (bindings-var (gensym "BINDINGS"))
          (opt-bindings (when opt-scope (e. opt-scope |bindings|)))
          (layout
            (make-instance 'prefix-scope-layout :fqn-prefix fqn-prefix
@@ -147,34 +174,30 @@
                (mapcar
                  (lambda (noun)
                    (escape-bind (fail)
-                       (progn
-                         (unless opt-scope (efuncall fail))
-                         (let* ((binding (e. opt-bindings |fetch| noun fail))
-                                (slot (ref-shorten (eelt binding))))
-                           (unless (and (typep slot 'e-simple-slot)
-                                        (typep (ref-shorten (e. slot |get|))
-                                               'externalizable-for-efasl)
-                                        (typep (ref-shorten
-                                                 (e. binding |getGuard|))
-                                               'externalizable-for-efasl))
-                             (efuncall fail))
-                           (cons noun (to-compiler-binding binding))))
+                       (let* ((binding (e. (or opt-bindings (efuncall fail))
+                                           |fetch| noun fail))
+                              (slot (ref-shorten (eelt binding))))
+                         (cond
+                           ((and (typep slot 'e-simple-slot)
+                                 (typep (ref-shorten (e. slot |get|))
+                                        'externalizable-for-efasl)
+                                 (typep (ref-shorten
+                                          (e. binding |getGuard|))
+                                        'externalizable-for-efasl))
+                            (cons noun (to-compiler-binding binding)))
+                           ((typep slot 'e-simple-slot)
+                            (cons noun (make-instance 'ltv-final-binding
+                                         :env-noun noun)))
+                           (t
+                            (efuncall fail))))
                      (-unused-)
                        (declare (ignore -unused-))
-                       (let ((binding-sym (make-symbol (format nil "~A-binding" noun)))
-                             (slot-sym (make-symbol noun))
-                             (guard-sym (make-symbol (format nil "~A-guard" noun))))
-                         (push `(,guard-sym (e. ,binding-sym |getGuard|)) extractions)
-                         (push `(,slot-sym (eelt ,binding-sym)) extractions)
-                         (push `(,binding-sym (e. ,bindings-var |fetch| ',noun +the-thrower+)) extractions)
-                         (cons noun (make-instance 'lexical-slot-binding :symbol slot-sym :guard-var guard-sym)))))
+                       (cons noun (make-instance 'ltv-slot-binding
+                                    :env-noun noun))))
                  all-nouns))))
          (*efasl-program*
            `(setf *efasl-result*
-                  (lambda (,initial-scope-var
-                           &aux (,bindings-var
-                                 (e. ,initial-scope-var |bindings|))
-                                ,@extractions)
+                  (lambda (,initial-scope-var)
                     (declare (ignorable ,@(mapcar #'first extractions)))
                     ;; XXX we shouldn't need to reference the compiler
                     ;; implementation here
@@ -197,7 +220,8 @@
           (assert (not failure-p) () "Compilation for ~A failed." output-file))))))
 
 (defun load-compiled-e (file scope)
-  (let ((*efasl-result* nil))
+  (let ((*efasl-result* nil)
+        (*efasl-env-bindings* (e. scope |bindings|)))
     (during ("CL load ~A" (file-namestring file))
       (load file :verbose nil :print nil))
     (during ("execute ~A" (file-namestring file))
