@@ -97,7 +97,7 @@
   (if (pattern-reifies-ejector pattern)
     (let ((g (gensym label)))
       (values
-        (make-instance 'direct-def-binding :symbol g)
+        (make-instance 'direct-def-binding :value-var g)
         `((,g (ejector ,label (lambda (v) (,exit-operator v)))))))
     (make-instance 'block-binding :operator exit-operator
                                   :label label)))
@@ -224,7 +224,7 @@
               `((,result ,value-var)))
             (updating-sequence-patt pattern layout result
                                     (if opt-ejector
-                                      (make-instance 'direct-def-binding :symbol ej)
+                                      (make-instance 'direct-def-binding :value-var ej)
                                       +throw-binding+)))
     layout))
 
@@ -415,11 +415,10 @@
         '()
         (scope-layout-bind layout noun
           (if opt-as-auditor-var
-            (make-instance 'direct-def-binding :symbol object-var
-                                               :noun noun
-                                               :guard-var opt-as-auditor-var)
-            (make-instance 'direct-def-binding :symbol object-var
-                                               :noun noun)))))))
+            (make-instance 'direct-def-binding :value-var object-var
+                                               :value-guard-var
+                                                 opt-as-auditor-var)
+            (make-instance 'direct-def-binding :value-var object-var)))))))
 
 (define-sequence-expr |ObjectExpr| (layout result doc-comment pattern auditors script
     &aux (object-var (gensym (or (pattern-opt-noun pattern) "G")))
@@ -533,14 +532,14 @@
   (if guard-var
     (values
       `((,coerced-var (e. ,guard-var |coerce| ,specimen-var ,(binding-get-code ejector-binding))))
-      (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :guard-var guard-var :noun noun)))
+      (scope-layout-bind layout noun (make-instance 'direct-def-binding :value-var coerced-var :value-guard-var guard-var)))
     (if (symbolp specimen-var) ;; XXX really means no-side-effects-p
       (values
         '()
-        (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol specimen-var :noun noun)))
+        (scope-layout-bind layout noun (make-instance 'direct-def-binding :value-var specimen-var)))
       (values
         `((,coerced-var ,specimen-var))
-        (scope-layout-bind layout noun (make-instance 'direct-def-binding :symbol coerced-var :noun noun))))))
+        (scope-layout-bind layout noun (make-instance 'direct-def-binding :value-var coerced-var))))))
 
 (defun var-sequence-binding (noun layout specimen-var ejector-binding guard-var
     &aux (value-var (gensym (concatenate 'string "var " noun)))
@@ -550,7 +549,7 @@
             (if guard-var
               `((,value-var (e. ,guard-var |coerce| ,specimen-var ,(binding-get-code ejector-binding))))
               `((,value-var ,specimen-var))))
-    (scope-layout-bind layout noun (make-instance 'direct-var-binding :value-symbol value-var :guard-symbol guard-var :broken-symbol broken-var :noun noun))))
+    (scope-layout-bind layout noun (make-instance 'direct-var-binding :value-symbol value-var :guard-symbol guard-var :broken-symbol broken-var))))
 
 (defun binding-sequence-binding (noun layout specimen-var ejector-binding syntactic-guard-var
     &aux (binding-var (gensym (concatenate 'string "&&" noun)))
@@ -565,7 +564,7 @@
       (,guard-var (e. ,binding-var |getGuard|)))
     (scope-layout-bind layout noun
       (make-instance 'lexical-slot-binding :symbol slot-var
-                                           :guard-var guard-var))))
+                                           :slot-guard-var guard-var))))
 
 (defun sequence-binding-pattern (fn specimen ejector-binding layout noun-expr &optional opt-guard-expr
     &aux (guardv (gensym "FINAL-GUARD")))

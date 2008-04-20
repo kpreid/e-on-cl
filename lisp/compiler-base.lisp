@@ -43,7 +43,7 @@
 
 (defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
   (make-instance 'direct-def-binding 
-    :symbol (make-symbol (concatenate 'string "free-" noun-string))
+    :value-var (make-symbol (concatenate 'string "free-" noun-string))
     :noun noun-string))
 
 (defmethod scope-layout-bindings ((scope-layout (eql '*)))
@@ -207,7 +207,7 @@
   ((symbol :initarg :symbol
            :type symbol
            :reader binding-get-slot-code)
-   (guard-var :initarg :guard-var
+   (guard-var :initarg :slot-guard-var
               :initform '+the-any-guard+
               :reader binding-audit-guard-code)))
 
@@ -222,21 +222,13 @@
 
 
 (defclass direct-def-binding (final-binding)
-  ((symbol :initarg :symbol
+  ((symbol :initarg :value-var
            :type symbol
            :reader binding-get-code)
-   (guard-var :initarg :guard-var
+   (guard-var :initarg :value-guard-var
               :initform '+the-any-guard+
-              :reader binding-audit-value-guard-code)
-   (noun :initarg :noun ;; XXX this ought to be on a general binding class
-         :initform nil
-         :type (or null string)
-         :reader binding-get-source-noun)))
-
-(defmethod binding-set-code ((binding direct-def-binding) value-form)
-  ;; xxx eventually this should be able to point at the source position of the assignment
-  (declare (ignore value-form))
-  (error "shouldn't happen: unassignable binding in compiler: ~A" (binding-get-source-noun binding)))
+              :reader binding-audit-value-guard-code))
+  (:documentation "The type of binding produced by FinalPatterns. Refers to CL variables holding the value and the guard of the value."))
 
 (defun final-binding-guard-ref (value-guard)
   (when value-guard
@@ -257,11 +249,7 @@
                   :reader %var-binding-broken-flag)
    (guard-symbol :initarg :guard-symbol
                  :type symbol
-                 :reader %binding-guard-code)
-   (noun :initarg :noun ;; XXX this ought to be on a general binding class
-         :initform (error ":noun not supplied for a direct-var-binding")
-         :type string
-         :reader binding-get-source-noun)))
+                 :reader %binding-guard-code)))
 
 (defmethod binding-get-code ((binding direct-var-binding))
   `(if ,(%var-binding-broken-flag binding)
@@ -313,12 +301,6 @@
 (defmethod binding-get-slot-code ((binding value-binding))
   ;; For this to be correct, e-simple-slot must be selfless.
   `',(make-instance 'e-simple-slot :value (binding-value binding)))
-
-(defmethod binding-set-code ((binding value-binding) value-form)
-  ; XXX This should probably be a different message. The current one is just imitating a previous implementation.
-  ; Should we have a binding-is-assignable function? ejector on this?
-  (declare (ignore value-form))
-  (error "not an assignable slot: <& ~A>" (e-quote (binding-value binding))))
 
 
 (defclass slot-binding (constant-guard-binding)

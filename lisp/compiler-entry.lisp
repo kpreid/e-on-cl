@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elang.compiler)
@@ -158,7 +158,7 @@
        (eelt slot))))
 
 (defun compile-e-to-file (expr output-file fqn-prefix opt-scope)
-  "Compile an EExpr into a compiled Lisp file. The file, when loaded, will set *efasl-result* to a function which, when called with a Scope object, will return as EVAL-E would. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope; opt-scope need not be complete."
+  "Compile an EExpr into a compiled Lisp file which may be loaded later with LOAD-COMPILED-E. If opt-scope is provided, some of the nouns in the expression may be compiled into literal occurrences of their values in that scope, or other assumptions of equivalence; opt-scope need not be complete."
   (require-kernel-e expr nil)
   (when opt-scope
     ;; XXX this is wrongish: we should execute the check *always*
