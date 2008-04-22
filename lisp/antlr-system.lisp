@@ -11,7 +11,10 @@
   ())
 
 (defclass antlr-source-file (source-file) 
-  ((output-names :initarg :output-names :reader antlr-source-file-output-names)))
+  ((java-class-name :initarg java-class-name
+                    :reader java-class-name)
+   (export-vocab-name :initarg export-vocab-name
+                      :reader export-vocab-name)))
 
 (defclass antlr-static-vocabulary-file (source-file)
   ())
@@ -21,18 +24,16 @@
 (defmethod source-file-type ((c antlr-static-vocabulary-file) (s module)) "txt")
 
 (defmethod output-files ((operation compile-op) (c antlr-source-file))
-  (loop for (name type) in (antlr-source-file-output-names c) 
-        collect
-          (make-pathname :defaults (component-pathname c)
-                         :name name
-                         :type type
-                         :version nil)
-        when (string= type "java")
-          collect
-            (make-pathname :defaults (component-pathname c)
-                           :name name
-                           :type "class"
-                           :version nil)))
+  (flet ((mp (name suffix type)
+           (make-pathname :defaults (component-pathname c)
+                          :name (concatenate 'string name suffix)
+                          :type type
+                          :version nil)))
+    (list (mp (java-class-name c) "" "java")
+          (mp (java-class-name c) "" "class")
+          (mp (export-vocab-name c) "TokenTypes" "txt")
+          (mp (export-vocab-name c) "TokenTypes" "java")
+          (mp (export-vocab-name c) "TokenTypes" "class"))))
 
 (defmethod output-files ((operation compile-op) (c antlr-java-source-file))
   (list (make-pathname :defaults (component-pathname c)
@@ -67,6 +68,8 @@
                                        :version nil))))
 
 (defmethod perform ((op compile-op) (component antlr-source-file))
+  ;; ANTLR seems to not write the token files if they already exist; this confuses asdf into recompiling every time as they look stale, so we make sure everything is built
+  (map nil #'delete-file (output-files op component))
   (let* ((output-files (output-files op component))
          (output-dir (same-enclosing-directory output-files))
          (code (run-shell-command "java -classpath ~S antlr.Tool -o ~S ~S"
@@ -152,16 +155,13 @@
      (:antlr-java-source-file "CountingLexerSharedInputState")
      (:antlr-static-vocabulary-file "CommonTokenTypes")
      (:antlr-source-file "e"
-                         :output-names (("EParser" "java") 
-                                        ("ETokenTypes" "txt")
-                                        ("ETokenTypes" "java"))
+                         java-class-name "EParser"
+                         export-vocab-name "E"
                          :depends-on ("CommonTokenTypes"))
      (:antlr-source-file "elex"
-                         :output-names (("EALexer" "java") 
-                                        ("EALexerTokenTypes" "txt")
-                                        ("EALexerTokenTypes" "java"))
+                         java-class-name "EALexer"
+                         export-vocab-name "EALexer"
                          :depends-on ("e" "CountingLexerSharedInputState"))
      (:antlr-source-file "quasi"
-                         :output-names (("QuasiLexer" "java") 
-                                        ("QuasiLexerTokenTypes" "txt")
-                                        ("QuasiLexerTokenTypes" "java")))))
+                         java-class-name "QuasiLexer"
+                         export-vocab-name "QuasiLexer")))
