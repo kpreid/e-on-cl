@@ -245,10 +245,10 @@
     ;; XXX this mess is evidence we need a handy make-node-according-to-"visitor"-arguments function (visitor arguments == maker arguments)
     (mn '|UpdateExpr| (apply #'mn '|CallExpr| accum-var verb (coerce args 'list)))))
 
-(defemacro |BinaryExpr| (|EExpr|) ((|op| nil string)
-                                   (|first| t |EExpr|)
+(defemacro |BinaryExpr| (|EExpr|) ((|first| t |EExpr|)
+                                   (|op| nil string)
                                    (|rest| t (e-list |EExpr|)))
-                                  ()
+                                  (:rest-slot t)
   (if (member |op| '(".." "..!") :test #'string=)
     (mn '|RangeExpr| |first| 
                      (progn
@@ -279,10 +279,10 @@
       (coerce |rest| 'list))))
 
 (defmethod expand-accum-body ((body |BinaryExpr|) accum-var)
-  (destructuring-bind (op first rest) (node-visitor-arguments body)
+  (destructuring-bind (first op rest) (node-visitor-arguments body)
     (setf first (ref-shorten first))
     (check-type first |AccumPlaceholderExpr|)
-    (mn '|UpdateExpr| (mn '|BinaryExpr| op accum-var rest))))
+    (mn '|UpdateExpr| (apply #'mn '|BinaryExpr| accum-var op (coerce rest 'list)))))
 
 (defemacro |CoerceExpr| (|EExpr|) ((value t |EExpr|)
                                    (guard t |EExpr|))

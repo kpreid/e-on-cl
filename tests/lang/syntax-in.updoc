@@ -263,8 +263,8 @@ XXX produce a nice error for this?
 
 ? t("a & def _ {}")
 # stdout: BinaryE.
-#           &
 #           NounE. a
+#           &
 #           [] ObjectHeadE.
 #             null
 #             IgnoreP.
@@ -278,8 +278,8 @@ XXX produce a nice error for this?
 
 ? t("a & /**b*/def _ {}")
 # stdout: BinaryE.
-#           &
 #           NounE. a
+#           &
 #           [] ObjectHeadE.
 #             b
 #             IgnoreP.
@@ -293,8 +293,8 @@ XXX produce a nice error for this?
 
 ? t("a & fn {}")
 # stdout: BinaryE.
-#           &
 #           NounE. a
+#           &
 #           [] FunctionE.
 #             []
 #             NullE.
@@ -539,47 +539,47 @@ Testing discrimination between functions and call patterns:
 Parentheses disable modPow form
 ? t("(a ** b) %% c")
 # stdout: BinaryE.
-#           %%
 #           BinaryE.
-#             **
 #             NounE. a
+#             **
 #             [] NounE. b
+#           %%
 #           [] NounE. c
 
 ? t("a %% b ** c")
 # stdout: BinaryE.
-#           %%
 #           NounE. a
+#           %%
 #           [] BinaryE.
-#             **
 #             NounE. b
+#             **
 #             [] NounE. c
 
 ? t("a ** b % c")
 # stdout: BinaryE.
-#           %
 #           BinaryE.
-#             **
 #             NounE. a
+#             **
 #             [] NounE. b
+#           %
 #           [] NounE. c
 
 ? t("(a %% b) ** c")
 # stdout: BinaryE.
-#           **
 #           BinaryE.
-#             %%
 #             NounE. a
+#             %%
 #             [] NounE. b
+#           **
 #           [] NounE. c
 
 ? t("a %% (b ** c)")
 # stdout: BinaryE.
-#           %%
 #           NounE. a
+#           %%
 #           [] BinaryE.
-#             **
 #             NounE. b
+#             **
 #             [] NounE. c
 
 --- CoerceExpr ---

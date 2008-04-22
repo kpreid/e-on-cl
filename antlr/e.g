@@ -249,6 +249,28 @@ private String quoteForMessage(String v) {
     return "\"" + v + "\"";
 }
 
+//private void dumpAST(AST n) {
+//  System.err.print("<" + n.toString() + "> (");
+//  if (n.getFirstChild() != null)
+//    dumpAST(n.getFirstChild());
+//  System.err.print(")");
+//  if (n.getNextSibling() != null) {
+//    System.err.print(" + ");
+//    dumpAST(n.getNextSibling());
+//  }
+//}
+
+private void becomeBinaryExpr(AST n) {
+    String op = n.getText();
+    AST left = n.getFirstChild();
+    AST right = left.getNextSibling();
+    AST opAST = astFactory.create(STRING, op);
+    left.setNextSibling(opAST);
+    opAST.setNextSibling(right);
+    n.setType(BinaryExpr);
+    n.setText("");
+}
+
 }
 
 
@@ -388,7 +410,7 @@ accumulator:
 
 accumBody:                      // XXX full set of binary ops
         "{"! ( accumPlaceholder (("+"^ | "*"^ | "&"^ | "|"^) assign
-                                                      {##.setType(BinaryExpr);}
+                                                      {becomeBinaryExpr(##);}
                                 | "."^ verb parenArgs {##.setType(CallExpr);})
             | accumulator
             ) br "}"!
@@ -601,19 +623,26 @@ block:          "{"! (seq | {##=#([SeqExpr],##);}) "}"! ;
 //  x::name := ...  converts to x.setName(...)
 //  x(i...) := ...  converts to x.setRun(i..., ...)
 // Based on the above patterns, only nounExprOrHole, nounExprOrHole
-assign:     (("def"|"var"|"bind") => objectPredict|) => cond (  ":="^ assign  {##.setType(NKAssignExpr);}
-                |   assignOp assign               {##=#([UpdateExpr], ##);}
+assign:         (("def"|"var"|"bind") => objectPredict|) => 
+                cond 
+                (   ":="^ assign  {##.setType(NKAssignExpr);}
+                |   assignOp assign
+                    { ##=#([UpdateExpr],#([BinaryExpr],##));}
                 |   verb "="!   // deal with deprecated single case
                     ( ("(")=> parenArgs
                      | assign warn["Parentheses expected on verb= argument"]!)
-                    {##=#([UpdateExpr], ##);}
+                    {##=#([UpdateExpr], #([CallExpr], ##));}
                 )?
             |   defExpr
             ;
 
-assignOp:       "//=" | "+="  | "-="  | "*="  | "/="
+assignOp:   (   "//=" | "+="  | "-="  | "*="  | "/="
             |   "%="  | "%%=" | "**=" | ">>=" | "<<="
-            |   "^="  | "|="  | "&="
+            |   "^="  | "|="  | "&=" 
+            ) { ##.setType(STRING);
+                final String t = ##.getText();
+                ##.setText(t.substring(0, t.length() - 1));
+              }
             ;
 
 ejector:        (   "break"
@@ -644,12 +673,12 @@ condAnd:        logical ( "&&"^ logical {##.setType(AndExpr);} )* ;
 logical:        order
                 (   "=="^ order      {##.setType(SameExpr);}
                 |   "!="^ order      {##.setType(SameExpr);}
-                |   "&!"^ order      {##.setType(BinaryExpr);}
+                |   "&!"^ order      {becomeBinaryExpr(##);}
                 |   "=~"^ pattern    {##.setType(MatchBindExpr);}
                 |   "!~"^ pattern    {##.setType(MismatchExpr);}
-                |   ("^"^ {##.setType(BinaryExpr);} order)+
-                |   ("&"^ {##.setType(BinaryExpr);} order)+
-                |   ("|"^ {##.setType(BinaryExpr);} order)+
+                |   ("^"^ order {becomeBinaryExpr(##);})+
+                |   ("&"^ order {becomeBinaryExpr(##);})+
+                |   ("|"^ order {becomeBinaryExpr(##);})+
                 )?   //optional
             ;
 
@@ -666,23 +695,23 @@ order:          interval
 compareOp:        "<" | "<=" | "<=>" | ">=" | ">" br ;
 
 // .. and ..! are both non-associative (no plural form)
-interval:       shift ((".."^ | "..!"^) {##.setType(BinaryExpr);} shift)?  ;
+interval:       shift ((".."^ | "..!"^) shift {becomeBinaryExpr(##);})?  ;
 
 // << and >> are left-associative (no plural form)
-shift:          add (("<<"^ | ">>"^) {##.setType(BinaryExpr);} add)*   ;
+shift:          add (("<<"^ | ">>"^) add {becomeBinaryExpr(##);})*   ;
 
 //+ and - are left associative
-add:            mult (("+"^ | "-"^) {##.setType(BinaryExpr);} mult)*   ;
+add:            mult (("+"^ | "-"^) mult {becomeBinaryExpr(##);})*   ;
 
 // *, /, //, %, and %% are left associative
 mult:           (prefix "**" prefix "%%") => 
                 prefix "**"! prefix "%%"^ pow {##.setType(ModPowExpr);}
             |   pow ( ("*"^ | "/"^ | "//"^ | "%"^ | "%%"^) pow
-                      {##.setType(BinaryExpr);}                )*;
+                      {becomeBinaryExpr(##);}                )*;
                 
 
 // ** is non-associative
-pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;
+pow:            prefix ("**"^ prefix     {becomeBinaryExpr(##);}   )?  ;
 
 // Unary prefix !, ~, &, *, and - are non-associative.
 // Unary prefix !, ~, &, and * bind less tightly than unary postfix.
@@ -695,8 +724,8 @@ pow:            prefix ("**"^ prefix     {##.setType(BinaryExpr);}   )?  ;
 // to disambiguate which you mean.
 prefix:         postfix
             |  reifyExpr
-            |  ("!" | "~" | "*" | "+")  postfix    {##=#([PrefixExpr],##);}
-            |  "-" prim                            {##=#([PrefixExpr],##);}
+            |  ("!" | "~" | "*" | "+")  postfix    {##.setType(STRING); ##=#([PrefixExpr],##);}
+            |  "-" prim                            {##.setType(STRING); ##=#([PrefixExpr],##);}
             ;
 
 // extracted because of their use in 'map'

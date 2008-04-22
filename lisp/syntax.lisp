@@ -248,7 +248,7 @@ XXX make precedence values available as constants"
           (:|visitNKAssignExpr| (oo n v)
             (e. |printVisitor| |visitAssignExpr| oo n v))
 
-          (:|visitBinaryExpr| (opt-original operator left-expr right-exprs)
+          (:|visitBinaryExpr| (opt-original left-expr operator right-exprs)
             (declare (ignore opt-original))
             (precedential (+precedence-outer+)
               (subprint left-expr +precedence-atom+) ;; XXX wrong precedence
@@ -936,24 +936,6 @@ XXX make precedence values available as constants"
           (cons tag text))
         ((e.grammar::|List|)
           (coerce out-children 'vector))
-        
-        ;; -- node type de-confusion --  
-        (e.grammar::|UpdateExpr|
-          (make-from-tag
-            (destructuring-bind (target verboid &rest args) out-children
-              (etypecase verboid
-                ((cons (eql update-op)) (mnp '|BinaryExpr| span (cdr verboid) target (coerce args 'vector)))
-                (string (apply #'mnp '|CallExpr| span target verboid args))))))
-        
-        ;; -- operator handling --        
-        (e.grammar::|PrefixExpr|
-          (destructuring-bind (op arg) out-children
-            (check-type op (cons (eql op) string))
-            (make-from-tag (cdr op) arg)))
-        ((e.grammar::|BinaryExpr|)
-          (destructuring-bind (left &rest rights) out-children
-            ;; GRUMBLE: either .., ..! should be marked as RangeExpr by the parser or CompareExpr should be another kind of BinaryExpr
-            (make-from-tag text left (coerce rights 'vector))))
 
         ;; -- doc-comment introduction --
         ((e.grammar::|ThunkExpr| e.grammar::|ObjectHeadExpr|)
@@ -993,23 +975,7 @@ XXX make precedence values available as constants"
               rest)))
 
         (otherwise
-          (let* ((tag-name (symbol-name tag))
-                 (length (length tag-name)))
-            (cond
-              ;; tokens like: "+="
-              ((and (string= (aref tag-name 0) "\"") 
-                    (string= (subseq tag-name (- length 2)) "=\"")
-                    (null out-children))
-                (cons 'update-op (subseq text 0 (1- (length text)))))
-              ;; tokens like: "+"
-              ((and (string= (aref tag-name 0) "\"") 
-                    (string= (aref tag-name (- length 1)) "\"")
-                    (null out-children))
-                (cons 'op text))
-              ;; tokens like: CallExpr
-              ((upper-case-p (aref tag-name 0))
-               (pass))
-              (t (error "don't know what to do with ~S <- ~A" ast-node (write-to-string path :length 5)))))))))))
+          (pass)))))))
 
 ; --- Parse cache files ---
  
