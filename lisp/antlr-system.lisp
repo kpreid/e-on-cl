@@ -69,7 +69,9 @@
 
 (defmethod perform ((op compile-op) (component antlr-source-file))
   ;; ANTLR seems to not write the token files if they already exist; this confuses asdf into recompiling every time as they look stale, so we make sure everything is built
-  (map nil #'delete-file (output-files op component))
+  (dolist (file (output-files op component))
+    (handler-case (delete-file file)
+      (file-error ())))
   (let* ((output-files (output-files op component))
          (output-dir (same-enclosing-directory output-files))
          (code (run-shell-command "java -classpath ~S antlr.Tool -o ~S ~S"
