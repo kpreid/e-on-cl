@@ -99,6 +99,49 @@
      (make-instance ',(class-name (class-of object))
                     :type-specifier ',(guard-to-type-specifier object))))
 
+;;; --- Optimizations ---
+
+#+sbcl (progn
+
+(defun sbcl-derive-coerce-result (call) 
+  (declare (type sb-c::combination call)
+           (optimize speed))
+  (let* ((dargs (sb-c::basic-combination-args call))
+         (verb-lvar (nth 1 dargs)))
+    (case (if (sb-c::constant-lvar-p verb-lvar)
+            (sb-c::lvar-value verb-lvar)
+            (return-from sbcl-derive-coerce-result))
+      (:|coerce/2|
+        ;; once we know the mverb, we know the arg count
+        (destructuring-bind (guardl verb-lvar specimenl ejectorl) dargs
+          (declare (ignore verb-lvar specimenl ejectorl))
+          (when (sb-c::constant-lvar-p guardl)
+            (let ((guard (sb-c::lvar-value guardl)))
+              (when (typep guard 'cl-type-guard)
+                #+(or) (efuncall e.knot:+sys-trace+ (format nil "~&deriving guard call type ~S~%" (guard-to-type-specifier guard)))
+                (sb-c::ir1-transform-specifier-type 
+                  (guard-to-type-specifier guard))))))))))
+
+(pushnew 'sbcl-derive-coerce-result *sbcl-dispatch-result-derivers*)
+
+(defun any-guard-p (guard)
+  (check-type guard cl-type-guard)
+  (subtypep 't (guard-to-type-specifier guard)))
+
+(sb-c:deftransform e-call-dispatch
+    ((target mverb specimen ejector)
+     (cl-type-guard (eql :|coerce/2|) t t))
+  "delete coercion by any guard"
+  (cond
+    ((and (sb-c::constant-lvar-p target)
+          (subtypep 't (guard-to-type-specifier (sb-c::lvar-value target))))
+     #+(or) (format *trace-output* "~&deleted a coercion~&")
+     'specimen)
+    (t
+     (sb-c::give-up-ir1-transform))))
+
+) ; #+sbcl progn
+
 ;;; --- Same guard ---
 
 (defclass same-guard ()

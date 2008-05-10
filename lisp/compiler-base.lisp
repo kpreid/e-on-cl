@@ -43,8 +43,7 @@
 
 (defmethod scope-layout-noun-binding ((scope-layout (eql '*)) noun-string)
   (make-instance 'direct-def-binding 
-    :value-var (make-symbol (concatenate 'string "free-" noun-string))
-    :noun noun-string))
+    :value-var (make-symbol (concatenate 'string "free-" noun-string))))
 
 (defmethod scope-layout-bindings ((scope-layout (eql '*)))
   nil)

@@ -28,6 +28,17 @@ Shortens REC if needed. MVERB must be either a mangled verb as in E.UTIL:MANGLE-
 Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and not expose non-keyword mverbs to untrusted code. XXX This list of requirements is probably not complete.")
   (declare (optimize (speed 3))))
 
+;; for optimization
+#+sbcl
+(defvar *sbcl-dispatch-result-derivers* nil)
+#+sbcl
+(defun sbcl-derive-dispatch-result (call)
+  (some (lambda (f) (funcall f call)) *sbcl-dispatch-result-derivers*))
+#+sbcl 
+(sb-c:defknown e-call-dispatch (t t &rest t) t
+  (sb-c:any)
+  :derive-type #'sbcl-derive-dispatch-result)
+
 (defgeneric e-call-match (fail rec mverb &rest args)
   (:documentation "The last method of E-CALL-DISPATCH calls this method with the same arguments, if MVERB is not a Miranda method. This is used for implementing 'matchers'/inheritance.")
   (declare (optimize (speed 3))))
@@ -417,3 +428,17 @@ If there is no current vat at initialization time, captures the current vat at t
   (setf (resolved-ref-target ref) 
         (ref-shorten (resolved-ref-target ref))))
 
+
+;;; --- SBCL-guts-specific optimization gimmicks ---
+
+#+(or) ;; this is disabled because it triggers a sbcl optimizer bug (introduced in 0.9.16.42, according to Nikodemus Siivola) now that our CL gen makes the FUNCTIONness of E object expressions visible; see thread from http://article.gmane.org/gmane.lisp.steel-bank.devel/9878 "Compiler hang, sbcl 1.0.8/.9". XXX reenable this when bug is fixed
+(sb-c:deftransform e-call-dispatch
+    ((target mverb &rest args)
+     (function t &rest t))
+  "optimize e-call to function call"
+  (let ((arg-names (mapcar (lambda (x)
+                             (declare (ignore x))
+                             (gensym "E-CALL-ARG"))
+                           args)))
+    `(lambda (target mverb ,@arg-names)
+      (funcall target mverb ,@arg-names))))
