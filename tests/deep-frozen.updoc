@@ -209,6 +209,7 @@ XXX test that redefinitions of __equalizer are rejected
 --- rangeSupersetOf
 
   ? def FinalSlot := __makeFinalSlot.asType(); null
+  ? def Same := <import:org.erights.e.elib.slot.Same>; null
 
   ? DeepFrozen.rangeSupersetOf(DeepFrozen)
   # value: true
@@ -226,6 +227,10 @@ XXX test that redefinitions of __equalizer are rejected
   # value: true
   ? DeepFrozen.rangeSupersetOf(List[int])
   # value: true
+  ? DeepFrozen.rangeSupersetOf(Same[f1])
+  # value: true
+  ? DeepFrozen.rangeSupersetOf(FinalSlot[Same[f1]])
+  # value: true
 
   ? DeepFrozen.rangeSupersetOf(any)
   # value: false
@@ -239,6 +244,10 @@ XXX test that redefinitions of __equalizer are rejected
   # value: [null]
   ? [DeepFrozen.rangeSupersetOf(List[Foo])]
   # value: [null]
+  ? DeepFrozen.rangeSupersetOf(Same[[].diverge()])
+  # value: false
+  ? DeepFrozen.rangeSupersetOf(FinalSlot[Same[[].diverge()]])
+  # value: false
 
 XXX try some spoofing guards
 XXX primitive union and intersections

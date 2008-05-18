@@ -359,6 +359,18 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
       if (guard == String) { return true } # XXX should be asking some built-in type-property-database
       if (guard == Twine) { return true }
       if (guard == any) { return false }
+
+      if (t.startOf("Same", 0) != -1) {
+        def Same := <import:org.erights.e.elib.slot.Same>
+        escape fail {
+          def [value] := Same."match__get/1"(guard, fail)
+        
+          if ((Same[value] == guard)) {
+            # XXX if the value is not DeepFrozen but resolves to being so later, then our answer will change from false to true. Is this bad?
+            return DeepFrozen.isDeepFrozen(value)
+          }
+        }
+      }
       if (t.startOf("FinalSlot", 0) != -1) {
         escape fail {
           # XXX this should somehow be generalized to any guard of a Selfless type which completely guards its members' state components
