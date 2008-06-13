@@ -171,7 +171,7 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
           def portrayal := uncaller.optUncall(specimen)
           if (portrayal == null) { continue }
           
-          rtrace("--rDF chose uncaller " + E.toQuote(uncaller))
+          rtrace(fn{"--rDF chose uncaller " + E.toQuote(uncaller)})
           
           # ejectorForTranslucent is used when the components we are descending into are private and so should not be used
           escape ejectorForTranslucent {
