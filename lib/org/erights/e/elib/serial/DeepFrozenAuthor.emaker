@@ -56,6 +56,24 @@ def eDF__quasiParser {
   }
 }
 
+# XXX this is hoisting parser invocations out of EventuallyDeepFrozen#audit. Ideally, the compiler would do this for us, but this is not yet implemented.
+def [
+  ::"eDF`__equalizer`",
+  ::"eDF`EventuallyDeepFrozen.getPeekBrand()`",
+  ::"eDF`EventuallyDeepFrozen`",
+  ::"eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`",
+] := {
+  var out := []
+  [
+    "__equalizer",
+    "EventuallyDeepFrozen.getPeekBrand()",
+    "EventuallyDeepFrozen",
+    "EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())",
+  ] \
+    .iterate(fn _,name {out := out.with(eDF__quasiParser.valueMaker(name).substitute([])); null})
+  out
+}
+
 def exprShorten(expr) {
   return \
     escape mismatch {
@@ -303,14 +321,14 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
               := methodBody
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
-            requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, eDF`__equalizer`, "sameEver", [brandPattern.getNoun(), eDF`EventuallyDeepFrozen.getPeekBrand()`], null)) \
-                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
-                      & expressionWillHaveValue(eDF`__equalizer`, &__equalizer, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
+            requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, ::"eDF`__equalizer`", "sameEver", [brandPattern.getNoun(), ::"eDF`EventuallyDeepFrozen.getPeekBrand()`"], null)) \
+                      & expressionWillHaveValue(::"eDF`EventuallyDeepFrozen`", &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
+                      & expressionWillHaveValue(::"eDF`__equalizer`", &__equalizer, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
               fn{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
               
             # overly restrictive in the same way as the previous
-            requireDF((exprShorten(ifExpr.getThen()) == eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`) \
-                      & expressionWillHaveValue(eDF`EventuallyDeepFrozen`, &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
+            requireDF((exprShorten(ifExpr.getThen()) == ::"eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`") \
+                      & expressionWillHaveValue(::"eDF`EventuallyDeepFrozen`", &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
               fn{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
             
             break true
