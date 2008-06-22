@@ -316,6 +316,7 @@
                             ("--lrepl"      repl-toplevel)
                             ("--irc"        irc-repl-toplevel)
                             ("--lisp"       lisp-toplevel)
+                            ("--swank"      swank-toplevel)
                             ("--save"       save-toplevel)
                             ("--not-stale?" stale-test-toplevel)))
 
@@ -431,4 +432,13 @@ Lisp-level options:
 (defmacro in-e-user ()
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (%in-e-user)))
+
+(define-toplevel swank-toplevel (args)
+  "Starts a swank-server for use with the SLIME Lisp IDE."
+  (declare (ignore args))
+  (%in-e-user)
+  (funcall (system-symbol "CREATE-SERVER" :swank :swank) :dont-close t :port nil)
+  (loop
+    (with-simple-restart (#:restart "Restart ~S" '(top-loop))
+      (top-loop))))
 
