@@ -25,6 +25,9 @@ def Really {
 def _maps(collection, key) { collection.fetch(key, fn { return false }); return true }
 
 def ConstList := <import:org.cubik.cle.prim.ConstList>
+def primInt := <import:org.cubik.cle.prim.int>
+def primChar := <import:org.cubik.cle.prim.char>
+def primFloat64 := <import:org.cubik.cle.prim.float64>
 
 /** Version of safeScope["require"] that has fewer dependencies. */
 def requireDF(condition, problemThunk) :void {
@@ -376,6 +379,9 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
       if (guard == DeepFrozen) { return true }
       if (guard == String) { return true } # XXX should be asking some built-in type-property-database
       if (guard == Twine) { return true }
+      if (guard == primInt) { return true }
+      if (guard == primChar) { return true }
+      if (guard == primFloat64) { return true }
       if (guard == any) { return false }
 
       if (t.startOf("Same", 0) != -1) {

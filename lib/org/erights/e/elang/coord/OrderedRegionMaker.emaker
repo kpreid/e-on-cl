@@ -8,7 +8,10 @@
 pragma.syntax("0.8")
 pragma.enable("function-implements")
 
+def Same :DeepFrozen := <import:org.erights.e.elib.slot.Same>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def SubrangeGuard := <import:org.erights.e.elib.slot.SubrangeGuard>
+def primInt := <import:org.cubik.cle.prim.int>
 
 /**
  * A min where null represents positive infinity
@@ -107,6 +110,7 @@ def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
 
         def myBoundedLeft :DeepFrozen := initBoundedLeft
         def myEdges :DeepFrozen := initEdges
+        def myTypeR :Same[myType] := myType # for SubrangeGuard audit
 
         /**
          * Regions are directly ValueGuards, and delegate to settable for the
@@ -114,7 +118,7 @@ def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
          * <p>
          * As guards, regions only accept positions in the region.
          */
-        def self implements EventuallyDeepFrozen {
+        def self implements EventuallyDeepFrozen, SubrangeGuard[myType], SubrangeGuard[DeepFrozen] {
             method __optSealedDispatch(brand) :any {
               if (brand == EventuallyDeepFrozen.getPeekBrand()) {
                 EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
@@ -197,7 +201,7 @@ def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
              * All Regions are also ValueGuards, either coercing a
              * specimen to a position in the region, or rejecting it.
              */
-            to coerce(var specimen, optEjector) :any {
+            to coerce(var specimen, optEjector) :myTypeR {
                 specimen := myType.coerce(specimen, optEjector)
                 if (self(specimen)) {
                     specimen
