@@ -3,11 +3,11 @@
 
 pragma.syntax("0.9")
 
-def utf_8 := <import:org.cubik.cle.charsets>["UTF-8"]
+def utf_8 :DeepFrozen := <import:org.cubik.cle.charsets>["UTF-8"]
 
-def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
+def unsignedIntegerCoding :DeepFrozen := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 
-def shortCoding := unsignedIntegerCoding[16]
+def shortCoding :DeepFrozen := unsignedIntegerCoding[16]
 
 def utf8StringWithLength16Coding implements DeepFrozen, ExitViaHere { # implements Binary
   to asType() { return String }

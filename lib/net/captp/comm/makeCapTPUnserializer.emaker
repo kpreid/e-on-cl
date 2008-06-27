@@ -5,18 +5,21 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 pragma.enable("accumulator")
 
-def messageDescs := <import:net.captp.protocol.messageDescs>
-def makeAppendStream := <import:org.cubik.cle.io.makeAppendStream>
+def messageDescs :DeepFrozen := <import:net.captp.protocol.messageDescs>
+def makeAppendStream :DeepFrozen := <import:org.cubik.cle.io.makeAppendStream>
 def typeEncodings := <import:net.captp.protocol.paramTypes>[<import:org.cubik.cle.binary.*>]
-def [=> OpCode] | _ := typeEncodings
-def now := <import:org.cubik.cle.schedule.now>
+def [=> OpCode :DeepFrozen] | _ := typeEncodings
+def now :DeepFrozen := <import:org.cubik.cle.schedule.now>
 
 # XXX parser bug: shouldn't need line continuation here
-def msgDecoders := accum [].asMap() for [verb, opCode, decoders] \
-                                        in messageDescs[typeEncodings] {
-  _.with(opCode, def decodeMsg(ins, rec) implements DeepFrozen {
-    E.send(rec, verb, accum [] for i => decoder in decoders { _.with(decoder.takingFrom(ins, now)()) })
-  })
+def msgDecoders :DeepFrozen := accum [].asMap() for rec in messageDescs[typeEncodings] {
+  _.with(
+    def [verb :String, opCode :(OpCode.asType()), decoders :DeepFrozen] := rec
+    opCode, 
+    def decodeMsg(ins, rec) implements DeepFrozen {
+      E.send(rec, verb, accum [] for i => decoder in decoders { _.with(decoder.takingFrom(ins, now)()) })
+    }
+  )
 }
 
 def makeCapTPUnserializer(receiver) implements ExitViaHere, DeepFrozen {

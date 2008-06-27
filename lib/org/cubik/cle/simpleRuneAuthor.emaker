@@ -6,7 +6,7 @@ pragma.syntax("0.9")
 pragma.enable("importer")
 pragma.enable("exporter")
 
-def makeEParser := <import:org.erights.e.elang.syntax.makeEParser>
+def makeEParser :DeepFrozen := <import:org.erights.e.elang.syntax.makeEParser>
 
 def simpleRuneAuthor implements DeepFrozen, ExitViaHere {
   to defaultAuths(<unsafe>) {

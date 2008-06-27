@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def root implements DeepFrozen, ExitViaHere {
  /** Produces an object to serve as the root of 'extends' chains. It responds 'no such method' to everything, but refers to 'self' in the error instead of the  parent-most object. */

@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("accumulator")
 
-def root := <import:org.cubik.cle.root>
+def root :DeepFrozen := <import:org.cubik.cle.root>
 
 def makeENodeCopyVisitor implements DeepFrozen, ExitViaHere { # XXX write tests and documentation for this
   to run(self) {

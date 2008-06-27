@@ -5,9 +5,9 @@ pragma.syntax("0.9")
 pragma.enable("call-pattern")
 pragma.enable("function-implements")
 
-def ALL := EIO.getALL()
+def ALL :DeepFrozen := EIO.getALL()
 
-def terminating(chunk) implements DeepFrozen {
+def terminating(chunk) as DeepFrozen {
   return chunk == null || Ref.isBroken(chunk)
 }
 

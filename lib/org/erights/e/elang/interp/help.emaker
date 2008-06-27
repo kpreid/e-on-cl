@@ -4,12 +4,12 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeUnQuote := <elib:oldeio.makeUnQuote>
-def makeTextWriter := <elib:oldeio.makeTextWriter>
+def makeUnQuote    :DeepFrozen := <elib:oldeio.makeUnQuote>
+def makeTextWriter :DeepFrozen := <elib:oldeio.makeTextWriter>
 
-def mirandaMethods := null.__getAllegedType().getMessageTypes()
+def mirandaMethods :DeepFrozen := null.__getAllegedType().getMessageTypes()
 
-def formatType(type) :any implements DeepFrozen {
+def formatType :DeepFrozen := {def formatType(type) :any implements DeepFrozen {
   def [tw, sb] := makeTextWriter.makeBufferingPair()
   
   # XXX produce nice explanations in the event the type misbehaves
@@ -32,7 +32,7 @@ def formatType(type) :any implements DeepFrozen {
   tw.lnPrint("}")
   
   return makeUnQuote(sb.snapshot())
-}
+}}
 
 def help implements DeepFrozen, ExitViaHere {
   to run(specimen) :any {

@@ -7,7 +7,7 @@ pragma.enable("function-implements")
 
 def defineException := <import:org.cubik.cle.fail.defineException>
 def defineExceptionGuard := <import:org.cubik.cle.fail.defineExceptionGuard>
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def makeParseError := defineException(
   [def parseErrorFQN := meta.context().getFQNPrefix() + "ParseError"], 

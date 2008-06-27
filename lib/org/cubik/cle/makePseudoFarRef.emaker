@@ -7,7 +7,8 @@ pragma.enable("exporter")
 pragma.enable("importer")
 pragma.enable("accumulator")
 
-def nonPassedMiranda := \
+# could be Data
+def nonPassedMiranda :DeepFrozen := \
   accum [].asSet() for messageDesc in \
       null.__getAllegedType().getMessageTypes().without("__getAllegedType/0") \
         .without("__respondsTo/2").without("__reactToLostClient/1") \
@@ -15,7 +16,7 @@ def nonPassedMiranda := \
     _.with([messageDesc.getVerb(), messageDesc.getParams().size()])
   }
 
-def makeProxy := <elib:ref.makeProxy>
+def makeProxy :DeepFrozen := <elib:ref.makeProxy>
 
 def makePseudoFarRef implements DeepFrozen, ExitViaHere {
   /** Make a Far reference out of a Near reference from the same vat. It does not modify arguments and return values, so is not a membrane. XXX document miranda method choices */

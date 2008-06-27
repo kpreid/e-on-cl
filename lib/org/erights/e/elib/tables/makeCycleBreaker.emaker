@@ -6,7 +6,7 @@ pragma.enable("function-implements")
 # Copyright 2003 Hewlett Packard, Inc. under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def TraversalKey := <type:org.erights.e.elib.tables.TraversalKey>
 def makeTraversalKey := <elib:tables.makeTraversalKey>
@@ -108,15 +108,17 @@ bind makeConstCycleBreaker implements EventuallyDeepFrozen {
         }
     }
     
-    to run(constPMap) :near {
-        def constCycleBreaker extends makeROCycleBreaker(constPMap.readOnly()) implements DeepFrozen {
+    to run(constPMap :DeepFrozen) :near {
+        def ro :DeepFrozen := makeROCycleBreaker(constPMap.readOnly())
+        
+        def constCycleBreaker extends ro implements DeepFrozen {
 
             to getPowerMap()    :near { constPMap.snapshot() }
         }
     }
 }
 
-def EMPTYConstCycleBreaker := makeConstCycleBreaker([].asMap())
+def EMPTYConstCycleBreaker :DeepFrozen := makeConstCycleBreaker([].asMap())
 
 /**
  * A CycleBreaker is like an EMap except that it accepts unsettled

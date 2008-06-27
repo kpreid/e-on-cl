@@ -4,8 +4,8 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
-def makeRedirector := <import:org.erights.e.elib.ref.makeRedirector>
+def OneArgFunc :DeepFrozen := <import:org.erights.e.elib.util.OneArgFunc>
+def makeRedirector :DeepFrozen := <import:org.erights.e.elib.ref.makeRedirector>
 
 /** Wraps a EProxyResolver for a remote promise in a way suitable for inclusion as an argument in the first __whenMoreResolved message, in order to preserve reference-full-order.
   * 

@@ -4,12 +4,12 @@
 pragma.syntax("0.9")
 pragma.enable("call-pattern")
 
-def Same := <import:org.erights.e.elib.slot.Same>
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-def FinalSlot := <elib:slot.makeFinalSlot>.asType()
+def Same :DeepFrozen := <import:org.erights.e.elib.slot.Same>
+def EventuallyDeepFrozen :Same[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
+def FinalSlot :DeepFrozen := <elib:slot.makeFinalSlot>.asType()
 
-def [=> makeNounExpr, => makeEMethod, => makeEScript] | _ := <elang:evm.*>
-def EScript := makeEScript.asType()
+def [=> makeNounExpr :DeepFrozen, => makeEMethod :DeepFrozen, => makeEScript :DeepFrozen] | _ := <elang:evm.*>
+def EScript :DeepFrozen := makeEScript.asType()
 
 # XXX duplicated from DeepFrozenAuthor
 /** Non-coercing guard wrapper. */

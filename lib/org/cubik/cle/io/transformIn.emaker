@@ -4,14 +4,14 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def ALL      := EIO.getALL()
-def InStream := any # <import:org.erights.e.elib.eio.InStream> -- XXX doesn't work because InStream isn't DeepFrozen because vow isn't
+def ALL      :DeepFrozen := EIO.getALL()
+def InStream :DeepFrozen := any # <import:org.erights.e.elib.eio.InStream> -- XXX doesn't work because InStream isn't DeepFrozen because vow isn't
 
-def defaultEstimator implements DeepFrozen {
+def defaultEstimator as DeepFrozen {
   to estimate(size) { return size }
 }
 
-def whenMaybeNow(ref, reactor) implements DeepFrozen {
+def whenMaybeNow(ref, reactor) as DeepFrozen {
   return if (Ref.isResolved(ref)) {
     reactor(ref)
   } else {

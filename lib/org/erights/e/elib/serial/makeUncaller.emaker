@@ -7,10 +7,10 @@ pragma.syntax("0.8")
 
 # modified by kpreid to not use deprecated Guard#get/0 (copied from E 0.8.35f)
 
-def makeRemoteCall := <elib:serial.makeRemoteCall>
-def Uncaller := <type:org.erights.e.elib.serial.Uncaller>
+def makeRemoteCall :DeepFrozen := <elib:serial.makeRemoteCall>
+def Uncaller :DeepFrozen := <type:org.erights.e.elib.serial.Uncaller>
 
-def minimalUncaller implements DeepFrozen, Uncaller {
+def minimalUncaller as DeepFrozen implements Uncaller {
     to optUncall(obj) :nullOk[__Portrayal] {
         if (Ref.isNear(obj)) {
             obj.__optUncall()
@@ -22,9 +22,9 @@ def minimalUncaller implements DeepFrozen, Uncaller {
     }
 }
 
-def minimalUncallers := [minimalUncaller, <import>]
+def minimalUncallers :DeepFrozen := [minimalUncaller, <import>]
 
-def defaultUncallers := [<type>] + minimalUncallers
+def defaultUncallers :DeepFrozen := [<type>] + minimalUncallers
 
 /**
  * Makes an uncall function that, when applied to a transparent-enough object,
@@ -36,7 +36,7 @@ def defaultUncallers := [<type>] + minimalUncallers
  *
  * @author Mark S. Miller
  */
-def makeUncaller implements ExitViaHere {
+def makeUncaller implements DeepFrozen, ExitViaHere {
 
     /**
      * [minimalUncaller, <import>]

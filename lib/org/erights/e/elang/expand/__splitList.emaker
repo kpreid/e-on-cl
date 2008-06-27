@@ -9,11 +9,11 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def EList := <import:org.erights.e.elib.tables.type.ConstList> # XXX variously wrong
+def EList :DeepFrozen := <import:org.erights.e.elib.tables.type.ConstList> # XXX variously wrong
 
-def makeException := <import:org.cubik.cle.prim.makeException>
-def ltsTypes := [meta.context().getFQNPrefix() + "ListTooShort"]
-def ltsPrinter implements DeepFrozen {
+def makeException :DeepFrozen := <import:org.cubik.cle.prim.makeException>
+def ltsTypes :DeepFrozen := [meta.context().getFQNPrefix() + "ListTooShort"]
+def ltsPrinter :DeepFrozen := {def ltsPrinter implements DeepFrozen {
   to run(tw :TextWriter, e ? (e._getProperties() =~ [=> specimen, => size, => expectedSize])) {  
     tw.write("a ")
     tw.quote(size)
@@ -21,10 +21,10 @@ def ltsPrinter implements DeepFrozen {
     tw.quote(expectedSize)
     tw.write(" size list pattern")
   }
-}
-def makeListTooShort(specimen, size, expectedSize) implements DeepFrozen {
+}}
+def makeListTooShort :DeepFrozen := {def makeListTooShort(specimen, size, expectedSize) implements DeepFrozen {
   return makeException(ltsTypes, [=> specimen, => size, => expectedSize], ltsPrinter)
-}
+}}
 
 /**
  * Defines the builtin '__splitList' via function template.

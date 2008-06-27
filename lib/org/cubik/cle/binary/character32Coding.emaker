@@ -4,9 +4,9 @@
 pragma.syntax("0.9")
 
 
-def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
+def unsignedIntegerCoding :DeepFrozen := <import:org.cubik.cle.binary.unsignedIntegerCoding>
 
-def u64 := unsignedIntegerCoding[64]
+def u64 :DeepFrozen := unsignedIntegerCoding[64]
 
 def character32Coding implements DeepFrozen, ExitViaHere { # implements Binary
   to asType() { return char }

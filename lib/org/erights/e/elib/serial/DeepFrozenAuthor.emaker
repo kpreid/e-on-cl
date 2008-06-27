@@ -5,6 +5,7 @@ pragma.syntax("0.9")
 
 pragma.enable("accumulator")
 pragma.enable("function-implements")
+pragma.enable("call-pattern")
 
 /** Non-coercing guard wrapper. */
 def Really {
@@ -25,13 +26,26 @@ def Really {
 def _maps(collection, key) { collection.fetch(key, fn { return false }); return true }
 
 def ConstList := <import:org.cubik.cle.prim.ConstList>
-def primInt := <import:org.cubik.cle.prim.int>
-def primChar := <import:org.cubik.cle.prim.char>
-def primFloat64 := <import:org.cubik.cle.prim.float64>
+
+def primGuardAnswers := accum [].asMap() for x in [
+  String,
+  Twine,
+  boolean,
+  <import:org.cubik.cle.prim.char>,
+  <import:org.cubik.cle.prim.int>,
+  <import:org.cubik.cle.prim.float64>,
+] { _.with(x, true) } | accum [].asMap() for x in [
+    any,
+  ] { _.with(x, false) }
 
 /** Version of safeScope["require"] that has fewer dependencies. */
-def requireDF(condition, problemThunk) :void {
-  if (!condition) { throw(problemThunk()) }
+def requireDF{
+  to run(condition, problemThunk) :void {
+    if (!condition) { throw(problemThunk()) }
+  }
+  to run(condition) :void {
+    if (!condition) { throw("Unexpected false") }
+  }
 }
 
 def makeCallExpr := <import:org.erights.e.elang.evm.makeCallExpr>
@@ -111,6 +125,8 @@ def selflessCrashUncaller {
     }
   }  
 }
+
+def emptySofar := [].asMap()
 
 def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
 
@@ -243,13 +259,11 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
       if (_maps(patternSS.varNames(), name)) {
         throw.eject(fail, E.toQuote(name) + " in the definition of " + audition.getFQName() + " is a variable pattern and therefore not DeepFrozen")
       } else {
-        def slot := audition.getSlot(name)
+        def guard := audition.getGuard(name)
         
-        requireDeepFrozen(slot, [].asMap(), fail, def _ {to __printOn(out :TextWriter) { 
-          out.quote(name)
-          out.print(" in the lexical scope of ")
-          out.print(audition.getFQName()) 
-        }})
+        if (DeepFrozen.rangeSupersetOf(guard) != true) {
+          throw.eject(fail, E.toQuote(name) + " in the lexical scope of " + audition.getFQName() + " does not have a guard implying DeepFrozen, but " + E.toQuote(guard))
+        }
       }
     }
   }
@@ -279,15 +293,31 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
       
       def label := "EventuallyDeepFrozen: " + audition.getFQName()
       
-      /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'. */
+      def Same := <import:org.erights.e.elib.slot.Same>
+      def FinalSlot := <import:org.erights.e.elib.slot.makeFinalSlot>.asType()
+      
+      /** Return true if 'expr' is proven to, when evaluated in the objectExpr's scope preceded by 'precedingExprs', result in the then value of 'slot'; otherwise exit via 'fail'. */
       def expressionWillHaveValue(expr :Really[EExpr], 
                                   slot :any,
-                                  precedingNodes # :Really[List[ENode]]
+                                  precedingNodes, # :Really[List[ENode]],
+                                  fail
                                  ) :boolean {
-        def nounExpr :NounExpr exit fn _{return false} := expr
-        return (audition.getSlot(def noun := nounExpr.getName()) == slot) \
-               & accum true for p in precedingNodes {
-                   _ & !(_maps(p.staticScope().outNames(), noun)) }
+        def nounExpr :NounExpr exit fail := expr
+        def guard := audition.getGuard(def noun := nounExpr.getName())
+        for p in precedingNodes {
+          if (_maps(p.staticScope().outNames(), noun)) {
+            fail("Preceding expression " + E.toString(p) + " redefines noun " + E.toString(expr))
+          }
+        }
+        
+        {
+          if (guard == Same[slot]) { return true }
+          escape x {
+            def [value] := __makeFinalSlot."match__run/1"(slot, x)
+            if (guard == FinalSlot[Same[value]]) { return true }
+          }
+          fail("the guard " + E.toString(guard) + " does not give reason to expect " + E.toQuote(slot))
+        }
       }
 
       def precedingExprs := [objectExpr.getPattern(), objectExpr.getAuditors()]
@@ -305,8 +335,8 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
             
             def optResultGuard := methd.getOptResultGuard()
             if (optResultGuard != null) {
-              requireDF(expressionWillHaveValue(optResultGuard, &any, [objectExpr.getAuditors()]), 
-                fn{label + ": __optSealedDispatch result guard is not any"})
+              expressionWillHaveValue(optResultGuard, &any, [objectExpr.getAuditors()], 
+                fn p {throw(label + ": __optSealedDispatch result guard is not any: " + E.toString(p))})
             }
             
             def [brandPattern :Really[FinalPattern]] \
@@ -324,15 +354,14 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
               := methodBody
             
             # XXX overly restrictive - we should extract the EventuallyDeepFrozen noun and check it instead of requiring that particular name
-            requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, ::"eDF`__equalizer`", "sameEver", [brandPattern.getNoun(), ::"eDF`EventuallyDeepFrozen.getPeekBrand()`"], null)) \
-                      & expressionWillHaveValue(::"eDF`EventuallyDeepFrozen`", &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}) \
-                      & expressionWillHaveValue(::"eDF`__equalizer`", &__equalizer, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}),
-              fn{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
+            requireDF((exprShorten(ifExpr.getTest()) == makeCallExpr(null, ::"eDF`__equalizer`", "sameEver", [brandPattern.getNoun(), ::"eDF`EventuallyDeepFrozen.getPeekBrand()`"], null)), fn{label + ": __optSealedDispatch if test does not compare the given brand to the peek brand"})
+            expressionWillHaveValue(::"eDF`EventuallyDeepFrozen`", &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}, fn p{throw(label + ": EventuallyDeepFrozen is not EventuallyDeepFrozen: " + p)})
+            expressionWillHaveValue(::"eDF`__equalizer`", &__equalizer, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]}, fn p{throw(label + ": __equalizer is not __equalizer: " + p)})
               
             # overly restrictive in the same way as the previous
-            requireDF((exprShorten(ifExpr.getThen()) == ::"eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`") \
-                      & expressionWillHaveValue(::"eDF`EventuallyDeepFrozen`", &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()]),
+            requireDF((exprShorten(ifExpr.getThen()) == ::"eDF`EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())`"),
               fn{label + ": __optSealedDispatch if body is not EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())"})
+            expressionWillHaveValue(::"eDF`EventuallyDeepFrozen`", &EventuallyDeepFrozen, precedingExprs + [brandPattern] + if (optResultGuard != null) {[optResultGuard]} else {[]} + [ifExpr.getTest()], fn p{throw(label + ": EventuallyDeepFrozen is not EventuallyDeepFrozen in peek seal body: " + p)})
             
             break true
           } != null, 
@@ -358,7 +387,7 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
     
     to isDeepFrozen(specimen) :boolean {
       escape notOk { 
-        requireDeepFrozen(specimen, [].asMap(), notOk, specimen)
+        requireDeepFrozen(specimen, emptySofar, notOk, specimen)
         return true
       }
       return false
@@ -366,24 +395,22 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
     
     to coerce(specimen, optEjector) :any {
       # XXX allow coercion?
-      requireDeepFrozen(specimen, [].asMap(), optEjector, specimen)
+      requireDeepFrozen(specimen, emptySofar, optEjector, specimen)
       return specimen
     }
     
     to rangeSupersetOf(guard) {
       
       # All the string tests below are so that we don't force the lazy-loading of those various guards (in case there's a loading dependency cycle) unless we have a guard specimen which might be one of them. Kludge, but AFAIK non-dangerous...
-      # All of this is a temporary mechanism anyway, to get guard-based auditing started. We need a more general way of accepting guards.
+      # All of this is a temporary mechanism anyway. We need a more general way of accepting guards...
       def t := guard.__getAllegedType().getFQName()
+      #traceln(t + " -- " + E.toString(t.startOf("Same", 0)))
+      
+      # XXX primGuardAnswers is an arbitrary list. Instead, check the guard for being a cl-type-guard, then ask it if its instances are DeepFrozen, or Selfless and parameterizable for all of its state (ook)
+      escape no { return primGuardAnswers.fetch(guard, no) }
       
       if (guard == DeepFrozen) { return true }
-      if (guard == String) { return true } # XXX should be asking some built-in type-property-database
-      if (guard == Twine) { return true }
-      if (guard == primInt) { return true }
-      if (guard == primChar) { return true }
-      if (guard == primFloat64) { return true }
-      if (guard == any) { return false }
-
+      
       if (t.startOf("Same", 0) != -1) {
         def Same := <import:org.erights.e.elib.slot.Same>
         escape fail {
@@ -410,7 +437,12 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
         }
       }
       if (t.startOf("rderedSpace", 0) != -1) {
-        if (guard == int) { return true } # late to try to avoid depending on ordered-region too soon
+        if (guard == int) { return true }
+        if (guard == float64) { return true }
+        if (guard == char) { return true }
+      }
+      if (t.startOf("rderedRegion", 0) != -1) {
+        if (<import:org.erights.e.elib.slot.SubrangeGuard>[DeepFrozen].passes(guard)) { return true }
         if (guard == float64) { return true }
         if (guard == char) { return true }
       }
@@ -429,5 +461,5 @@ def DeepFrozenAuthor(DeepFrozenStamp, semitransparentUncaller) {
     }
   })
   
-  return DeepFrozen0
+  return DeepFrozen
 }

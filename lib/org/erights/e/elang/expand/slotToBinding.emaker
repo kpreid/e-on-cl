@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def makeCoercedSlot := <import:org.erights.e.elib.slot.makeCoercedSlot>
+def makeCoercedSlot :DeepFrozen := <import:org.erights.e.elib.slot.makeCoercedSlot>
 
 def slotToBinding implements DeepFrozen, ExitViaHere {
   to run(guard) {

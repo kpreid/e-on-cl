@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-interface ValueThunk guards ValueThunkStamp {
+interface ValueThunk :DeepFrozen guards ValueThunkStamp :DeepFrozen {
   to run() :any
 }
 

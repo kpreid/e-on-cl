@@ -4,20 +4,21 @@
 pragma.syntax("0.9")
 pragma.enable("one-method-object")
 
-def dataBits := 7
+def dataBits :DeepFrozen := 7
 
 def unsignedIntegerCoding implements DeepFrozen, ExitViaHere {
   to get(bitCount :(int >= 0)) {
-    def UnsignedIntegerSpecific := (0..!(2**bitCount))
+    def bitCountD :int := bitCount # XXX interim -- DeepFrozen ought to accept (int >= 0) as a subtype
+    def UnsignedIntegerSpecific :DeepFrozen := (0..!(2**bitCount))
     return def unsignedIntegerSpecificCoding implements DeepFrozen { # implements Binary
       to asType() { return UnsignedIntegerSpecific }
       to writingTo(out) { # , schedule
-        def byteCount := bitCount // 8
+        def byteCount := bitCountD // 8
         def mask := (2**8-1)
         # XXX consult stream's byte size
         return def writer(n :UnsignedIntegerSpecific) {
           out.reserve().resolve(__makeList.fromValuesOf(def wIter.iterate(f) {
-            var i := bitCount - 8
+            var i := bitCountD - 8
             while (i >= 0) {
               f(null, n >> i & mask)
               i -= 8
@@ -26,14 +27,14 @@ def unsignedIntegerCoding implements DeepFrozen, ExitViaHere {
         }
       }
       to takingFrom(ins, schedule) {
-        def byteCount := bitCount // 8
+        def byteCount := bitCountD // 8
         # XXX consult stream's byte size
         return def taker() :(schedule.result(UnsignedIntegerSpecific)) {
           return schedule.whenResolved(EIO.takeRange(byteCount, byteCount, ins), fn bytes {
             # XXX this is O(n^2) in the size of the number; we could do better by using an efficient "bignum-from-digit-array" primitive
             var acc := 0
             for i => byte in bytes {
-              acc |= byte << (bitCount - (i+1)*8)
+              acc |= byte << (bitCountD - (i+1)*8)
             }
             acc
           })

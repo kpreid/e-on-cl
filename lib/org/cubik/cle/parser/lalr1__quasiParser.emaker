@@ -6,19 +6,19 @@ pragma.enable("dot-props")
 pragma.enable("accumulator")
 pragma.enable("function-implements")
 
-def makeLALR1Parser := <import:org.cubik.cle.parser.makeLALR1Parser>
-def makeParseError := makeLALR1Parser::makeParseError
-def EOF := makeLALR1Parser::EOF
+def makeLALR1Parser :DeepFrozen := <import:org.cubik.cle.parser.makeLALR1Parser>
+def makeParseError :DeepFrozen := makeLALR1Parser::makeParseError
+def EOF :DeepFrozen := makeLALR1Parser::EOF
 
-def mapStream := <import:org.cubik.cle.io.mapStream>
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def mapStream :DeepFrozen := <import:org.cubik.cle.io.mapStream>
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
-def mapV(f, coll) implements DeepFrozen \
+def mapV(f, coll) as DeepFrozen \
   { return accum [] for v in coll {_.with(f(v))}}
 
-def listAction implements DeepFrozen { to run(item, list) { return [item] + list }}
+def listAction as DeepFrozen { to run(item, list) { return [item] + list }}
 
-def ToProblem implements DeepFrozen {
+def ToProblem as DeepFrozen {
   to coerce(specimen, optEjector) {
     if (Ref.optProblem(specimen) =~ p :notNull) {
       return p
@@ -28,7 +28,7 @@ def ToProblem implements DeepFrozen {
   }
 }
 
-def lex(textIn) implements DeepFrozen {
+def lex(textIn) as DeepFrozen {
   # XXX get a better lexer library/pattern
   var text := EIO.takeAll(textIn)
   #traceln(`text is ->$text<-, match ${text =~ rx`(?s)"(@mid.*)`} ->$mid<-`)
@@ -85,7 +85,7 @@ def lex(textIn) implements DeepFrozen {
   return tokens.snapshot().asStream()
 }
 
-def metaparser := makeLALR1Parser(
+def metaparser :DeepFrozen := makeLALR1Parser(
   "grammar",
   "grammar",
   ["string", "derives", "yields", "symbol", "Quasi$", "end"],
@@ -205,7 +205,7 @@ def metaparser := makeLALR1Parser(
    ["item", ["Quasi$"], __identityFunc]],
   ["tokenFunction" => __identityFunc])
 
-def memoValueMaker := 
+def memoValueMaker :DeepFrozen := 
   <import:org.cubik.cle.memoize>.interning(
     def valueMaker implements DeepFrozen { to run(template) {
       return metaparser.parse(lex(template.asStream())) }})

@@ -3,8 +3,8 @@
 
 pragma.syntax("0.9")
 
-def primParser := <import:org.cubik.cle.prim.parser>
-def convertQuasiInput := <import:org.cubik.cle.convertQuasiInput>
+def primParser :DeepFrozen := <import:org.cubik.cle.prim.parser>
+def convertQuasiInput :DeepFrozen := <import:org.cubik.cle.convertQuasiInput>
 
 def epatt__quasiParser implements DeepFrozen, ExitViaHere {
   to valueMaker(quasi1Source) {

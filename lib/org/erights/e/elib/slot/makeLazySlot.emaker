@@ -7,7 +7,7 @@ pragma.syntax("0.8")
 #   * Safe against nonlocal exits by the value maker
 #   * makeLazySlot is DeepFrozen
 
-def Slot := <type:org.erights.e.elib.slot.Slot>
+def Slot :DeepFrozen := <type:org.erights.e.elib.slot.Slot>
 
 def makeLazySlot implements DeepFrozen, ExitViaHere {
     to run(maker) :Slot {

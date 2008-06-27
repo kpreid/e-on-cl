@@ -3,8 +3,8 @@
 
 pragma.syntax("0.9")
 
-def primParser := <import:org.cubik.cle.prim.parser>
-def makeTwineFeeder := <import:org.quasiliteral.syntax.makeTwineFeeder>
+def primParser :DeepFrozen := <import:org.cubik.cle.prim.parser>
+def makeTwineFeeder :DeepFrozen := <import:org.quasiliteral.syntax.makeTwineFeeder>
 
 /** Java-E compatibility for makeParseFuncAuthor */
 def makeELexer implements DeepFrozen, ExitViaHere {

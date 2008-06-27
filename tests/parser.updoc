@@ -9,11 +9,11 @@
   ? makeLALR1Parser :DeepFrozen
   # value: <makeLALR1Parser>
 
-  ? def s implements DeepFrozen {}; def l implements DeepFrozen {}; def r implements DeepFrozen {}; def id implements DeepFrozen {}; def star implements DeepFrozen {}; def eq implements DeepFrozen {}; null
+  ? def s as DeepFrozen {}; def l as DeepFrozen {}; def r as DeepFrozen {}; def id as DeepFrozen {}; def star as DeepFrozen {}; def eq as DeepFrozen {}; null
   
   ? def mapStream := <import:org.cubik.cle.io.mapStream>; null
   
-  ? def identityValues implements DeepFrozen { to run(s) :any { return [s, s] }}; null
+  ? def identityValues as DeepFrozen { to run(s) :any { return [s, s] }}; null
   
   ? def parser := makeLALR1Parser("from cl-yacc test 4-20",
   >                               s,
@@ -99,7 +99,7 @@ bad terminal
 
 quasi-parser with actions
 
-  ? def calls(verb) :any { return def caller implements DeepFrozen { 
+  ? def calls(verb :String) :any { return def caller as DeepFrozen { 
   >   match [=="run", [rec] + args] { 
   >     E.call(rec, verb, args) }}}
   > null

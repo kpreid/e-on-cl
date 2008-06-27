@@ -7,8 +7,8 @@ pragma.syntax("0.8")
 
 # copied 2007-08-17 from EoJ r466, modified for DeepFrozen
 
-def Term := <type:org.quasiliteral.term.Term>
-def DEBuilderOf := <elib:serial.DEBuilderOf>
+def Term :DeepFrozen := <type:org.quasiliteral.term.Term>
+def DEBuilderOf :DeepFrozen := <elib:serial.DEBuilderOf>
 
 /**
  * A Data-E AST is (XXX need explanation)

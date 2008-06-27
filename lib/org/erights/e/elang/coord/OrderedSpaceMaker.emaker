@@ -4,7 +4,7 @@
 pragma.syntax("0.8")
 
 # MODIFIED by kpreid to be DeepFrozen
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def <erights> := <import:org.erights.*>
 

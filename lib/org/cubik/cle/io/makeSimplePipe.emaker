@@ -5,9 +5,9 @@ pragma.syntax("0.9")
 pragma.enable("dot-props")
 pragma.enable("function-implements")
 
-def ALL := EIO.getALL()
+def ALL :DeepFrozen := EIO.getALL()
 
-def enqueue(item, &tail) implements DeepFrozen {
+def enqueue(item, &tail) as DeepFrozen {
   def resolver := tail
   tail := def next
   resolver.resolve([item, next])

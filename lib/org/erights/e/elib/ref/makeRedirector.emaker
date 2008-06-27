@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
+def OneArgFunc :DeepFrozen := <import:org.erights.e.elib.util.OneArgFunc>
 
 /** Wraps a Resolver in a way suitable for inclusion as an argument in a __whenMoreResolved message.
   * 

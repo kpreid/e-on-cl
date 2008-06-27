@@ -5,11 +5,13 @@ pragma.syntax("0.9")
 pragma.enable("exporter")
 pragma.enable("importer")
 
-def makeLazySlot   := <elib:slot.makeLazySlot>
-def makeScope      := <elang:scope.makeScope>
-def makePathLoader := <import:org.cubik.cle.prim.makePathLoader>
+def makeLazySlot   :DeepFrozen := <elib:slot.makeLazySlot>
+def makeScope      :DeepFrozen := <elang:scope.makeScope>
+def makePathLoader :DeepFrozen := <import:org.cubik.cle.prim.makePathLoader>
 
-def Scope := makeScope.asType()
+def Scope :DeepFrozen := makeScope.asType()
+
+def traceln1 :DeepFrozen := traceln # workaround for lack of guard attached to traceln
 
 # XXX document what keys in vatPrivScope and exits are used
 def makeIOScope implements DeepFrozen, ExitViaHere {
@@ -163,7 +165,7 @@ def makeIOScope implements DeepFrozen, ExitViaHere {
       def unsafeInheritLoader {
         to fetch(fqn :String, absentThunk) :any {
           def result := <import>.fetch(fqn, absentThunk)
-          traceln(`warning: loading safe ${E.toQuote(fqn)} via unsafe loader`)
+          traceln1(`warning: loading safe ${E.toQuote(fqn)} via unsafe loader`)
           return result
         }
       },

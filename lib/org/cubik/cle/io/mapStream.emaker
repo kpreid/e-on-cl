@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 pragma.enable("dot-props")
 pragma.enable("function-implements")
 
-def chunkedMapStream implements DeepFrozen {
+def chunkedMapStream as DeepFrozen {
   to run(OutChunk :Guard, sourceStream, func, namer) :any {
     
     def doMap(chunk) {

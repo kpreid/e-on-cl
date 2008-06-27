@@ -4,10 +4,10 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def VatID := <import:net.captp.protocol.VatID>
-def Vine := <import:net.captp.tables.makeVine>.asType()
+def VatID :DeepFrozen := <import:net.captp.protocol.VatID>
+def Vine :DeepFrozen := <import:net.captp.tables.makeVine>.asType()
 
-def PeerHub := def SwissTable := def PromiseGiftTable := def NearGiftTable := any # XXX restrict or interface or something
+def PeerHub :DeepFrozen := def SwissTable :DeepFrozen := def PromiseGiftTable :DeepFrozen := def NearGiftTable :DeepFrozen := any # XXX restrict or interface or something
 
 /**
  * Made magically available at incoming position 0.

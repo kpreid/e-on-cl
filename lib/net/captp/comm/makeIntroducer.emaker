@@ -4,17 +4,17 @@
 pragma.syntax("0.9")
 pragma.enable("call-pattern")
 
-def scheme := "captp"
+def scheme :String := "captp"
 
-def makeSwissTable := <import:net.captp.tables.makeSwissTable>
-def asWaterkenBase32 := <import:net.captp.util.asWaterkenBase32>
-def now := <import:org.cubik.cle.schedule.now>
-def unsignedIntegerCoding := <import:org.cubik.cle.binary.unsignedIntegerCoding>
-def makeLocatorUnum := <import:net.captp.comm.makeLocatorUnum>
-def makeHub := <import:net.captp.comm.makeHub>
-def makeBrand := <elib:sealing.makeBrand>
+def makeSwissTable :DeepFrozen := <import:net.captp.tables.makeSwissTable>
+def asWaterkenBase32 :DeepFrozen := <import:net.captp.util.asWaterkenBase32>
+def now :DeepFrozen := <import:org.cubik.cle.schedule.now>
+def unsignedIntegerCoding :DeepFrozen := <import:org.cubik.cle.binary.unsignedIntegerCoding>
+def makeLocatorUnum :DeepFrozen := <import:net.captp.comm.makeLocatorUnum>
+def makeHub :DeepFrozen := <import:net.captp.comm.makeHub>
+def makeBrand :DeepFrozen := <elib:sealing.makeBrand>
 
-def KeyPair := any # XXX stub
+def KeyPair :DeepFrozen := any # XXX stub
 
 def makeIntroducer implements ExitViaHere, DeepFrozen {
   to makePair(config :Map,

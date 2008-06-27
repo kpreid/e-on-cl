@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def insertNamePrefix(fqn, insertion) implements DeepFrozen {
+def insertNamePrefix :DeepFrozen := {def insertNamePrefix(fqn, insertion) implements DeepFrozen {
   def lastDotPos := fqn.lastIndexOf1('.')
   return \
     if (lastDotPos == -1) {
@@ -13,7 +13,7 @@ def insertNamePrefix(fqn, insertion) implements DeepFrozen {
       def after := lastDotPos + 1
       fqn(0, after) + insertion + fqn(after)
     }
-}
+}}
 
 /** Compatibility. <type:a.b.C> => <import:a.b.type.C> OR <import:a.b.makeC>.asType(), whichever exists */
 def typeLoader implements DeepFrozen, ExitViaHere {

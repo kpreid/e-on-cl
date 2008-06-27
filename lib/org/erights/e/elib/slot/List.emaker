@@ -6,13 +6,13 @@ pragma.syntax("0.9")
 pragma.enable("accumulator")
 pragma.enable("one-method-object")
 
-def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
-def makeCoercionFailure := <import:org.cubik.cle.fail.makeCoercionFailure>
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-def ConstList := <type:org.erights.e.elib.tables.ConstList>
+def simplifyFQName :DeepFrozen := <import:org.cubik.cle.prim.simplifyFQName>
+def makeCoercionFailure :DeepFrozen := <import:org.cubik.cle.fail.makeCoercionFailure>
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
+def ConstList :DeepFrozen := __makeList.asType()
 
-def ListGuardStamp implements DeepFrozen {to audit(_) { return true }}
-def ListGuard implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(ListGuardStamp, sp)) {return sp} else {throw.eject(ej, "not a ListGuard")}}}
+def ListGuardStamp :DeepFrozen := {def ListGuardStamp implements DeepFrozen {to audit(_) { return true }}}
+def ListGuard :DeepFrozen := {def ListGuard implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(ListGuardStamp, sp)) {return sp} else {throw.eject(ej, "not a ListGuard")}}}}
 
 def List0 implements EventuallyDeepFrozen, ListGuardStamp, ExitViaHere {
 

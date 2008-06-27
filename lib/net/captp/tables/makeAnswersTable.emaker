@@ -4,8 +4,8 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeCommTable := <import:net.captp.tables.makeCommTable>
-def Throwable := <type:java.lang.Throwable>
+def makeCommTable :DeepFrozen := <import:net.captp.tables.makeCommTable>
+def Throwable :DeepFrozen := <type:java.lang.Throwable>
 
 def makeAnswersTable() implements DeepFrozen {
     def answersTable extends makeCommTable(answersTable) {

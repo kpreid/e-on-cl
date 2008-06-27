@@ -3,8 +3,8 @@
 
 pragma.syntax("0.9")
 
-def deBytecodeKit := <elib:serial.deBytecodeKit>
-def DataEBuild := any
+def deBytecodeKit :DeepFrozen := <elib:serial.deBytecodeKit>
+def DataEBuild :DeepFrozen := any
 
 def dataEBuildCoding implements DeepFrozen, ExitViaHere { # implements Binary
   to asType() { return DataEBuild }

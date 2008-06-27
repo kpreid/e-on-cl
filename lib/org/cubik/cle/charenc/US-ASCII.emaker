@@ -3,10 +3,10 @@
 
 pragma.syntax("0.9")
 
-def ASCIIRange := 0..!128
+def ASCIIRange :DeepFrozen := 0..!128
 
-def mapStream := <import:org.cubik.cle.io.mapStream>
-def getCharacter := <import:org.cubik.cle.prim.getCharacter>
+def mapStream :DeepFrozen := <import:org.cubik.cle.io.mapStream>
+def getCharacter :DeepFrozen := <import:org.cubik.cle.prim.getCharacter>
 
 def ::"US-ASCII" implements DeepFrozen, ExitViaHere { 
   to __printOn(tw :TextWriter) { tw.print("<US-ASCII encoding>") }

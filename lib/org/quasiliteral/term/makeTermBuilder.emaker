@@ -4,16 +4,16 @@
 pragma.syntax("0.9")
 pragma.enable("accumulator")
 
-def SourceSpan := <elib:base.makeSourceSpan>.asType()
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def SourceSpan :DeepFrozen := <elib:base.makeSourceSpan>.asType()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
-def Term := any # XXX restrict
-def AstroTag := any # XXX restrict
-def AstroArg := any # XXX restrict
-def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
+def Term     :DeepFrozen := any # XXX restrict
+def AstroTag :DeepFrozen := any # XXX restrict
+def AstroArg :DeepFrozen := any # XXX restrict
+def makeBaseAstroBuilder :DeepFrozen := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
 
-def makeTerm := <import:org.quasiliteral.term.makeTerm>
-def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
+def makeTerm :DeepFrozen := <import:org.quasiliteral.term.makeTerm>
+def makeAstroTag :DeepFrozen := <import:org.quasiliteral.astro.makeAstroTag>
 
 def makeTermBuilder implements DeepFrozen, ExitViaHere {
   to run() { # XXX schema parameter

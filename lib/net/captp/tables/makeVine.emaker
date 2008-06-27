@@ -4,9 +4,9 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def fakeUnsealToken implements DeepFrozen {}
+def fakeUnsealToken as DeepFrozen {}
 
-interface Vine guards VineStamp {
+interface Vine :DeepFrozen guards VineStamp :DeepFrozen {
   to run() :void
 }
 

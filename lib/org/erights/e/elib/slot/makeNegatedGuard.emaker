@@ -5,9 +5,9 @@ pragma.syntax("0.9")
 
 pragma.enable("function-implements")
 
-def makeException := <import:org.cubik.cle.prim.makeException>
-def ncfTypes := [meta.context().getFQNPrefix() + "NegatedCoercionFailure"]
-def makeNegatedCoercionFailure(specimen, guard) implements DeepFrozen {
+def makeException :DeepFrozen := <import:org.cubik.cle.prim.makeException>
+def ncfTypes :DeepFrozen := [meta.context().getFQNPrefix() + "NegatedCoercionFailure"]
+def makeNegatedCoercionFailure(specimen, guard) as DeepFrozen {
   return makeException(ncfTypes, [=> specimen, => guard],
     def ncfPrinter implements DeepFrozen {
       to run(tw :TextWriter, e ? (e._getProperties() =~ [=> specimen, => guard])) {  
@@ -19,7 +19,7 @@ def makeNegatedCoercionFailure(specimen, guard) implements DeepFrozen {
     })
 }
 
-def _make(subGuard) implements DeepFrozen {
+def _make(subGuard) as DeepFrozen {
   def negatedGuard {
     to __printOn(out :TextWriter) {
       out.write("Not[")

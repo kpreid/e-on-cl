@@ -7,12 +7,12 @@ pragma.syntax("0.8")
 
 # copied 2007-08-17 from EoJ r466, modified for DeepFrozen
 
-def makeURIKit := <import:org.quasiliteral.syntax.makeURIKit>
-def DEBuilderOf := <elib:serial.DEBuilderOf>
-def deENodeKit := <elib:serial.deENodeKit>
-def makePrettyFeeder := <elang:syntax.makePrettyFeeder>
-def makeELexer := <elang:syntax.makeELexer>
-def makeEParser := <elang:syntax.makeEParser>
+def makeURIKit :DeepFrozen := <import:org.quasiliteral.syntax.makeURIKit>
+def DEBuilderOf :DeepFrozen := <elib:serial.DEBuilderOf>
+def deENodeKit :DeepFrozen := <elib:serial.deENodeKit>
+def makePrettyFeeder :DeepFrozen := <elang:syntax.makePrettyFeeder>
+def makeELexer :DeepFrozen := <elang:syntax.makeELexer>
+def makeEParser :DeepFrozen := <elang:syntax.makeEParser>
 
 /**
  * Prints a Kernel-E AST with some syntactic shorthands restored.

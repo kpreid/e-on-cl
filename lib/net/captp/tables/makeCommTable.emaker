@@ -4,15 +4,15 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeTextWriter := <import:org.erights.e.elib.oldeio.makeTextWriter>
-def makeFlexList := <elib:tables.makeFlexList>
+def makeTextWriter :DeepFrozen := <import:org.erights.e.elib.oldeio.makeTextWriter>
+def makeFlexList :DeepFrozen := <elib:tables.makeFlexList>
 
 # Default initial capacity
-def INIT_CAPACITY := 16
+def INIT_CAPACITY :int := 16
 
-def GROWTH_FACTOR := 2
+def GROWTH_FACTOR :int := 2
 
-def Index := int > 0
+def Index :DeepFrozen := int > 0
 
 /**
  * Just some common mechanism made available to the CommTable implementations.

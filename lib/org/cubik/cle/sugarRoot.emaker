@@ -3,16 +3,7 @@
 
 pragma.syntax("0.9")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-
-def sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
-
-  method __optSealedDispatch(brand) :any {
-    if (brand == EventuallyDeepFrozen.getPeekBrand()) {
-      EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
-    }
-  }
-  
+def sugarRoot implements DeepFrozen, ExitViaHere {
   match [=="instance___getAllegedType", [_]] {
     # __getAllegedType/0 for the sugar
     null.__getAllegedType()

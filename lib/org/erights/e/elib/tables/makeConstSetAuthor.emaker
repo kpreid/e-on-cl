@@ -6,13 +6,13 @@ pragma.syntax("0.9")
 def setSugar := <import:org.erights.e.elib.tables.setSugar>
 
 def makeConstSetAuthor(TransparentStamp) {
-  def ConstSetStamp implements DeepFrozen { 
+  def ConstSetStamp as DeepFrozen { 
     to audit(_) { return true }
   }
   
-  interface ConstSetGuard guards ConstSetGuardStamp extends Guard {}
+  interface ConstSetGuard :DeepFrozen guards ConstSetGuardStamp :DeepFrozen extends Guard {}
   
-  def ConstSet implements DeepFrozen, ConstSetGuardStamp {
+  def ConstSet as DeepFrozen implements ConstSetGuardStamp {
     # XXX should reuse standard-coerce from the Lisp side
     to coerce(specimen, optEjector) {
       if (__auditedBy(ConstSetStamp, specimen)) {

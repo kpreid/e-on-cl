@@ -5,13 +5,13 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 pragma.enable("accumulator")
 
-def messageDescs := <import:net.captp.protocol.messageDescs>
-def ["deENodeKit" => bufferingKit,
-     => deSrcKit] | _ := <elib:serial.*>
+def messageDescs :DeepFrozen := <import:net.captp.protocol.messageDescs>
+def ["deENodeKit" => bufferingKit :DeepFrozen,
+     => deSrcKit :DeepFrozen] | _ := <elib:serial.*>
 
-def VERY_WIDE := 10000
+def VERY_WIDE :int := 10000
 
-def convertDE(f) implements DeepFrozen {
+def convertDE(f) as DeepFrozen {
   def builder := bufferingKit.makeBuilder()
   def ast := f(builder)
   return def dataECarrier {
@@ -33,7 +33,7 @@ def convertDE(f) implements DeepFrozen {
   }
 }
 
-def converterTable implements DeepFrozen {
+def converterTable as DeepFrozen {
   to fetch(name, _) {
     return if (name == "Obj") { convertDE } else { __identityFunc }
   }
@@ -41,8 +41,9 @@ def converterTable implements DeepFrozen {
 }
 
 # XXX parser bug: shouldn't need line continuation here
-def dispatchTable := accum [].asMap() for [verb, _, argConverters] \
-                                        in messageDescs[converterTable] {
+def dispatchTable :DeepFrozen :=
+  accum [].asMap() for [verb, _, argConverters :DeepFrozen] \
+                     in messageDescs[converterTable] {
   _.with(verb, def convertMsg(args) implements DeepFrozen {
     require(args.size() == argConverters.size())
     return accum [] for i => c in argConverters { _.with(c(args[i])) }

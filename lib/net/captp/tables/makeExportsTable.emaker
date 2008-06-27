@@ -4,10 +4,10 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeCommTable := <import:net.captp.tables.makeCommTable>
-def PassByProxy := <import:org.erights.e.elib.serial.PassByProxy>
-def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
-def Throwable := <type:java.lang.Throwable>
+def makeCommTable :DeepFrozen := <import:net.captp.tables.makeCommTable>
+def PassByProxy :DeepFrozen := <import:org.erights.e.elib.serial.PassByProxy>
+def makeFlexMap :DeepFrozen := <import:org.erights.e.elib.tables.makeFlexMap>
+def Throwable :DeepFrozen := <type:java.lang.Throwable>
 
 /**
  *

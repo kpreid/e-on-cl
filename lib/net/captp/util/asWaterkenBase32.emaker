@@ -6,12 +6,12 @@ pragma.syntax("0.9")
 pragma.enable("one-method-object")
 pragma.enable("function-implements")
 
-def Octets := List[0..!(2**8)]
+def Octets :DeepFrozen := List[0..!(2**8)]
 
-def at(v) implements DeepFrozen {
+def at(v) as DeepFrozen {
   return if (v < 26) { 'a' + v } else { '2' + v - 26 }
 }
-def locate(c, ej) implements DeepFrozen {
+def locate(c, ej) as DeepFrozen {
   return switch (c) {
     match _ :('a'..'z') { c - 'a' }
     #match _ :('A'..'Z') { c - 'A' } # XXX test

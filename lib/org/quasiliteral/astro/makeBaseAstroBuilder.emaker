@@ -4,13 +4,13 @@
 pragma.syntax("0.9")
 pragma.enable("accumulator")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-def root := <import:org.cubik.cle.root>
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
+def root :DeepFrozen := <import:org.cubik.cle.root>
 
-def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
-def AstroTag := makeAstroTag.asType()
+def makeAstroTag :DeepFrozen := <import:org.quasiliteral.astro.makeAstroTag>
+def AstroTag :DeepFrozen := makeAstroTag.asType()
 
-def Pass := any # marker that the guarding is to be handled by another method
+def Pass :DeepFrozen := any # marker that the guarding is to be handled by another method
 
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
 

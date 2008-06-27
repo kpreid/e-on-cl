@@ -35,7 +35,7 @@ XXX some of these tests should be eventually moved out to files relevant to the 
   # value: 0
   
   ? def f2 implements DeepFrozen { to run() :void { f2x += 1 } }
-  # problem: "f2x" in the lexical scope of __main$f2 is not DeepFrozen because <var 0> is not
+  # problem: "f2x" in the lexical scope of __main$f2 does not have a guard implying DeepFrozen, but VarSlot
   
   ? DeepFrozen :DeepFrozen
   # value: DeepFrozen
@@ -73,7 +73,7 @@ XXX enable this and the similar below as soon as we support var patterns
 
 --- 'Lazy' checking
 
-  ? def EventuallyDeepFrozen := DeepFrozen."eventually"()
+  ? def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
   # value: <EventuallyDeepFrozen>
   
   ? def secret
@@ -93,7 +93,7 @@ XXX enable this and the similar below as soon as we support var patterns
   ? def lazyFailer4 implements EventuallyDeepFrozen {
   >   to __optSealedDispatch(brand) :void {}
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer4: __optSealedDispatch result guard is not any
+  # problem: EventuallyDeepFrozen: __main$lazyFailer4: __optSealedDispatch result guard is not any: the guard Same[<& void>] does not give reason to expect <& any>
   
   ? def lazyFailer5 implements EventuallyDeepFrozen {
   >   method __optSealedDispatch(brand :void) :any {
@@ -120,7 +120,7 @@ XXX enable this and the similar below as soon as we support var patterns
   >     }
   >   }
   > }
-  # problem: EventuallyDeepFrozen: __main$lazyFailer6: __optSealedDispatch result guard is not any
+  # problem: EventuallyDeepFrozen: __main$lazyFailer6: __optSealedDispatch result guard is not any: the guard Same[<& void>] does not give reason to expect <& any>
   
   XXX can't do this test because Java-E rejects redefining "any" - see if we can replace the node builder or some such to fix this - if not, build an expression using ENode constructors and eval that '
   x ? def lazyFailer7 implements (def any := int; EventuallyDeepFrozen) {

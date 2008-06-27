@@ -10,18 +10,18 @@ pragma.enable("function-implements")
 #   * removed uses of Guard sugar verbs or/1 and get/0
 #   * DeepFrozen
 
-def Uncaller := <type:org.erights.e.elib.serial.Uncaller>
+def Uncaller :DeepFrozen := <type:org.erights.e.elib.serial.Uncaller>
 
-def deASTKit := <elib:serial.deASTKit>
-def DEBuilderOf := <elib:serial.DEBuilderOf>
-def deSrcKit := <elib:serial.deSrcKit>
-def makeCycleBreaker := <elib:tables.makeCycleBreaker>
-def makeUncaller := <elib:serial.makeUncaller>
+def deASTKit :DeepFrozen := <elib:serial.deASTKit>
+def DEBuilderOf :DeepFrozen := <elib:serial.DEBuilderOf>
+def deSrcKit :DeepFrozen := <elib:serial.deSrcKit>
+def makeCycleBreaker :DeepFrozen := <elib:tables.makeCycleBreaker>
+def makeUncaller :DeepFrozen := <elib:serial.makeUncaller>
 
-def defaultUncallers := makeUncaller.getDefaultUncallers()
+def defaultUncallers :DeepFrozen := makeUncaller.getDefaultUncallers()
 
 # See comment on getMinimalScope() below.
-def minimalScope := [
+def minimalScope :DeepFrozen := [
     "null"              => null,
     "false"             => false,
     "true"              => true,
@@ -33,11 +33,11 @@ def minimalScope := [
     "import__uriGetter" => <import>
 ]
 
-def defaultScope := [ "type__uriGetter" => <type> ] | minimalScope
+def defaultScope :DeepFrozen := [ "type__uriGetter" => <type> ] | minimalScope
 
-def minimalUnscope := makeCycleBreaker.byInverting(minimalScope)
+def minimalUnscope :DeepFrozen := makeCycleBreaker.byInverting(minimalScope)
 
-def defaultUnscope := makeCycleBreaker.byInverting(defaultScope)
+def defaultUnscope :DeepFrozen := makeCycleBreaker.byInverting(defaultScope)
 
 /**
  * Serialize by generating an expression whose evaluation would produce a
@@ -66,7 +66,11 @@ def defaultUnscope := makeCycleBreaker.byInverting(defaultScope)
  *                   beginning of each recognize(..).
  * @author Mark S. Miller
  */
-def makeUnevaler(uncallerList, unscopeLayout) :near implements DeepFrozen {
+def makeUnevaler(uncallerList0, unscopeLayout0) :near as DeepFrozen {
+
+    # XXX guard-based-auditing hack. this looks like a suggestion that EventuallyDeepFrozen is more the right thing for this case
+    def uncallerList :(DeepFrozen.isDeepFrozen(uncallerList0).pick(DeepFrozen, any)) := uncallerList0
+    def unscopeLayout :(DeepFrozen.isDeepFrozen(unscopeLayout0).pick(DeepFrozen, any)) := unscopeLayout0
 
     /**
      *
@@ -171,7 +175,7 @@ def makeUnevaler(uncallerList, unscopeLayout) :near implements DeepFrozen {
     }
 }
 
-def defaultRecognizer := makeUnevaler(defaultUncallers, defaultUnscope)
+def defaultRecognizer :DeepFrozen := makeUnevaler(defaultUncallers, defaultUnscope)
 
 
 /**

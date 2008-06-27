@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 def makeArray := <import:org.cubik.cle.prim.makeArray>
 def makeFlexListShell := <import:org.erights.e.elib.tables.makeFlexListShell>
 def listSugar := <import:org.erights.e.elib.tables.listSugar>

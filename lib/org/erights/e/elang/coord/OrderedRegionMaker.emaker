@@ -9,14 +9,14 @@ pragma.syntax("0.8")
 pragma.enable("function-implements")
 
 def Same :DeepFrozen := <import:org.erights.e.elib.slot.Same>
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-def SubrangeGuard := <import:org.erights.e.elib.slot.SubrangeGuard>
-def primInt := <import:org.cubik.cle.prim.int>
+def EventuallyDeepFrozen :Same[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
+def SubrangeGuard :DeepFrozen := <import:org.erights.e.elib.slot.SubrangeGuard>
+def primInt :DeepFrozen := <import:org.cubik.cle.prim.int>
 
 /**
  * A min where null represents positive infinity
  */
-def min(a, b) :any implements DeepFrozen {
+def min(a, b) :any as DeepFrozen {
     if (a == null) {
         b
     } else if (b == null) {
@@ -29,7 +29,7 @@ def min(a, b) :any implements DeepFrozen {
 /**
  * A max where null represents negative infinity
  */
-def max(a, b) :any implements DeepFrozen {
+def max(a, b) :any as DeepFrozen {
     if (a == null) {
         b
     } else if (b == null) {
@@ -42,7 +42,7 @@ def max(a, b) :any implements DeepFrozen {
 /**
  * A get that returns null if index is out of bounds
  */
-def get(list, index) :any implements DeepFrozen {
+def get(list, index) :any as DeepFrozen {
     if (index < 0 || index >= list.size()) {
         null
     } else {
@@ -70,14 +70,8 @@ def get(list, index) :any implements DeepFrozen {
  *                positions.
  * @author Mark S. Miller
  */
-def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
-    method __optSealedDispatch(brand) :any {
-      if (brand == EventuallyDeepFrozen.getPeekBrand()) {
-        EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
-      }
-    }
-  
-    to (myType,
+def OrderedRegionMaker as DeepFrozen implements ExitViaHere {
+    to (myType :DeepFrozen,
         myName :String,
         var initBoundedLeft :boolean,
         var initEdges
@@ -86,16 +80,8 @@ def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
         /**
          * Notational convenience
          */
-        def region implements EventuallyDeepFrozen {
-            method __optSealedDispatch(brand) :any {
-              if (brand == EventuallyDeepFrozen.getPeekBrand()) {
-                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
-              }
-            }
-          
-            to run(boundedLeft :boolean, edges) :any {
-                OrderedRegionMaker(myType, myName, boundedLeft, edges)
-            }
+        def region(boundedLeft :boolean, edges) :any as DeepFrozen {
+            OrderedRegionMaker(myType, myName, boundedLeft, edges)
         }
 
         if (initEdges.size() >= 1 && initEdges[0].previous() <=> initEdges[0]) {
@@ -104,12 +90,12 @@ def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
             initEdges := initEdges(1, initEdges.size())
             initBoundedLeft := !initBoundedLeft
         }
-        initEdges := initEdges.snapshot()
-        def myInParity := if (initBoundedLeft) {0} else {1}
-        def myLen := initEdges.size()
 
-        def myBoundedLeft :DeepFrozen := initBoundedLeft
-        def myEdges :DeepFrozen := initEdges
+        def myBoundedLeft :boolean := initBoundedLeft
+        def myEdges :DeepFrozen := initEdges.snapshot()
+        
+        def myInParity :primInt := if (myBoundedLeft) {0} else {1}
+        def myLen :primInt := myEdges.size()
         def myTypeR :Same[myType] := myType # for SubrangeGuard audit
 
         /**
@@ -118,14 +104,7 @@ def OrderedRegionMaker implements EventuallyDeepFrozen, ExitViaHere {
          * <p>
          * As guards, regions only accept positions in the region.
          */
-        def self implements EventuallyDeepFrozen, SubrangeGuard[myType], SubrangeGuard[DeepFrozen] {
-            method __optSealedDispatch(brand) :any {
-              if (brand == EventuallyDeepFrozen.getPeekBrand()) {
-                EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())
-              }
-            }
-          
-
+        def self implements DeepFrozen, SubrangeGuard[myType], SubrangeGuard[DeepFrozen] {
             /**
              * Returns a ConstList of edge positions in ascending order
              */

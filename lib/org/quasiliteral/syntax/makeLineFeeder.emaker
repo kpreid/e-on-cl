@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def LineFeeder := <import:org.cubik.cle.makeAdvisoryInterface>(
+def LineFeeder :DeepFrozen := <import:org.cubik.cle.makeAdvisoryInterface>(
 /**
  * XXX add documentation, methods
  */

@@ -7,13 +7,13 @@ pragma.enable("function-implements")
 
 # --- ---
 
-def makeFirstCharSplitter := <import:org.quasiliteral.text.makeFirstCharSplitter>
+def makeFirstCharSplitter :DeepFrozen := <import:org.quasiliteral.text.makeFirstCharSplitter>
 
-def templateSpecialSplitter := makeFirstCharSplitter("$@")
-def closeBraceSplitter := makeFirstCharSplitter(# {
-                                                "}")
+def templateSpecialSplitter :DeepFrozen := makeFirstCharSplitter("$@")
+def closeBraceSplitter :DeepFrozen := makeFirstCharSplitter(# {
+                                                            "}")
 
-def parse(var template, builder) implements DeepFrozen {
+def parse(var template, builder) as DeepFrozen {
   while (true) {
     def specialIndex := templateSpecialSplitter.findInFrom(template, 0)
 
@@ -69,10 +69,10 @@ def parse(var template, builder) implements DeepFrozen {
 
 # --- ---
 
-def makeSeqExpr := <elang:evm.makeSeqExpr>
-def makeLiteralExpr := <elang:evm.makeLiteralExpr>
+def makeSeqExpr :DeepFrozen := <elang:evm.makeSeqExpr>
+def makeLiteralExpr :DeepFrozen := <elang:evm.makeLiteralExpr>
 
-def compileValue(template) implements DeepFrozen {
+def compileValue(template) as DeepFrozen {
   
   var printExprs := []
   var maxIndex := -1
@@ -94,7 +94,7 @@ def compileValue(template) implements DeepFrozen {
     pragma.enable("easy-return")
     pragma.disable("explicit-result-guard")
 
-    def makeTextWriter := <elib:oldeio.makeTextWriter>
+    def makeTextWriter :DeepFrozen := <elib:oldeio.makeTextWriter>
     def simpleValueMaker implements DeepFrozen {
       to substitute(holeValues) {
         def [tw, sb] := makeTextWriter.makeBufferingPair()
@@ -110,7 +110,7 @@ def compileValue(template) implements DeepFrozen {
   `.eval(safeScope)
 }
 
-def compileMatch(template) implements DeepFrozen {
+def compileMatch(template) as DeepFrozen {
   # xxx compile-to-E the matcher also, like we do the valueMaker above?
   var vmatchers := []
   
@@ -171,7 +171,7 @@ def compileMatch(template) implements DeepFrozen {
     }
   })
 
-  def matchers := vmatchers
+  def matchers :DeepFrozen := vmatchers
 
   def matchMaker implements DeepFrozen {
     to matchBind(holeValues :List[any], var specimen, optEjector) :List[Twine] {

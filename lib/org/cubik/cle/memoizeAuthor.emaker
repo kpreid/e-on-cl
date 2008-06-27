@@ -5,8 +5,8 @@ pragma.syntax("0.9")
 
 # XXX todo: add support for cheap memoization of thunks
 
-def memoizeAuthor(DeepFrozenStamp) {
-  def _memoize implements DeepFrozen {
+def memoizeAuthor(DeepFrozenStamp :DeepFrozen) {
+  def _memoize as DeepFrozen {
     to run(base :DeepFrozen, 
            #[=> cacheSize ...
            # => memoOptional :boolean := false

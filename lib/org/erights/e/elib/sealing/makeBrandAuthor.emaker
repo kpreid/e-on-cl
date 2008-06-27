@@ -9,7 +9,8 @@ pragma.syntax("0.9")
 pragma.enable("explicit-result-guard")
 
 def makeBrandAuthor { # not DeepFrozen, for dependencies
-  to run(DeepFrozenWhichever) :any {
+  to run(DeepFrozenWhichever0) :any {
+    def DeepFrozenWhichever :(if (DeepFrozenWhichever0 == DeepFrozen) {DeepFrozen} else {any}) := DeepFrozenWhichever0 # confused yet?
     def makeBrand implements DeepFrozenWhichever {
       to run(label :String) :any {
         

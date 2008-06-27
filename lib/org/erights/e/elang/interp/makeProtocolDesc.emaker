@@ -4,10 +4,10 @@
 
 pragma.syntax("0.9")
 
-def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
-def makeTypeDesc := <import:org.erights.e.elib.base.makeTypeDesc>
+def simplifyFQName :DeepFrozen := <import:org.cubik.cle.prim.simplifyFQName>
+def makeTypeDesc :DeepFrozen := <import:org.erights.e.elib.base.makeTypeDesc>
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 /**
  * A type description object, as would be created by an <tt>interface</tt>

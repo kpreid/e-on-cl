@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def mapSugar := <elib:tables.mapSugar>
+def mapSugar :DeepFrozen := <elib:tables.mapSugar>
 
 /** Makes a full FlexMap given an object implementing the data storage. */
 def makeFlexMapShell implements DeepFrozen, ExitViaHere {

@@ -8,26 +8,26 @@ pragma.enable("function-implements")
 
 # copied 2007-08-17 from EoJ r466, modified for DeepFrozen, makeFinalPattern args, getOptPrincipalNoun
 
-def EExpr := <type:org.erights.e.elang.evm.EExpr>
-def FinalPattern := <type:org.erights.e.elang.evm.FinalPattern>
+def EExpr :DeepFrozen := <type:org.erights.e.elang.evm.EExpr>
+def FinalPattern :DeepFrozen := <type:org.erights.e.elang.evm.FinalPattern>
 
-def makeCallExpr := <elang:evm.makeCallExpr>
-def makeDefineExpr := <elang:evm.makeDefineExpr>
-def makeFinalPattern := <elang:evm.makeFinalPattern>
-def makeListPattern := <elang:evm.makeListPattern>
-def makeLiteralExpr := <elang:evm.makeLiteralExpr>
-def makeSeqExpr := <elang:evm.makeSeqExpr>
-def makeSimpleNounExpr := <elang:evm.makeSimpleNounExpr>
+def makeCallExpr :DeepFrozen := <elang:evm.makeCallExpr>
+def makeDefineExpr :DeepFrozen := <elang:evm.makeDefineExpr>
+def makeFinalPattern :DeepFrozen := <elang:evm.makeFinalPattern>
+def makeListPattern :DeepFrozen := <elang:evm.makeListPattern>
+def makeLiteralExpr :DeepFrozen := <elang:evm.makeLiteralExpr>
+def makeSeqExpr :DeepFrozen := <elang:evm.makeSeqExpr>
+def makeSimpleNounExpr :DeepFrozen := <elang:evm.makeSimpleNounExpr>
 
-def makeKernelECopyVisitor := <elang:visitors.makeKernelECopyVisitor>
+def makeKernelECopyVisitor :DeepFrozen := <elang:visitors.makeKernelECopyVisitor>
 
-def ANY := makeSimpleNounExpr(null, "any", null)
+def ANY :DeepFrozen := makeSimpleNounExpr(null, "any", null)
 
-def makeFinalPatternS(span, name :String, layout) :FinalPattern implements DeepFrozen {
+def makeFinalPatternS :DeepFrozen := {def makeFinalPatternS(span, name :String, layout) :FinalPattern implements DeepFrozen {
   return makeFinalPattern(span, makeSimpleNounExpr(span, name, null), null, layout)
-}
+}}
 
-def DEBuilderOf := <elib:serial.DEBuilderOf>
+def DEBuilderOf :DeepFrozen := <elib:serial.DEBuilderOf>
 
 /**
  * Data-E ENodes are the subset of possible Kernel-E ENode ASTs which could

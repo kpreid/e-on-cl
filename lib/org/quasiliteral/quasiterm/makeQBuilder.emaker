@@ -13,36 +13,36 @@ pragma.enable("function-implements")
 #  makeQBuilder(null)
 #})
 
-def makeTermParser := <import:org.quasiliteral.term.makeTermParser>
-def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
-def makeBaseAstroBuilder := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
+def makeTermParser :DeepFrozen := <import:org.quasiliteral.term.makeTermParser>
+def makeAstroTag :DeepFrozen := <import:org.quasiliteral.astro.makeAstroTag>
+def makeBaseAstroBuilder :DeepFrozen := <import:org.quasiliteral.astro.makeBaseAstroBuilder>
 
-def AstroTag := makeAstroTag.asType()
-def Astro := any # XXX restrict
-def AstroArg := any # XXX restrict
-def Term := <import:org.quasiliteral.term.makeTerm>.asType()
-def TagTerm := Term[AstroTag, any, TagTerm]
+def AstroTag :DeepFrozen := makeAstroTag.asType()
+def Astro :DeepFrozen := any # XXX restrict
+def AstroArg :DeepFrozen := any # XXX restrict
+def Term :DeepFrozen := <import:org.quasiliteral.term.makeTerm>.asType()
+def TagTerm :DeepFrozen := {def T := Term[AstroTag, any, T]}
 
-interface QAstroArg guards QAstroArgStamp {}
-def QFunctor := QAstroArg # XXX restrict
-def QTerm := QAstroArg # XXX restrict
+interface QAstroArg :DeepFrozen guards QAstroArgStamp :DeepFrozen {}
+def QFunctor :DeepFrozen := QAstroArg # XXX restrict
+def QTerm :DeepFrozen := QAstroArg # XXX restrict
 
-def SourceSpan := <elib:base.makeSourceSpan>.asType()
-def FlexList := <elib:tables.makeFlexList>.asType()
-def EList := any[List, FlexList]
-def Number := any[int, float64] # XXX better definition
+def SourceSpan :DeepFrozen := <elib:base.makeSourceSpan>.asType()
+def FlexList :DeepFrozen := <elib:tables.makeFlexList>.asType()
+def EList :DeepFrozen := any[List, FlexList]
+def Number :DeepFrozen := any[int, float64] # XXX better definition
 
-def memoize := <import:org.cubik.cle.memoize>
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-def root := <import:org.cubik.cle.root>
+def memoize :DeepFrozen := <import:org.cubik.cle.memoize>
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
+def root :DeepFrozen := <import:org.cubik.cle.root>
 
-def qtPrint(tw :TextWriter, what :QAstroArg) implements DeepFrozen {
+def qtPrint(tw :TextWriter, what :QAstroArg) as DeepFrozen {
   tw.write("qterm`")
   what.termPrint(tw)
   tw.write("`")
 }
 
-def EMPTY_INDEX := []
+def EMPTY_INDEX :DeepFrozen := []
 
 /**
  * Given a multi-dimensional list and an index path, put newValue at that
@@ -56,7 +56,7 @@ def EMPTY_INDEX := []
  * Alternatively, if an old value is being overwritten, then that old
  * value is also returned.
  */
-def multiPut(bindings, holeNum :int, indexes :EList, newValue) implements DeepFrozen {
+def multiPut(bindings, holeNum :int, indexes :EList, newValue) as DeepFrozen {
   # XXX blindly copied
   var list := bindings
   var dest := holeNum
@@ -96,7 +96,7 @@ def multiPut(bindings, holeNum :int, indexes :EList, newValue) implements DeepFr
  * an exception to be thrown. In either case, if an index step is out of
  * bounds, an exception is thrown regardless of the value of 'repeat'.
  */
-def multiGet(args :List, holeNum :int, indexes :EList, repeat :boolean) implements DeepFrozen {
+def multiGet(args :List, holeNum :int, indexes :EList, repeat :boolean) as DeepFrozen {
     # XXX blindly copied
     var result := args[holeNum]
     for i => index in indexes {
@@ -113,7 +113,7 @@ def multiGet(args :List, holeNum :int, indexes :EList, repeat :boolean) implemen
     return result
 }
 
-def inBounds(num :int, quant :char) :boolean implements DeepFrozen {
+def inBounds(num :int, quant :char) :boolean as DeepFrozen {
   return \
     switch (quant) {
       match =='?' { num == 0 || num == 1 }
@@ -124,21 +124,22 @@ def inBounds(num :int, quant :char) :boolean implements DeepFrozen {
 }
 
 
-def _make(astroBuilder) implements DeepFrozen {
+# XXX shouldn't require astroBuilder to be DeepFrozen
+def _make(astroBuilder :DeepFrozen) as DeepFrozen {
 
   def qBuilder
 
   /** XXX faked for now */
-  def schema implements DeepFrozen {
+  def schema as DeepFrozen {
     to obtainTagForName(name) { return makeAstroTag(null, name, nullOk) }
   }
   
   def baseBuilder := makeBaseAstroBuilder(qBuilder, 
-                                          schema,
-                                          ["BAstroArg" => QAstroArg,
-                                           ])
+                              schema,
+                              ["BAstroArg" => QAstroArg,
+                               ])
   
-  def makeBaseQAstro(self) implements DeepFrozen {
+  def makeBaseQAstro(self) as DeepFrozen {
     return def baseQAstro extends root[self] {
       # XXX blindly imitating EoJ. review after I understand this
       to matchBind(args :List, specimen, ejector) {
@@ -154,13 +155,13 @@ def _make(astroBuilder) implements DeepFrozen {
     }
   }
 
-  def leafTag(tagName :String, optSpan :nullOk[SourceSpan]) :Astro implements DeepFrozen {
+  def leafTag(tagName :String, optSpan :nullOk[SourceSpan]) :Astro as DeepFrozen {
     # XXX componentized tag names
     def tag :AstroTag := astroBuilder.getSchema().obtainTagForName(tagName)
     return astroBuilder.leafTag(tag, optSpan)
   }
 
-  def optCoerce(termoid, isFunctorHole :boolean, optTag :nullOk[AstroTag]) implements DeepFrozen {
+  def optCoerce(termoid, isFunctorHole :boolean, optTag :nullOk[AstroTag]) as DeepFrozen {
     # XXX copied blindly, review. At the very least, it should be the astroBuilder's business how data types are coerced.
     var result :Astro := null
     switch (termoid) {
@@ -209,7 +210,7 @@ def _make(astroBuilder) implements DeepFrozen {
     return result
   }
 
-  def makeLeafTagOrData(optTag :nullOk[AstroTag], inputData, optSpan) implements DeepFrozen {
+  def makeLeafTagOrData(optTag :nullOk[AstroTag], inputData, optSpan) as DeepFrozen {
       def [tag, data] := 
         # ewwww
         if (optTag != null) { 
@@ -296,7 +297,7 @@ def _make(astroBuilder) implements DeepFrozen {
     return quasiFunctor    
   }
 
-  bind qBuilder extends baseBuilder implements EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
+  bind qBuilder extends baseBuilder as EventuallyDeepFrozen { # implements AstroBuilder?, QuasiBuilder?
     method __optSealedDispatch(brand) :any {
       if (brand == EventuallyDeepFrozen.getPeekBrand()) {
         EventuallyDeepFrozen.getPeekSealer().seal(meta.getState())

@@ -10,34 +10,34 @@ pragma.enable("function-implements")
 #   - Using different stream and binary-encoding imports
 #   - DeepFrozen
 
-def DEBuilderOf := <elib:serial.DEBuilderOf>
+def DEBuilderOf :DeepFrozen := <elib:serial.DEBuilderOf>
 
-def makeAppendStream := <import:org.cubik.cle.io.makeAppendStream>
+def makeAppendStream :DeepFrozen := <import:org.cubik.cle.io.makeAppendStream>
 #def [=> InStream, => OutStream] | _ := <elib:eio.*>
 
-def now := <import:org.cubik.cle.schedule.now>
+def now :DeepFrozen := <import:org.cubik.cle.schedule.now>
 
-def [=> wholeNumCoding,
-     => unsignedIntegerCoding,
-     => utf8StringWithLength16Coding, 
-     => float64Coding, 
-     => character32Coding] | _ := 
+def [=> wholeNumCoding :DeepFrozen,
+     => unsignedIntegerCoding :DeepFrozen,
+     => utf8StringWithLength16Coding :DeepFrozen,
+     => float64Coding :DeepFrozen,
+     => character32Coding :DeepFrozen] | _ := 
   <import:org.cubik.cle.binary.*>
 
-def byte := 0..255
+def byte :DeepFrozen := 0..255
 
-def OP_ROOT         :=  1
-def OP_LIT_WHOLENUM :=  2
-def OP_LIT_NEGINT   :=  3
-def OP_LIT_FLOAT64  :=  4
-def OP_LIT_CHAR     :=  5
-def OP_LIT_STRING   :=  6
-def OP_IMPORT       :=  7
-def OP_IBID         :=  8
-def OP_CALL         :=  9
-def OP_DEFINE       := 10
-def OP_PROMISE      := 11
-def OP_DEFREC       := 12
+def OP_ROOT         :int :=  1
+def OP_LIT_WHOLENUM :int :=  2
+def OP_LIT_NEGINT   :int :=  3
+def OP_LIT_FLOAT64  :int :=  4
+def OP_LIT_CHAR     :int :=  5
+def OP_LIT_STRING   :int :=  6
+def OP_IMPORT       :int :=  7
+def OP_IBID         :int :=  8
+def OP_CALL         :int :=  9
+def OP_DEFINE       :int := 10
+def OP_PROMISE      :int := 11
+def OP_DEFREC       :int := 12
 
 /**
  * DataECode bytecodes is the compact fast form of the DataECode instruction

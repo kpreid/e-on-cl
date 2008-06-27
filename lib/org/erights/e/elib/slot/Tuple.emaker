@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 pragma.enable("accumulator")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 interface TupleGuard guards TupleGuardStamp {}
 

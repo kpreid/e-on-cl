@@ -19,9 +19,9 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
-def makeVerbFacet(kind :String, recipient, verb, caller) :near implements DeepFrozen, ExitViaHere {
+def makeVerbFacet(kind :String, recipient, verb, caller) :near as DeepFrozen implements ExitViaHere {
 
     /**
      * A facet-function on some underlying object for sending only messages
@@ -77,11 +77,11 @@ def makeVerbFacet(kind :String, recipient, verb, caller) :near implements DeepFr
     return verbFacet
 }
 
-def callCaller(recipient, verb, args) :any implements DeepFrozen {
+def callCaller(recipient, verb, args) :any as DeepFrozen {
     return E.call(recipient, verb, args)
 }
 
-def sendCaller(recipient, verb, args) :any implements DeepFrozen {
+def sendCaller(recipient, verb, args) :any as DeepFrozen {
     return E.send(recipient, verb, args)
 }
 

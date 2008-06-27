@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def imports := <import:org.cubik.cle.charenc.*>
+def imports :DeepFrozen := <import:org.cubik.cle.charenc.*>
 
 /** Supplies encoding objects named according to the IANA charset registry.
 

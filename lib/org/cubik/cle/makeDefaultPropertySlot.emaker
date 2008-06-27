@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def ePrinter := <import:org.erights.e.elang.syntax.ePrinter>
+def ePrinter :DeepFrozen := <import:org.erights.e.elang.syntax.ePrinter>
 
 def makeDefaultPropertySlot(object, propertyName :String) implements DeepFrozen {
   

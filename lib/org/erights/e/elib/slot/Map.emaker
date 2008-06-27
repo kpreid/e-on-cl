@@ -5,11 +5,11 @@ pragma.syntax("0.9")
 
 pragma.enable("accumulator")
 
-def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+def simplifyFQName :DeepFrozen := <import:org.cubik.cle.prim.simplifyFQName>
 
-def ConstMap := <import:org.cubik.cle.prim.ConstMap>
+def ConstMap :DeepFrozen := <import:org.cubik.cle.prim.ConstMap>
 
-interface MapGuard guards MapGuardStamp {}
+interface MapGuard :DeepFrozen guards MapGuardStamp :DeepFrozen {}
 
 def Map0 implements MapGuardStamp, DeepFrozen, ExitViaHere {
   to __printOn(out :TextWriter) {

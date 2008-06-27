@@ -6,7 +6,7 @@ pragma.enable("function-implements")
 pragma.enable("accumulator")
 pragma.enable("call-pattern")
 
-def map implements DeepFrozen {
+def map as DeepFrozen {
   to v(f, coll) {
     return accum [] for v in coll {_.with(f(v))}}
   to kv(f, coll) {
@@ -14,40 +14,40 @@ def map implements DeepFrozen {
 }
 
 # definitions per http://www.erights.org/elib/distrib/captp/types.html
-def IncomingPos := -2**31..!2**31
-def ExportPos := 1..!2**31
-def AnswerPos := -2**31..-1
-def ImportPos := 0..!2**31
-def WireDelta := 0..255
-def MsgCount := 0..!2**63
-def MsgName := String
-def VatID := <import:net.captp.protocol.VatID>
-def SwissBase := int
-def SwissNumber := int
-def SwissHash := int
-def Nonce := int
-def OneArgFunc := <elib:util.OneArgFunc>
-def Vine := any # should be rcvr (DeepFrozen missing)
+def IncomingPos :DeepFrozen := -2**31..!2**31
+def ExportPos :DeepFrozen := 1..!2**31
+def AnswerPos :DeepFrozen := -2**31..-1
+def ImportPos :DeepFrozen := 0..!2**31
+def WireDelta :DeepFrozen := 0..255
+def MsgCount :DeepFrozen := 0..!2**63
+def MsgName :DeepFrozen := String
+def VatID :DeepFrozen := <import:net.captp.protocol.VatID>
+def SwissBase :DeepFrozen := int
+def SwissNumber :DeepFrozen := int
+def SwissHash :DeepFrozen := int
+def Nonce :DeepFrozen := int
+def OneArgFunc :DeepFrozen := <elib:util.OneArgFunc>
+def Vine :DeepFrozen := any # should be rcvr (DeepFrozen missing)
 
-def DESCS_EXIT := "CapTP_1_descs"
+def DESCS_EXIT :DeepFrozen := "CapTP_1_descs"
 
-def makeProxy := <elib:ref.makeProxy>
-def makeDelayedRedirector := <elib:ref.makeDelayedRedirector>
-def makeBrand := <elib:sealing.makeBrand>
-def Throwable := <type:java.lang.Throwable>
+def makeProxy :DeepFrozen := <elib:ref.makeProxy>
+def makeDelayedRedirector :DeepFrozen := <elib:ref.makeDelayedRedirector>
+def makeBrand :DeepFrozen := <elib:sealing.makeBrand>
+def Throwable :DeepFrozen := <type:java.lang.Throwable>
 
-def makeCycleBreaker := <elib:tables.makeCycleBreaker>
-def deSubgraphKit := <elib:serial.deSubgraphKit>
+def makeCycleBreaker :DeepFrozen := <elib:tables.makeCycleBreaker>
+def deSubgraphKit :DeepFrozen := <elib:serial.deSubgraphKit>
 
-def makeNonceLocator := <import:net.captp.comm.makeNonceLocator>
-def [=> makeAnswersTable,
-     => makeExportsTable,
-     => makeProxiesTable,
-     => makeNearGiftTable,
-     => makePromiseGiftTable,
-     => makeVine] | _ := <import:net.captp.tables.*>
+def makeNonceLocator :DeepFrozen := <import:net.captp.comm.makeNonceLocator>
+def [=> makeAnswersTable :DeepFrozen,
+     => makeExportsTable :DeepFrozen,
+     => makeProxiesTable :DeepFrozen,
+     => makeNearGiftTable :DeepFrozen,
+     => makePromiseGiftTable :DeepFrozen,
+     => makeVine :DeepFrozen] | _ := <import:net.captp.tables.*>
 
-def descMakerStandin implements DeepFrozen {}
+def descMakerStandin as DeepFrozen {}
 
 def makeCapTPConnection implements ExitViaHere, DeepFrozen {
   # XXX this should be a map

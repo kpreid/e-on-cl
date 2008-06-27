@@ -5,7 +5,8 @@ pragma.syntax("0.9")
 
 pragma.enable("function-implements")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def Same := <import:org.erights.e.elib.slot.Same>
+def EventuallyDeepFrozen :Same[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 def sugarRoot := <import:org.cubik.cle.sugarRoot>
 
 def listSugar

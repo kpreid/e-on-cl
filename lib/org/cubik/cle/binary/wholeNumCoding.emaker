@@ -3,12 +3,13 @@
 
 pragma.syntax("0.9")
 
-def dataBits := 7
-def WholeNum := (int >= 0)
+def dataBits :DeepFrozen := 7
+def WholeNum :DeepFrozen := (int >= 0)
 
 /** http://www.waterken.com/dev/Doc/code/#ExtensionNumber */
 # XXX is this the right name? should we call this ExtensionNumber instead?
-def wholeNumCoding extends WholeNum implements DeepFrozen, ExitViaHere { # implements Binary
+def wholeNumCoding implements DeepFrozen, ExitViaHere { # implements Binary
+  to asType() { return WholeNum }
   to writingTo(out) { # , schedule
     # XXX consult stream's byte size
     return def writeWholeNum(n :WholeNum) {

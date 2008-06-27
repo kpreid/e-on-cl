@@ -7,16 +7,18 @@ pragma.enable("accumulator")
 
 def messageDescs := <import:net.captp.protocol.messageDescs>
 def typeEncodings := <import:net.captp.protocol.paramTypes>[<import:org.cubik.cle.binary.*>]
-def [=> OpCode] | _ := typeEncodings
+def [=> OpCode :DeepFrozen] | _ := typeEncodings
 
-# XXX parser bug: shouldn't need line continuation here
-def argTable2 := accum [].asMap() for [verb, opCode, encoders] \
-                                    in messageDescs[typeEncodings] {
-  _.with(verb, def encodeMsg(out, args) implements DeepFrozen {
-    require(args.size() == encoders.size())
-    OpCode.writingTo(out)(opCode)
-    for i => encoder in encoders { encoder.writingTo(out)(args[i]) }
-  })
+def argTable2 :DeepFrozen := accum [].asMap() for rec in messageDescs[typeEncodings] {
+  _.with(
+    def [verb, opCode :(OpCode.asType()), encoders :DeepFrozen] := rec
+    verb, 
+    def encodeMsg(out, args) implements DeepFrozen {
+      require(args.size() == encoders.size())
+      OpCode.writingTo(out)(opCode)
+      for i => encoder in encoders { encoder.writingTo(out)(args[i]) }
+    }
+  )
 }
 
 def makeCapTPSerializer(messageStreams) implements ExitViaHere, DeepFrozen {

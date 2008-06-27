@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeBrand := <elib:sealing.makeBrand>
+def makeBrand :DeepFrozen := <elib:sealing.makeBrand>
 
 def makeCapTPHub(makeConnection, outgoingConnect) implements ExitViaHere, DeepFrozen {
   def liveConnections := [].asMap().diverge()

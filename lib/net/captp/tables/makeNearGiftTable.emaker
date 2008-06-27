@@ -4,11 +4,11 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
-def VatID := <import:net.captp.protocol.VatID>
-def makeVine := <import:net.captp.tables.makeVine>
-def Vine := makeVine.asType()
-def Throwable := <type:java.lang.Throwable>
+def makeFlexMap :DeepFrozen := <import:org.erights.e.elib.tables.makeFlexMap>
+def VatID :DeepFrozen := <import:net.captp.protocol.VatID>
+def makeVine :DeepFrozen := <import:net.captp.tables.makeVine>
+def Vine :DeepFrozen := makeVine.asType()
+def Throwable :DeepFrozen := <type:java.lang.Throwable>
 /**
  * Rendezvous point for 3-vat live Granovetter introductions of Resolved remote
  * references (FarRefs).

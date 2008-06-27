@@ -5,12 +5,12 @@ pragma.syntax("0.9")
 
 pragma.enable("function-implements")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
-def sugarRoot := <import:org.cubik.cle.sugarRoot>
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
+def sugarRoot :DeepFrozen := <import:org.cubik.cle.sugarRoot>
 
 def mapSugar
 
-def makeFlexMap := <import:org.erights.e.elib.tables.makeFlexMap>
+def makeFlexMap :DeepFrozen := <import:org.erights.e.elib.tables.makeFlexMap>
 
 # XXX I expect to move this to a separate emaker.
 def makeReadOnlyMap implements EventuallyDeepFrozen {

@@ -3,9 +3,11 @@
 
 pragma.syntax("0.9")
 
-def makeUnionGuard := <elib:slot.makeUnionGuard>
+def makeUnionGuard :DeepFrozen := <elib:slot.makeUnionGuard>
 
-def anyGuardSugar extends <import:org.cubik.cle.sugarRoot> implements DeepFrozen, ExitViaHere {
+def sugarRoot :DeepFrozen := <import:org.cubik.cle.sugarRoot>
+
+def anyGuardSugar extends sugarRoot implements DeepFrozen, ExitViaHere {
   to "instance_match__of/1"(self, specimen, ejector) {
     return makeUnionGuard."match__run/1"(specimen, ejector)
   }

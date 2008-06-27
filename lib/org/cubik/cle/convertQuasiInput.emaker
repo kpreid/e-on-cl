@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 def makeFirstCharSplitter := <import:org.quasiliteral.text.makeFirstCharSplitter>
 
-def quasiSpecialSplitter := makeFirstCharSplitter("$@")
+def quasiSpecialSplitter :DeepFrozen := makeFirstCharSplitter("$@")
 
 def convertQuasiInput implements DeepFrozen, ExitViaHere {
   to inlineHoles_to_holeCharacterIndexes(quasi1Source :Twine) {

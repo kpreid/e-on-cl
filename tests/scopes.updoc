@@ -159,7 +159,6 @@
   ? aScope == E.call(E, "call", aScope.__optUncall())
   # value: true
   
-  XXX test proper uncall of a binding whose noun is ::"&foo"
   XXX test that a scope with bindings overridden via with/or/eval only produces one map entry
 
 --- 'Nesting' ---

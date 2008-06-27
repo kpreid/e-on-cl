@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def makePackageLoader implements DeepFrozen, ExitViaHere {
   to run(loader, scheme, packageFQN) {

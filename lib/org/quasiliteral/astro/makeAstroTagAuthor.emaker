@@ -3,9 +3,9 @@
 
 pragma.syntax("0.9")
 
-def makeAstroTagAuthor(TransparentStamp) {
+def makeAstroTagAuthor(TransparentStamp :DeepFrozen) {
 
-  interface AstroTag guards AstroTagStamp {
+  interface AstroTag :DeepFrozen guards AstroTagStamp :DeepFrozen {
     # XXX ...
   }
 

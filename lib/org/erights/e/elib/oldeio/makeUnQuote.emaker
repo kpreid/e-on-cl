@@ -4,7 +4,7 @@
 pragma.syntax("0.9")
 
 # XXX EventuallyDeepFrozen needs to be made prettier
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def makeUnQuote implements EventuallyDeepFrozen, ExitViaHere {
 
@@ -21,7 +21,8 @@ def makeUnQuote implements EventuallyDeepFrozen, ExitViaHere {
         out.print(text)
       }
       
-      to __optUncall() { return [makeUnQuote, "run", [text]] }
+      # XXX indirect self-reference for DF auditing
+      to __optUncall() { return [<elib:oldeio.makeUnQuote>, "run", [text]] }
     }
     return unQuote
   }

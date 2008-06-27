@@ -4,9 +4,9 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def makeValueThunk := <import:org.erights.e.elib.base.makeValueThunk>
-def makeFlexSet := <import:org.erights.e.elib.tables.makeFlexSet>
-def OneArgFunc := <import:org.erights.e.elib.util.OneArgFunc>
+def makeValueThunk :DeepFrozen := <import:org.erights.e.elib.base.makeValueThunk>
+def makeFlexSet :DeepFrozen := <import:org.erights.e.elib.tables.makeFlexSet>
+def OneArgFunc :DeepFrozen := <import:org.erights.e.elib.util.OneArgFunc>
 
 /**
  * A weak-value table mapping from SwissNumbers to references.

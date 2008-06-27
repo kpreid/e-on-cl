@@ -3,7 +3,7 @@
 
 pragma.syntax("0.9")
 
-def LineFeeder := <import:org.quasiliteral.syntax.makeLineFeeder>.asType()
+def LineFeeder :DeepFrozen := <import:org.quasiliteral.syntax.makeLineFeeder>.asType()
 
 /** Java-E compatibility? */
 def makeTwineFeeder implements DeepFrozen, ExitViaHere {

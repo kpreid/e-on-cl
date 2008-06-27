@@ -3,11 +3,11 @@
 
 pragma.syntax("0.9")
 
-def transformIn := <import:org.cubik.cle.io.transformIn>
-def getCharacter := <import:org.cubik.cle.prim.getCharacter>
+def transformIn :DeepFrozen := <import:org.cubik.cle.io.transformIn>
+def getCharacter :DeepFrozen := <import:org.cubik.cle.prim.getCharacter>
 
 # Unicode Standard, Version 4.0, Chapter 3, Section 3.10, page 78
-def utf8DecodeRanges := [
+def utf8DecodeRanges :DeepFrozen := [
   # range, byte mask, following, second range
   [0x00..0x7F, 0x7F, 0, 0..!0],
   [0xC2..0xDF, 0x1F, 1, 0x80..0xBF],
@@ -19,7 +19,7 @@ def utf8DecodeRanges := [
   [0xF1..0xF3, 0x07, 3, 0x80..0xBF],
   [0xF4..0xF4, 0x07, 3, 0x80..0x8F]]
 
-def utf8DecodeTable := {
+def utf8DecodeTable :DeepFrozen := {
   def t := [].asMap().diverge(int, any)
   for [range] + info in utf8DecodeRanges {
     for octett in range { t[octett] := info }
@@ -27,13 +27,13 @@ def utf8DecodeTable := {
   t.snapshot()
 }
 
-def anyContinuation := 0x80..0xBF
+def anyContinuation :DeepFrozen := 0x80..0xBF
 
 # These would really be better inline; moving them to outer level is optimization. XXX Improve the compiler etc. to be able to hoist/constant fold these, and put them back at their usage sites
-def EncodedBy1 := 0..0x7f
-def EncodedBy2 := 0x80..0x7FF
-def EncodedBy3 := 0x800..0xFFFF
-def EncodedBy4 := 0x10000..0x10FFFF
+def EncodedBy1 :DeepFrozen := 0..0x7f
+def EncodedBy2 :DeepFrozen := 0x80..0x7FF
+def EncodedBy3 :DeepFrozen := 0x800..0xFFFF
+def EncodedBy4 :DeepFrozen := 0x10000..0x10FFFF
 
 def ::"UTF-8" implements DeepFrozen, ExitViaHere { # implements CharacterEncoding
   to decode(octetStream, ==([].asMap())) {

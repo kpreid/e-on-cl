@@ -3,9 +3,9 @@
 
 pragma.syntax("0.9")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
-interface UnionGuard guards UnionGuardStamp {}
+interface UnionGuard :DeepFrozen guards UnionGuardStamp :DeepFrozen {}
 
 def makeUnionGuard implements DeepFrozen, ExitViaHere {
   to run(subGuards) {

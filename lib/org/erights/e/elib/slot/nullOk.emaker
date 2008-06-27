@@ -3,10 +3,10 @@
 
 pragma.syntax("0.9")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
-def NullOkParamStamp implements DeepFrozen {to audit(_) { return true }}
-def NullOkParam implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(NullOkParamStamp, sp)) {return sp} else {throw.eject(ej, "Not a parameterized nullOk")}}}
+def NullOkParamStamp :DeepFrozen := {def NullOkParamStamp implements DeepFrozen {to audit(_) { return true }}}
+def NullOkParam :DeepFrozen := {def NullOkParam implements DeepFrozen {to coerce(sp, ej) { if (__auditedBy(NullOkParamStamp, sp)) {return sp} else {throw.eject(ej, "Not a parameterized nullOk")}}}}
 
 def nullOk0 implements DeepFrozen, ExitViaHere {
 

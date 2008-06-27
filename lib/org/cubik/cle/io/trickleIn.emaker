@@ -4,8 +4,8 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def ALL      := EIO.getALL()
-def InStream := any # <import:org.erights.e.elib.eio.InStream> -- XXX doesn't work because InStream isn't DeepFrozen because vow isn't
+def ALL      :DeepFrozen := EIO.getALL()
+def InStream :DeepFrozen := any # <import:org.erights.e.elib.eio.InStream> -- XXX doesn't work because InStream isn't DeepFrozen because vow isn't
 
 def trickleIn implements DeepFrozen {
   to run(underlying :InStream) {

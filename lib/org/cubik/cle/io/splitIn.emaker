@@ -4,12 +4,12 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def transformIn := <import:org.cubik.cle.io.transformIn>
+def transformIn :DeepFrozen := <import:org.cubik.cle.io.transformIn>
 
-def k := 0.1
-def ik := 1.0 - k
+def k :float64 := 0.1
+def ik :float64 := 1.0 - k
 
-def csplit(var chunk, separator) implements DeepFrozen {
+def csplit(var chunk, separator) as DeepFrozen {
   return if (chunk =~ twine :Twine) {
     chunk.split(separator)
   } else {
@@ -23,11 +23,11 @@ def csplit(var chunk, separator) implements DeepFrozen {
   }
 }
 
-def separatorPolicy(buffer, streamTerminator) implements DeepFrozen {
+def separatorPolicy(buffer, streamTerminator) as DeepFrozen {
   return [buffer]
 }
 
-def strictTerminatorPolicy(buffer, streamTerminator) implements DeepFrozen {
+def strictTerminatorPolicy(buffer, streamTerminator) as DeepFrozen {
   return if (buffer.size().isZero()) {
     []
   } else {

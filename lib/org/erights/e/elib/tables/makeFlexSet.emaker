@@ -5,13 +5,13 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 pragma.enable("one-method-object")
 
-def setSugar := <import:org.erights.e.elib.tables.setSugar>
+def setSugar :DeepFrozen := <import:org.erights.e.elib.tables.setSugar>
 
-interface FlexSet guards FlexSetStamp {
+interface FlexSet :DeepFrozen guards FlexSetStamp :DeepFrozen {
   # XXX methods
 }
 
-def unsafeMakeFlexSet(itemMap) implements DeepFrozen {
+def unsafeMakeFlexSet(itemMap) as DeepFrozen {
   return def flexSet implements FlexSetStamp {
     to __printOn(tw :TextWriter) {
       tw.quote(flexSet.snapshot())

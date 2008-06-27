@@ -4,18 +4,18 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
-def EventuallyDeepFrozen := DeepFrozen."eventually"()
+def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 
 def makeAstroTag := <import:org.quasiliteral.astro.makeAstroTag>
 def AstroTag := makeAstroTag.asType()
 def SourceSpan := <elib:base.makeSourceSpan>.asType()
 
 def makeTermAuthor(TransparentStamp) {
-  def TermStamp implements DeepFrozen { 
+  def TermStamp :DeepFrozen := {def TermStamp implements DeepFrozen { 
     to audit(_) { return true }
-  }
+  }}
 
-  def printSeps(tw, args) implements DeepFrozen {
+  def printSeps :DeepFrozen := {def printSeps(tw, args) implements DeepFrozen {
     var sep := ""
     for arg in args { 
       tw.write(sep)
@@ -26,7 +26,7 @@ def makeTermAuthor(TransparentStamp) {
       }
       sep := ", "
     }
-  }
+  }}
   
   def magicPrintTable := {[
     makeAstroTag(null, ".bag.", nullOk) => def bagPrinter(out, term)  implements DeepFrozen {

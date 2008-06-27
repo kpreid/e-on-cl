@@ -5,12 +5,12 @@ pragma.syntax("0.9")
 pragma.enable("accumulator")
 pragma.enable("function-implements")
 
-def makeTextWriter := <elib:oldeio.makeTextWriter>
+def makeTextWriter :DeepFrozen := <elib:oldeio.makeTextWriter>
 
-def ALL := null # XXX should be something else
-def Range := nullOk[int >= 0]
+def ALL :DeepFrozen := null # XXX should be something else
+def Range :DeepFrozen := nullOk[int >= 0]
 
-def whenMaybeNow(ref, reactor) implements DeepFrozen {
+def whenMaybeNow(ref, reactor) as DeepFrozen {
   return if (Ref.isResolved(ref)) {
     reactor(ref)
   } else {

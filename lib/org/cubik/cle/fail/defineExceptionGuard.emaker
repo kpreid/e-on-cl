@@ -4,8 +4,8 @@
 pragma.syntax("0.9")
 pragma.enable("accumulator")
 
-def StructureException := <import:org.cubik.cle.prim.StructureException>
-def simplifyFQName := <import:org.cubik.cle.prim.simplifyFQName>
+def StructureException :DeepFrozen := <import:org.cubik.cle.prim.StructureException>
+def simplifyFQName     :DeepFrozen := <import:org.cubik.cle.prim.simplifyFQName>
 
 def defineExceptionGuard implements DeepFrozen, ExitViaHere {
   to run(matchTypeIDs :List[String]) {
