@@ -3,12 +3,25 @@
 
 pragma.syntax("0.9")
 
-def finalSlotGuardSugarAuthor(TransparentStamp) {
-  interface FinalSlotPGuard guards FinalSlotPGuardStamp { # confused yet?
-    to getValueGuard()
-  }
+def ZeroAuditor { to audit(_) { return false }}
 
-  return def finalSlotGuardSugar extends <import:org.cubik.cle.sugarRoot> implements DeepFrozen, ExitViaHere {
+def finalSlotGuardSugarAuthor(DeepFrozenStamp, TransparentStamp) {
+  def FinalSlotPGuardStamp { to audit(_) { return true }}
+  def FinalSlotPGuard { 
+    to coerce(sp, ej) {
+      if (__auditedBy(FinalSlotPGuardStamp, sp)) {
+        return sp
+      } else {
+        throw.eject(ej, "not a FinalSlot[_] guard")
+      }
+    }
+  }
+  
+  #var sugarRootLazy match msg { E.callWithPair(sugarRootLazy := <import:org.cubik.cle.sugarRoot>, msg) } -- XXX doesn't work because var-obj isn't yet supported
+  var sugarRootLazy := null
+  sugarRootLazy := def sugarRootThunk match msg { E.callWithPair(sugarRootLazy := <import:org.cubik.cle.sugarRoot>, msg) }
+
+  return def finalSlotGuardSugar extends sugarRootLazy implements DeepFrozenStamp, ExitViaHere {
 
     to getValueGuard() { return any }
 
@@ -17,9 +30,9 @@ def finalSlotGuardSugarAuthor(TransparentStamp) {
     }
 
     to instance_get(self, valueGuard) {
-      return def FinalSlotP implements DeepFrozen."optionally"(), FinalSlotPGuardStamp, Selfless, TransparentStamp {
+      return def FinalSlotP implements DeepFrozen.isDeepFrozen(valueGuard).pick(DeepFrozenStamp, ZeroAuditor), FinalSlotPGuardStamp, Selfless, TransparentStamp {
         to __optUncall() {
-          return [<elib:slot.makeFinalSlot>.asType(), "get", [valueGuard]]
+          return [<import:org.erights.e.elib.slot.makeFinalSlot>.asType(), "get", [valueGuard]]
         }
         
         to __printOn(out :TextWriter) {

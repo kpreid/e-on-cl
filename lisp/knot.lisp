@@ -326,7 +326,11 @@
     (:|makeBrand|
       (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
                 elib:+deep-frozen-stamp+))
-
+    
+    (:|finalSlotGuardSugar|
+      (efuncall (e-import "org.erights.e.elib.slot.finalSlotGuardSugarAuthor") 
+                +deep-frozen-stamp+ +transparent-stamp+))
+    
     (:|Same|
       (efuncall (e-import "org.erights.e.elib.slot.SameAuthor") 
                 +deep-frozen-stamp+ e.elib::+make-same-guard+))
@@ -337,7 +341,6 @@
 
 (defglobal +transparent-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"
-    "org.erights.e.elib.slot.finalSlotGuardSugar"
     "org.erights.e.elib.slot.SubrangeGuard"
     "org.quasiliteral.astro.makeAstroTag"
     "org.quasiliteral.term.makeTerm"))

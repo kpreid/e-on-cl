@@ -39,7 +39,7 @@ Final
   # value: int
   
   ? def FinalSlot[x] := 1; x
-  # problem: Not stamped by org.erights.e.elib.slot.finalSlotGuardSugarAuthor$finalSlotGuardSugarAuthor$FinalSlotPGuard__T
+  # problem: not a FinalSlot[_] guard
 
   ? def makeFinalSlot(x) := makeFinalSlot(1); x
   # value: 1
