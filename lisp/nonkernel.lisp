@@ -832,7 +832,6 @@
                                                           "callWithPair"
                                                           (mn '|NounExpr| "super")
                                                           msg-noun)))))))))
-        ;; XXX is introducing _ here the right thing? or should kernel ObjectExpr accept nil for the qualifiedName?
         (mn '|ObjectExpr| |docComment| |name| |auditors| |script|)))
     (t (error "Don't know what to do for object name of type ~A." (type-of |name|)))))
 
