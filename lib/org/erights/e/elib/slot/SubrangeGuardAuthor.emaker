@@ -4,6 +4,7 @@
 pragma.syntax("0.9")
 pragma.enable("call-pattern")
 
+def Same := <import:org.erights.e.elib.slot.Same>
 def EventuallyDeepFrozen := DeepFrozen."eventually"()
 def FinalSlot := <elib:slot.makeFinalSlot>.asType()
 
@@ -26,8 +27,8 @@ def Really as DeepFrozen {
   }
 }
 
-def SubrangeGuardAuthor(TransparentStamp) {
-  return def SubrangeGuard implements DeepFrozen, ExitViaHere {
+def SubrangeGuardAuthor(TransparentStamp :DeepFrozen) {
+  return def SubrangeGuard as DeepFrozen {
     to __printOn(out :TextWriter) {
       out.write("SubrangeGuard")
     }
@@ -43,15 +44,19 @@ def SubrangeGuardAuthor(TransparentStamp) {
       
         to __optUncall() { return [SubrangeGuard, "get", [superrangeGuard]] }
 
-        to coerce(specimen, optEjector) {
+        to coerce(specimen, ejector) {
           if (__auditedBy(SubrangeGuard1, specimen)) {
             return specimen
           } else if (__auditedBy(SubrangeGuard1,
                       def c := specimen.__conformTo(SubrangeGuard1))) {
             return c
           } else {
-            throw(`$specimen isn't approved as a SubrangeGuard[$superrangeGuard]`)
+            throw.eject(ejector, `$specimen isn't approved as a SubrangeGuard[$superrangeGuard]`)
           }
+        }
+        
+        to passes(specimen :any) :boolean {
+          return __auditedBy(SubrangeGuard1, specimen)
         }
     
         to __printOn(out :TextWriter) {
@@ -61,20 +66,25 @@ def SubrangeGuardAuthor(TransparentStamp) {
           out.print("]")
         }
         
-        to audit(audition) {
+        to audit(audition) :boolean {
           def expr := audition.getObjectExpr()
           def ::"methods" := (expr.getScript() :EScript).getMethods()
           for makeEMethod(_, _, =="coerce", [_, _], makeNounExpr(_, noun, _), _, _) in ::"methods" {
-            def resultGuardSlot :Really[FinalSlot] := audition.getSlot(noun)
-            def resultGuard := resultGuardSlot[]
-            require(
-              resultGuard == superrangeGuard \
-                || superrangeGuard.__respondsTo("rangeSupersetOf", 1) \
-                     && superrangeGuard.rangeSupersetOf(resultGuard),      
-              fn{ `${audition.getFQName()} does not have a result guard of $superrangeGuard, but $resultGuard` })
-            return true
+            def resultGuardSlotGuard := audition.getGuard(noun)
+            #if (Same[makeFinalSlot(superrangeGuard)].rangeSupersetOf(resultGuardSlotGuard)) {
+            #  return true
+            #}
+            if (resultGuardSlotGuard =~ FinalSlot[Same[resultGuard]] ? (resultGuardSlotGuard == FinalSlot[Same[resultGuard]])) {
+              if (resultGuard == superrangeGuard \
+                    || superrangeGuard.__respondsTo("rangeSupersetOf", 1) \
+                         && superrangeGuard.rangeSupersetOf(resultGuard) == true) {
+                return true
+              }
+              throw(`${audition.getFQName()} does not have a result guard implying $superrangeGuard, but $resultGuard`)
+            }
+            throw(`${audition.getFQName()} does not have a determinable result guard, but <& $noun> :$resultGuardSlotGuard`)
           }
-          throw("no coerce/2 method found")
+          throw(`${audition.getFQName()} has no coerce/2 method`)
         }
       }
     

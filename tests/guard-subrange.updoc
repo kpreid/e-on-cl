@@ -4,8 +4,8 @@
   ? def SubrangeGuard :DeepFrozen := <import:org.erights.e.elib.slot.SubrangeGuard>
   # value: SubrangeGuard
   
-  ? def t := int; def int := t; null
-  (int in the safeScope is visibly a LazyEvalSlot. The auditor doesn't know with to do that yet, so we rebind it as a FinalSlot. XXX this is unpleasant)
+  ? def t := int; def int :(<elib:slot.Same>[t]) := t; null
+  (int in the safeScope is a LazyEvalSlot and doesn't reveal its value (yet?), so we rebind it as a FinalSlot. XXX this is unpleasant)
   
   ? def SGInt :DeepFrozen := SubrangeGuard[int]
   # value: SubrangeGuard[int]
@@ -14,12 +14,12 @@
   # value: true
   
   ? def Gzero implements SGInt {}
-  # problem: no coerce/2 method found
+  # problem: __main$Gzero has no coerce/2 method
   
   ? def Gnoco implements SGInt { to coerce(foo, bar) {
   >   return foo
   > }}
-  # problem: __main$Gnoco does not have a result guard of int, but any
+  # problem: __main$Gnoco does not have a determinable result guard, but <& any> :Same[<& any>]
   
   ? def Gresult implements SGInt { to coerce(specimen, ejector) :int {
   >   return 42
