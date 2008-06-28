@@ -1,0 +1,154 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+E-on-CL caches the results of audits. This file performs tests to make sure that the cache operates correctly.
+
+  ? pragma.syntax("0.9")
+  > pragma.enable("one-method-object")
+  > pragma.enable("function-implements")
+  > pragma.enable("call-pattern")
+
+The results of a non-DeepFrozen auditor should not be cached. (Eventually, non-DeepFrozen auditors will be prohibited.)
+
+  ? def answers := [false, true].diverge()
+  > def notDFAu.audit(a) { println("notDFAu called"); return answers.pop() }
+  > def mk() { return def instance implements notDFAu {} }
+  > __auditedBy(notDFAu, mk())
+  # stdout: notDFAu called
+  #         
+  
+  # value: true
+
+  ? __auditedBy(notDFAu, mk())
+  # stdout: notDFAu called
+  #         
+  
+  # value: false
+
+If the auditor is DeepFrozen, and doesn't make any inquiries, then its answer can be cached; the cache is specific to the particular compiled ObjectExpr (thus mk1 and mk2 each get one audit).
+
+  ? def DFAu.audit(a) implements DeepFrozenStamp {
+  >   println(`DFAu called on $a`)
+  >   return a.getObjectExpr().getPattern().getOptPrincipalNoun().endsWith("ok")
+  > }
+  > def mk1() { return def instanceok implements DFAu {} }
+  > def mk2() { return def instanceok implements DFAu {} }
+  > def mkX() { return def not implements DFAu {} }
+  > __auditedBy(DFAu, mk1())
+  # stdout: DFAu called on <Audition for a __main$mk1$instanceok>
+  #         
+  
+  # value: true
+
+  ? __auditedBy(DFAu, mk1())
+  # value: true
+
+  ? __auditedBy(DFAu, mk2())
+  # stdout: DFAu called on <Audition for a __main$mk2$instanceok>
+  #         
+  
+  # value: true
+
+  ? __auditedBy(DFAu, mkX())
+  # stdout: DFAu called on <Audition for a __main$mkX$not>
+  #         
+  
+  # value: false
+
+  ? __auditedBy(DFAu, mkX())
+  # value: false
+
+The cache must record not only this auditor's response, but which additional auditors it invoked (using Audition#ask/1).
+
+Note that the other auditor might be fresh (be created by this invocation of the auditor whose response is being cached); this implies that a different fresh auditor will be passed to ask/1 each time. However, the only way such a fresh auditor can be revealed to code which can check the results of a later caching is by passing it to a non-DeepFrozen guard, and if the original auditor interacts with such a guard then its answer cannot be cached anyway.
+
+  ? def otherT.audit(a) implements DeepFrozenStamp {
+  >   println(`otherT called on $a`)
+  >   return true
+  > }
+  > def otherF.audit(a) implements DeepFrozenStamp {
+  >   println(`otherF called on $a`)
+  >   return false
+  > }
+  > def otherND.audit(a) {
+  >   println(`otherND called on $a`)
+  >   return true
+  > }
+  > def multiAu.audit(a) implements DeepFrozenStamp {
+  >   println(`multiAu called on $a`)
+  >   a.ask(otherT)
+  >   a.ask(otherF)
+  >   a.ask(otherND)
+  >   return true
+  > }
+  > def mk() { return def instance implements multiAu {} }
+  > def o := mk()
+  > [__auditedBy(multiAu, o), __auditedBy(otherT, o), __auditedBy(otherF, o), __auditedBy(otherND, o)]
+  # stdout: multiAu called on <Audition for a __main$mk$instance>
+  #         otherT called on <Audition for a __main$mk$instance>
+  #         otherF called on <Audition for a __main$mk$instance>
+  #         otherND called on <Audition for a __main$mk$instance>
+  #
+  
+  # value: [true, true, false, true]
+
+  ? def o := mk()
+  > [__auditedBy(multiAu, o), __auditedBy(otherT, o), __auditedBy(otherF, o), __auditedBy(otherND, o)]
+  # stdout: otherND called on <Audition for a __main$mk$instance>
+  #         
+  
+  # value: [true, true, false, true]
+
+Guards
+
+If the auditor asks for a guard, then the cache must remember this and not reused a cached answer if the guard is different.
+
+  ? def FinalSlot := __makeFinalSlot.asType(); DeepFrozen; null
+
+  ? def comparesGuard.audit(a) implements DeepFrozenStamp {
+  >   println(`comparesGuard called on $a`)
+  >   def FinalSlot[g] := a.getGuard("x")
+  >   return if (g.__respondsTo("getAns", 0)) { g.getAns() } else { g == int }
+  > }
+  > def mk(g, x :g) { return def f() implements comparesGuard { return x } }
+  > __auditedBy(comparesGuard, mk(int, 1))
+  # stdout: comparesGuard called on <Audition for a __main$mk$f>
+  #         
+  
+  # value: true
+
+  ? __auditedBy(comparesGuard, mk(int, 1))
+  # value: true
+
+  ? __auditedBy(comparesGuard, mk(String, "a"))
+  # stdout: comparesGuard called on <Audition for a __main$mk$f>
+  #         
+  
+  # value: false
+
+The cache contains only one entry, so auditing with String above discards the result for int.
+
+  ? __auditedBy(comparesGuard, mk(int, 1))
+  # stdout: comparesGuard called on <Audition for a __main$mk$f>
+  #         
+  
+  # value: true
+
+If the guard is not DeepFrozen then the result could vary and must not be cached.
+
+  ? var ans := true
+  > def funkyGuard extends any { to getAns() { return ans } }
+  > __auditedBy(comparesGuard, mk(funkyGuard, 1))
+  # stdout: comparesGuard called on <Audition for a __main$mk$f>
+  #         
+  
+  # value: true
+
+  ? ans := false
+  > __auditedBy(comparesGuard, mk(funkyGuard, 1))
+  # stdout: comparesGuard called on <Audition for a __main$mk$f>
+  #         
+  
+  # value: false
+
+check that throws reoccur
