@@ -213,26 +213,6 @@ This section includes tests that the proper guards appear on each of the various
 
   XXX should test scope with guards, but that isn't implemented yet.
 
-audition.getSlot
-
-  ? def slotCheckingAuditor {
-  >   to audit(audition) :boolean {
-  >     # NOTE: In a similar auditor attempting to actually prove security properties, we would check if x is a true FinalSlot or itself DeepFrozen.
-  >     if (audition.getSlot("x").get() == 2) {
-  >       return true
-  >     } else {
-  >       throw("Bad!")
-  >     }
-  >   }
-  > }
-  # value: <slotCheckingAuditor>
-  
-  ? {def x := 1; def x4s implements slotCheckingAuditor { to f() :any { x } }}
-  # problem: Bad!
-  
-  ? {def x := 2; def x5s implements slotCheckingAuditor { to f() :any { x } }}
-  # value: <x5s>
-
 --- Audition guard, and usage example
 
   ? def gcStamp { to audit(_) :boolean { return true } }
@@ -304,13 +284,9 @@ audition.getSlot
   #            /** The ObjectExpr defining the object under audit. */
   #            to getObjectExpr()
   #            /** Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor */
-  #            to ask(::"other-auditor")
+  #            to ask(auditor)
   #            /** Returns a guard which the named slot in the audited object's environment has passed. */
-  #            to getGuard(noun)
-  #            /** Returns the named slot in the audited object's environment.
-  #            
-  #            XXX This is deprecated in favor of getGuard, and will be removed as soon as possible. */
-  #            to getSlot(::"slot-name")
+  #            to getGuard(noun :String)
   #        }
 
 --- Old auditing protocol

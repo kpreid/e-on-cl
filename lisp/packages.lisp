@@ -532,7 +532,7 @@
 
 (cl:defpackage :e.elang.compiler
   (:nicknames :e.compiler)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node)
+  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :net.hexapodia.hashtables)
   (:export
     :scope-layout
     :scope-layout-noun-binding

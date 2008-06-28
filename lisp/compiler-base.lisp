@@ -603,10 +603,40 @@
                                (scope-layout-noun-binding layout noun))))
        ,tv)))
 
-(defun make-audition (fqn this-expr guard-table meta-state)
-  (let (audition 
-        (approvers '())
-        (audition-ok t))
+(defun invoke-auditor (auditor audition)
+  (e-coerce
+    (if (and (e-is-true (e. auditor |__respondsTo| "audit" 2))
+             (not (e-is-true (e. auditor |__respondsTo| "audit" 1))))
+      ;; use old auditing protocol iff it is the only one supported
+      (e. auditor |audit| (e. audition |getObjectExpr|) audition)
+      (e. auditor |audit| audition))
+    '(or null e-boolean)))
+
+(defun make-audit-cache ()
+  (make-generic-hash-table :test 'samep))
+
+(defstruct (audit-cache-record
+            (:conc-name #:acr-))
+  answer
+  asked
+  guards)
+
+(defun bootstrap-safe-deep-frozen-p (specimen)
+  (or (approvedp +deep-frozen-stamp+ specimen)
+      (let ((slot (e. (vat-safe-scope *vat*) |fetchSlot| "DeepFrozen" +the-thrower+)))
+        (if (e.knot::unseal-lazy-slot-forced-box (e. slot |__optSealedDispatch| e.knot::+lazy-slot-forced-brand+))
+          (e-is-true (e. (eelt slot) |isDeepFrozen| specimen))
+          (progn
+            #+e.audit-cache.debug (break "not DFchecking ~S" specimen)
+            nil)))))
+
+(defun make-audition (fqn this-expr guard-table audit-cache)
+  (let* (audition 
+         (approvers '())
+         (audition-ok t)
+         (asked-log (make-symbol "ASKED-LOG"))
+         (guard-log (make-symbol "GUARD-LOG"))
+         (logs (list asked-log guard-log)))
     (setf audition
       (e-lambda "org.erights.e.elang.evm.Audition" 
           (:stamped +e-audition-stamp+)
@@ -626,34 +656,60 @@
         (:|getObjectExpr| ()
           "The ObjectExpr defining the object under audit."
           this-expr)
-        (:|ask| (other-auditor)
+        (:|ask| (auditor)
           "Audits the object with the given auditor. XXX describe behavior upon false/throw returns from auditor"
           (assert audition-ok ()
             "~A is out of scope" (e-quote audition))
-          (when (if (and (e-is-true (e. other-auditor |__respondsTo| "audit" 2))
-                         (not (e-is-true (e. other-auditor |__respondsTo| "audit" 1))))
-                  ;; use old auditing protocol iff it is the only one supported
-                  (e-is-true (e. other-auditor |audit| this-expr audition))
-                  (e-is-true (e. other-auditor |audit| audition)))
-            (push other-auditor approvers))
+          (when (boundp asked-log)
+            (push auditor (symbol-value asked-log)))
+          (let* ((caching (approvedp +deep-frozen-stamp+ auditor))
+                 (cached (when caching
+                           (let ((cached (hashref auditor audit-cache)))
+                             (block check
+                               (dolist (pair (when cached (acr-guards cached)))
+                                 (unless (samep (gethash (car pair) guard-table)
+                                                (cdr pair))
+                                   (e. e.knot::+sys-trace+ |run| (format nil "AUDIT: ~S ~A: ignoring cache for guard ~S mismatch: old=~A new=~A" fqn (e-quote auditor) (car pair) (e-quote (cdr pair)) (e-quote (gethash (car pair) guard-table))))
+                                   (return-from check nil)))
+                               cached))))
+                 (answer (if cached
+                           (progn
+                             #+e.audit-cache.debug (format *trace-output* "~&$$$ ~S ~S: using cache entry ~S~%" fqn audit-cache cached)
+                             (loop for asked in (acr-asked cached) do
+                               (e. audition |ask| asked))
+                             (acr-answer cached))
+                           (progv logs '(nil nil)
+                             (let ((r (invoke-auditor auditor audition)))
+                                (when (and caching
+                                           (not (eql (symbol-value guard-log)
+                                                     'ruined)))
+                                  (let ((record
+                                          (make-audit-cache-record
+                                            :answer r
+                                            :asked (symbol-value asked-log)
+                                            :guards (symbol-value guard-log))))
+                                    #+e.audit-cache.debug (format *trace-output* "~&$$$ Storing ~S ~S ~S: ~S~%" fqn audit-cache auditor record)
+                                    (setf (hashref auditor audit-cache)
+                                          record)))
+                                r)))))
+            (when (e-is-true answer)
+              (push auditor approvers)))
           nil)
-        (:|getGuard| (noun)
+        (:|getGuard| ((noun 'string))
           "Returns a guard which the named slot in the audited object's environment has passed."
           (assert audition-ok ()
             "~A is out of scope" (e-quote audition))
-          (or (gethash noun guard-table)
-              (error "~A is not a free variable in ~A"
-                     (e-quote noun) (e-quote fqn))))
-        (:|getSlot| (slot-name)
-          "Returns the named slot in the audited object's environment.
-
-XXX This is deprecated in favor of getGuard, and will be removed as soon as possible."
-          (assert audition-ok ()
-            "~A is out of scope" (e-quote audition))
-          ; XXX this is a rather big authority to grant auditors - being (eventually required to be) DeepFrozen themselves, they can't extract information, but they can send messages to the slot('s value) to cause undesired effects
-          ;; XXX also, cross-layer reference into the current compiler implementation
-          (e. meta-state |fetch| (e. "&" |add| slot-name)
-            (efun () (error "There is no slot named ~A in ~A." (e-quote slot-name ) (e-quote audition)))))))
+          (let ((answer (or (gethash noun guard-table)
+                            (error "~A is not a free variable in ~A"
+                                   (e-quote noun) (e-quote fqn)))))
+            (when (and (boundp guard-log)
+                       (not (eql (symbol-value guard-log) 'ruined)))
+              (if (bootstrap-safe-deep-frozen-p answer)
+                (push (cons noun answer) (symbol-value guard-log))
+                (progn
+                  #+e.audit-cache.debug (format *trace-output* "~&$$$ ~S: ruined by guard of ~S: ~S~%" fqn  noun (e-quote answer))
+                  (setf (symbol-value guard-log) 'ruined))))
+            answer))))
     (values audition 
             (lambda () (setf audition-ok nil)) 
             (lambda (auditor)
@@ -661,12 +717,6 @@ XXX This is deprecated in favor of getGuard, and will be removed as soon as poss
                               approvers
                               :test #'elib:samep) 
                 t)))))
-
-#| saved old getSlot impl that avoids touching every slot
-(cond
-  ,@(loop for (name . binding) in (scope-layout-bindings layout) collect
-    `((string= slot-name ,name) ,(binding-get-slot-code binding)))
-  (t (error "no such slot: ~A" slot-name))) |#
 
 (defmacro compiler-object (object-body post-forms self-fsym)
   ;; XXX poor name
@@ -718,10 +768,9 @@ The scope layout provided should include the binding for the object's name patte
               (finisher-sym (make-symbol "AUDITION-FINISH")))
           `(multiple-value-bind (,audition-sym ,finisher-sym ,checker-sym) 
               (make-audition ',fqn 
-                            ',this-expr
-                            ,(guard-table-form outer-nouns inner-layout)
-                            ,(e.compiler.seq::leaf-sequence 
-                              (make-instance '|MetaStateExpr| :elements '()) inner-layout))
+                             ',this-expr
+                             ,(guard-table-form outer-nouns inner-layout)
+                             (load-time-value (make-audit-cache)))
             ,@(loop for auditor-form in auditor-forms collect
                 `(funcall ,audition-sym :|ask/1| ,auditor-form))
             ,(build-labels

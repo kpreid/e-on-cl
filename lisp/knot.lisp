@@ -460,9 +460,14 @@
       (error "not an assignable slot: ~A" (e-quote this)))
     (:|isFinal| () elib:+e-true+))))
 
+(defparameter +lazy-slot-forced-brand+ (gensym))
+(defclass lazy-slot-forced-box () ((value :initarg :value :accessor unseal-lazy-slot-forced-box)))
 (defun make-lazy-apply-slot (maker &aux value-box)
   (e-lambda "lazyApplySlot"
       (:stamped +deep-frozen-stamp+)
+    (:|__optSealedDispatch| (brand)
+      (when (samep brand +lazy-slot-forced-brand+)
+        (make-instance 'lazy-slot-forced-box :value (and value-box t))))
     (:|get| ()
       (unless value-box
         (multiple-value-bind (promise resolver) (make-promise)
