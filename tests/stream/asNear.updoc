@@ -1,0 +1,72 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+  ? def makePseudoFarRef := <import:org.cubik.cle.makePseudoFarRef>
+  # value: <makePseudoFarRef>
+
+  ? def makeWriterStream := <import:org.cubik.cle.io.makeWriterStream>
+  # value: <makeWriterStream>
+
+These utilities convert eventual references to streams to near streams, and near references are left alone.
+
+asNearIn
+
+  ? def b := EIO.asNearIn(def a := [1].asStream())
+  # value: [1].asStream()
+  
+  ? b == a
+  # value: true
+
+  ? def inStreamVow
+  > def inNear := EIO.asNearIn(inStreamVow)
+  # value: <near InStream proxy>
+
+This is the best we can do for a chunk type.
+
+  ? def type := inNear.getChunkType()
+  # value: <Promise>
+  
+  ? def chunk := inNear.takeAtMost(1)
+  # value: <Promise>
+
+  ? bind inStreamVow := [1,2,3].asStream()
+  # value: [1, 2, 3].asStream()
+  
+  ? interp.waitAtTop(chunk)
+  ? chunk
+  # value: [1]
+
+  ? type
+  # value: ConstList
+  
+  ? inNear.takeAtMost(1)
+  # value: [2]
+
+asNearOut
+  
+  ? def b := EIO.asNearOut(def a := makeWriterStream(String, E.call, stdout))
+  # value: -><calling "call" facet>(<textWriter>, ...)
+  
+  ? b == a
+  # value: true
+  
+  ? def outStreamVow
+  > def outNear := EIO.asNearOut(outStreamVow)
+  # value: <near OutStream proxy>
+
+  ? def type := outNear.getChunkType()
+  # value: <Promise>
+  
+  ? def resolver := outNear.reserve()
+  # value: <Promise>
+  
+  ? bind outStreamVow := a
+  # value: -><calling "call" facet>(<textWriter>, ...)
+
+  ? resolver
+  # value: <resolver>
+  
+  ? resolver.resolve("ping. ")
+  # stdout: ping. 
+  
+  

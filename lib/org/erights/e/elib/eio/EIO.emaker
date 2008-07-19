@@ -57,6 +57,10 @@ def EIO implements DeepFrozen, ExitViaHere {
         match ==null { return [] } # XXX should return according to chunk type
         match t ? Ref.isBroken(t) { return t }
         # XXX support unknown chunk types
+        match _ {
+          # XXX unnecessary printing
+          throw(`$inStream produced unusual or nonempty chunk $first when asked for empty chunk`)
+        }
       }
       
       def computeWanted := if (maximum == ALL) {
@@ -114,5 +118,59 @@ def EIO implements DeepFrozen, ExitViaHere {
   /** XXX stream redesign: to be reviewed */
   to takeAll(inStream) {
     return EIO.takeRange(ALL, ALL, inStream)
+  }
+  
+  /** If inStream is not near, produce a near stream which proxies for it. */
+  to asNearIn(streamRef :any) {
+    def InStream := <elib:eio.InStream>
+    if (Ref.isNear(streamRef)) {
+      return streamRef
+    } else {
+      def chunkType := streamRef <- getChunkType()
+      return def ::"near InStream proxy" implements InStream {
+        to getChunkType() {
+          if (Ref.isNear(streamRef)) {
+            return streamRef.getChunkType()
+          } else {
+            return chunkType
+          }
+        }
+        to takeAtMost(size) {
+          # XXX does not implement overlapping-request robustness -- if an there's an <- in the queue then a . could sneak in before it
+          if (Ref.isNear(streamRef)) {
+            return streamRef.takeAtMost(size)
+          } else {
+            return streamRef <- takeAtMost(size)
+          }
+        }
+      }
+    }
+  }
+
+  /** If streamRef is not near, produce a near stream which proxies for it. */
+  to asNearOut(streamRef :any) {
+    def OutStream := <elib:eio.OutStream>
+    if (Ref.isNear(streamRef)) {
+      return streamRef      
+    } else {
+      def chunkType := streamRef <- getChunkType()
+      return def ::"near OutStream proxy" implements OutStream {
+        to getChunkType() {
+          if (Ref.isNear(streamRef)) {
+            return streamRef.getChunkType()
+          } else {
+            return chunkType
+          }
+        }
+        to reserve() {
+          if (Ref.isNear(streamRef)) {
+            # XXX can't do immediate if there were outstanding eventual; need to do the isFresh sort of thing, set a flag and clear it if the <- completes
+            return streamRef <- reserve()
+          } else {
+            return streamRef <- reserve()
+          }
+        }
+      }
+    }
   }
 }
