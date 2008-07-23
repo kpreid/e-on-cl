@@ -197,17 +197,18 @@
 (define-sequence-expr |CatchExpr| (layout result attempt catch-pattern catch-body
     &aux (pattern-eject-block (gensym "CATCH-PATTERN-"))
          (condition-var (gensym "CONDITION"))
+         (backtrace-var (gensym "BACKTRACE"))
          (catch-outer (gensym "CATCH-OUTER-")))
   (values
     `((,result
        (block ,catch-outer
-         (handler-case
+         (handler-case-with-backtrace
             ,(hide-sequence attempt layout)
-            (e-catchable-condition (,condition-var)
+            (e-catchable-condition (,condition-var ,backtrace-var)
               (robust-block (,pattern-eject-block "catch-pattern")
                 ,(with-nested-scope-layout (layout)
                   (sequence-to-form 
-                    (updating-block-pattern-entry catch-pattern layout `(transform-condition-for-e-catch ,condition-var) "catch-pattern" pattern-eject-block)
+                    (updating-block-pattern-entry catch-pattern layout `(transform-condition-for-e-catch ,condition-var :backtrace ,backtrace-var) "catch-pattern" pattern-eject-block)
                     `(return-from ,catch-outer ,(leaf-sequence catch-body layout)))))
               (%catch-expr-resignal ,condition-var))))))
     layout))

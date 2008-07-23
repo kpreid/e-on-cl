@@ -626,6 +626,12 @@ CatchExpr
   non-catching
   ? try { throw("hi") } catch =="irrelevant" { "oops" }
   # problem: hi
+  
+  backtrace is caught
+  ? def p; try { throw("hi") } catch bind p {}; lisp["E.ELIB", "LOCAL-THROW-SEALED-BOX-BACKTRACE"].getFunction()(p :(<import:org.cubik.cle.prim.Throwable>)) != null
+  # value: true
+  
+  (NOTE: the result of L-T-S-B-B contains non-E-object functions, so manipulating it is dangerous)
 
 Trinary DefineExpr
 
