@@ -108,6 +108,7 @@ In order to preserve E semantics by default:
   # value: [null, <internet stream socket on 0.0.0.0:35037>]
   
   XXX return value is null-or-broken - test and document
+  XXX provide an interface for accepting only some of the time, so apps can not-accept when they're flooded already
   ? listener.listen(null, def handler(serverEnd) :void {
       XXX address return from socket accept()
   >   print("Accepted")
