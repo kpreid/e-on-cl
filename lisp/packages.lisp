@@ -81,7 +81,10 @@
 
 ;;; 'early util' interlude
 (defmacro e.util:defglobals (&rest names)
-  `(declaim (special ,@names)))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     ,@(loop for name in names collect
+         `(unless (constantp ',name)
+            (proclaim '(special ,name))))))
 
 (e.util:defglobals
   e.util:+the-asdf-system+)
@@ -96,6 +99,9 @@
      :serve-event
      :add-fd-handler
      :remove-fd-handler)
+  
+  (:intern
+    :selflessp)
   
   (:export 
     :*compatible-catch-leakage*
