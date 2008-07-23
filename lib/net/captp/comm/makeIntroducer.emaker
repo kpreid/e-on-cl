@@ -17,6 +17,7 @@ def makeBrand :DeepFrozen := <elib:sealing.makeBrand>
 def KeyPair :DeepFrozen := any # XXX stub
 
 def makeIntroducer implements ExitViaHere, DeepFrozen {
+  # XXX makePair wrong name since it's three facets now
   to makePair(config :Map,
               entropy :any, # XXX interface
               timer :any) { # XXX interface
