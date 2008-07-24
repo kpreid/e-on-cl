@@ -1,0 +1,113 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Setup
+
+  ? def ALL := EIO.getALL()
+
+  ? var state := 0
+  > def wobbler(elements) :any {
+  >   var out := []
+  >   for e in elements {
+  >     out += [e] * state
+  >     state := (state + 1) % 3
+  >   }
+  >   return out
+  > }
+  # value: <wobbler>
+  
+  ? var stdoutS := null
+  ? def refresh() {
+  >   stdoutS := <import:org.cubik.cle.io.makeWriterStream>(List, E.call, def testW {
+  >     to write(chunk :List) {
+  >       chunk.printOn("", " ", "", stdout)
+  >       if (chunk.size().aboveZero()) { stdout.print(" ") }
+  >     }
+  >     to close() { stdout.print("<close>") }
+  >     to flush() {}
+  >     to fail(p) { stdout.print(p) }
+  >   })
+  > }; null
+
+---
+
+  ? def transformOut :DeepFrozen := <import:org.cubik.cle.io.transformOut>
+  # value: <transformOut>
+
+  ? refresh()
+  > def s := transformOut(def Lx extends List {}, wobbler, stdoutS)
+  # value: -<wobbler>->-><calling "call" facet>(<testW>, ...)
+  
+  ? s.getChunkType()
+  # value: <Lx>
+  
+  ? interp.waitAtTop(s.reserve() <- resolve(['a','b','c']))
+  # stdout: 'b' 'c' 'c' 
+
+Downward closure
+
+  ? interp.waitAtTop(s.reserve() <- resolve(null))
+  # stdout: <close>
+
+Downward failure
+
+  ? refresh()
+  > def s := transformOut(List, wobbler, stdoutS)
+  > interp.waitAtTop(s.reserve() <- smash("foo"))
+  # stdout: problem: foo
+
+Upward closure
+
+  ? def s := transformOut(List,
+  >                       wobbler,
+  >                       def _ { to terminates() { return null }
+  >                               to reserve() { return null }})
+  # value: -<wobbler>-><__main$_>
+
+  ? [s.terminates()]
+  # value: [null]
+
+  ? interp.waitAtTop(def r := s.reserve())
+  ? [r]
+  # value: [null]
+
+Upward failure
+
+  ? def b := Ref.broken("foo")
+  > def s := transformOut(List,
+  >                       wobbler,
+  >                       def _ { to terminates() { return b }
+  >                               to reserve() { return b }})
+  # value: -<wobbler>-><__main$_>
+
+  ? s.terminates()
+  # value: <ref broken by problem: foo>
+
+  ? interp.waitAtTop(def r := s.reserve())
+  ? r
+  # value: <ref broken by problem: foo>
+
+Finishing chunk
+
+  ? refresh()
+  > interp.waitAtTop(
+  >   transformOut(List,
+  >                def _ { to run(x) { return x }
+  >                        to finish() { return [2] }},
+  >                stdoutS).reserve() <- resolve(null))
+  # stdout: 2 <close>
+
+Finishing error
+
+The finish may cause failure; this is used for cases where the input ends in the middle of some sort of segment boundary.
+
+  ? refresh()
+  > transformOut(List,
+  >              def _ { to run(x) { return x }
+  >                      to finish() { return Ref.broken("foo") }},
+  >              stdoutS).reserve() <- resolve(null)
+  > interp.waitAtTop(stdoutS.terminates())
+  # stdout: problem: foo
+  
+  ? stdoutS.terminates()
+  # value: <ref broken by problem: foo>

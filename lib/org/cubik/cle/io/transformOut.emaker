@@ -1,0 +1,59 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("call-pattern")
+
+interface Resolver :DeepFrozen {} # XXX implement
+
+def OutStream :DeepFrozen := any # <elib:eio.OutStream> # XXX should be DeepFrozen, isn't because 'vow' isn't
+
+def transformOut implements DeepFrozen, ExitViaHere {
+  # XXX chunkType should probably be provided by chunkFilter -- do this to transformIn as well
+  to run(chunkType :Guard, chunkFilter, underlying :OutStream) :OutStream {
+    return def transformOutStream { # implements OutStream
+      to __printOn(out :TextWriter) {
+        out.write("-")
+        out.print(chunkFilter)
+        out.write("->")
+        out.printSame(underlying)
+      }
+            
+      to getChunkType() {
+        return chunkType
+      }
+      to reserve() {
+        return Ref.whenResolved(underlying.reserve(), fn targetResolver {
+          if (targetResolver == null || Ref.isBroken(targetResolver)) {
+            targetResolver
+          } else {
+            def subResolver implements Resolver {
+              to resolve(chunk) {
+                if (chunk == null && chunkFilter.__respondsTo("finish", 0)) {
+                  def fin := chunkFilter.finish()
+                  targetResolver.resolve(fin)
+                  underlying.reserve() <- resolve(null) # XXX need a policy?
+                } else if (chunk == null || Ref.isBroken(chunk)) {
+                  targetResolver.resolve(chunk)
+                } else {
+                  targetResolver.resolve(chunkFilter(chunk))
+                }
+              }
+              to smash(problem) {
+                targetResolver.resolve(Ref.broken(problem))
+              }
+            }
+          }
+        })
+      }
+      to flush() {
+        underlying.flush()
+      }
+      to terminates() {
+        return underlying.terminates()
+      }
+    }
+  }
+}
+
