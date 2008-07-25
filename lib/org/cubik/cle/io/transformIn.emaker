@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 
 def ALL      :DeepFrozen := EIO.getALL()
-def InStream :DeepFrozen := any # <import:org.erights.e.elib.eio.InStream> -- XXX doesn't work because InStream isn't DeepFrozen because vow isn't
+def InStream :DeepFrozen := <elib:eio.InStream>
 
 def defaultEstimator as DeepFrozen {
   to estimate(size) { return size }
@@ -27,9 +27,9 @@ def whenMaybeNow(ref, reactor) as DeepFrozen {
 
 /** Transforms an InStream with a stateful function. ... When the source stream becomes closed, chunkFilter.finish() will be invoked to provide a final chunk, if it __respondsTo that message. ... If chunkFilter.estimate/1 never overestimates, then transformIn will never take unneeded elements from the underlying stream. */
 def transformIn implements DeepFrozen {
-  to run(Chunk,
+  to run(Chunk :Guard,
          chunkFilter,
-         underlying) {
+         underlying :InStream) {
     def sizeEstimator := 
       if (chunkFilter.__respondsTo("estimate", 1)) {
         chunkFilter

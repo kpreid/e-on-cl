@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 pragma.enable("function-implements")
 pragma.enable("call-pattern")
 
-def OutStream :DeepFrozen := any # <elib:eio.OutStream> # XXX should be DeepFrozen, isn't because 'vow' isn't
+def OutStream :DeepFrozen := <elib:eio.OutStream>
 def makeWriterStream :DeepFrozen := <import:org.cubik.cle.io.makeWriterStream>
 
 /** Makes OutStreams which synchronously append to FlexLists or other objects with append/1 and elementType/0 methods. A trivial but frequently occurring use of makeWriterStream. (For closure notification, check the resulting stream's terminates/0.) */

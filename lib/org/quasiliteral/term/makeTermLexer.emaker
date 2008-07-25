@@ -5,6 +5,8 @@
 
 pragma.syntax("0.9")
 
+def InStream :DeepFrozen := <elib:eio.InStream>
+
 def makeTermLexer implements DeepFrozen, ExitViaHere {
   # from Term.y
   # = new TermLexer(lineFeeder,          # input
@@ -15,7 +17,7 @@ def makeTermLexer implements DeepFrozen, ExitViaHere {
 
   to run(quasi :boolean) {
     def termLexer implements DeepFrozen {
-      to run(textIn) { # xx textIn :InStream
+      to run(textIn :InStream) {
         # kpreid's Standard Cheap Ugly Lexer Style
         var text := EIO.takeAll(textIn)
         #traceln(`text: $text`)

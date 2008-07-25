@@ -1,0 +1,111 @@
+#!/usr/bin/env rune
+
+pragma.syntax("0.8")
+
+# Copyright 2002 Combex, Inc. under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+# Diverged from svn://svn.synchrona.org/erights/e/trunk/src/esrc/org/erights/e/elang/interp/vow.emaker r279 to become DeepFrozen.
+
+/**
+ * Defines the builtin 'vow' guard and guard-template.
+ * <p>
+ * The 'vow' guard is currently mostly advisory. It should be used
+ * to indicate that a value's resolution is expected to be near or broken.
+ *
+ * @author Mark S. Miller
+ */
+def vow0 implements Guard, DeepFrozen {
+
+    /**
+     * 'vow' is a non-transforming guard -- when it succeeds, the result
+     * is the same as the specimen.
+     * <p>
+     * Currently, 'vow' is mostly advisory. It fails only when it can
+     * fail immediately (and so immediately report failure to the optEjector).
+     * This one case is when the specimen is far, ie, resolved and eventual.
+     * Only in this case do we already know that it will not resolve to
+     * near or broken. (A subtlety: it may still get smashed, in which case
+     * it will become broken, but we know it won't <i>resolve</i> to broken
+     * since it's already resolved.)
+     * <p>
+     * It is not clear what the behavior or implementation of a future
+     * accurately enforcing 'vow' guard would be. Probably, if given a promise
+     * (an unresolved reference) it would coerce to a new promise that resolves
+     * to the same value that the original promise resolves to if that value
+     * is <i>ok</i>, and otherwise resolves to broken. The tricky thing is
+     * that the definition of <i>ok</i> in this context is that the resolved
+     * value be near at the guarding site, even though (in order not to destroy
+     * pipelining) the resolution decision must be made at the hosting site.
+     */
+    to coerce(specimen, optEjector) :any {
+        if (Ref.isFar(specimen)) {
+            throw.eject(optEjector, "Vow must not be a far reference")
+        } else {
+            specimen
+        }
+    }
+
+    /**
+     * Prints "vow"
+     */
+    to __printOn(out :TextWriter) :void { out.print("vow") }
+
+    /**
+     * @deprecated Use vow[subGuard] instead
+     */
+    to run(subGuard) :near { return vow0[subGuard] }
+
+    /**
+     * Returns a mostly-advisory vow-guard parameterized by a Guard
+     * for indicating that a value's resolution is expected to either be
+     * broken or be a near reference that would pass or be returned by the
+     * subGuard parameter.
+     */
+    to get(subGuard :Guard) :Guard {
+        def subGuardD :DeepFrozen := subGuard # XXX Guard should imply DeepFrozen
+
+        /**
+         * @author Mark S. Miller
+         */
+        def vow1 implements Guard, DeepFrozen {
+
+            /**
+             * As with {@link vow0#coerce/2}, this is mostly advisory.
+             * <p>
+             * It reports failure only when it can report failure immediately.
+             * In this case, this can happen in two circumstances:<ul>
+             * <li>When the ref is far, as above
+             * <li>and when the ref is near, in which case we return the
+                   result of coercing it through our subGuard parameter.
+             * </ul>
+             * For example, 'vow[int]' will fail when given a
+             * character, but will currently succeed when given a
+             * promise that will resolve to a character. A future
+             * accurately enforcing 'vow[int]' should instead coerce
+             * to a promise that resolves to the same int iff the original
+             * resolves to an int (or a value that coerces to an int). If the
+             * original resolved to a value that doesn't coerce to an int,
+             * then the returned promise should resolve to broken.
+             */
+            to coerce(specimen, optEjector) :any {
+                if (Ref.isFar(specimen)) {
+                    throw.eject(optEjector, "Vow must not be a far reference")
+                } else if (Ref.isNear(specimen)) {
+                    subGuardD.coerce(specimen, optEjector)
+                } else {
+                    specimen
+                }
+            }
+
+            /**
+             * For example, "vow[int]"
+             */
+            to __printOn(out :TextWriter) :void {
+                out.print("vow[")
+                out.quote(subGuardD)
+                out.print("]")
+            }
+        }
+    }
+}

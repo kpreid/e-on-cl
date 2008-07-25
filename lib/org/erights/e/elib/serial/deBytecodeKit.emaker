@@ -11,6 +11,7 @@ pragma.enable("function-implements")
 #   - DeepFrozen
 
 def DEBuilderOf :DeepFrozen := <elib:serial.DEBuilderOf>
+def OutStream :DeepFrozen := <elib:eio.InStream>
 
 def makeAppendStream :DeepFrozen := <import:org.cubik.cle.io.makeAppendStream>
 #def [=> InStream, => OutStream] | _ := <elib:eio.*>
@@ -77,7 +78,7 @@ def deBytecodeKit implements DeepFrozen {
         }
     }
 
-    to makeStreamBuilder(baos) :near { # baos :OutStream -- XXX DeepFrozen
+    to makeStreamBuilder(baos :OutStream) :near {
       
         def writeWholeNum := wholeNumCoding.writingTo(baos)
         def writeByte := unsignedIntegerCoding[8].writingTo(baos)

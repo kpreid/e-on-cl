@@ -6,6 +6,7 @@ pragma.enable("accumulator")
 
 def Range := EIO.getRange()
 def ALL := EIO.getALL()
+def InStream :DeepFrozen := <elib:eio.InStream>
 
 def Element := int # XXX should be int8 (0..255)
 
@@ -32,7 +33,7 @@ def makeFDInStreamAuthor implements ExitViaHere {
       /** 'nameObj' is used for printing the stream. */
       to run(nameObj :any, fdRef, bufferLimit :(int >= 1)) {
 
-        def inStream {
+        def inStream implements InStream {
           to __printOn(out :TextWriter) {
             out.write("<-")
             out.printSame(nameObj)

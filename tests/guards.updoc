@@ -65,7 +65,7 @@ XXX test with far refs (eventual resolved)
   
 vow
 
-  ? vow
+  ? vow :DeepFrozen
   # value: vow
   
   XXX more tests (we're using existing vow.emaker, so we assume for now it's correct)

@@ -151,7 +151,6 @@ Everything in the safeScope should be DeepFrozen, on general principles and beca
   #         rcvr (rcvr) ought to be DeepFrozen
   #         rx__quasiParser (<makePerlMatchMaker>) ought to be DeepFrozen
   #         term__quasiParser (<term__quasiParser>) ought to be DeepFrozen
-  #         vow (vow) ought to be DeepFrozen
   #         ok
   
   XXX fix things until the above test produces no errors

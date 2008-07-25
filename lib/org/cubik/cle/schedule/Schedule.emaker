@@ -8,7 +8,7 @@ interface "org.cubik.cle.schedule.Schedule" {
   /** Invoke reactor with ref. If possible, do so after ref is resolved. */
   to whenResolved(ref :any, reactor :any)
   /** Invoke continueFn until it returns false, then return null. */
-  to loop(continueFn) :any # XXX should be vow[nullOk]
+  to loop(continueFn) :vow[nullOk]
   /** Return nearGuard or vow[nearGuard], as appropriate. */
   to result(nearGuard :Guard) :Guard
 })
