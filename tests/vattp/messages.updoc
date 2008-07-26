@@ -1,0 +1,42 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+A VatTP connection runs on top of some secure reliable stream protocol (e.g. SSL/TLS over TCP), whereas it provides unlimited-size ordered messages. This component provides the subdivision.
+
+  ? def takeOne(inStream) { 
+  >   return when (def r := EIO.takeRange(1, 1, inStream)) -> {
+  >     if (r =~ [x]) { x } else { Ref.broken("end of stream") }
+  >   }
+  > }; null
+
+  ? def messageJoining := <import:net.vattp.messageJoining>
+  # value: <messageJoining>
+
+  ? def [i, o] := EIO.pipe(["Chunk" => List[0..255]])
+  > def [j, p] := [messageJoining.makeJoiner(i), messageJoining.makeSplitter(o)]
+  # value: [<joinerInput>, <splitterInput>]
+  
+  ? def send(msg) { return when (def mos := takeOne(j)) -> { EIO.join(msg.asStream(), mos) }}
+  > def receive() { return when (def mis := takeOne(p)) -> { traceln(`got one $mis`); EIO.takeAll(mis) }}
+  > null
+  
+  ? send([97])
+  # value: <Promise>
+  
+  ? interp.waitAtTop(def r := receive())
+  ? r
+  # value: [97]
+
+  ? when (send([1, 2, 3, 4])) ->
+  >      {send([97, 98, 99])}
+  # value: <Promise>
+  
+  ? interp.waitAtTop(def r := receive())
+  ? r
+  # value: [1, 2, 3, 4]
+  
+  ? interp.waitAtTop(def r := receive())
+  ? r
+  # value: [97, 98, 99]
+  
+  
