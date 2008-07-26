@@ -1,0 +1,59 @@
+# Copyright 2007 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+pragma.syntax("0.9")
+pragma.enable("function-implements")
+pragma.enable("call-pattern")
+
+# XXX this emaker has no tests, whoops
+
+def OutStream :DeepFrozen := <elib:eio.OutStream>
+def makeSubOutStream implements DeepFrozen, ExitViaHere {
+  /** Wraps an OutStream with another OutStream which passes on chunks and failure, but not closure. */
+  to stopClose(target :OutStream) :OutStream {
+    
+    def [terminator, termRes] := Ref.promise()
+    
+    var optUnusedResolver := null
+    
+    Ref.whenResolved(target.terminates(), termRes.resolveRace)
+    
+    return def subOutStream {
+      to getChunkType() { return target.getChunkType() }
+      to reserve() {
+        if (Ref.isResolved(terminator)) { return terminator }
+        return Ref.whenResolved(if (optUnusedResolver != null) \
+                                  { def r := optUnusedResolver; optUnusedResolver := null; r } \
+                                  else { target.reserve() },
+                                fn targetResolver {
+          def subResolver {
+            to resolve(chunk) {
+              switch (chunk) {
+                match ==null {
+                  termRes.resolveRace(chunk)
+                  targetResolver.resolve([]) # XXX support general chunk types
+                  optUnusedResolver := targetResolver
+                }
+                #match Ref.broken(_) {
+                #  termRes.resolveRace(chunk)
+                #  optUnusedResolver := targetResolver
+                #}
+                match _ {
+                  targetResolver.resolve(chunk)
+                }
+              }
+            }
+            to smash(p) { subResolver.resolve(Ref.broken(p)) }
+          }
+        })
+      }
+      to flush() {
+        target.flush()
+      }
+      to terminates() {
+        return terminator
+      }
+    }
+  }
+}
+

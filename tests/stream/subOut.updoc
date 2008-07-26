@@ -1,0 +1,78 @@
+# Copyright 2008 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Setup
+
+  ? def ALL := EIO.getALL()
+
+  ? var stdoutS := null
+  ? def refresh() {
+  >   stdoutS := <import:org.cubik.cle.io.makeWriterStream>(List, E.call, def testW {
+  >     to write(chunk :List) {
+  >       chunk.printOn("", " ", "", stdout)
+  >       if (chunk.size().aboveZero()) { stdout.print(" ") }
+  >     }
+  >     to close() { stdout.print("<close>") }
+  >     to flush() {}
+  >     to fail(p) { stdout.print(p) }
+  >   })
+  > }; null
+
+---
+
+  ? def makeSubOutStream :DeepFrozen := <import:org.cubik.cle.io.makeSubOutStream>
+  # value: <makeSubOutStream>
+
+  ? refresh()
+  > def s := makeSubOutStream.stopClose(stdoutS)
+  # value: <subOutStream>
+  
+  ? s.getChunkType()
+  # value: List
+  
+  ? interp.waitAtTop(s.reserve() <- resolve([1,2,3]))
+  # stdout: 1 2 3 
+
+Downward closure
+
+  ? interp.waitAtTop(s.reserve() <- resolve(null))
+  -- no effect, as intended
+  
+  ? interp.waitAtTop(stdoutS.reserve() <- resolve([4,5]))
+  # stdout: 4 5 
+
+Downward failure
+
+  ? refresh()
+  > def s := makeSubOutStream.stopClose(stdoutS)
+  > interp.waitAtTop(s.reserve() <- smash("foo"))
+  # stdout: problem: foo
+
+Upward closure
+
+  ? def s := makeSubOutStream.stopClose(
+  >            def _ { to terminates() { return null }
+  >                    to reserve() { return null }})
+  # value: <subOutStream>
+
+  ? [s.terminates()]
+  # value: [null]
+
+  ? interp.waitAtTop(def r := s.reserve())
+  ? [r]
+  # value: [null]
+
+Upward failure
+
+  ? def b := Ref.broken("foo")
+  > def s := makeSubOutStream.stopClose(
+  >            def _ { to terminates() { return b }
+  >                    to reserve() { return b }})
+  # value: <subOutStream>
+
+  ? s.terminates()
+  # value: <ref broken by problem: foo>
+
+  ? interp.waitAtTop(def r := s.reserve())
+  ? r
+  # value: <ref broken by problem: foo>
