@@ -3,17 +3,6 @@
 
 (in-package :elib)
 
-(define-condition unguarded-text-writer-error (program-error)
-  ((object  :initarg :object  :reader unguarded-text-writer-error-object)
-   (message :initarg :message :reader unguarded-text-writer-error-message))
-  (:report (lambda (error stream)
-             (format stream 
-               "~A#__printOn/1 should have coerced its argument by TextWriter, but instead called it: ~A"
-               (e. (e. (unguarded-text-writer-error-object error) 
-                       |__getAllegedType|) 
-                   |getFQName|)
-               (e-quote (unguarded-text-writer-error-message error))))))
-
 (defobject +text-writer-stamp+
     "org.erights.e.elib.print.TextWriterStamp"
     (:stamped +deep-frozen-stamp+)
@@ -29,16 +18,6 @@
     (lambda () +the-text-writer-guard+)
     :error (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
     :test-shortened nil)))
-
-(defun hide-text-writer (tw thing)
-  (with-result-promise (wrapped-tw)
-    (e-lambda "org.cubik.cle.prim.TextWriterHint" ()
-      (:|__conformTo| (guard)
-        (if (samep guard +the-text-writer-guard+)
-          tw
-          wrapped-tw))
-      (otherwise (mverb &rest args)
-        (error 'unguarded-text-writer-error :object thing :message (vector (unmangle-verb mverb) (coerce args 'vector)))))))
 
 (defglobal +standard-syntax+ 
   (e-lambda "org.erights.e.elib.print.baseSyntax"
@@ -90,8 +69,7 @@
         raw-condition 
         (or #+(or) (e.util:backtrace-value))))))
 
-(defun do-print-syntax (tw thing syntax in-error-printing nest
-    &aux (wrapped-tw (hide-text-writer tw thing)))
+(defun do-print-syntax (tw thing syntax in-error-printing nest)
   (ecase (ref-state thing)
     (eventual (e. syntax |eventual| (as-e-boolean (ref-is-resolved thing))))
     (broken   (e. syntax |broken| tw (ref-opt-problem thing))) ; XXX wart: tw argument
@@ -99,11 +77,11 @@
                 ; If we're in error printing, and the printing
                 ; fails, just give up and let the exception
                 ; propagate.
-                (e. thing |__printOn| wrapped-tw)
+                (e. thing |__printOn| tw)
                 (handler-case
                   (handler-bind 
                       ((e-catchable-condition (trace-error-print-handler thing)))
-                    (e. thing |__printOn| wrapped-tw))
+                    (e. thing |__printOn| tw))
                   (e-catchable-condition (condition)
                     (e. syntax |problem| (funcall nest :in-error-printing t)
                                          (cl-type-fq-name (observable-type-of thing))
