@@ -1,7 +1,11 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (cl:in-package :e.util)
+
+;; sb-introspect does not have an asdf system
+#+sbcl (eval-when (:compile-toplevel :load-toplevel :execute)
+         (require :sb-introspect))
 
 ; --- Globals ---
 
@@ -226,9 +230,6 @@
   `(%with-appropriate-floating-point-rules (lambda () ,@forms)))
 
 ; --- lambda lists ---
-
-#+sbcl (eval-when (:compile-toplevel :load-toplevel :execute)
-         (require :sb-introspect))
 
 (defun function-lambda-list (function)
   "Return the lambda list of the given function, or '(&rest <unknown-lambda-list>) if it cannot be determined."
