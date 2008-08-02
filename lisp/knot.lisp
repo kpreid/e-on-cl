@@ -768,6 +768,7 @@
           ("&__splitList"    ,(lazy-import "org.erights.e.elang.expand.__splitList"))
           ("&__suchThat"     ,(lazy-import "org.erights.e.elang.expand.suchThat"))
           ("&__switchFailed" ,(lazy-import "org.erights.e.elang.expand.__switchFailed"))
+          ("&promiseAllFulfilled" ,(lazy-import "org.erights.e.elang.interp.promiseAllFulfilled"))
 
           ; --- utility: miscellaneous ---
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
