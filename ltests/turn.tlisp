@@ -126,7 +126,8 @@
          (counter 0))
     (block nil
       (flet ((ding () (incf counter) (when (= counter 2) (return))))
-        (dolist (*vat* vats)
-          (e<- (efun () (ding)) |run|))
+        (dolist (vat vats)
+          (with-turn (vat)
+            (e<- (efun () (ding)) |run|)))
         (runner-loop *runner*))))
   nil)

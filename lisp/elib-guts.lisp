@@ -1,5 +1,5 @@
-; This Common Lisp code is Copyright 2005-2007 Kevin Reid, under the terms of the
-; MIT X license, and partially derived from Java code which is
+; This Common Lisp code is Copyright 2005-2008 Kevin Reid, under the terms of
+; the MIT X license, and partially derived from Java code which is
 ; Copyright 2002 Combex, Inc. under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
@@ -228,3 +228,8 @@
     (map 'vector 
          #'(lambda (c) (vector (car c) (cdr c)))
          (priority-queue-snapshot this))))
+
+;;; --- eventual sending bit ---
+
+(defobject +dummy-resolver+ "org.cubik.cle.prim.dummyResolver" ()
+  (:|resolve| (target) (declare (ignore target)) nil))

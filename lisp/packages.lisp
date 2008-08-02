@@ -106,6 +106,7 @@
   (:export 
     :*compatible-catch-leakage*
     :*break-on-ejections*
+    :*causality-output*
     
     :unexternalizable-optimization-p
     :with-unexternalizable-optimization

@@ -1,5 +1,5 @@
-; This Common Lisp code is Copyright 2005-2007 Kevin Reid, under the terms of the
-; MIT X license, and partially derived from Java code which is
+; This Common Lisp code is Copyright 2005-2008 Kevin Reid, under the terms of
+; the MIT X license, and partially derived from Java code which is
 ; Copyright 2002 Combex, Inc. under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
@@ -410,6 +410,11 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (declare (type promise-ref ref)
            (type (vector list) buffer))
   (setf new-target (ref-shorten new-target))
+  
+  (unless (zerop (length buffer)) ; avoid mentioning promises whose ids won't show up otherwise
+    (log-event '("org.ref_send.log.Resolved" "org.ref_send.log.Event")
+               `((condition . ,(promise-ref-log-id ref)))))
+  
   (with-ref-transition-invariants (ref)
     (if (eq new-target ref)
       (change-class ref 'unconnected-ref :problem (make-condition 'vicious-cycle-error))
@@ -417,10 +422,14 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   
   ; after change-class, the buffer has been dropped by the ref
   ; we could optimize the case of just forwarding many messages to the target, for when the target is another promise, but don't yet
-  (loop for (resolver mverb args) across buffer do
-    (if resolver
-      (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))
-      (apply #'e-send-only-dispatch new-target mverb args)))
+  (loop for (resolver mverb args message-id) across buffer do
+    (take-turn-serial (lambda ()
+      ;; Each send is executed in a separate virtual turn so that a log analyzer will consider each forwarded message separate.
+      (log-event '("org.ref_send.log.Got" "org.ref_send.log.Event")
+                 `((message . ,message-id)))
+      (if resolver
+        (e. resolver |resolve| (apply #'e-send-dispatch new-target mverb args))
+        (apply #'e-send-only-dispatch new-target mverb args)))))
   
   (maphash (lambda (reactor action)
              (funcall action reactor))
@@ -457,8 +466,11 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     "Returns whether this resolver's promise has been resolved already."
     (as-e-boolean (not (resolver-opt-promise this))))
   (:|gettingCloser| (this)
-    "Has no visible effect; used by causality tracing. XXX write documentation."
-    (declare (ignore this))
+    "Has no visible effect; used by causality tracing. Claims that something happened such that this resolver is closer to getting resolved."
+    (let ((p (resolver-opt-promise this)))
+      (when p
+        (log-event '("org.cubik.cle.GettingCloser" "org.ref_send.log.Event")
+                   `((condition . ,(promise-ref-log-id p))))))
     nil)) 
 
 ;;; --- sugar cache ---

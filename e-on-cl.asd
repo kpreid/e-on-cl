@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defpackage :e.system
@@ -16,11 +16,13 @@
 (defsystem e-on-cl
   :depends-on (:bordeaux-threads
                :cl-fad
+               :cl-json
                :cl-ppcre
                :genhash
                :trivial-garbage
                :ironclad
-               #+sbcl :sb-bsd-sockets)
+               #+sbcl :sb-bsd-sockets
+               #| sb-introspect, but that isn't asdf (loaded from util.lisp) |#)
   :components
   ((:module "lisp" :components
     ((:file "packages")
@@ -35,6 +37,8 @@
             :depends-on ("packages"))
      (:file "base"
             :depends-on ("util" "packages"))
+     (:file "event-log"
+            :depends-on ("util" "packages"))
      (:file "runner"
             :depends-on ("base" "util" "packages" "queues"))
      (:file "runner-late"
@@ -45,7 +49,7 @@
             :depends-on ("runner" "queues"))
      (:file "ref"
             ; ref protocol and basic ref classes
-            :depends-on ("util" "base" "packages"))
+            :depends-on ("util" "base" "packages" "event-log"))
      (:file "type-desc-early"
             :depends-on ("util"))
      (:file "smethod"
@@ -56,10 +60,10 @@
             :depends-on ("compile-options" "ref" "smethod"))
      (:file "elib"
             ; def-vtable, stamps, misc.
-            :depends-on ("ref" "smethod" "e-lambda" "compile-options" "util" "base" "packages"))
+            :depends-on ("ref" "smethod" "e-lambda" "compile-options" "util" "base" "packages" "event-log"))
      (:file "vat"
             ; vats, turns, e-send-dispatch on near refs
-            :depends-on ("runner" "ref" "util" "packages"))
+            :depends-on ("runner" "ref" "util" "packages" "event-log"))
      (:file "lazy"
             :depends-on ("ref"))
      (:file "sugar" 

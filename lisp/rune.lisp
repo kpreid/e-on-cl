@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.rune)
@@ -61,7 +61,7 @@
              (Ref (eelt scope "Ref")))
         (e. Ref |whenResolved| (efuncall (eelt scope "rune") 
                                         (coerce args 'vector))
-          (e-lambda "org.erights.e.elang.interp.RuneTerminator" ()
+          (e-lambda "org.erights.e.elang.interp.runeTerminator" ()
             (:|run| (outcome 
                 &aux (opt-problem (e. Ref |optProblem| outcome)))
               (when opt-problem
@@ -70,10 +70,11 @@
 
 (defun generic-toplevel (label starter)
   (declare (ignore label)) ;; XXX reestablish use? formerly vat label
-  (call-when-resolved
-    (funcall starter)
-    (efun (result)
-      (return-from generic-toplevel result)))
+  (with-turn (*vat* :label "generic-toplevel exit hook registration")
+    (call-when-resolved
+      (funcall starter)
+      (efun (result)
+        (return-from generic-toplevel result))))
   (setf *vat* nil) ;; allow potential other-vats created by user code -- XXX this seems like The Wrong Solution but I don't know what isn't
   (top-loop))
 
@@ -346,6 +347,16 @@
         (setf do-usage t))
       (("--parse-cache" "-p")
         (setf parse-cache-name (native-pathname (pop args))))
+      (("--causality")
+        (setf *causality-output*
+          (open (native-pathname (pop args))
+                :direction :output
+                :if-exists :rename))
+        (format *causality-output* "[~%")
+        (push (lambda ()
+                (format *causality-output* "~&]")
+                (close *causality-output*))
+              *after-everything-hooks*))
       (("--bos" "--break-on-signals")
         (setf *break-on-signals* (read-from-string (pop args))))
       (("--boe" "--break-on-ejections")
@@ -371,6 +382,8 @@ Lisp-level options:
   --parse-cache|-p <file> 
       Use <file> to cache data that otherwise requires starting a Java
       process.
+  --causality <file>
+      Write a causality tracelog to <file> for debugging with Causeway.
   --break-on-signals|--bos <type>
       Bind common-lisp:*break-on-signals* to the given value.
   --break-on-ejections|--boe <type>

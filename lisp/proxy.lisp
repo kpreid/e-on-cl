@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elib)
@@ -97,6 +97,8 @@
   (if (%maybe-resolve-proxy ref)
     (apply #'e-call-dispatch ref mverb args)
     (error 'synchronous-call-error :recipient ref :mverb mverb :args args)))
+
+;; XXX should anything in particular be done with causality logging for proxy-ref messages? As it is, this will log the send of handleSend, with no record of the original unreified message.
 
 (defmethod e-send-dispatch ((ref proxy-ref) mverb &rest args)
   (if (%maybe-resolve-proxy ref)

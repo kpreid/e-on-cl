@@ -1,4 +1,4 @@
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elib)
@@ -274,7 +274,9 @@ If there is no current vat at initialization time, captures the current vat at t
      :initform (make-weak-hash-table :weakness :key :test #'eq)
      :type hash-table
      :documentation "Stores weak when-more-resolved messages for reference shortening."
-     :reader %weak-when-more-resolved-table)))
+     :reader %weak-when-more-resolved-table)
+   (log-id :initform (log-unique-id)
+           :reader promise-ref-log-id)))
 
 (defmethod %ref-shorten ((ref promise-ref))
   ref)
@@ -288,13 +290,22 @@ If there is no current vat at initialization time, captures the current vat at t
 (defmethod e-call-dispatch ((ref promise-ref) mverb &rest args)
   (error 'synchronous-call-error :recipient ref :mverb mverb :args args))
 
+(declaim (inline e-send-promise-either))
+(defun e-send-promise-either (opt-resolver ref mverb args)
+  (let ((id (log-unique-id)))
+    (log-event '("org.ref_send.log.SentIf" "org.ref_send.log.Sent" "org.ref_send.log.Event")
+               `(("condition" . ,(promise-ref-log-id ref))
+                 ("message"   . ,id)))
+    (vector-push-extend (list opt-resolver mverb args id)
+                        (promise-ref-buffer ref))))
+
 (defmethod e-send-dispatch ((ref promise-ref) mverb &rest args)
   (multiple-value-bind (promise resolver) (make-promise)
-    (vector-push-extend (list resolver mverb args) (promise-ref-buffer ref))
+    (e-send-promise-either resolver ref mverb args)
     promise))
 
 (defmethod e-send-only-dispatch ((ref promise-ref) mverb &rest args)
-  (vector-push-extend (list nil mverb args) (promise-ref-buffer ref))
+  (e-send-promise-either nil ref mverb args)
   nil)
 
 (defgeneric weak-when-more-resolved (ref weak-reactor action))

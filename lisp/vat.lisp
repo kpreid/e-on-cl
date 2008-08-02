@@ -14,9 +14,10 @@
               (eq *vat* vat))
     (error "there is already a current vat, ~S, so ~S may not execute a turn" *vat* vat))
   (unwind-protect
-    (let ((*vat* vat))
+    (let ((*vat* vat)
+          (*runner* (vat-runner vat)))
       (setf (vat-in-turn vat) label)
-      (funcall body))
+      (take-turn-serial body))
     (setf (vat-in-turn vat) nil)))
 
 (defmacro with-turn ((&rest args) &body body)
@@ -37,6 +38,10 @@
           :initform nil
           :type (or null string)
           :reader label)
+   (vat-log-id :reader vat-log-id)
+   (turn-serial-counter :initform 0
+                        :type (integer 0)
+                        :accessor turn-serial-counter)
    (sugar-cache :initform (make-hash-table :test #'equal)
                 :type hash-table
                 :reader sugar-cache
@@ -49,7 +54,8 @@
 (defmethod initialize-instance :after ((vat vat) &rest initargs)
   (declare (ignore initargs))
   (let ((*vat* vat))
-    (setf (vat-safe-scope vat)   (e.knot:make-safe-scope)
+    (setf (slot-value vat 'vat-log-id) (make-vat-log-id (label vat))
+          (vat-safe-scope vat)   (e.knot:make-safe-scope)
           (vat-comm-handler vat) (make-comm-handler-promise vat))))
 
 (defmethod print-object ((vat vat) stream)
@@ -75,13 +81,15 @@
                                                       target)) 
                          (funcall (ref-shorten function) target*)))))
 
-(defmethod e-send-dispatch (rec mverb &rest args)
-;; NOTE: edit this in parallel with e-send-only-dispatch above
-  (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
-  (multiple-value-bind (promise resolver) (make-promise)
+(declaim (inline queue-send-either))
+(defun queue-send-either (rec mverb args resolver)
+  (assert (eq (ref-state rec) 'near) () "inconsistency: send default case was called with a non-NEAR receiver, ~S" rec)
+  (let ((id (log-unique-id)))
+    (log-event '("org.ref_send.log.Sent" "org.ref_send.log.Event")
+               `((message . ,id)))
     (enqueue-turn *vat* (lambda ()
-      ; XXX direct this into a *configurable* tracing system once we have one
-      ;(efuncall e.knot:+sys-trace+ (format nil "running ~A ~A <- ~A ~A" (e. (e. rec |__getAllegedType|) |getFQName|) (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector))))
+      (log-event '("org.ref_send.log.Got" "org.ref_send.log.Event")
+                 `((message . ,id)))
       (e. resolver |resolve| 
         (handler-case-with-backtrace
           (apply #'e-call-dispatch rec mverb args)
@@ -90,18 +98,17 @@
             ;;   (a) CL print instead
             ;;   (b) make printing the error done in yet another turn (possible object's-print-representation-has-changed problem)
             (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) problem))
-            (make-unconnected-ref (transform-condition-for-e-catch problem :backtrace backtrace)))))))
+            (make-unconnected-ref (transform-condition-for-e-catch problem :backtrace backtrace)))))))))
+
+(defmethod e-send-dispatch (rec mverb &rest args)
+  (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-dispatch default case was called with a non-NEAR receiver")
+  (multiple-value-bind (promise resolver) (make-promise)
+    (queue-send-either rec mverb args resolver)
     promise))
 
 (defmethod e-send-only-dispatch (rec mverb &rest args)
-  ;; NOTE: edit this in parallel with e-send-dispatch above
-  (assert (eq (ref-state rec) 'near) () "inconsistency: e-send-only-dispatch default case was called with a non-NEAR receiver")
-  (enqueue-turn *vat* (lambda ()
-    (handler-case
-      (apply #'e-call-dispatch rec mverb args)
-      (error (p)
-        (efuncall e.knot:+sys-trace+ (format nil "problem in send ~A <- ~A ~A: ~A" (e-quote rec) (symbol-name mverb) (e-quote (coerce args 'vector)) p))))))
-  (values))
+  (queue-send-either rec mverb args +dummy-resolver+)
+  nil)
 
 (defmethod enqueue-timed ((vat vat) time func)
   (enqueue-timed (vat-runner vat) time
