@@ -148,6 +148,7 @@ Everything in the safeScope should be DeepFrozen, on general principles and beca
   > print("ok")
   # stdout: near (near) ought to be DeepFrozen
   #         opaque__uriGetter (<opaque__uriGetter0>) ought to be DeepFrozen
+  #         promiseAllFulfilled (<promiseAllFulfilled0>) ought to be DeepFrozen
   #         rcvr (rcvr) ought to be DeepFrozen
   #         rx__quasiParser (<makePerlMatchMaker>) ought to be DeepFrozen
   #         term__quasiParser (<term__quasiParser>) ought to be DeepFrozen
