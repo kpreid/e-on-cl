@@ -108,6 +108,7 @@
             :arguments arguments
             (let ((key-args (copy-seq key-args)))
               (remf key-args :error)
+              (remf key-args :search) ;; XXX reimplement in wrapper
               key-args))
         (cond
           ((and (eql input :stream)

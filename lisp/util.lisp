@@ -12,7 +12,8 @@
 ;; The definition of DEFGLOBALS is in packages.lisp.
 
 (defmacro defglobal (&rest args)
-  `(defconstantonce ,@args))
+  #+sbcl `(defconstantonce ,@args) ; use this only on implementations which don't die on non-externalizable constants
+  #-sbcl `(defvar ,@args))
 
 (defmacro defconstantonce (name value-form &optional documentation)
   `(progn

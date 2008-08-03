@@ -322,7 +322,7 @@
               :type fixnum)
    (fringe :initarg :fringe
            :accessor tk-fringe
-           :type hash-table)))
+           :type (vector cons))))
    
 (defun make-traversal-key (target)
   (let ((wrapped (ref-shorten target))

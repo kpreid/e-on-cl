@@ -11,5 +11,5 @@
     (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
     (apply #'make-instance
       (or #+(or sbcl cmu) 'serve-event-runner
-          'queue-blocking-runner)
+          'runner)
       initargs)))
