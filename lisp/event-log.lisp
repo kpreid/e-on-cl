@@ -15,10 +15,17 @@
 
 ;;; --- Stack cleanup ---
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun sym-or-gen (name package-des)
+    "Return the symbol in the package if both exist, otherwise a gensym. For robustness against internal symbols going away in future versions (or running on some other lisp)."
+    (let ((package (find-package package-des)))
+      (or (when package (find-symbol name package))
+          (gensym)))))
+
 (defparameter *omit-functions*
   (let ((h (make-hash-table :test #'equal)))
-    (loop for f in '(sb-debug::map-backtrace
-                     sb-debug:backtrace-as-list
+    (loop for f in '(#.(sym-or-gen "MAP-BACKTRACE" "SB-DEBUG")
+                     #.(sym-or-gen "BACKTRACE-AS-LIST" "SB-DEBUG")
                      backtrace-value
                      backtrace-prettily
                      event-fields
@@ -38,7 +45,14 @@
 (defun backtrace-prettily ()
   (loop for frame in (e.util:backtrace-value)
         for fname = (first frame)
-        for source-path = (e.util:native-namestring (translate-logical-pathname (or (ignore-errors (sb-introspect:definition-source-pathname (sb-introspect:find-definition-source (fdefinition fname)))) #p"")))
+        for source-path =
+          (e.util:native-namestring
+            (translate-logical-pathname
+              (or #+sbcl (ignore-errors
+                           (sb-introspect:definition-source-pathname
+                             (sb-introspect:find-definition-source 
+                               (fdefinition fname)))) 
+                  #p"")))
         for name = 
           (cond
             ((gethash fname *omit-functions*)
@@ -48,7 +62,7 @@
                      (first frame)
                      (unmangle-verb (second frame))
                      (cddr frame)))
-            ((typep frame '(cons (cons (eql sb-pcl::fast-method)
+            ((typep frame '(cons (cons (eql #.(sym-or-gen "FAST-METHOD" "SB-PCL"))
                                        (cons (member e-call-dispatch
                                                      e-send-dispatch 
                                                      e-send-only-dispatch)))))
