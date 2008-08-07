@@ -2,7 +2,7 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defpackage :e.lisp-test.turn
-  (:use :cl :e.lisp-test :elib :e.util))
+  (:use :cl :e.lisp-test :e.elib :e.util))
 (cl:in-package :e.lisp-test.turn)
 
 
@@ -71,7 +71,7 @@
     (values)))
 
 (deftest ordinary-turn-excludes-io
-  ;; Tests that turns created with ELIB:ENQUEUE-TURN do IO handler exclusion.
+  ;; Tests that turns created with E.ELIB:ENQUEUE-TURN do IO handler exclusion.
   ;; XXX this test makes little sense now that there isn't an exclusion layer
   (let* ((runner (make-runner-for-this-thread))
          (*runner* runner)

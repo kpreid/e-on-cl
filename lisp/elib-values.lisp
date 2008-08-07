@@ -2,7 +2,7 @@
 ; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :elib)
+(in-package :e.elib)
 
 (defun format-control-quote (string)
   (cl-ppcre:regex-replace-all "~" string "~~"))
@@ -160,7 +160,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|asFrom| (this uri)
     (e. +the-make-twine+ |fromString| 
       this 
-      (e.elib.tables::source-span-for-string this uri)))
+      (e.tables::source-span-for-string this uri)))
   (:|getOptSpan| (this) 
     (declare (ignore this))
     nil)
@@ -447,7 +447,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   
   (:|sort| (vector)
     (stable-sort (copy-seq vector)
-                 (e.elib.tables::comparer-adapter)))
+                 (e.tables::comparer-adapter)))
   (:|sort| (vector comparer)
     (stable-sort (copy-seq vector) 
                  (lambda (a b) (e-is-true (e. (efuncall comparer a b) |belowZero|))))))
@@ -482,7 +482,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (type-specifier-to-guard 'vector))
   (:|fromValuesOf| (iteratable)
     ; XXX write tests for this
-    (e.elib.tables:vector-from-iteratable '(vector t) 't iteratable))
+    (e.tables:vector-from-iteratable '(vector t) 't iteratable))
   (otherwise (mverb &rest args)
     ;; XXX __respondsTo, etc.
     (if (mverb-verb= mverb "run")
@@ -764,7 +764,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (e. tw |write| "problem: ")
     (print-object-with-type tw (type-error-datum this))
     (e. tw |write| " doesn't coerce to ")
-    (e. tw |print| (e-util:aan (e-quote (type-specifier-to-guard (type-error-expected-type this))))))
+    (e. tw |print| (aan (e-quote (type-specifier-to-guard (type-error-expected-type this))))))
   (:|__optUncall| (this)
     `#(,+the-make-coercion-failure+ "run" #(,(e. this |getSpecimen|)
                                             ,(e. this |getGuard|))))
@@ -822,7 +822,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
        (setf (gethash mverb seen) md)))
 
 (defun message-desc-mverb (md)
-  (e-util:mangle-verb (message-desc-verb md) (length (message-desc-params md))))
+  (mangle-verb (message-desc-verb md) (length (message-desc-params md))))
 
 
 (defobject +the-make-type-desc+

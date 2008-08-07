@@ -90,7 +90,7 @@
                     (return-from msg-hook))))
           (handler-case-with-backtrace
             (multiple-value-bind (result new-scope)
-                (elang:eval-e source *scope*)
+                (e.elang:eval-e source *scope*)
               (safe-privmsg *connection* destination (format nil "# value: ~A" (e-quote result)))
               (setf *scope* new-scope))
             (error (condition backtrace)

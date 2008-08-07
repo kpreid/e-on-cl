@@ -2,7 +2,7 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defpackage :e.jar
-  (:use :cl :elib :zip)
+  (:use :cl :e.elib :zip)
   (:documentation "Access to jar/zip files, so that we can borrow Java E's emakers.")
   (:export))
 

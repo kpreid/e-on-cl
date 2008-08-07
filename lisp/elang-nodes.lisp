@@ -1,7 +1,7 @@
 ; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :elang)
+(in-package :e.elang)
 
 ; --- base ---
 
@@ -37,7 +37,7 @@
         ',(map 'vector #'as-e-boolean subnode-flags))
       (,(locally
           (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-          (e-util:mangle-verb "run" run-param-count))
+          (mangle-verb "run" run-param-count))
         ((,span-sym '(or null source-span))
           ,@(mapcar (lambda (s ty) `(,s ',ty)) param-syms param-types)
           (,jlayout-sym 'null))
@@ -67,7 +67,7 @@
             property-names rest-slot
             (lambda (last-name)
               `(member-of ,last-name)))))
-    (defmethod elib:cl-type-fq-name ((type (eql node-type)))
+    (defmethod cl-type-fq-name ((type (eql node-type)))
       fqn)
     
     (defmethod node-class-arity ((node-class (eql (find-class node-type))))
@@ -145,7 +145,7 @@
 
 ;;; --- Node definitions ---
 
-#+sbcl (sb-ext:unlock-package :e.elang.vm-node)
+#+sbcl (sb-ext:unlock-package :e.kernel)
 
 (defclass |ENode| () 
   ((elements  :initform (error "Can't have an ENode without elements.")
@@ -280,7 +280,7 @@
 (define-node-class |QuasiPatternPatt| (|QuasiPatternNode| |QuasiPattern|)
   ((:|index| nil (integer 0))))
 
-#+sbcl (sb-ext:lock-package :e.elang.vm-node)
+#+sbcl (sb-ext:lock-package :e.kernel)
 
 ; --- general definitions for nodes ---
 
@@ -314,7 +314,7 @@
   ((class :initarg :class :reader attempted-node-class)
    (elements :initarg :elements :reader attempted-node-elements))
   (:report (lambda (condition stream &aux (*package* #.(find-package 
-                                                         :e.elang.vm-node)))
+                                                         :e.kernel)))
              (multiple-value-call 
                #'format 
                stream 
@@ -820,7 +820,7 @@ NOTE: There is a non-transparent optimization, with the effect that if args == [
     (flatten :|foo|) -- the sequencing of the list property foo of this node
     (! <CL-form>) -- CL code to return a static scope
     
-    Within a ! form, elang::node is bound to this node, elang::environment is bound to the preceding/enclosing environment, and (:get <keyword>) is bound to a property-fetching function."
+    Within a ! form, e.elang::node is bound to this node, e.elang::environment is bound to the preceding/enclosing environment, and (:get <keyword>) is bound to a property-fetching function."
   (labels ((transform (expr)
             (cond
               ((null expr)

@@ -43,10 +43,10 @@
     h))
 
 (defun backtrace-prettily ()
-  (loop for frame in (e.util:backtrace-value)
+  (loop for frame in (backtrace-value)
         for fname = (first frame)
         for source-path =
-          (e.util:native-namestring
+          (native-namestring
             (translate-logical-pathname
               (or #+sbcl (ignore-errors
                            (sb-introspect:definition-source-pathname

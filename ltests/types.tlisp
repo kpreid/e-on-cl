@@ -89,35 +89,35 @@
 (deftest string-error.ok
   (typep (make-condition 'simple-error :format-control "hello world"
                                        :format-arguments '())
-         'elib::string-error)
+         'e.elib::string-error)
   t)
 
 (deftest string-error.simple-not-string
   (typep (make-condition 'simple-error :format-control (formatter "foo")
                                        :format-arguments '())
-         'elib::string-error)
+         'e.elib::string-error)
   nil)
 
 (deftest string-error.simple-extra-args
   (typep (make-condition 'simple-error :format-control ""
                                        :format-arguments '(junk))
-         'elib::string-error)
+         'e.elib::string-error)
   nil)
 
 (deftest string-error.simple-formatty
   (typep (make-condition 'simple-error :format-control "~A"
                                        :format-arguments '(junk))
-         'elib::string-error)
+         'e.elib::string-error)
   nil)
 
 (deftest string-error.not-simple
   (typep (make-condition 'program-error)
-         'elib::string-error)
+         'e.elib::string-error)
   nil)
 
 (deftest string-error.not-error
   (typep (make-condition 'simple-condition)
-         'elib::string-error)
+         'e.elib::string-error)
   nil)
 
 (deftest string-error.uncall-other-simple-error

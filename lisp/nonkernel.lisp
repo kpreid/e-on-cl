@@ -86,7 +86,7 @@
     :|QuasiText|))
 
 (cl:defpackage :e.nonkernel.impl
-  (:use :cl :e.util :e.elib :e.elang :e.elang.node-impl :e.elang.vm-node :e.nonkernel))
+  (:use :cl :e.util :e.elib :e.elang :e.elang.node-impl :e.kernel :e.nonkernel))
 
 (cl:in-package :e.nonkernel.impl)
 
@@ -112,7 +112,7 @@
     (|NounExpr| (node-elements node))
     (|ENode| 
       (loop for subnode-flag across (e. (get (class-name (class-of node)) 'static-maker) |getParameterSubnodeFlags|)
-            for sub in (elang::node-visitor-arguments node)
+            for sub in (e.elang::node-visitor-arguments node)
             append (if (e-is-true subnode-flag)
                      (find-names sub)
                      '())))))
@@ -145,7 +145,7 @@
           (e-call maker "run"
             ((lambda (args) `(,(e. node |getOptSpan|) ,@args nil))
               (loop for subnode-flag across (e. maker |getParameterSubnodeFlags|)
-                    for sub in (elang::node-visitor-arguments node)
+                    for sub in (e.elang::node-visitor-arguments node)
                     collect (if (e-is-true subnode-flag)
                               (substitution sub)
                               sub)))))))))
@@ -182,13 +182,13 @@
     ;; XXX poor structure. should we have a separate "e-macroexpand-children"?
     (if (not (typep node '|ENode|))
       (e-macroexpand-all node)
-      (let* ((maker (get (class-name (class-of node)) 'elang::static-maker))
+      (let* ((maker (get (class-name (class-of node)) 'e.elang::static-maker))
              (new-node-args 
               (progn 
                 (assert maker () "maker not found for ~S" node)
                 (loop 
                   for subnode-flag across (e. maker |getParameterSubnodeFlags|)
-                  for sub in (elang::node-visitor-arguments node)
+                  for sub in (e.elang::node-visitor-arguments node)
                   collect (if (e-is-true subnode-flag)
                             (e-macroexpand-all sub)
                             sub)))))
@@ -444,7 +444,7 @@
          (left-scope (e. kernel-pattern |staticScope|))
          (right-scope (e. (if kernel-ejector
                             (e. kernel-ejector |staticScope|)
-                            elang::+empty-static-scope+)
+                            e.elang::+empty-static-scope+)
                           |add|
                           (e. kernel-r-value |staticScope|)))
          (common-names
@@ -660,7 +660,7 @@
          (broken (gennoun "b"))
          (kernel-pattern (e-macroexpand-all |pattern|))
          (pattern-nouns (keys-to-nouns (e. (e. kernel-pattern |staticScope|) |outNames|))))
-    (elang::reject-definition-usage node +the-thrower+ t :|pattern| :|specimen|)
+    (e.elang::reject-definition-usage node +the-thrower+ t :|pattern| :|specimen|)
     (mn '|SeqExpr|
       (kdef |specimen| nil (mn '|FinalPattern| specimen nil))
       (kdef (mn '|EscapeExpr|

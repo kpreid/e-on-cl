@@ -35,12 +35,12 @@
       verb-or-mverb)
     (keyword
       (let ((verb-string (symbol-name verb-or-mverb)))
-        (e.util:mangle-verb
+        (mangle-verb
           verb-string
           (multiple-value-bind (min max)
               (progn
                 (assert (cddr smethod) () "Inferring arity for function smethod not supported: ~S" smethod)
-                (e.util:lambda-list-arguments-range (second smethod)))
+                (lambda-list-arguments-range (second smethod)))
             (assert (>= min prefix-arity) () "Method ~S has ~S parameters, which is not enough to accept ~S prefix argument~:P." verb-string min prefix-arity)
             (assert (= min max) () "Variable arguments not yet supported for smethod-case-entry arity inference")
             (- min prefix-arity)))))))
@@ -201,7 +201,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
     &aux (mverb (smethod-mverb smethod prefix-arity))
          (impl-desc (rest smethod)))
   (assert (mangled-verb-p mverb))
-  (multiple-value-bind (verb arity) (e-util:unmangle-verb mverb)
+  (multiple-value-bind (verb arity) (unmangle-verb mverb)
     (make-instance 'message-desc
       :verb verb
         :doc-comment (find-if #'stringp impl-desc) ; XXX too lenient

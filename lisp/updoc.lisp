@@ -174,7 +174,7 @@
               (if skipping
                 (progn 
                   (princ "x") 
-                  (load-time-value (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(0))))
+                  (load-time-value (make-instance 'e.kernel:|LiteralExpr| :elements '(0))))
                 (progn
                   (if print-steps
                     (format t "~&? ~A~%" expr)
@@ -243,8 +243,8 @@
                   (make-instance 'result :failures 1 :steps 1))))))))))
 
 (defun make-stepper (&key props handler)
-  (let* ((scope-slot (make-instance 'elib:e-var-slot :value nil))
-         (wait-hook-slot (make-instance 'elib:e-var-slot :value "the arbitrary resolved value for the wait hook chain")))
+  (let* ((scope-slot (make-instance 'e-var-slot :value nil))
+         (wait-hook-slot (make-instance 'e-var-slot :value "the arbitrary resolved value for the wait hook chain")))
     (symbol-macrolet ((scope (e-slot-value scope-slot))
                       (wait-hook (e-slot-value wait-hook-slot)))
       (values
@@ -256,12 +256,12 @@
                 (handler-bind ((error #'(lambda (condition) 
                                           (e. handler |takeStreams|)
                                           (e. handler |answer| (make-problem-answer condition))
-                                          (e. handler |backtrace| (e.util:backtrace-value))
+                                          (e. handler |backtrace| (backtrace-value))
                                           (return-from attempt)))
                                (warning #'muffle-warning)
                                #+sbcl (sb-ext:compiler-note #'muffle-warning))
                   (setf (values new-result scope)
-                        (elang:eval-e (e. handler |begin| step) scope))))
+                        (e.elang:eval-e (e. handler |begin| step) scope))))
               (e. handler |takeStreams|)
               (unless (same-yet-p new-result nil)
                 (e. handler |answer| (list "value" (e. +the-e+ |toQuote| new-result))))
@@ -379,7 +379,7 @@
     "E.ELANG"
     "E.ELANG.SYNTAX"
     "E.EXTERN"
-    "E.ELANG.VM-NODE"
+    "E.KERNEL"
     "E.RUNE"
     "E.UPDOC"))
 

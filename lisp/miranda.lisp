@@ -37,7 +37,7 @@
     (:|__printOn| ((tw +the-text-writer-guard+))
       ; FUNCTION-based E-objects must always implement their own __printOn/1.
       (assert (not (typep self 'function)))
-      (e. tw |print| "<" (e-util:aan (simplify-fq-name (cl-type-fq-name (observable-type-of self)))) ">"))
+      (e. tw |print| "<" (aan (simplify-fq-name (cl-type-fq-name (observable-type-of self)))) ">"))
 
     (:|__getAllegedType| ()
       ; FUNCTION-based E-objects must always implement their own __getAllegedType/1.
@@ -46,7 +46,7 @@
 
     (:|__respondsTo| ((verb 'string) (arity '(integer 0)))
       ;; The object itself must handle returning true for those verbs which it implements.
-      (if (member (e-util:mangle-verb verb arity) miranda-mverbs)
+      (if (member (mangle-verb verb arity) miranda-mverbs)
         +e-true+
         (funcall matcher-func (constantly +e-false+))))
 

@@ -425,7 +425,7 @@ Lisp-level options:
 
 (defpackage :e.user
   (:nicknames :e-user)
-  (:use :cl :e.util :e.elib :e.elib.tables :e.knot :e.kernel :e.elang.node-impl :e.elang :e.elang.syntax :e.elang.compiler :e.extern :e.rune))
+  (:use :cl :e.util :e.elib :e.elib.tables :e.knot :e.kernel :e.elang.node-impl :e.elang :e.syntax :e.compiler :e.extern :e.rune))
 
 (defun read-e-literal (stream character arg)
   (declare (ignore character))

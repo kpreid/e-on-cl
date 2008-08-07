@@ -1,7 +1,7 @@
 ; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang.syntax)
+(in-package :e.syntax)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (use-package :e.nonkernel)) ;; XXX remove once nonkernel package is defined before syntax package
@@ -73,7 +73,7 @@
 
 
 ; xxx stomping on erights.org namespace
-(defobject +e-printer+ "org.erights.e.elang.syntax.ePrinter"
+(defobject +e-printer+ "org.erights.e.syntax.ePrinter"
     (:doc "Centralized object for generating E source and E-like text."
      :stamped +deep-frozen-stamp+)
   
@@ -554,7 +554,7 @@ XXX make precedence values available as constants"
   ; XXX pipe this through common tracing architecture
   (efuncall e.knot:+sys-trace+ "starting Java-E parsing subprocess")
   (asdf:operate 'asdf:compile-op :e-on-cl.antlr-parser)
-  (setf *parser-process* (e.util:run-program
+  (setf *parser-process* (run-program
     "rune"
     (list "-J-XX:ThreadStackSize=10240"
           "-cpa" (native-namestring (merge-pathnames #P"jlib/" (asdf:component-pathname +the-asdf-system+)))
@@ -567,15 +567,15 @@ XXX make precedence values available as constants"
     :output :stream
     :error t
     :wait nil))
-  (format (e.util:external-process-input-stream *parser-process*)
+  (format (external-process-input-stream *parser-process*)
           "def parseEToSExpression := <import:parseEToSExpression>(<unsafe>)~%")
   (values))
 
 #-e.syntax::local-parser
 (defun kill-parser ()
   (when (boundp '*parser-process*)
-    (close (e.util:external-process-input-stream *parser-process*))
-    (close (e.util:external-process-output-stream *parser-process*))
+    (close (external-process-input-stream *parser-process*))
+    (close (external-process-output-stream *parser-process*))
     (makunbound '*parser-process*)))
 
 #-e.syntax::local-parser
@@ -640,19 +640,19 @@ XXX make precedence values available as constants"
 (defun call-to-java (verb args &key trying-again)
   (ensure-parser)
 
-  (format (e-util:external-process-input-stream *parser-process*) 
+  (format (external-process-input-stream *parser-process*) 
           "println(\"~S \" + parseEToSExpression(~S, ~A)); stdout.flush()~%"
           (incf *parse-counter*) 
           verb
           (e-quote (coerce args 'vector)))
-  (finish-output (e-util:external-process-input-stream *parser-process*))
+  (finish-output (external-process-input-stream *parser-process*))
   
   (handler-case 
       (let ((return-serial
-              (read (e-util:external-process-output-stream *parser-process*)))
+              (read (external-process-output-stream *parser-process*)))
             (tree-expr 
-              (let ((*package* (find-package :e.elang.vm-node)))
-                (read (e-util:external-process-output-stream *parser-process*)))))
+              (let ((*package* (find-package :e.kernel)))
+                (read (external-process-output-stream *parser-process*)))))
         (unless (eql *parse-counter* return-serial) 
           (error 'link-out-of-sync-error))
         tree-expr)
@@ -987,7 +987,7 @@ XXX make precedence values available as constants"
       (loop
         for (source tree) in
           (with-standard-io-syntax
-            (let ((*package* (find-package :e.elang.vm-node))) 
+            (let ((*package* (find-package :e.kernel))) 
               (read stream)))
         do (setf (hashref source *parse-cache-hash*) tree))
       (values))))
@@ -1001,7 +1001,7 @@ XXX make precedence values available as constants"
                    (push (list source tree) data))
                  *parse-cache-hash*)
         (with-standard-io-syntax
-          (let ((*package* (find-package :e.elang.vm-node)))
+          (let ((*package* (find-package :e.kernel)))
             (write data :stream stream))))
       (values))))
 

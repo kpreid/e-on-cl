@@ -22,7 +22,7 @@
      (make-traversal-key (%proxy-ref-resolution-box ref))
      ref))
 
-;; NOTE: this is magic in that proxies are considered Selfless whereas no other kinds of eventual references are; implemented in elib::selflessp.
+;; NOTE: this is magic in that proxies are considered Selfless whereas no other kinds of eventual references are; implemented in e.elib::selflessp.
 (def-atomic-sameness resolved-handler-ref
   (lambda (a b) (and (eql (class-of a)
                           (class-of b))
@@ -103,12 +103,12 @@
 (defmethod e-send-dispatch ((ref proxy-ref) mverb &rest args)
   (if (%maybe-resolve-proxy ref)
     (apply #'e-send-dispatch ref mverb args)
-    (e<- (%proxy-ref-handler ref) |handleSend| (e-util:unmangle-verb mverb) (coerce args 'vector))))
+    (e<- (%proxy-ref-handler ref) |handleSend| (unmangle-verb mverb) (coerce args 'vector))))
 
 (defmethod e-send-only-dispatch ((ref proxy-ref) mverb &rest args)
   (if (%maybe-resolve-proxy ref)
     (apply #'e-send-only-dispatch ref mverb args)
-    (e-send-only-dispatch (%proxy-ref-handler ref) :|handleSendOnly/2| (e-util:unmangle-verb mverb) (coerce args 'vector)))
+    (e-send-only-dispatch (%proxy-ref-handler ref) :|handleSendOnly/2| (unmangle-verb mverb) (coerce args 'vector)))
   nil)
 
 (defmethod weak-when-more-resolved ((ref proxy-ref) weak-reactor action)

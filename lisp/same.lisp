@@ -6,7 +6,7 @@
 
 (cl:defpackage :e.elib.same-impl
   (:use :cl :e.elib)
-  (:import-from :elib :selflessp))
+  (:import-from :e.elib :selflessp))
 
 (in-package :e.elib.same-impl)
 
@@ -36,7 +36,7 @@
   (or (approvedp +selfless+ a)
       ;; NOTE: special case for proxies
       ;; XXX should this instead be implemented by some mechanism for approvedp to dispatch on nonnear refs?
-      (typep a 'elib::resolved-handler-ref)))
+      (typep a 'e.elib::resolved-handler-ref)))
 
 ;; this ought to be with the GF definition, but can't be because def-shorten-methods isn't available there
 (def-shorten-methods semitransparent-result-box-contents 1)
@@ -114,7 +114,7 @@
       :transparent-shortcut (lambda (result)
                               (and (not result) (null opt-fringe)))
       :nontransparent-op (lambda (short path)
-                           (if (elib::same-hash-dispatch short)
+                           (if (e.elib::same-hash-dispatch short)
                              t
                              (progn
                                ;; XXX duplication here of the unresolved-selfish logic
@@ -145,16 +145,16 @@
                         (logxor accum (%sameness-hash a (1- hash-depth) path-ext opt-fringe)))
       :nontransparent-op (lambda (target path)
                            (declare (ignore path))
-                           (or (elib::same-hash-dispatch target)
+                           (or (e.elib::same-hash-dispatch target)
                                (unsettled)))
       :when-resolved-selfish #'selfish-hash
       :when-unresolved-selfish #'unsettled)))
 
-(defmethod elib::same-hash-dispatch ((a null))
+(defmethod e.elib::same-hash-dispatch ((a null))
   (declare (ignore a))
   0)
   
-(defmethod elib::same-hash-dispatch (a)
+(defmethod e.elib::same-hash-dispatch (a)
   (declare (ignore a))
   nil)
 
@@ -276,7 +276,7 @@
                           ((and spread-l spread-r)
                             (opt-same-spread left right sofar 
                                              spread-l spread-r))
-                          ((elib::opt-same-dispatch left right))
+                          ((e.elib::opt-same-dispatch left right))
                           (t
                             ; missing sameness definition, consider unsettled
                             nil)))
@@ -377,7 +377,7 @@
   (e-is-true (e. *the-equalizer* |sameEver| a b)))
 
 (defun same-hash (target)
-  "Return a hash value which corresponds to the equality test ELIB:SAMEP."
+  "Return a hash value which corresponds to the equality test E.ELIB:SAMEP."
   (%sameness-hash target +hash-depth+ nil nil))
 
 (defun settledp (a)

@@ -27,7 +27,7 @@
 (defun opt-method-function-for-class (class mverb)
   "Given a class and an mverb, return a function which implements this method for instances of that class, or nil if either no such function is available or the type is not sufficiently specific to determine the exact method."
   (let ((function
-         (loop for superclass in (e-util:class-precedence-list class)
+         (loop for superclass in (class-precedence-list class)
             while (not (gethash superclass *non-vtable-leaf-classes*))
             thereis (opt-local-method-function-for-class superclass mverb))))
     (lambda (&rest args)
@@ -42,7 +42,7 @@
 
 (defun vtable-message-types (type)
   ; Note that we reverse the class precedence list, because the caller of this stuffs it into non-strict ConstMap construction, and so takes the *last* seen smethod as the overriding one. xxx perhaps this subtle dependency should be made more robust/explicit?
-  (loop for superclass in (reverse (e-util:class-precedence-list (find-class type)))
+  (loop for superclass in (reverse (class-precedence-list (find-class type)))
     append (vtable-local-message-types (class-name superclass))))
 
 (defmacro def-vtable (type-spec &body smethods
@@ -69,8 +69,8 @@
     (loop 
       for superclass in 
         ,(if is-eql
-          `(e-util:class-precedence-list (class-of ,eql-instance-var))
-          `(rest (e-util:class-precedence-list ,vtable-class-var)))
+          `(class-precedence-list (class-of ,eql-instance-var))
+          `(rest (class-precedence-list ,vtable-class-var)))
       do (setf (gethash superclass *non-vtable-leaf-classes*) t))
     
     (when ,vtable-class-var
@@ -90,7 +90,7 @@
           (e-coercef verb 'string)
           (e-coercef arity '(integer 0))
           (as-e-boolean (or
-            (member (e-util:mangle-verb verb arity) 
+            (member (mangle-verb verb arity) 
                     ',(mapcar (lambda (smethod) (smethod-mverb smethod 1)) 
                               smethods))
             (e-is-true (call-next-method))))))
@@ -374,7 +374,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 (defmethod e-call-dispatch ((rec t) mverb &rest args)
   "Fallthrough case for e-call-dispatch - forwards to e-call-match so the class hierarchy gets another chance."
-  (elib:miranda rec mverb args (lambda (fail)
+  (miranda rec mverb args (lambda (fail)
     (apply #'e-call-match fail rec mverb args))))
 
 (defmethod e-call-match (fail (rec t) mverb &rest args)
@@ -461,7 +461,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (:|smash| (this problem)
     "Equivalent to this.resolve(Ref.broken(problem))."
     ; XXX the doc comment is accurate, and specifies the appropriate behavior, but it does so by performing the same operation as Ref.broken()'s implementation in a separate implementation. Both occurrences should probably be routed through the exception-semantics section in base.lisp.
-    (e. this |resolve| (elib:make-unconnected-ref (e-coerce problem 'condition))))
+    (e. this |resolve| (make-unconnected-ref (e-coerce problem 'condition))))
   (:|isDone| (this)
     "Returns whether this resolver's promise has been resolved already."
     (as-e-boolean (not (resolver-opt-promise this))))

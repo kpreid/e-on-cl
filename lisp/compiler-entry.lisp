@@ -1,7 +1,7 @@
 ; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang.compiler)
+(in-package :e.compiler)
 
 (defvar *trace-loading* nil)
 
@@ -61,7 +61,7 @@
 
 (defun e-to-cl (expr outer-scope)
   (e-coercef outer-scope 'e.knot:scope)
-  (e-coercef expr 'e.elang.vm-node::|ENode|)
+  (e-coercef expr 'e.kernel::|ENode|)
   (require-kernel-e expr nil)
   (e.knot:require-node-fits-scope expr outer-scope +the-thrower+)
   (during ("e-to-cl")
@@ -73,7 +73,7 @@
                            (space 1)
                            (speed 1))
                  #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
-        ,(e.elang.compiler.seq:sequence-e-to-cl 
+        ,(e.compiler.seq:sequence-e-to-cl 
            expr
            (outer-scope-to-layout outer-scope)
            `',outer-scope)))))
@@ -84,7 +84,7 @@
   "this is a separate function to show up distinctly in profiles"
   (during ("CL eval")
     (eval `(with-unexternalizable-optimization
-             (e.util:named-lambda ,name () ,form)))))
+             (named-lambda ,name () ,form)))))
 
 ; --- ---
 
@@ -97,8 +97,8 @@
 (defun get-translation (expr)
   ; XXX document this - * means use |outer-&foo| for outer vars
   ; XXX poking at compiler internals
-  (e.elang.compiler.seq::naive-sequence-to-form
-    (e.elang.compiler.seq::sequence-expr expr '* 'return-value)
+  (e.compiler.seq::naive-sequence-to-form
+    (e.compiler.seq::sequence-expr expr '* 'return-value)
     'return-value))
 
 (defobject +the-evaluator+ "$evaluator" (:stamped +deep-frozen-stamp+)
@@ -201,7 +201,7 @@
                     (declare (ignorable ,@(mapcar #'first extractions)))
                     ;; XXX we shouldn't need to reference the compiler
                     ;; implementation here
-                    ,(e.elang.compiler.seq:sequence-e-to-cl
+                    ,(e.compiler.seq:sequence-e-to-cl
                        expr 
                        layout
                        initial-scope-var)))))
@@ -233,7 +233,7 @@
   `(("ConstList"       ,(type-specifier-to-guard 'vector)) ;; XXX twines are lists
     ("getSafeScope"    ,(efun () (vat-safe-scope *vat*)))
     ("lisp"            ,e.knot:+lisp+)
-    ("DeepFrozenStamp" ,elib:+deep-frozen-stamp+))))
+    ("DeepFrozenStamp" ,+deep-frozen-stamp+))))
 
 (defglobal +core-scope+
    (e. +core-scope-additions+ |or| e.knot:+shared-safe-scope+))

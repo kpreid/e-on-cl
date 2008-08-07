@@ -67,16 +67,16 @@
               (e-coercef verb 'string)
               (e-coercef arity '(integer 0))
               (as-e-boolean (or
-                (member (e-util:mangle-verb verb arity) 
+                (member (mangle-verb verb arity) 
                         ',(mapcar (lambda (smethod) (smethod-mverb smethod 0)) 
                                   smethods))
-                (e-is-true (elib:miranda ,self-expr ,mverb-sym ,args-sym #'funcall)))))) ;; XXX should invoke matcher
+                (e-is-true (miranda ,self-expr ,mverb-sym ,args-sym #'funcall)))))) ;; XXX should invoke matcher
             ,@(nl-miranda-case-maybe 'e.elib:selfish-hash-magic-verb smethods
                 hash-sym)
-            ,@(nl-miranda-case-maybe 'elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
+            ,@(nl-miranda-case-maybe 'e.elib:audited-by-magic-verb smethods `(destructuring-bind (auditor) ,args-sym
               (not (not (find auditor ,stamps-sym :test #'samep)))))
             (otherwise 
-              (elib:miranda ,self-expr ,mverb-sym ,args-sym (lambda (,miranda-return-sym)
+              (miranda ,self-expr ,mverb-sym ,args-sym (lambda (,miranda-return-sym)
                 (declare (ignorable ,miranda-return-sym))
                 ,(if opt-otherwise-body
                    (smethod-body opt-otherwise-body `(cons ,mverb-sym ,args-sym) '() :type-name fqn)

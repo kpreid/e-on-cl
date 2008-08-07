@@ -5,7 +5,7 @@
 
 (deftest node-arity.low
   (handler-case
-    (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '())
+    (make-instance 'e.kernel:|LiteralExpr| :elements '())
     (e.elang:node-arity-error (c)
       (write-to-string c :readably nil :escape nil :pretty nil)))
   "Attempted to create a |LiteralExpr| with 0 children, COMMON-LISP:NIL, instead of 1-1.")
@@ -13,7 +13,7 @@
 
 (deftest node-arity.high
   (handler-case
-    (make-instance 'e.elang.vm-node:|LiteralExpr| :elements '(1 2))
+    (make-instance 'e.kernel:|LiteralExpr| :elements '(1 2))
     (e.elang:node-arity-error (c)
       (write-to-string c :readably nil :escape nil :pretty nil)))
   "Attempted to create a |LiteralExpr| with 2 children, (1 2), instead of 1-1.")

@@ -2,7 +2,7 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defpackage :e.lisp-test.compiler-seq
-  (:use :cl :e.lisp-test :e.elib :e.elang :e.elang.vm-node))
+  (:use :cl :e.lisp-test :e.elib :e.elang :e.kernel))
 (cl:in-package :e.lisp-test.compiler-seq)
 
 (defun n (nt)
@@ -109,7 +109,7 @@
   "<sealed problem>")
 
 (deftest pattern-has-no-side-effects.no
-  (remove-if-not #'e.elang.compiler.seq::pattern-has-no-side-effects
+  (remove-if-not #'e.compiler.seq::pattern-has-no-side-effects
     (mapcar #'n '((|FinalPattern|   (|NounExpr| "a") (|NounExpr| "b"))
                   (|VarPattern|     (|NounExpr| "a") (|NounExpr| "b"))
                   (|ListPattern|)
@@ -117,7 +117,7 @@
   ())
 
 (deftest pattern-has-no-side-effects.yes
-  (remove-if #'e.elang.compiler.seq::pattern-has-no-side-effects
+  (remove-if #'e.compiler.seq::pattern-has-no-side-effects
     (mapcar #'n '((|FinalPattern|   (|NounExpr| "a") nil)
                   (|BindingPattern| (|NounExpr| "a"))
                   (|VarPattern|     (|NounExpr| "a") nil)

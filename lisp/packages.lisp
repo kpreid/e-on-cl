@@ -4,7 +4,6 @@
 (in-package :cl-user)
 
 (cl:defpackage :e.util
-  (:nicknames :e-util) ; XXX remove use of this nickname
   (:use :cl :bordeaux-threads)
   
   #.(cl:let ((cl:package (cl:some #'cl:find-package '( 
@@ -90,7 +89,6 @@
   e.util:+the-asdf-system+)
 
 (cl:defpackage :e.elib
-  (:nicknames :elib)
   (:use :cl :e.util :trivial-garbage :bordeaux-threads)
   
   #+(or sbcl cmu)
@@ -294,51 +292,51 @@
     :eelt :efuncall))
 
 (e.util:defglobals
-  elib:+the-make-simple-slot+
-  elib:+the-make-var-slot+
-  elib:+the-make-guarded-slot+
+  e.elib:+the-make-simple-slot+
+  e.elib:+the-make-var-slot+
+  e.elib:+the-make-guarded-slot+
 
-  elib:+the-make-coercion-failure+
+  e.elib:+the-make-coercion-failure+
 
-  elib:+the-any-map-guard+
-  elib:+the-make-const-map+
-  elib:+the-make-twine+
-  elib:+the-text-writer-guard+
+  e.elib:+the-any-map-guard+
+  e.elib:+the-make-const-map+
+  e.elib:+the-make-twine+
+  e.elib:+the-text-writer-guard+
 
-  elib:+the-make-type-desc+
-  elib:+the-make-param-desc+
-  elib:+the-make-message-desc+
+  e.elib:+the-make-type-desc+
+  e.elib:+the-make-param-desc+
+  e.elib:+the-make-message-desc+
 
-  #-sbcl elib:+e-false+
-  #-sbcl elib:+e-true+
-  elib:+the-exception-guard+
-  elib:+the-map-guard+
+  #-sbcl e.elib:+e-false+
+  #-sbcl e.elib:+e-true+
+  e.elib:+the-exception-guard+
+  e.elib:+the-map-guard+
   
-  elib:+the-thrower+
-  elib:+the-make-coercion-failure+
-  elib:+the-make-string-error+
+  e.elib:+the-thrower+
+  e.elib:+the-make-coercion-failure+
+  e.elib:+the-make-string-error+
 
-  elib:+the-make-flex-map+
-  elib:+the-make-text-writer+
-  elib:+the-make-list+
-  elib:+the-make-int+
-  elib:+the-make-priority-queue+
+  e.elib:+the-make-flex-map+
+  e.elib:+the-make-text-writer+
+  e.elib:+the-make-list+
+  e.elib:+the-make-int+
+  e.elib:+the-make-priority-queue+
 
-  elib:+the-audit-checker+
-  elib:+deep-frozen-stamp+
+  e.elib:+the-audit-checker+
+  e.elib:+deep-frozen-stamp+
   
-  elib:+thread-sharable-stamp+
-  elib:+pass-by-construction+
-  elib:+standard-graph-exit+
-  elib:+standard-graph-exit-stamp+
+  e.elib:+thread-sharable-stamp+
+  e.elib:+pass-by-construction+
+  e.elib:+standard-graph-exit+
+  e.elib:+standard-graph-exit-stamp+
 
-  elib:+the-make-source-span+
-  elib:+the-make-twine+
+  e.elib:+the-make-source-span+
+  e.elib:+the-make-twine+
 
-  elib:+the-make-weak-ref+
-  elib:+the-make-traversal-key+
-  elib:+the-make-vat+
-  elib:+the-make-proxy+)
+  e.elib:+the-make-weak-ref+
+  e.elib:+the-make-traversal-key+
+  e.elib:+the-make-vat+
+  e.elib:+the-make-proxy+)
 
 (declaim (ftype function
   e.elib:ejector
@@ -352,7 +350,7 @@
 
 (cl:defpackage :e.elib.tables
   (:nicknames :e.tables)
-  (:use :cl :e.util :elib :net.hexapodia.hashtables)
+  (:use :cl :e.util :e.elib :net.hexapodia.hashtables)
   (:documentation "Collection implementations.")
   (:export
     :~span
@@ -364,7 +362,7 @@
   e.elib.tables:+the-make-array+)
 
 (cl:defpackage :e.knot
-  (:use :cl :e.util :elib)
+  (:use :cl :e.util :e.elib)
   (:export
     :scope
     :make-scope
@@ -403,8 +401,6 @@
   (:use))
 
 (cl:defpackage :e.kernel
-  ;; XXX plan-of-the-moment is to deprecate the names other than e.kernel
-  (:nicknames :e.node :e.elang.vm-node)
   (:documentation "All symbols in this package are the names of subclasses of ENode, eccept for null, error and .tuple..")
   ; XXX arrange so that null, error and .tuple. are not produced by parseEToSExpression?
   (:use)
@@ -467,8 +463,7 @@
     :def-scope-rule))
 
 (cl:defpackage :e.elang
-  (:nicknames :elang)
-  (:use :cl :e.util :elib :e.elang.vm-node :e.elang.node-impl :bordeaux-threads)
+  (:use :cl :e.util :e.elib :e.kernel :e.elang.node-impl :bordeaux-threads)
   (:export
     :eval-e
     :get-translation
@@ -495,15 +490,14 @@
 
 
 (e.util:defglobals
-  elang:+the-make-static-scope+)
+  e.elang:+the-make-static-scope+)
 
 (declaim (ftype function
   e.elang:eval-e
   e.elang:get-translation))
 
-(cl:defpackage :e.elang.syntax
-  (:nicknames :e.syntax)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node
+(cl:defpackage :e.syntax
+  (:use :cl :e.util :e.elib :e.elang :e.kernel
         #+abcl :java ; local parser (no cache)
         #-abcl :net.hexapodia.hashtables ; for parse cache
         :bordeaux-threads)
@@ -526,20 +520,20 @@
   (pushnew 'e.syntax::local-parser *features*))
 
 (e.util:defglobals
-  e.elang.syntax:+prim-parser+
-  e.elang.syntax:+e-printer+)
+  e.syntax:+prim-parser+
+  e.syntax:+e-printer+)
 
 (declaim (ftype function 
-  e.elang.syntax:e-source-to-tree
-  e.elang.syntax:load-parse-cache
-  e.elang.syntax:save-parse-cache
-  e.elang.syntax:load-parse-cache-file
-  e.elang.syntax:save-parse-cache-file))
+  e.syntax:e-source-to-tree
+  e.syntax:load-parse-cache
+  e.syntax:save-parse-cache
+  e.syntax:load-parse-cache-file
+  e.syntax:save-parse-cache-file))
 
 
-(cl:defpackage :e.elang.compiler
+(cl:defpackage :e.compiler
   (:nicknames :e.compiler)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :net.hexapodia.hashtables)
+  (:use :cl :e.util :e.elib :e.elang :e.kernel :net.hexapodia.hashtables)
   (:export
     :scope-layout
     :scope-layout-noun-binding
@@ -593,20 +587,19 @@
     :load-compiled-e))
 
 (e.util:defglobals
-  e.elang.compiler::+e-audition-guard+
-  e.elang.compiler:+the-evaluator+)
+  e.compiler::+e-audition-guard+
+  e.compiler:+the-evaluator+)
 
-(cl:defpackage :e.elang.compiler.seq
-  (:nicknames :e.compiler.seq)
-  (:use :cl :e.util :e.elib :e.elang :e.elang.vm-node :e.elang.compiler)
+(cl:defpackage :e.compiler.seq
+  (:use :cl :e.util :e.elib :e.elang :e.kernel :e.compiler)
   (:export
     :sequence-e-to-cl))
 
 (declaim (ftype function
-  e.elang.compiler.seq:sequence-e-to-cl))
+  e.compiler.seq:sequence-e-to-cl))
 
 (cl:defpackage :e.extern
-  (:use :common-lisp :e.util :elib :elang)
+  (:use :common-lisp :e.util :e.elib :e.elang)
   (:documentation "Capability-structured IO, and interfaces to libraries.")
   (:export
     :+standard-external-format+
@@ -633,8 +626,7 @@
   e.extern:read-entire-file))
 
 (defpackage :e.streams
-  (:nicknames :e.stream)
-  (:use :cl :e.util :elib 
+  (:use :cl :e.util :e.elib
         #+sbcl :sb-bsd-sockets)
   #+openmcl (:import-from :openmcl-socket :socket-error)
   (:documentation "EIO streams, mapping to CL streams, socket interfaces.")

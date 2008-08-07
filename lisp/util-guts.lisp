@@ -81,8 +81,8 @@
 #+clisp
   (defun squote (string)
     (format nil "'~A'"
-      (elib:e-call-dispatch "'\\''" :|rjoin/1|
-        (elib:e-call-dispatch string :|split/1| "'"))))
+      (e.elib:e-call-dispatch "'\\''" :|rjoin/1|
+        (e.elib:e-call-dispatch string :|split/1| "'"))))
 
 #+clisp
   (defun run-program (program arguments &rest key-args &key input output wait &allow-other-keys)
@@ -93,7 +93,7 @@
              (eql wait nil))
       (multiple-value-bind (io i o)
           (ext:make-pipe-io-stream
-            (elib:e-call-dispatch " " :|rjoin/1| (map 'vector #'squote (cons program arguments)))
+            (e.elib:e-call-dispatch " " :|rjoin/1| (map 'vector #'squote (cons program arguments)))
             :element-type 'character
             :external-format e.extern:+standard-external-format-common-name+
             :buffered nil)

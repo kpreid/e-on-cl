@@ -62,10 +62,10 @@
     ;; XXX this should be removed in accordance with the new sealer-based async exception plan
     (error (if *compatible-catch-leakage*
              problem
-             (make-condition 'elib::free-problem :value problem)))))
+             (make-condition 'e.elib::free-problem :value problem)))))
 
 (defun ejector-prethrow (ejector-spec value)
-  "Implements elib:*break-on-ejections*, analogously to cl:*break-on-signals*."
+  "Implements e.elib:*break-on-ejections*, analogously to cl:*break-on-signals*."
   (when (typep value *break-on-ejections*)
     (break "About to exit via ~W with value ~W" ejector-spec value))
   nil)

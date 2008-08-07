@@ -57,7 +57,7 @@
       (multiple-value-bind (noun slot)
           (if (eql 0 (position #\& varspec))
             (values (subseq varspec 1) value)
-            (values varspec (make-instance 'elib:e-simple-slot :value value)))
+            (values varspec (make-instance 'e-simple-slot :value value)))
         (setf (gethash noun table) (make-binding slot (or opt-guard +the-any-guard+)))
         (unless local-definitions
           (setf (gethash noun l-d-table) t))))

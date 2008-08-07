@@ -1,7 +1,7 @@
 ; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang.compiler.seq)
+(in-package :e.compiler.seq)
 
 (defgeneric sequence-expr (node layout result)
   (:documentation "Compile an E expression into a series of LET* binding clauses, and return the clauses and the updated scope layout. The symbol in RESULT will be bound to the return value of the node."))

@@ -15,9 +15,9 @@
   "Return an E function value corresponding to the given Lisp function value."
   (labels ((wrapper (mverb &rest args)
       (cond
-        ((eql mverb (e-util:mangle-verb "run" (length args)))
+        ((eql mverb (mangle-verb "run" (length args)))
           (apply f args))
-        ((eql mverb (e-util:mangle-verb "tuple" (length args)))
+        ((eql mverb (mangle-verb "tuple" (length args)))
           (multiple-value-call #'vector (apply f args)))
         (t
           (case mverb
@@ -39,13 +39,13 @@
               (as-e-boolean
                 (or (and (or (string= verb "run") 
                              (string= verb "tuple"))
-                         (e-util:function-responds-to f arity))
-                    (e-is-true (elib:miranda #'wrapper mverb args #'funcall))))))
-            ((elib:audited-by-magic-verb) (destructuring-bind (auditor) args
+                         (function-responds-to f arity))
+                    (e-is-true (miranda #'wrapper mverb args #'funcall))))))
+            ((e.elib:audited-by-magic-verb) (destructuring-bind (auditor) args
               (not (not (find auditor stamps :test #'samep)))))
             ((e.elib:selfish-hash-magic-verb) hash-code)
             (otherwise
-              (elib:miranda #'wrapper mverb args #'funcall)))))))
+              (miranda #'wrapper mverb args #'funcall)))))))
     #'wrapper))
 
 (defun make-symbol-accessor (symbol)
@@ -181,7 +181,7 @@
             fqn-prefix
             scope))
         (e.compiler:load-compiled-e compile-target scope))
-      (elang:eval-e (e.syntax:parse-to-kernel (e. file |getTwine|))
+      (e.elang:eval-e (e.syntax:parse-to-kernel (e. file |getTwine|))
                     scope))))
 
 (defglobal +emaker-fasl-type+ 
@@ -245,7 +245,7 @@
 (defun transparent-authorize (fqn)
   "Perform the typical load and authorization for an E-implemented maker of transparent objects."
   (efuncall (e-import (concatenate 'string fqn "Author")) 
-            elib:+transparent-stamp+))
+            +transparent-stamp+))
 
 (defglobal +shared-safe-loader+
   (prefix-scope ("org.cubik.cle.prim.sharedPrimLoader" "org.cubik.cle.prim.")
@@ -262,7 +262,7 @@
     (:|makeException|    +the-make-exception+)
     (:|makeStringException| +the-make-string-error+)
     (:|StructureException| (type-specifier-to-guard 'e-structure-exception))
-    (:|Throwable|        elib:+the-exception-guard+)
+    (:|Throwable|        +the-exception-guard+)
     
     ;; simple makers
     (:|getCharacter|     +the-get-character+)
@@ -270,12 +270,12 @@
     (:|makeCoercedSlot|  +the-make-coerced-slot+)
     (:|makeConstList|    +the-make-list+)
     (:|makeFinalSlot|    +the-make-simple-slot+)
-    (:|makeFlexMap|      elib:+the-make-flex-map+)
+    (:|makeFlexMap|      +the-make-flex-map+)
     (:|makeGuardedSlot|  +the-make-guarded-slot+)
     (:|makeScope|        +the-make-scope+)
-    (:|makePriorityQueue| elib:+the-make-priority-queue+)
-    (:|makeStaticScope|  elang:+the-make-static-scope+)
-    (:|makeTextWriter|   elib:+the-make-text-writer+)
+    (:|makePriorityQueue| +the-make-priority-queue+)
+    (:|makeStaticScope|  e.elang:+the-make-static-scope+)
+    (:|makeTextWriter|   +the-make-text-writer+)
     (:|makeVarSlot|      +the-make-var-slot+)
     
     (:|makeTypeDesc|     +the-make-type-desc+)
@@ -285,12 +285,12 @@
     ;; data guards
     (:|char|             (type-specifier-to-guard 'character))
     (:|ConstList|        (type-specifier-to-guard 'vector)) ; XXX and not string?
-    (:|ConstMap|         elib:+the-map-guard+) ; used by nonprimitive map guard
+    (:|ConstMap|         +the-map-guard+) ; used by nonprimitive map guard
     (:|float64|          (type-specifier-to-guard 'float64))
     (:|int|              (type-specifier-to-guard 'integer))
 
     ;; guards
-    (:|PassByConstruction| elib:+pass-by-construction+)
+    (:|PassByConstruction| +pass-by-construction+)
     
     ;; tools
     (:|makeSafeScope|    (wrap-function 'make-safe-scope))    
@@ -314,18 +314,18 @@
     
     (:|DeepFrozen|
       (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
-                elib:+deep-frozen-stamp+
+                +deep-frozen-stamp+
                 (e-lambda "semitransparentUncaller" ()
                   (:|optUncall| (specimen)
                     (e.elib.same-impl::semitransparent-opt-uncall specimen)))))
     
     (:|makeBaseGuard|
       (efuncall (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
-                elib:+deep-frozen-stamp+ elib:+transparent-stamp+))
+                +deep-frozen-stamp+ +transparent-stamp+))
     
     (:|makeBrand|
       (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
-                elib:+deep-frozen-stamp+))
+                +deep-frozen-stamp+))
     
     (:|finalSlotGuardSugar|
       (efuncall (e-import "org.erights.e.elib.slot.finalSlotGuardSugarAuthor") 
@@ -337,7 +337,7 @@
     
     (:|memoize|
       (efuncall (e-import "org.cubik.cle.memoizeAuthor")
-                elib:+deep-frozen-stamp+))))
+                +deep-frozen-stamp+))))
 
 (defglobal +transparent-maker-fqns+
   '("org.erights.e.elib.tables.makeConstSet"
@@ -363,7 +363,7 @@
         (let ((local-name (some (lambda (p) (without-prefix fqn p)) 
                                 prefixes)))
           (if local-name
-            (let* ((sym (find-symbol local-name :e.elang.vm-node)))
+            (let* ((sym (find-symbol local-name :e.kernel)))
               (or (and sym
                        (get sym 'static-maker))
                   (efuncall absent-thunk)))
@@ -371,7 +371,7 @@
       (:|optUnget| (specimen)
         ; XXX O(N) not good - have elang-nodes.lisp build a hash table of makers at load time
         (block opt-unget
-          (do-symbols (node-type (find-package :e.elang.vm-node))
+          (do-symbols (node-type (find-package :e.kernel))
             (when (same-yet-p specimen (get node-type 'static-maker))
               (return-from opt-unget 
                 (concatenate 'string (first prefixes) 
@@ -384,7 +384,7 @@
   (:|fetch| ((fqn 'string) absent-thunk)
     (let ((local-name (without-prefix fqn "org.erights.e.elang.evm.type.")))
       (if local-name
-        (let* ((sym (find-symbol local-name :e.elang.vm-node)))
+        (let* ((sym (find-symbol local-name :e.kernel)))
           (if sym
             (type-specifier-to-guard sym)
             (efuncall absent-thunk)))
@@ -452,13 +452,13 @@
                   source nil)
             (e. resolver |resolve| (e. +sys-trace+ |runAsTurn|
               (efun ()
-                (setf value (elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|))))))
+                (setf value (e.elang:eval-e (e.syntax:parse-to-kernel source-here) (e. scope |withPrefix| (format nil "~A<lazy-eval>$" (e. scope |getFQNPrefix|))))))
               (efun () (format nil "knot lazy eval of ~S" source)))))))
       value)
     (:|put| (new)
       (declare (ignore new))
       (error "not an assignable slot: ~A" (e-quote this)))
-    (:|isFinal| () elib:+e-true+))))
+    (:|isFinal| () +e-true+))))
 
 (defparameter +lazy-slot-forced-brand+ (gensym))
 (defclass lazy-slot-forced-box () ((value :initarg :value :accessor unseal-lazy-slot-forced-box)))
@@ -478,14 +478,14 @@
             (unless (ref-is-resolved promise)
               (setf value-box nil)))))
       (car value-box))
-    (:|isFinal| () elib:+e-true+)))
+    (:|isFinal| () +e-true+)))
 
 ;; XXX review the things put in safe-extern-loader vs. in shared-safe-loader; seems arbitrary
 
 (defun make-safe-extern-loader ()
   (lazy-prefix-scope ("__cle_safe_extern" "")
 
-    ("org.erights.e.elib.base.makeSourceSpan" e.elib:+the-make-source-span+)
+    ("org.erights.e.elib.base.makeSourceSpan" +the-make-source-span+)
 
     ("org.apache.oro.text.regex.makePerl5Compiler" e.extern:+rx-perl5-compiler+)
     ("org.apache.oro.text.regex.makePerl5Matcher"  e.extern:+rx-perl5-matcher+)
@@ -502,7 +502,7 @@
     ("org.cubik.cle.prim.simplifyFQName" 
       (e-lambda "org.cubik.cle.prim.simplifyFQName" 
           (:stamped +deep-frozen-stamp+)
-        (:|run| (x) (elib:simplify-fq-name (elib:e-coerce x 'string))))) ; XXX replace this with wrap-function
+        (:|run| (x) (simplify-fq-name (e-coerce x 'string))))) ; XXX replace this with wrap-function
     ("org.cubik.cle.io.makeSocket"             e.streams:+the-make-socket+)
     ))
 
@@ -529,9 +529,9 @@
                    :stamps (list +deep-frozen-stamp+))
     (wrap-function #'ref-opt-sealed-dispatch
                    :stamps (list +deep-frozen-stamp+))
-    'elib:broken
-    'elib:near
-    'elib:eventual
+    'e.elib:broken
+    'e.elib:near
+    'e.elib:eventual
     +deep-frozen-stamp+))))
 
 (defun sameness-is-eq-p (specimen)
@@ -619,14 +619,14 @@
         ; --- primitive: values not available as literals ---
         ; XXX true can be defined as (0 =~ _), and false as (!true) or (0 =~ []). Do we want to do so?
         ("null"       ,nil)
-        ("false"      ,elib:+e-false+)
-        ("true"       ,elib:+e-true+)
-        ("NaN"        ,elib:|NaN|)
-        ("Infinity"   ,elib:|Infinity|)
+        ("false"      ,+e-false+)
+        ("true"       ,+e-true+)
+        ("NaN"        ,|NaN|)
+        ("Infinity"   ,|Infinity|)
 
         ; --- primitive: guards ---
         ("any"        ,(type-specifier-to-guard 't))
-        ("void"       ,elib:+the-void-guard+)
+        ("void"       ,+the-void-guard+)
 
         ; --- primitive: flow control ---
         ("E"          ,(prim "org.cubik.cle.prim.E")) ; XXX should be interp.E
@@ -638,24 +638,24 @@
         ("traceln"    ,+trace+)
 
         ; --- data constructors (shared) ---
-        ("__makeFinalSlot"     ,elib:+the-make-simple-slot+)
-        ("__makeCoercedSlot"   ,elib:+the-make-coerced-slot+)
-        ("__makeVarSlot"       ,elib:+the-make-var-slot+)
-        ("__makeGuardedSlot"   ,elib:+the-make-guarded-slot+)
-        ("__makeInt"           ,elib:+the-make-int+)
-        ("__makeList"          ,elib:+the-make-list+)
-        ("__makeMap"           ,elib:+the-make-const-map+)
-        ("__makeTwine"         ,elib:+the-make-twine+)
+        ("__makeFinalSlot"     ,+the-make-simple-slot+)
+        ("__makeCoercedSlot"   ,+the-make-coerced-slot+)
+        ("__makeVarSlot"       ,+the-make-var-slot+)
+        ("__makeGuardedSlot"   ,+the-make-guarded-slot+)
+        ("__makeInt"           ,+the-make-int+)
+        ("__makeList"          ,+the-make-list+)
+        ("__makeMap"           ,+the-make-const-map+)
+        ("__makeTwine"         ,+the-make-twine+)
 
         ; --- data guards: atomic (shared) ---
         ; XXX should boolean be an ordered space?
         ("boolean"    ,(type-specifier-to-guard 'e-boolean))
         ("String"     ,(type-specifier-to-guard 'string))
-        ("TextWriter" ,elib:+the-text-writer-guard+)
-        ("Twine"      ,(type-specifier-to-guard 'elib:twine))
+        ("TextWriter" ,+the-text-writer-guard+)
+        ("Twine"      ,(type-specifier-to-guard 'twine))
 
         ; --- primitive: reference conditions ---
-        ("pbc"        ,elib:+pass-by-construction+)
+        ("pbc"        ,+pass-by-construction+)
         ;; XXX safeScope["StandardGraphExit"] is a lousy name for this
         ("StandardGraphExit" ,+standard-graph-exit+)
         ("Selfless" ,+selfless+)
@@ -738,8 +738,8 @@
           ; --- E language ---
           ("&epatt__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.epatt__quasiParser"))
           ("&e__quasiParser" ,(lazy-import "org.erights.e.elang.syntax.makeEParser"))
-          ("EAudition" ,e.elang.compiler::+e-audition-guard+)
-          ("__eval" ,e.elang.compiler::+the-evaluator+) ; XXX fix package
+          ("EAudition" ,e.compiler::+e-audition-guard+)
+          ("__eval" ,e.compiler::+the-evaluator+) ; XXX fix package
           
           ; --- utility: data ---
           ("&rx__quasiParser" ,(lazy-import "org.erights.e.elang.interp.makePerlMatchMaker"))
@@ -792,8 +792,8 @@
           (e. (make-scope "__localPrivileged$"
                 ;; XXX the comment on the next line is stale, because thread-sharability now exists. We need to review whether these authorities should be where they are.
                 ; NOTE: these stamps are process-wide, but their effect is local unless amplified with some authority allowing sharing objects between vats (e.g. a hypothetical thread-safe stamp)
-                `(("DeepFrozenStamp"  ,elib:+deep-frozen-stamp+)
-                  ("TransparentStamp" ,elib:+transparent-stamp+)))
+                `(("DeepFrozenStamp"  ,+deep-frozen-stamp+)
+                  ("TransparentStamp" ,+transparent-stamp+)))
             |or| (vat-safe-scope *vat*))))
     (efuncall (e-import "org.cubik.cle.makeIOScope")
         "__privileged$"

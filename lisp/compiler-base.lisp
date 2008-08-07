@@ -1,7 +1,7 @@
 ; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :e.elang.compiler)
+(in-package :e.compiler)
 
 ; --- Scope layouts ---
 
@@ -466,7 +466,7 @@
 
 (defun miranda-case-maybe (mverb methods &rest body)
   (unless (find-if (lambda (method &aux (e (node-elements method)))
-                     (eq mverb (e-util:mangle-verb (cadr e) (length (caddr e)))))
+                     (eq mverb (mangle-verb (cadr e) (length (caddr e)))))
                    methods)
     `(((,mverb) ,@body))))
 
@@ -496,7 +496,7 @@
               ,@(loop for method across methods
                       for (nil verb patterns nil nil) = (node-elements method)
                       collect
-                        `((,(e-util:mangle-verb verb (length patterns)))
+                        `((,(mangle-verb verb (length patterns)))
                           ,(funcall method-body layout method 'args)))
               ,@(miranda-case-maybe :|__printOn/1| methods `(default-print args ',simple-name))
               ,@(miranda-case-maybe :|__getAllegedType/0| methods
@@ -509,21 +509,21 @@
                                            `(return ',type-desc))))
                   `',type-desc))
               ,@(when (plusp (length methods))
-                  ;; implement __respondsTo iff this object has methods, otherwise elib:miranda will handle it
+                  ;; implement __respondsTo iff this object has methods, otherwise e.elib:miranda will handle it
                   (miranda-case-maybe :|__respondsTo/2| methods 
                     `(default-responds-to 
                       #',self-fsym args 
                       ',(loop for method across methods
                               for (nil verb patterns nil nil) = (node-elements method)
-                              collect (e-util:mangle-verb verb (length patterns)))
+                              collect (mangle-verb verb (length patterns)))
                       (lambda (v a fail)
                         (declare (ignorable v a))
                         ,(funcall build-matcher-call 'v 'a '(funcall fail))))))
               ,@(when checker-sym
-                  `(((elib:audited-by-magic-verb) 
+                  `(((e.elib:audited-by-magic-verb) 
                      (funcall ,checker-sym (first args)))))
               (otherwise 
-                (elib:miranda #',self-fsym mverb args (lambda (fail)
+                (miranda #',self-fsym mverb args (lambda (fail)
                   ,(funcall build-matcher-call
                      'mverb 'args 
                      `(funcall fail))))))))
@@ -549,15 +549,15 @@
     (e-coercef verb 'string)
     (e-coercef arity '(integer 0))
     (as-e-boolean
-      (or (member (e-util:mangle-verb verb arity) mangled-verbs)
-          (e-is-true (elib:miranda self :|__respondsTo/2| args 
+      (or (member (mangle-verb verb arity) mangled-verbs)
+          (e-is-true (miranda self :|__respondsTo/2| args 
                         (lambda (fail)
                           (funcall matcher-function :|__respondsTo/2| args fail))))))))
 
 (defmethod object-body (generators self-fsym layout (matcher |EMatcher|) qualified-name checker-sym type-desc)
   (declare (ignore self-fsym type-desc))
   `(case mverb
-    ((elib:audited-by-magic-verb) 
+    ((e.elib:audited-by-magic-verb) 
       ,(if checker-sym
          `(funcall ,checker-sym (first args)) 
          nil))
@@ -715,7 +715,7 @@
             (lambda (auditor)
               (when (position auditor 
                               approvers
-                              :test #'elib:samep) 
+                              :test #'samep) 
                 t)))))
 
 (defmacro compiler-object (object-body post-forms self-fsym)

@@ -1,7 +1,7 @@
 ; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
-(in-package :elib)
+(in-package :e.elib)
 
 (defobject +text-writer-stamp+
     "org.erights.e.elib.print.TextWriterStamp"
@@ -41,7 +41,7 @@
                     (e. writer |write| ">"))
                   (:|problem| (tw (fqn 'string) problem)
                     (e. tw |print| "<***"
-                                    (e.util:aan fqn)
+                                    (aan fqn)
                                     " threw "
                                     problem
                                     " when printed"
@@ -67,7 +67,7 @@
         thing 
         (e-quote raw-condition) 
         raw-condition 
-        (or #+(or) (e.util:backtrace-value))))))
+        (or #+(or) (backtrace-value))))))
 
 (defun do-print-syntax (tw thing syntax in-error-printing nest)
   (ecase (ref-state thing)
@@ -95,7 +95,7 @@
   (labels ((spawn (&key syntax should-close autoflush in-error-printing open-flags
               &aux (delegate delegate))
             "Makes an individual TextWriter."
-            (push (make-instance 'elib:e-var-slot :value t) open-flags)
+            (push (make-instance 'e-var-slot :value t) open-flags)
             (with-result-promise (tw)
               (labels ((nest (&key (syntax syntax)
                                    (should-close should-close)
