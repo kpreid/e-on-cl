@@ -88,12 +88,21 @@
 
 ;;; --- Log ID management ---
 
+(defglobal +id-charset+ "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_+=$:;,.")
+(defglobal +id-charset-size+ (length +id-charset+))
+(defglobal +id-bits+ 160)
+(defglobal +id-characters+ (ceiling +id-bits+ (1- (integer-length +id-charset-size+))))
+
 (defun log-unique-id ()
-  (write-to-string (random 10000000000000000000000000000000000000) :base 36))
+  (loop with string = (make-array +id-characters+ :element-type 'standard-char)
+        for i from 0 below +id-characters+
+        do (setf (schar string i)
+                 (schar +id-charset+ (random +id-charset-size+)))
+        finally (return string)))
 
 (defun make-vat-log-id (label)
   ;; XXX uri-encode label part
-  (format nil "tag:cle.cubik.org,2008:vat:~A:~A" (log-unique-id) label))
+  (format nil "tag:cle.cubik.org,2008:vat/~A/~A" (log-unique-id) label))
 
 (defun make-turn-log-id (vat)
   `(("loop" . ,(vat-log-id vat))
@@ -107,13 +116,12 @@
 ;;; --- Log output ---
 
 (defun event-fields (classes)
-  (let ((stack (e.util:backtrace-value #| XXX not always list |#)))
-    `(("$" . ,(coerce classes 'vector))
-      ("anchor" .
-        (("number" . ,(incf *turn-subserial*))
-         ("turn" . ,*turn-log-id*)))
-      ("trace" .
-       (("calls" . ,(coerce (backtrace-prettily) 'vector)))))))
+  `(("$" . ,(coerce classes 'vector))
+    ("anchor" .
+      (("number" . ,(incf *turn-subserial*))
+       ("turn" . ,*turn-log-id*)))
+    ("trace" .
+     (("calls" . ,(coerce (backtrace-prettily) 'vector))))))
 
 (defun %log-event (classes alist)
   (princ *causality-output-comma* *causality-output*)
