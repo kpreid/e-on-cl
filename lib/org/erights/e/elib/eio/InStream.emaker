@@ -7,7 +7,7 @@ pragma.syntax("0.9")
 /** XXX Finish this documentation
   */
 interface "org.erights.e.elib.eio.inStream" \
-  extends <import:org.erights.e.elib.eio.stream> {
+  extends <import:org.erights.e.elib.eio.Stream> {
   /** Take up to the specified size of chunk from the stream. 
     *
     * Returns (possibly a promise for) either the taken chunk, or the stream's terminator.
