@@ -16,10 +16,10 @@
   ? def home := <file>[interp.getProps()["e.home"]]; null
 
  a file in the directory
-  
+ 
   ? def runeScriptFile := home["clrune"]; null
-
-  check print  
+  
+  check print
   ? def `<file:///@homeFragment/clrune>` := E.toQuote(runeScriptFile); null
   
   ? runeScriptFile.getPath().replaceAll(homeFragment, "<home>")
@@ -28,9 +28,12 @@
   ? runeScriptFile.getPlatformPath().replaceAll(homeFragment, "<home>")
   # value: "/<home>/clrune"
   
+  ? runeScriptFile.getName()
+  # value: "clrune"
+  
   ? runeScriptFile.getTwine().split("\n")[0]
   # value: "#!/bin/bash"
-
+  
   ? E.toQuote(runeScriptFile.getTwine().split("\n")[0].getOptSpan()).replaceAll(homeFragment, "<home>")
   # value: "<file:///<home>/clrune#:span::1:0::1:10>"
 
@@ -60,16 +63,58 @@
 
  readOnly
  
-  ? def roHome := home.readOnly(); null
+  ? def droHome := home.deepReadOnly(); null
+  ? def sroHome := home.shallowReadOnly(); null
   
-  x ? E.toQuote(roHome).replaceAll(homeFragment, "<home>")
-  x # value: "<file:///<home>>.readOnly()"
+  x ? E.toQuote(droHome).replaceAll(homeFragment, "<home>")
+  x # value: "<file:///<home>>.deepReadOnly()"
   
-  ? roHome.exists()
+  ? droHome.exists()
   # value: true
   
-  ? roHome.__respondsTo("setText", 1)
+  ? sroHome.exists()
+  # value: true
+  
+  ? droHome.__respondsTo("setText", 1)
   # value: false
+
+  ? sroHome.__respondsTo("setText", 1)
+  # value: false
+
+  ? droHome.getPath() == home.getPath()
+  # value: true
+  
+  ? sroHome.getPath() == home.getPath()
+  # value: true
+  
+  ? droHome.getPlatformPath() == home.getPlatformPath()
+  # value: true
+  
+  ? sroHome.getPlatformPath() == home.getPlatformPath()
+  # value: true
+  
+  ? droHome.getName() == home.getName()
+  # value: true
+  
+  ? sroHome.getName() == home.getName()
+  # value: true
+  
+  ? droHome.deepReadOnly() == droHome
+  # value: true
+
+  ? sroHome.deepReadOnly() == sroHome
+  # value: true
+
+  ? droHome.shallowReadOnly() == droHome
+  # value: true
+
+  ? sroHome.shallowReadOnly() == sroHome
+  # value: true
+
+  ? sroHome.deepReadOnly() == droHome
+  # value: false
+
+XXX test getting subdirs of readonly file, and deep vs. shallow writability distinction
 
  createNewFile, setText
   
@@ -97,4 +142,4 @@ XXX
   all file operations
   all dir operations
   path construction is independent of current filesystem state
-  readOnly is properly transitive
+  deepReadOnly is properly transitive and shallowReadOnly isn't

@@ -12,7 +12,8 @@ interface "org.cubik.cle.file.File" {
   to getOpt(subpath :String) :nullOk[File]
   to getText() :String # XXX failure?
   to getTwine() :Twine # XXX failure?
-  to readOnly() :File
+  to deepReadOnly() :File
+  to shallowReadOnly() :File
   to iterate(f :AssocFunc) :void
 })
 

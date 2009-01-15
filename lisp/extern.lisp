@@ -100,6 +100,10 @@
             ; xxx Java-E appends a / to the regular path iff the file exists and is a directory. should we do this?
             (e. tw |print| "/"))))
       
+      (:|getName| ()
+        "Return the name of the file or directory, sans path."
+        (elt path-components (1- (length path-components))))
+      
       (:|getPlatformPath| ()
         "Return the pathname of this file in the host OS's syntax."
         (native-namestring pathname))
@@ -141,8 +145,10 @@
       (:|iterate| (f)
         (loop for subpath in (cl-fad:list-directory pathname)
           do (efuncall f (file-namestring (cl-fad:pathname-as-file subpath)) (pathname-to-file subpath))))
-      (:|readOnly| ()
-        (efuncall (e-import "org.cubik.cle.file.makeReadOnlyFile") |file|))
+      (:|deepReadOnly| ()
+        (efuncall (e-import "org.cubik.cle.file.makeReadOnlyFile") |file| +e-false+))
+      (:|shallowReadOnly| ()
+        (efuncall (e-import "org.cubik.cle.file.makeReadOnlyFile") |file| +e-true+))
       (:|_clFileWriteDate| ()
         "XXX this interface needs changing. no tests. quick fix to support changes in emaker loading."
         (file-write-date pathname))

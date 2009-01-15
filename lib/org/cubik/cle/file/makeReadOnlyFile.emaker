@@ -8,20 +8,22 @@ pragma.syntax("0.9")
 
 /** Return a read-only facet on a standard file-protocol object. */
 def makeReadOnlyFile implements ExitViaHere { # implements DeepFrozen (fails because DeepFrozen uses this!)
-  to run(rwFile) {
+  to run(rwFile, beShallow) {
     def readOnlyFile { # implements File
       # XXX all appropriate methods
-    
-      # to readOnly() :File { return readOnlyFile }
-      # to shallowReadOnly() :File { return readOnlyFile }
-    
+      
+      to deepReadOnly() { return readOnlyFile } # :File
+      to shallowReadOnly() { return readOnlyFile } # :File
+      
       to exists() :boolean { return rwFile.exists() }
-    
+      
       to getText() :String { return rwFile.getText() }
       to getTwine() :Twine { return rwFile.getTwine() }
+      
+      to getName() :String { return rwFile.getName() }
+      to getPath() :String { return rwFile.getPath() }
+      to getPlatformPath() :String { return rwFile.getPlatformPath() }
     }
-    return readOnlyFile    
+    return readOnlyFile
   }
 }
-
-# XXX tests for this

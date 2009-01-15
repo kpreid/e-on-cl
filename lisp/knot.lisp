@@ -224,7 +224,7 @@
       (loop for (root) in search-list
             for file = (e. root |getOpt| subpath)
             when file
-              return (e. file |readOnly|)
+              return (e. file |deepReadOnly|)
             finally (return (efuncall absent-thunk))))))
 
 
