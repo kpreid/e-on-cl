@@ -22,10 +22,10 @@
      ,@body))
 
 
-;; xxx Assuming things about the implementation. Perhaps we should produce a warning if we don't know that the implementation uses these sizes.
-(deftype float64 () 'double-float) 
-(deftype float32 () 'single-float)
-
+(eval-when (:compile-toplevel :load-toplevel :execute) 
+  ;; xxx Assuming things about the implementation. Perhaps we should produce a warning if we don't know that the implementation uses these sizes.
+  (setf (find-class 'float64) (find-class 'double-float)
+        (find-class 'float32) (find-class 'single-float)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
 

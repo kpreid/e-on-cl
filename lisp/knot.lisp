@@ -1,4 +1,4 @@
-; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2009 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.knot)
@@ -486,6 +486,7 @@
   (lazy-prefix-scope ("__cle_safe_extern" "")
 
     ("org.erights.e.elib.base.makeSourceSpan" +the-make-source-span+)
+    ("org.erights.e.elib.atom.makeFloat64"    +the-make-float64+)
 
     ("org.apache.oro.text.regex.makePerl5Compiler" e.extern:+rx-perl5-compiler+)
     ("org.apache.oro.text.regex.makePerl5Matcher"  e.extern:+rx-perl5-matcher+)

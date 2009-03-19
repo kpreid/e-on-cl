@@ -238,7 +238,7 @@
   (first
     (or
       #+sbcl
-        (list (sb-introspect:function-arglist function))
+        (list (sb-introspect:function-lambda-list function))
       #+excl ; xx is this the most appropriate feature test?
         (list (nth-value 0 (excl:arglist function)))
       #+(or abcl clisp)

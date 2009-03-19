@@ -1,4 +1,4 @@
-; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2009 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (defpackage :e.system
@@ -19,8 +19,10 @@
                :cl-json
                :cl-ppcre
                :genhash
-               :trivial-garbage
                :ironclad
+               :trivial-garbage
+               :yacc
+
                #+sbcl :sb-bsd-sockets
                #| sb-introspect, but that isn't asdf (loaded from util.lisp) |#)
   :components
@@ -83,6 +85,10 @@
             :depends-on ("elib" "sugar"))
      (:file "elib-values"
             :depends-on ("elib" "sugar" "lazy"))
+     (:file "float"
+            :depends-on ("base" #| NaN/inf |#
+                         "elib" #| def-vtable |#
+                         "sugar" #| defobject |#))
      (:file "tables2"
             :depends-on ("sugar" 
                          "same" ; genhash's register-hash-function needs the values #'same-hash #'samep

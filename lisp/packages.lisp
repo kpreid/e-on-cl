@@ -1,4 +1,4 @@
-; Copyright 2005-2008 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2009 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :cl-user)
@@ -240,6 +240,7 @@
     :+the-any-map-guard+
     :+the-make-list+
     :+the-make-int+
+    :+the-make-float64+
     :+the-make-priority-queue+    
     
     :e-quote
@@ -320,6 +321,7 @@
   e.elib:+the-make-text-writer+
   e.elib:+the-make-list+
   e.elib:+the-make-int+
+  e.elib:+the-make-float64+
   e.elib:+the-make-priority-queue+
 
   e.elib:+the-audit-checker+

@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+# Copyright 2005-2009 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 ? 44.previous()
@@ -239,6 +239,50 @@ Float comparison
   ? (-0.0).op__cmp(0.0)
   # value: 0.0
 
+Float parsing
+
+  ? def makeFloat64 := <elib:atom.makeFloat64>
+  # value: <makeFloat64>
+  
+  ? makeFloat64("1")
+  # value: 1.0
+  ? makeFloat64("-1")
+  # value: -1.0
+  ? makeFloat64("+1")
+  # value: 1.0
+  ? makeFloat64("NaN")
+  # value: NaN
+  ? makeFloat64(".1")
+  # value: 0.1
+  ? makeFloat64(".")
+  # value: 0.0
+  XXX should the above fail?
+  ? makeFloat64("0.")
+  # value: 0.0
+  ? makeFloat64("-NaN")
+  # value: NaN
+  ? makeFloat64("-.1")
+  # value: -0.1
+  ? makeFloat64("-.")
+  # value: -0.0
+  XXX should the above fail?
+  ? makeFloat64("-0.")
+  # value: -0.0
+  ? makeFloat64("0.9999999999999999")
+  # value: 0.9999999999999999
+  ? makeFloat64("0.99999999999999999")
+  # value: 1.0
+  ? makeFloat64("Infinity")
+  # value: Infinity
+  ? makeFloat64("-Infinity")
+  # value: -Infinity
+  ? makeFloat64("Inf")
+  # problem: <yacc-parse-error: Unexpected terminal YACC:YACC-EOF-SYMBOL (value NIL)Expected one of: (:|i|)>
+  ? makeFloat64("Irgle")
+  # problem: <yacc-parse-error: Unexpected terminal :|r| (value #\r)Expected one of: (:|n|)>
+
+XXX the above errors are not pretty
+
 signum
 
   ? 1.signum()
@@ -278,3 +322,8 @@ XXX EoJ does not have floating-point signum -- why?
   # value: -1.0
   ? (-23984092348790.0).signum()
   # value: -1.0
+
+Bug test by dash: the internal float64 type was not a class, and this would throw
+
+  ? 1.0.__getAllegedType().getMessageTypes().size() > 0
+  # value: true

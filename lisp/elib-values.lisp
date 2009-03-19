@@ -1,5 +1,5 @@
 ; Except for otherwise-labeled sections, this file is:
-; Copyright 2005-2007 Kevin Reid, under the terms of the MIT X license
+; Copyright 2005-2009 Kevin Reid, under the terms of the MIT X license
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (in-package :e.elib)
@@ -629,46 +629,12 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-fqn integer "org.cubik.cle.native.int")
 (def-class-opaque integer)
 
-(def-vtable float
-  (:|__printOn| (this (tw +the-text-writer-guard+))
-    (e. tw |print| 
-      (with-standard-io-syntax
-        (let ((*read-default-float-format* 'double-float)
-              (*print-readably* nil)) ; for clisp
-          (prin1-to-string this)))))
-  (:|isNaN| (this)
-    (declare (ignore this))
-    +e-false+))
-
-(def-vtable (eql #.|NaN|)
-  (:|__printOn| (this (tw +the-text-writer-guard+))
-    (declare (ignore this))
-    (e. tw |print| "NaN"))
-  (:|isNaN| (this)
-    (declare (ignore this))
-    +e-true+))
-
-(def-vtable (eql #.|Infinity|)
-  (:|__printOn| (this (tw +the-text-writer-guard+))
-    (declare (ignore this))
-    (e. tw |print| "Infinity"))
-  (:|isNaN| (this)
-    (declare (ignore this))
-    +e-false+))
-
-(def-vtable (eql #.|-Infinity|)
-  (:|__printOn| (this (tw +the-text-writer-guard+))
-    (declare (ignore this))
-    (e. tw |print| "-Infinity"))
-  (:|isNaN| (this)
-    (declare (ignore this))
-    +e-false+))
 
 (defobject +the-make-int+ "org.cubik.cle.prim.makeInt" 
     (:stamped +deep-frozen-stamp+
      :doc "Operations for producing integers from other data such as strings.")
   (:|run| ((value 'string))
-    "Return the integer denoted by the given string in base ten. A leading '+' or '-' is allowed; whitespace or other extraneous characters are not."
+    "Return the integer denoted by the given string in base ten. A leading '+' or '-' is allowed; whitespace or other extraneous characters are not." ; XXX leading + should not be allowed
     (handler-case
       (parse-integer value)
       (error (e)
