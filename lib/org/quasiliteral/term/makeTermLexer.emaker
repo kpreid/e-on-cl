@@ -39,6 +39,11 @@ def makeTermLexer implements DeepFrozen, ExitViaHere {
               tokens.push(["Integer", __makeInt(n)])
             }
 
+            match rx`"(@strbody(?:\\.|[^"])*)"(@r.*)` {
+              text := r
+              tokens.push(["String", e__quasiParser(`"$strbody"`).getValue()]) # XXX horrible but correct kludge to get escape parsing.
+            }
+
             match rx`(@t[$$@@])\{(@n[0-9]+)\}(@r.*)` {
               text := r
               tokens.push(["Quasi" + t, __makeInt(n)])

@@ -28,8 +28,15 @@
   ? lex("+3")
   # value: [["+"], ["Integer", 3]]
 
+  ? lex("\"foo\"")
+  # value: [["String", "foo"]]
+
+  ? lex("\"foo\\t\"")
+  # value: [["String", "foo\t"]]
+
+  ? lex("\"foo\\\"\"")
+  # value: [["String", "foo\""]]
 XXX EoJ term lexer returns terms
-XXX lexer tests should be in a separate file
-XXX token types: integer, float, char, string, tag, punct, chars
+XXX token types: float, char, more strings, tag, punct, chars
 XXX consequence of loose ::, or malformed tags in general
 XXX consequence of non-token characters
