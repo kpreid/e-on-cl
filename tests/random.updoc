@@ -13,3 +13,6 @@
 ? if ((1..!2**160)(v)) { "OK" } else { [v] }
 # value: "OK"
 
+? var seen := [].asSet()
+> for _ in 1..1000 { seen with= entropy.nextInt(4) }
+> require(seen.sort() == [0,1,2,3].asSet(), fn { `nextInt(4) probably broken: expected results [0,1,2,3].asSet() but got ${seen.sort()}` })

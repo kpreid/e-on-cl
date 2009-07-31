@@ -71,7 +71,7 @@ bind setSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
   }
   method instance_diverge(self) { self.diverge(any) }
   method instance_snapshot(self) {
-    self.getElements().asSet()
+    self.getElements().asSet() # XXX worth optimizing?
   }
   to instance_readOnly(self) {
     return makeReadOnlySet(self)
@@ -86,7 +86,11 @@ bind setSugar extends sugarRoot implements EventuallyDeepFrozen, ExitViaHere {
     self.getElements().printOn(left, sep, right, out)
   }
   
-  # XXX missing: and/1, butNot/1, intersects/1, or/2, sort/0, sort/1, with/1, without/1
+  to instance_sort(self) {
+    return self.getElements().sort().asSet()
+  }
+  
+  # XXX missing: and/1, butNot/1, intersects/1, or/2, sort/1, with/1, without/1
 }
 
 # XXX this file is in need of tests -- it is only used by FlexSet (which doesn't have tests for all of these methods) and ConstSet (which overrides many of them)

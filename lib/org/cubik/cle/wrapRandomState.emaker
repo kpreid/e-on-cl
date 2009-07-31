@@ -4,6 +4,9 @@
 pragma.syntax("0.9")
 pragma.enable("function-implements")
 
+def swissSizeInOctets :int := 20
+def swissUpperBound :int := 2 ** (8 * swissSizeInOctets)
+
 /** Wrap a CL:RANDOM-STATE object so as to hide its state. */
 def wrapRandomState(randomState) implements DeepFrozen, ExitViaHere {
   trace("WARNING: privilegedScope entropy is not yet high-quality")
@@ -11,6 +14,7 @@ def wrapRandomState(randomState) implements DeepFrozen, ExitViaHere {
     to __printOn(out :TextWriter) {
       out.write("<pseudorandom number generator>")
     }
-    to nextSwiss() :int { return randomState.nextSwiss() }
+    to nextInt(range :int) :int { return randomState.nextInt(range) }
+    to nextSwiss() :int { return randomState.nextInt(swissUpperBound) }
   }
 }

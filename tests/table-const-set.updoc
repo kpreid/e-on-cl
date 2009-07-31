@@ -125,8 +125,16 @@ readOnly
   
   ? threeSet.readOnly() == threeSet
   # value: true
+
+sort
+
+  ? [].asSet().sort()
+  # value: [].asSet()
+
+  ? [3,7,2,6,3].asSet().sort()
+  # value: [2, 3, 6, 7].asSet()
   
-XXX sort/0,1
+XXX sort/1
 XXX sameness
 XXX diverge/1,2
 XXX should we have getElements/1 at all?
