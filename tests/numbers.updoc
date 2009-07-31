@@ -108,6 +108,27 @@ Exponentiation
   ? 2.0 ** 0.5
   # value: 1.4142135623730951
 
+modPow
+
+  ? e`(1) ** (2) %% (3)`.asKernelE()
+  # value: e`1.modPow(2, 3)`
+  
+  ? 2 ** 16 %% (2 ** 16)
+  # value: 0
+  
+  ? 2 ** 17 %% (2 ** 16 - 1)
+  # value: 2
+  
+  ? 3 ** 3 %% 37
+  # value: 27
+  
+  ? 3 ** 3 %% 10
+  # value: 7
+
+  ? (-3) ** 3 %% 10
+  # value: 3
+  
+  XXX test this a little more systematically
 
 Coercion tests
 

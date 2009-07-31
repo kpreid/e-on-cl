@@ -538,8 +538,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|remainder| (a (b 'number)) 
     (rem a b))
   
-  (:|pow| (a (b 'number))
-    (expt a b))
+  (:|pow| (base (exponent 'number))
+    (expt base exponent))
+  (:|modPow| (base (exponent 'number) (modulus 'number))
+    (if (and (integerp base) (integerp exponent) (integerp modulus)
+             (>= exponent 0) (/= modulus 0))
+       (ironclad:expt-mod base exponent modulus)
+       (mod (expt base exponent) modulus)))
   
   (:|signum/0| 'signum)
   (:|aboveZero| (this)
