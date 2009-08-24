@@ -3,7 +3,6 @@
 
 pragma.syntax("0.9")
 
-pragma.enable("function-implements")
 
 def _make(subGuards) as DeepFrozen {
   def intersectionGuard implements DeepFrozen."optionally"() {

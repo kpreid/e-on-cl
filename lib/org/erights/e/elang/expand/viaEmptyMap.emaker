@@ -1,5 +1,4 @@
 pragma.syntax("0.9")
-pragma.enable("function-implements")
 
 {def __mapEmpty(specimen, optEjector) :void implements DeepFrozen, ExitViaHere { # implements ViaFunction
   if (specimen.size().isZero()) {

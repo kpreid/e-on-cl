@@ -8,7 +8,6 @@
 #   * removed uses of Guard sugar verbs or/2 and get/0
 
 pragma.syntax("0.8")
-pragma.enable("function-implements")
 
 /**
  * Data-E is the subset of E used for serializing a subgraph by unevaling to an

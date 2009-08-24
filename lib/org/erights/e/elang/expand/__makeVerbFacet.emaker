@@ -17,7 +17,6 @@
 # XXX possible further changes: 'fix' documentation markup; don't include not-relevant-to-client runtime documentation on facet; better print representation
 
 pragma.syntax("0.9")
-pragma.enable("function-implements")
 
 def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 

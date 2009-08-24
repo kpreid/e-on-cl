@@ -1,6 +1,5 @@
 pragma.syntax("0.9")
 
-pragma.enable("function-implements")
 
 def defineException :DeepFrozen := <import:org.cubik.cle.fail.defineException>
 #def defineExceptionGuard :DeepFrozen := <import:org.cubik.cle.fail.defineExceptionGuard>

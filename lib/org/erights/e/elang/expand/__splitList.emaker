@@ -7,7 +7,6 @@
 # 2007-03: ExitViaHere
 
 pragma.syntax("0.9")
-pragma.enable("function-implements")
 
 def EList :DeepFrozen := <import:org.erights.e.elib.tables.type.ConstList> # XXX variously wrong
 

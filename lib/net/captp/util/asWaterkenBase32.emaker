@@ -4,7 +4,6 @@
 
 pragma.syntax("0.9")
 pragma.enable("one-method-object")
-pragma.enable("function-implements")
 
 def Octets :DeepFrozen := List[0..!(2**8)]
 

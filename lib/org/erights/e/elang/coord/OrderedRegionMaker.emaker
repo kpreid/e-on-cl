@@ -6,7 +6,6 @@
 #   more helpful failure message
 
 pragma.syntax("0.8")
-pragma.enable("function-implements")
 
 def Same :DeepFrozen := <import:org.erights.e.elib.slot.Same>
 def EventuallyDeepFrozen :Same[DeepFrozen."eventually"()] := DeepFrozen."eventually"()

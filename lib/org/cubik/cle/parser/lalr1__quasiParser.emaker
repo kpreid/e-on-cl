@@ -4,7 +4,6 @@
 pragma.syntax("0.9")
 pragma.enable("dot-props")
 pragma.enable("accumulator")
-pragma.enable("function-implements")
 
 def makeLALR1Parser :DeepFrozen := <import:org.cubik.cle.parser.makeLALR1Parser>
 def makeParseError :DeepFrozen := makeLALR1Parser::makeParseError

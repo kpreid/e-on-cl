@@ -3,7 +3,6 @@
 
 pragma.syntax("0.9")
 
-pragma.enable("function-implements")
 
 def EventuallyDeepFrozen :(<import:org.erights.e.elib.slot.Same>)[DeepFrozen."eventually"()] := DeepFrozen."eventually"()
 def sugarRoot :DeepFrozen := <import:org.cubik.cle.sugarRoot>

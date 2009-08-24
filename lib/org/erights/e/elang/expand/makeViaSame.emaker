@@ -1,6 +1,5 @@
 pragma.syntax("0.9")
 
-pragma.enable("function-implements")
 
 {def __matchSame implements DeepFrozen, ExitViaHere {
   to run(expected) :any {

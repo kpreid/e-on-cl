@@ -3,7 +3,6 @@
 
 pragma.syntax("0.9")
 pragma.enable("dot-props")
-pragma.enable("function-implements")
 
 def ALL :DeepFrozen := EIO.getALL()
 def InStream :DeepFrozen := <elib:eio.InStream>
