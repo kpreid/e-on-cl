@@ -1225,7 +1225,7 @@ SlotExpr
   #            }
   #        }`
 
-  ? t("pragma.syntax(\"0.9\"); pragma.enable(\"function-implements\"); /** a */ def b() :c implements d { e }")
+  ? t("pragma.syntax(\"0.9\"); /** a */ def b() :c implements d { e }")
   # value: e`def b implements d {
   #            
   #            /** a */
@@ -1237,10 +1237,10 @@ SlotExpr
   #            }
   #        }`
 
-  ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :d implements c { d }")
+  ? t("/** a */ def b(c) :d implements c { d }")
   # problem: <misleading-apparent-usage-error: a FunctionObject's auditors (e??` implements c`) may not appear to use definitions from its patterns ([epatt`c`])>
 
-  ? t("pragma.enable(\"function-implements\"); /** a */ def b(c) :(def d := e) implements d { e }")
+  ? t("/** a */ def b(c) :(def d := e) implements d { e }")
   # problem: <misleading-apparent-usage-error: a FunctionObject's auditors (e??` implements d`) may not appear to use definitions from its optResultGuard (e`def d := e`)>
   XXX prettier error
 

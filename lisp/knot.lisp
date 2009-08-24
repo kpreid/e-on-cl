@@ -722,7 +722,7 @@
           ; The ValueGuard and Guard guards do not currently reject anything, but this may change (e.g. DeepFrozen)
           ("&Guard"       ,(lazy-import "org.erights.e.elib.slot.type.Guard"))
           ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
-          ("&__makeGuard" ,(typical-lazy "pragma.enable(\"function-implements\"); def stubMakeGuard(_) :any implements DeepFrozen { return def stubBaseGuard {} }"))
+          ("&__makeGuard" ,(typical-lazy "def stubMakeGuard(_) :any implements DeepFrozen { return def stubBaseGuard {} }"))
       
           ; --- utility: guards ---
           ("&notNull"   ,(lazy-import "org.erights.e.elang.interp.notNull"))
@@ -773,7 +773,7 @@
 
           ; --- utility: miscellaneous ---
           ("&opaque__uriGetter" ,(lazy-import "org.erights.e.elib.serial.opaque__uriGetter"))
-          ("&__identityFunc"    ,(typical-lazy "pragma.enable(\"function-implements\"); def identityFunc(x) :any implements DeepFrozen { return x }"))
+          ("&__identityFunc"    ,(typical-lazy "def identityFunc(x) :any implements DeepFrozen { return x }"))
           
           ; --- XXX describe this category ---
           ;; XXX remove this special and use a parameter instead

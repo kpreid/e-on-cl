@@ -464,10 +464,7 @@ XXX test resulting pragma state directly?
 #             true
 
 ? t("def a() :b implements c {}")
-# problem: (line 1)@23: The optional "function-implements" syntax is currently off.
-
-? t("pragma.enable(\"function-implements\"); def a() :b implements c {}")
-# stdout: SeqE. [] ObjectHeadE.
+# stdout: ObjectHeadE.
 #           null
 #           FinalP.
 #             NounE. a
@@ -498,7 +495,7 @@ Testing discrimination between functions and call patterns:
 #             NullE.
 #             true
 
-? t("pragma.disable(\"explicit-result-guard\"); pragma.enable(\"function-implements\"); def a() implements b {}")
+? t("pragma.disable(\"explicit-result-guard\"); def a() implements b {}")
 # stdout: SeqE. [] ObjectHeadE.
 #           null
 #           FinalP.

@@ -496,32 +496,21 @@ objectTail:     //(typeParamList)?
             functionTail {##.setType(OneMethodObject);}
     ;
 
-functionTail: parenParamList optResultGuard fAuditors block getPocket["easy-return"] ;
+functionTail: parenParamList optResultGuard oAuditors block getPocket["easy-return"] ;
 
 extender:    "extends"! br order ;
 oExtends:    extender
              |                   {##=#([Absent],##);}  ;
 
 oAuditors: oAs oImplements {##=#([Auditors],##);} ;
-fAuditors: fAs fImplements {##=#([Auditors],##);} ;
 
 oAs:            "as"! br! order ("," {throwSemanticHere("\"as\" clause may only have one auditor");})?
-            |   {##=#([Absent],##);}
-            ;
-
-fAs:            "as"! br! order ("," {throwSemanticHere("\"as\" clause may only have one auditor");})?
-                pocket["function-implements"]
             |   {##=#([Absent],##);}
             ;
 
 oImplements: "implements"^ br order (","! order)* {##.setType(List);}
              | {##=#([List],##);} ;
              // trailing comma would be ambiguous with HideExpr
-
-// this can be replaced with oImplements when function-implements becomes official
-fImplements:    "implements"^ br order (","! order)*
-                pocket["function-implements"] {##.setType(List);}
-             |  {##=#([List],##);} ;
 
 // used in interface expressions
 multiExtends: "extends"^ br order (","! order)* {##.setType(List);}

@@ -5,7 +5,6 @@ E-on-CL caches the results of audits. This file performs tests to make sure that
 
   ? pragma.syntax("0.9")
   > pragma.enable("one-method-object")
-  > pragma.enable("function-implements")
   > pragma.enable("call-pattern")
 
 The results of a non-DeepFrozen auditor should not be cached. (Eventually, non-DeepFrozen auditors will be prohibited.)
