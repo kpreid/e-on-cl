@@ -2,7 +2,7 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (cl:defpackage :e.lisp-test
-  (:use :cl 
+  (:use :cl
         #+e.sb-rt :sb-rt #-e.sb-rt :rt
         :e.elib)
   (:export :system-test
@@ -18,8 +18,8 @@
       (remove-if (lambda (p) (e.util:without-prefix (pathname-name p) "."))
         (directory
           (merge-pathnames
-            (make-pathname :name :wild 
-                           :type "tlisp" 
+            (make-pathname :name :wild
+                           :type "tlisp"
                            :directory '(:relative "ltests"))
             (asdf:component-pathname system))))))
   (do-tests))

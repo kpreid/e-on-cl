@@ -13,7 +13,7 @@
 (defconstant +hash-depth+ 5)
 
 (declaim (inline selfish-hash))
-(defun selfish-hash (target) 
+(defun selfish-hash (target)
   #-e.function-sxhash-inadequate (sxhash target)
   #+e.function-sxhash-inadequate
   (or (when (functionp target)
@@ -27,7 +27,7 @@
   (setf portrayal (ref-shorten portrayal))
   (when portrayal
     (e-coercef portrayal 'vector)
-    (concatenate 'vector (list (aref portrayal 0) 
+    (concatenate 'vector (list (aref portrayal 0)
                                (aref portrayal 1))
                          (aref portrayal 2))))
 
@@ -58,7 +58,7 @@
 
 (declaim (inline %examine-reference))
 (defun %examine-reference (original path opt-fringe
-                           &key 
+                           &key
                            (before-shortening (constantly nil))
                            early-test
                            (selfless-early (constantly nil))
@@ -153,7 +153,7 @@
 (defmethod e.elib::same-hash-dispatch ((a null))
   (declare (ignore a))
   0)
-  
+
 (defmethod e.elib::same-hash-dispatch (a)
   (declare (ignore a))
   nil)
@@ -171,15 +171,15 @@
 
 (defmacro sort-two-by-hash (a b)
   "not multiple-evaluation safe"
-  `(when (< (sxhash ,b) 
+  `(when (< (sxhash ,b)
             (sxhash ,a))
-     (psetf ,a ,b 
+     (psetf ,a ,b
             ,b ,a)))
 
 ;; xxx *Currently*, the equalizer being returned from a maker function is left over from when equalizers used buffer vectors. Future changes, such as parameterization, might make the maker useful again later so I haven't bothered to change it.
 
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun make-equalizer () 
+  (defun make-equalizer ()
     (declare (optimize (speed 3) (safety 3) (debug 0)))
     (labels  ((push-sofar (left right sofar)
                 (declare (type (cons list list) sofar))
@@ -195,7 +195,7 @@
                              (eql right sofar-right)))
                       (car sofar)
                       (cdr sofar)))
-  
+              
               (opt-same-spread (left right sofar leftv rightv)
                 "returns e-boolean or nil"
                 (declare (type (cons list list) sofar)
@@ -211,18 +211,18 @@
                         for new-left = (aref leftv i)
                         for new-right = (aref rightv i)
                         for opt-result = (opt-same new-left new-right sofarther)
-                        do (cond 
+                        do (cond
                              ; If we encountered an unsettled reference,
                              ; then we can never be sure of sameness
                              ; (return true), but we might later find out
                              ; it's different (return false), so instead
-                             ; of returning nil now, we remember that 
+                             ; of returning nil now, we remember that
                              ; our result should not be true.
-                             ((null opt-result) 
+                             ((null opt-result)
                                (equalizer-trace "tagging as not-same at ~S ~S ~S" i new-left new-right)
                                (setf not-different-result nil))
                              ; Two same-index elements of the uncalls are
-                             ; different, so the objects must be 
+                             ; different, so the objects must be
                              ; different.
                              ((eq opt-result +e-false+)
                                (equalizer-trace "exit opt-same-spread different at ~S ~S ~S" i new-left new-right)
@@ -234,7 +234,7 @@
                   ; whether we encountered an unsettled reference.
                   (equalizer-trace "exit opt-same-spread with accumulated ~S" not-different-result)
                   not-different-result))
-                  
+              
               (opt-same (left right sofar)
                 "returns e-boolean or nil"
                 (declare (type (cons list list) sofar))
@@ -274,7 +274,7 @@
                         ; by short-circuiting if spread-l is nil
                         (cond
                           ((and spread-l spread-r)
-                            (opt-same-spread left right sofar 
+                            (opt-same-spread left right sofar
                                              spread-l spread-r))
                           ((e.elib::opt-same-dispatch left right))
                           (t
@@ -294,16 +294,16 @@
               (if result
                 result
                 (error 'insufficiently-settled-error :values (list left right)))))
-        
+          
           (:|sameYet| (left right)
             (or (e. |equalizer| |optSame| left right) +e-false+))
-        
+          
           (:|optSame| (left right)
             (opt-same left right '(() . ())))
           
           (:|isSettled| (ref)
             (as-e-boolean (settledp ref)))
-                    
+          
           (:|makeTraversalKey/1| 'make-traversal-key))))))
 
 ;;; --- TraversalKey ---
@@ -314,7 +314,7 @@
   (reduce #'logxor fringe :key #'selfish-hash :initial-value
     (%sameness-hash target +hash-depth+ nil fringe)))
 
-(defclass traversal-key (vat-checking) 
+(defclass traversal-key (vat-checking)
   ((wrapped :initarg :wrapped
             :accessor tk-wrapped)
    (snap-hash :initarg :snap-hash
@@ -323,11 +323,11 @@
    (fringe :initarg :fringe
            :accessor tk-fringe
            :type (vector cons))))
-   
+
 (defun make-traversal-key (target)
   (let ((wrapped (ref-shorten target))
         (fringe (make-array 1 :element-type 'cons
-                              :adjustable t 
+                              :adjustable t
                               :fill-pointer 0)))
     (make-instance 'traversal-key
       :wrapped wrapped

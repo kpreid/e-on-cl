@@ -7,11 +7,11 @@
 
 ; XXX tests for this
 (defun simplify-fq-name (fq-name)
-  " Drops any package or containing class prefixes and any \"__C\" or \"__T\"
-    suffixes prior to the last \"significant\" name.
-    
-    A \"significant\" name is any name that doesn't begin with a digit or \"_\"
-    (ruling out anonymous objects and classes) and that isn't \"self\"."
+  "Drops any package or containing class prefixes and any \"__C\" or \"__T\"
+suffixes prior to the last \"significant\" name.
+
+A \"significant\" name is any name that doesn't begin with a digit or \"_\"
+(ruling out anonymous objects and classes) and that isn't \"self\"."
   (let* ((last-sep (or (position-if (lambda (x) (member x '(#\. #\$))) fq-name :from-end t)
                        -1))
          (result (subseq fq-name (1+ last-sep))))
@@ -29,7 +29,7 @@
       (let* ((parent-full (subseq fq-name 0 last-sep))
              (parent-simp (simplify-fq-name parent-full)))
         (concatenate 'string (if (or (string= parent-full parent-simp)
-                                     (without-prefix parent-simp "...")) 
+                                     (without-prefix parent-simp "..."))
                                ""
                                "...")
                              parent-simp
@@ -67,7 +67,7 @@
 
 ;;; These are defined early so that the classes are available for use in the various __getAllegedType implementations, some of which construct the type description at macroexpansion time.
 
-(defclass type-desc () 
+(defclass type-desc ()
   ((doc-comment :initarg :doc-comment
                 :reader type-desc-doc-comment
                 :type doc-comment)
@@ -86,8 +86,8 @@
 
 (defgeneric type-desc-message-types (type-desc))
 
-(defclass message-desc () 
-  ((verb :initarg :verb 
+(defclass message-desc ()
+  ((verb :initarg :verb
          :reader message-desc-verb
          :type string)
    (doc-comment :initarg :doc-comment :initform nil
@@ -101,7 +101,7 @@
            :type (vector param-desc)))
   (:documentation "A description of a message signature within a type description."))
 
-(defclass param-desc () 
+(defclass param-desc ()
   ((opt-name :initarg :opt-name :initform nil
              :reader param-desc-opt-name
              :type (or null string))
@@ -124,7 +124,7 @@
 
 ; The vtables for {type,message,param}-desc may be found in elib-values.lisp.
 
-; This is necessary because E-LAMBDA and elang objects have 'literal' 
+; This is necessary because E-LAMBDA and elang objects have 'literal'
 ; TypeDescs in their __getAllegedType/0 methods.
 ; 
 ; The definition was copied from
@@ -137,7 +137,7 @@
 (defmethod make-load-form ((a param-desc) &optional environment)
   (make-load-form-saving-slots a :environment environment))
 
-;; We aren't equipped to make eval-param-descs have a different E 
+;; We aren't equipped to make eval-param-descs have a different E
 ;; selfless-identity, so we make them look just like ordinary param-descs
 ;; instead.
 (def-class-opaque param-desc)

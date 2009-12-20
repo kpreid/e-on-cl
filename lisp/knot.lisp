@@ -25,7 +25,7 @@
             ((:|__printOn/1|) (destructuring-bind (tw) args
               (e-coercef tw +the-text-writer-guard+)
               (e. tw |print| "<native function ")
-              (e. tw |quote| 
+              (e. tw |quote|
                 (nth-value 2
                   (function-lambda-expression
                     (etypecase f
@@ -37,7 +37,7 @@
               (e-coercef verb 'string)
               (e-coercef arity 'integer)
               (as-e-boolean
-                (or (and (or (string= verb "run") 
+                (or (and (or (string= verb "run")
                              (string= verb "tuple"))
                          (function-responds-to f arity))
                     (e-is-true (miranda #'wrapper mverb args #'funcall))))))
@@ -53,7 +53,7 @@
   (e-lambda "org.cubik.cle.prim.lisp$symbolAccessor" ()
     (:|__printOn| ((tw +the-text-writer-guard+))
       (e. tw |write| "<")
-      (e. tw |print| 
+      (e. tw |print|
         (with-standard-io-syntax
           (prin1-to-string symbol)))
       (e. tw |write| ">")
@@ -87,7 +87,7 @@
         (error "the symbol ~S does not exist in ~S" symbol-name package-name))))
   (:|unsealingConditionGuard| (class-name)
     "Return a guard which accepts and unseals thrown (that is, SIGNALed) conditions of the given class."
-    (e-lambda "$unsealingConditionGuard" 
+    (e-lambda "$unsealingConditionGuard"
         (:stamped +deep-frozen-stamp+)
       (:|coerce| (specimen opt-ejector)
         (let ((c (e-problem-unseal (ref-shorten specimen))))
@@ -107,8 +107,8 @@
                                offset
                                (asdf:component-pathname +the-asdf-system+))))
 
-(defglobal +builtin-emaker-loader-desc+ 
-  (list (system-file (make-pathname :directory '(:relative "lib"))) 
+(defglobal +builtin-emaker-loader-desc+
+  (list (system-file (make-pathname :directory '(:relative "lib")))
         (system-file (make-pathname :directory '(:relative "compiled-lib")))))
 
 (defvar *emaker-search-list*
@@ -118,14 +118,14 @@
 (defun found-e-on-java-home (dir-pathname)
   "Called (usually by clrune) to report the location of an E-on-Java installation."
   (setf *antlr-jar* (merge-pathnames #p"e.jar" dir-pathname))
-  (setf *emaker-search-list* 
+  (setf *emaker-search-list*
     (append *emaker-search-list*
       (list
         (list
           (handler-case
               (if (member :e.saving-image *features*)
                 (error "saving an image")
-                (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar) 
+                (funcall (system-symbol "OPEN-JAR" :e.jar :e-on-cl.jar)
                          (merge-pathnames #p"e.jar" dir-pathname)))
             (error (c)
               (warn "Could not use e.jar because: ~A" c)
@@ -184,8 +184,8 @@
       (e.elang:eval-e (e.syntax:parse-to-kernel (e. file |getTwine|))
                     scope))))
 
-(defglobal +emaker-fasl-type+ 
-  (concatenate 'string 
+(defglobal +emaker-fasl-type+
+  (concatenate 'string
     "emaker-"
     (pathname-type (compile-file-pathname #p"foo.lisp" #|eww|#))))
 
@@ -194,7 +194,7 @@
     (e-coercef fqn 'string)
     (let* ((file (e. source-file-root |getOpt| (fqn-to-slash-path fqn "emaker"))))
       (if file
-        (load-emaker-from-file file fqn 
+        (load-emaker-from-file file fqn
                                scope
                                (when opt-compiled-file-root
                                  (eelt opt-compiled-file-root
@@ -212,13 +212,13 @@
           (funcall load-function fqn absent-thunk (vat-safe-scope *vat*)))))))
 
 ;;; this is here because it's closely related to emaker loading
-(defun make-resource-loader (search-list) 
+(defun make-resource-loader (search-list)
   (e-lambda |resource__uriGetter|
       (:stamped +deep-frozen-stamp+)
     (:|get| (subpath)
       ;; XXX there should be a getter-shell for this common method - is path-loader fit for that?
       (e. |resource__uriGetter| |fetch| subpath
-        (e-lambda "$getFailureThunk" () (:|run| () 
+        (e-lambda "$getFailureThunk" () (:|run| ()
           (error "~A can't find ~A" (e-quote |resource__uriGetter|) (e-quote subpath))))))
     (:|fetch| ((subpath 'string) absent-thunk)
       (loop for (root) in search-list
@@ -244,7 +244,7 @@
 
 (defun transparent-authorize (fqn)
   "Perform the typical load and authorization for an E-implemented maker of transparent objects."
-  (efuncall (e-import (concatenate 'string fqn "Author")) 
+  (efuncall (e-import (concatenate 'string fqn "Author"))
             +transparent-stamp+))
 
 (defglobal +shared-safe-loader+
@@ -293,14 +293,14 @@
     (:|PassByConstruction| +pass-by-construction+)
     
     ;; tools
-    (:|makeSafeScope|    (wrap-function 'make-safe-scope))    
+    (:|makeSafeScope|    (wrap-function 'make-safe-scope))
     ))
 
 (defglobal +sharable-importer+
   (let ((real-loader +shared-safe-loader+)) ; might become a path loader
     (e-lambda "org.cubik.cle.prim.SharableImporter"
         (:stamped +deep-frozen-stamp+
-         :stamped +thread-sharable-stamp+ 
+         :stamped +thread-sharable-stamp+
          :stamped +standard-graph-exit-stamp+)
       (:|__printOn| ((out +the-text-writer-guard+))
         (e. out |write| "<shared:*>"))
@@ -313,26 +313,26 @@
     (:|Ref|              (e. +e-ref-kit-slot+ |get|)) ; XXX reduce indirection
     
     (:|DeepFrozen|
-      (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing")))) 
+      (efuncall (e. +builtin-emaker-loader+ |fetch| "org.erights.e.elib.serial.DeepFrozenAuthor" (e-lambda "org.erights.e.elib.prim.safeScopeDeepFrozenNotFoundThunk" () (:|run| () (error "DeepFrozenAuthor missing"))))
                 +deep-frozen-stamp+
                 (e-lambda "semitransparentUncaller" ()
                   (:|optUncall| (specimen)
                     (e.elib.same-impl::semitransparent-opt-uncall specimen)))))
     
     (:|makeBaseGuard|
-      (efuncall (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor") 
+      (efuncall (e-import "org.erights.e.elib.slot.makeBaseGuardAuthor")
                 +deep-frozen-stamp+ +transparent-stamp+))
     
     (:|makeBrand|
-      (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor") 
+      (efuncall (e-import "org.erights.e.elib.sealing.makeBrandAuthor")
                 +deep-frozen-stamp+))
     
     (:|finalSlotGuardSugar|
-      (efuncall (e-import "org.erights.e.elib.slot.finalSlotGuardSugarAuthor") 
+      (efuncall (e-import "org.erights.e.elib.slot.finalSlotGuardSugarAuthor")
                 +deep-frozen-stamp+ +transparent-stamp+))
     
     (:|Same|
-      (efuncall (e-import "org.erights.e.elib.slot.SameAuthor") 
+      (efuncall (e-import "org.erights.e.elib.slot.SameAuthor")
                 +deep-frozen-stamp+ e.elib::+make-same-guard+))
     
     (:|memoize|
@@ -347,10 +347,10 @@
 
 (defun make-transparent-loader ()
   "Makes the loader for those makers which would be plain .emakers if they did not need the TransparentStamp."
-  (make-scope "org.cubik.cle.prim.transparentLoaders" 
+  (make-scope "org.cubik.cle.prim.transparentLoaders"
     (mapcar (lambda (fqn)
               (list (concatenate 'string "&" fqn)
-                    (make-lazy-apply-slot 
+                    (make-lazy-apply-slot
                       (lambda () (transparent-authorize fqn)))))
             +transparent-maker-fqns+)))
 
@@ -360,7 +360,7 @@
     (e-lambda "vm-node-maker-importer"
         (:stamped +deep-frozen-stamp+)
       (:|fetch| ((fqn 'string) absent-thunk)
-        (let ((local-name (some (lambda (p) (without-prefix fqn p)) 
+        (let ((local-name (some (lambda (p) (without-prefix fqn p))
                                 prefixes)))
           (if local-name
             (let* ((sym (find-symbol local-name :e.kernel)))
@@ -373,8 +373,8 @@
         (block opt-unget
           (do-symbols (node-type (find-package :e.kernel))
             (when (same-yet-p specimen (get node-type 'static-maker))
-              (return-from opt-unget 
-                (concatenate 'string (first prefixes) 
+              (return-from opt-unget
+                (concatenate 'string (first prefixes)
                                      (string node-type)))))
           nil)))))
 
@@ -420,7 +420,7 @@
             (format stream "done.~%")))
         (:|runAsTurn| (thunk context-thunk)
           "Call the given thunk. If it throws, the exception is logged for debugging (unsealed), and a broken reference (sealed) is returned. If it ejects, no special handling is performed.
-    
+
     If a log message is produced, context-thunk is run to produce a string describing the origin of the failure."
           (handler-case-with-backtrace
             (efuncall thunk)
@@ -492,7 +492,7 @@
     ("org.apache.oro.text.regex.makePerl5Matcher"  e.extern:+rx-perl5-matcher+)
     
     ("org.cubik.cle.parser.makeLALR1Parser"
-     (efuncall (e-import "org.cubik.cle.parser.makeLALR1ParserAuthor") 
+     (efuncall (e-import "org.cubik.cle.parser.makeLALR1ParserAuthor")
                ;; XXX smaller authority: actually just wants access to cl-yacc
                +lisp+))
     
@@ -500,8 +500,8 @@
     ("org.cubik.cle.prim.ePrinter"             e.syntax:+e-printer+)
     ("org.cubik.cle.prim.makeFirstCharSplitter" +make-first-char-splitter+)
     ("org.cubik.cle.prim.makePathLoader"       +the-make-path-loader+)
-    ("org.cubik.cle.prim.simplifyFQName" 
-      (e-lambda "org.cubik.cle.prim.simplifyFQName" 
+    ("org.cubik.cle.prim.simplifyFQName"
+      (e-lambda "org.cubik.cle.prim.simplifyFQName"
           (:stamped +deep-frozen-stamp+)
         (:|run| (x) (simplify-fq-name (e-coerce x 'string))))) ; XXX replace this with wrap-function
     ("org.cubik.cle.io.makeSocket"             e.streams:+the-make-socket+)
@@ -514,8 +514,8 @@
 ; XXX simplify the amount of wrapping this requires / make those of these primitives which are safe (all of them?) importable
 (defglobal +e-ref-kit-slot+ (make-lazy-apply-slot (lambda ()
   (efuncall (e. +builtin-emaker-loader+ |fetch|
-        "org.erights.e.elib.ref.RefAuthor" 
-        (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing")))) 
+        "org.erights.e.elib.ref.RefAuthor"
+        (e-lambda "org.erights.e.elib.prim.RefAuthorNotFoundThunk" () (:|run| () (error "RefAuthor missing"))))
     (wrap-function (f+ #'vector #'make-promise)
                    :stamps (list +deep-frozen-stamp+))
     (wrap-function #'ref-shorten
@@ -580,8 +580,8 @@
       `(("&import__uriGetter"  ,(make-lazy-apply-slot (lambda ()
           ; wrapper to provide stamped DeepFrozenness since we can't currently do it 'properly' without dependency cycles
           (with-result-promise (self)
-            (let ((real-loader 
-                    (efuncall +the-make-path-loader+ self "import" (vector 
+            (let ((real-loader
+                    (efuncall +the-make-path-loader+ self "import" (vector
                       (efuncall +scope-to-right-invertible-loader+ +shared-safe-loader+) ; XXX unnecessarily repeating work
                       +sharable-importer+ ;; first so that anything the sharable importer contains is agreed upon by this
                       (make-primitive-loader)
@@ -606,7 +606,7 @@
     (:stamped +deep-frozen-stamp+)
   ;; XXX should be a guard
   ;; XXX this name and protocol to be reviewed. used only to implement Data, so far
-  (:|coerce/2| (standard-coerce 
+  (:|coerce/2| (standard-coerce
                  (lambda (s) (approvedp +standard-graph-exit-stamp+ s))
                  (lambda () +standard-graph-exit+)))
   (:|passes| (ref)
@@ -616,7 +616,7 @@
   (labels ((prim (name) (e. +shared-safe-loader+ |fetch| name +the-thrower+)))
     (make-exposing-scope "__shared"
       `(("shared__uriGetter"  ,+sharable-importer+)
-      
+        
         ; --- primitive: values not available as literals ---
         ; XXX true can be defined as (0 =~ _), and false as (!true) or (0 =~ []). Do we want to do so?
         ("null"       ,nil)
@@ -662,7 +662,7 @@
         ("Selfless" ,+selfless+)
         ("Transparent" ,+transparent-guard+)
 
-        ; --- primitive: reference operations (shared) ---        
+        ; --- primitive: reference operations (shared) ---
         ("__auditedBy" ,+the-audit-checker+)
         ("__equalizer" ,(prim "org.cubik.cle.prim.equalizer")) ; XXX should be elib.tables.equalizer
 
@@ -683,12 +683,12 @@
              (lazy-import (fqn)
                (make-lazy-apply-slot (lambda () (eelt (e. &<import> |get|) fqn)))))
       (make-union-exposing-scope fqn-prefix +shared-safe-scope+
-      
+        
         `(; --- self-referential / root ---
           ("safeScope"  ,safe-scope-vow)
           ("&import__uriGetter"  ,&<import>)
           
-          ; --- primitive: reference operations (non-shared) ---        
+          ; --- primitive: reference operations (non-shared) ---
           ("&Ref"        ,(lazy-import "org.cubik.cle.prim.Ref")) ; XXX should be elib.ref.Ref
           ("&DeepFrozen" ,(lazy-import "org.cubik.cle.prim.DeepFrozen")) ; XXX fqn
 
@@ -698,9 +698,9 @@
           ; --- data constructors (non-shared) ---
           ("&term__quasiParser"  ,(typical-lazy "<import:org.quasiliteral.quasiterm.makeQBuilder>.getTerm__quasiParser()"))
           ("&__makeOrderedSpace" ,(lazy-import "org.erights.e.elang.coord.OrderedSpaceMaker"))
-      
+          
           ; --- data guards: atomic (non-shared) ---
-          ("&char"      ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.char>, \"char\")"))    
+          ("&char"      ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.char>, \"char\")"))
           ("&float64"   ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.float64>, \"float64\")"))
           ("&int"       ,(typical-lazy "__makeOrderedSpace(<import:org.cubik.cle.prim.int>, \"int\")"))
           
@@ -712,7 +712,7 @@
           ("&Set"         ,(typical-lazy "<import:org.erights.e.elib.tables.makeConstSet>.asType()"))
           ("&Tuple"       ,(lazy-import "org.erights.e.elib.slot.Tuple"))
           ("&__Portrayal" ,(typical-lazy "Tuple[any, String, List[any]]"))
-  
+          
           ; --- protocol/guard constructors ---
           ("&__makeMessageDesc"  ,(lazy-import "org.erights.e.elib.base.makeMessageDesc"))
           ("&__makeParamDesc"    ,(lazy-import "org.erights.e.elib.base.makeParamDesc"))
@@ -723,7 +723,7 @@
           ("&Guard"       ,(lazy-import "org.erights.e.elib.slot.type.Guard"))
           ("&ValueGuard"  ,(lazy-import "org.erights.e.elib.slot.type.ValueGuard"))
           ("&__makeGuard" ,(typical-lazy "def stubMakeGuard(_) :any implements DeepFrozen { return def stubBaseGuard {} }"))
-      
+          
           ; --- utility: guards ---
           ("&notNull"   ,(lazy-import "org.erights.e.elang.interp.notNull"))
           ("&nullOk"    ,(lazy-import "org.erights.e.elib.slot.nullOk"))
@@ -745,7 +745,7 @@
           ; --- utility: data ---
           ("&rx__quasiParser" ,(lazy-import "org.erights.e.elang.interp.makePerlMatchMaker"))
           ("&simple__quasiParser" ,(lazy-import "org.quasiliteral.text.simple__quasiParser"))
-              
+          
           ; --- utility: alias loaders ---
           ("&elang__uriGetter"  ,(lazy-import "org.erights.e.elang.*"))
           ("&elib__uriGetter"   ,(lazy-import "org.erights.e.elib.*"))
@@ -784,8 +784,8 @@
 
 ; XXX should use e-extern's pathname-to-E-style-path facilities
 (defglobal +eprops+
-  (e. +the-make-const-map+ |fromPairs| 
-    `#(#("e.home" ,(namestring (asdf:component-pathname 
+  (e. +the-make-const-map+ |fromPairs|
+    `#(#("e.home" ,(namestring (asdf:component-pathname
                                  +the-asdf-system+))))))
 
 (defun make-io-scope (&key (interp nil interp-supplied) ((:stdout out-cl-stream)) ((:stderr error-cl-stream)))

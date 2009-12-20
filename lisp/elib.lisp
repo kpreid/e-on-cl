@@ -61,13 +61,13 @@
         `((let ((class (find-class ',type-spec)))
             (unless (class-finalized-p class)
               (finalize-inheritance class)))))
-  
+    
     (defmethod vtable-local-message-types ((type-sym (eql ',type-spec)))
       (list ,@(loop for smethod in smethods append
         (smethod-maybe-describe-fresh #'smethod-message-desc-pair smethod :prefix-arity 1))))
     
-    (loop 
-      for superclass in 
+    (loop
+      for superclass in
         ,(if is-eql
           `(class-precedence-list (class-of ,eql-instance-var))
           `(rest (class-precedence-list ,vtable-class-var)))
@@ -90,11 +90,11 @@
           (e-coercef verb 'string)
           (e-coercef arity '(integer 0))
           (as-e-boolean (or
-            (member (mangle-verb verb arity) 
-                    ',(mapcar (lambda (smethod) (smethod-mverb smethod 1)) 
+            (member (mangle-verb verb arity)
+                    ',(mapcar (lambda (smethod) (smethod-mverb smethod 1))
                               smethods))
             (e-is-true (call-next-method))))))
-  
+        
         (otherwise (call-next-method))))))
 
 ; xxx it might be useful to enforce the constraint that anything transparent-selfless and not a FUNCTION must have a specialized observable-type-of, or something to that effect.
@@ -115,7 +115,7 @@
 
 ; These must? be defined early, since any (defglobal +the-whatever+ (e-lambda :stamped +deep-frozen-stamp+ ...)) will cause evaluation of +deep-frozen-stamp+ at the time of execution of the defglobal.
 
-(defglobal +thread-sharable-stamp+ (e-lambda 
+(defglobal +thread-sharable-stamp+ (e-lambda
     "org.erights.e.elib.serial.ThreadSharableStamp"
     (:doc "The primitive rubber-stamping auditor for objects whose /implementation/ (those components of its state not exposed by __optUncall) is thread-safe. It does *not* guarantee observed immutability or no-outside-effects-during-turn behaviors; see DeepFrozenStamp. This stamp is a Lisp-system-wide authority.")
   (audited-by-magic-verb (auditor)
@@ -126,10 +126,10 @@
     (declare (ignore object-expr witness))
     +e-true+)))
 
-(defglobal +deep-frozen-stamp+ (e-lambda 
+(defglobal +deep-frozen-stamp+ (e-lambda
     "org.erights.e.elib.serial.DeepFrozenStamp"
     (:doc "The primitive rubber-stamping auditor for DeepFrozen-by-fiat objects.
-  
+
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   (audited-by-magic-verb (auditor)
     ;; stamped by itself; can't use :stamped because that would try to take the value before the object is constructed
@@ -139,7 +139,7 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore audition))
     +e-true+)))
 
-(defglobal +selfless+ (e-lambda 
+(defglobal +selfless+ (e-lambda
     "org.erights.e.elib.serial.Selfless"
     (:doc "XXX document this")
   (audited-by-magic-verb (auditor)
@@ -154,11 +154,11 @@ While this is a process-wide object, its stamps should not be taken as significa
 (defglobal +transparent-stamp+ (e-lambda
     "org.erights.e.elib.serial.TransparentStamp"
     (:doc "The primitive rubber-stamping auditor for Transparent objects, whose uncalls are guaranteed to be accurate.
-  
+
 While this is a process-wide object, its stamps should not be taken as significant outside of the vats of the objects stamped by it.")
   (audited-by-magic-verb (auditor)
     (setf auditor (ref-shorten auditor))
-    (cond 
+    (cond
       ((eql auditor +transparent-stamp+)
         ;; Prevents an infinite recursion:
         ;;       (transparent-selfless-p some-obj)
@@ -168,7 +168,7 @@ While this is a process-wide object, its stamps should not be taken as significa
         ;;    -> (approvedp +transparent-stamp+ +transparent-stamp+)
         ;;    -> (samep +transparent-stamp+ +deep-frozen-stamp+)
         ;;    -> repeat with +transparent-stamp+ in place of some-obj
-        ;;      
+        ;; 
         ;; Since we know the TransparentStamp is not itself transparent, we can shortcut the transparent check to not involve equalizer operations.
         nil)
       ((eql auditor +deep-frozen-stamp+)
@@ -181,13 +181,13 @@ While this is a process-wide object, its stamps should not be taken as significa
     (declare (ignore audition))
     +e-true+)))
 
-(defglobal +transparent-guard+ (e-lambda 
+(defglobal +transparent-guard+ (e-lambda
     "org.erights.e.elib.serial.Transparent"
     (:stamped +deep-frozen-stamp+
      :stamped +thread-sharable-stamp+)
   (:|passes/1| (specimen)
     (as-e-boolean (approvedp +transparent-stamp+ specimen)))
-  (:|coerce/2| (standard-coerce 
+  (:|coerce/2| (standard-coerce
                  (lambda (s) (approvedp +transparent-stamp+ s))
                  (lambda () +transparent-guard+)))))
 
@@ -197,30 +197,30 @@ While this is a process-wide object, its stamps should not be taken as significa
   (audited-by-magic-verb (auditor)
     (setf auditor (ref-shorten auditor))
     ;; see TransparentStamp comments
-    (cond 
+    (cond
       ((eql auditor +transparent-stamp+)     nil)
       ((eql auditor +deep-frozen-stamp+)     t)
       ((eql auditor +thread-sharable-stamp+) t)))
   (:|audit| (audition)
     (declare (ignore audition))
     +e-true+)))
-(defglobal +semitransparent-result-box-brand+ (e-lambda 
-    "org.erights.e.elib.serial.SemitransparentBoxBrand" 
+(defglobal +semitransparent-result-box-brand+ (e-lambda
+    "org.erights.e.elib.serial.SemitransparentBoxBrand"
     (:stamped +deep-frozen-stamp+
      :stamped +thread-sharable-stamp+)))
 (defgeneric semitransparent-result-box-contents (box))
 (defclass semitransparent-result-box ()
   ((value :initarg :value :reader semitransparent-result-box-contents)))
 
-(defglobal +pass-by-construction+ (e-lambda 
+(defglobal +pass-by-construction+ (e-lambda
     "org.erights.e.elib.serial.PassByConstruction"
     (:stamped +deep-frozen-stamp+
      :stamped +thread-sharable-stamp+)
   (:|audit| (audition)
     (declare (ignore audition))
     +e-true+)
-  (:|coerce/2| (standard-coerce 
-                 (lambda (s) 
+  (:|coerce/2| (standard-coerce
+                 (lambda (s)
                    (or (approvedp +pass-by-construction+ s)
                        (and (approvedp +selfless+ s)
                             (approvedp +transparent-stamp+ s)
@@ -228,8 +228,8 @@ While this is a process-wide object, its stamps should not be taken as significa
                                    `(or ,(guard-to-type-specifier +pass-by-construction+)
                                         ,(guard-to-type-specifier +standard-graph-exit+))))))
                  (lambda () +pass-by-construction+)))))
-        
-(defglobal +standard-graph-exit-stamp+ (e-lambda 
+
+(defglobal +standard-graph-exit-stamp+ (e-lambda
     "org.erights.e.elib.serial.StandardGraphExitStamp"
     (:stamped +deep-frozen-stamp+
      :stamped +thread-sharable-stamp+)
@@ -240,7 +240,7 @@ While this is a process-wide object, its stamps should not be taken as significa
 ; --- utilities referenced below ---
 
 (deftype e-list (element-type &aux (sym (make-symbol (format nil "generated predicate for (E-LIST ~A)" element-type))))
-  (setf (symbol-function sym) 
+  (setf (symbol-function sym)
         (lambda (specimen)
           (every (lambda (element) (typep element element-type)) specimen)))
   `(and vector (satisfies ,sym)))
@@ -278,7 +278,7 @@ While this is a process-wide object, its stamps should not be taken as significa
     &aux (resolver-var (gensym "RESULT-RESOLVER"))
          (value-var    (gensym "VALUE")))
   "Evaluate the forms as an implicit progn, binding result-var to an E promise-ref which refers to the result of the forms. Returns that result (not the resolved promise).
-  
+
 In the event of a nonlocal exit, the promise will currently remain unresolved, but this macro may be revised to smash it instead."
   `(multiple-value-bind (,result-var ,resolver-var) (make-promise)
     (let ((,value-var (progn ,@forms)))
@@ -298,21 +298,21 @@ In the event of a nonlocal exit, the promise will currently remain unresolved, b
   (:|coerce| (specimen opt-ejector)
     (declare (ignore specimen opt-ejector))
     nil)))
- 
+
 ; Simple native-type Guards
-(defclass cl-type-guard () 
+(defclass cl-type-guard ()
   ((ts :initarg :type-specifier
        :reader guard-to-type-specifier)))
 
 (declaim (inline standard-coerce))
 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (defun standard-coerce (test 
-                          conform-guard-thunk 
+  (defun standard-coerce (test
+                          conform-guard-thunk
                           &key
-                          (error 
+                          (error
                            (lambda (specimen)
                              (make-condition 'type-error
-                               :datum specimen 
+                               :datum specimen
                                :expected-type (guard-to-type-specifier (funcall conform-guard-thunk)))))
                           (test-shortened t))
     "Typical guard coercion. Returns a function which returns the first of these which passes the test, or ejects the result of error-thunk via opt-ejector: specimen, ref-shortened specimen, ref-shortened result of specimen.__conformTo(conform-guard-thunk.run()).
@@ -327,7 +327,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
           long-specimen
           (let ((specimen (ref-shorten long-specimen)))
             ; We shorten here even if test-shortened is false, because
-            ; if we didn't we'd pay for shortening twice in ref-state 
+            ; if we didn't we'd pay for shortening twice in ref-state
             ; and the __conformTo call.
             (cond
               ((and test-shortened (funcall test specimen))
@@ -336,8 +336,8 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
                 ; avoid synchronous-call errors from __conformTo
                 (fail))
               (t
-                (let ((coerced (ref-shorten 
-                                 (e. specimen |__conformTo| 
+                (let ((coerced (ref-shorten
+                                 (e. specimen |__conformTo|
                                    (funcall conform-guard-thunk)))))
                   (if (funcall test coerced)
                     coerced
@@ -350,9 +350,9 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
     (funcall (standard-coerce #'(lambda (specimen) (typep specimen type))
                               #'(lambda () (or opt-guard
                                              (type-specifier-to-guard type)))
-                              :error 
+                              :error
                               #'(lambda (specimen) (make-condition 'type-error
-                                                     :datum specimen 
+                                                     :datum specimen
                                                      :expected-type type)))
              long-specimen
              ejector)))
@@ -368,7 +368,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 ;;; --- Additional reference pieces ---
 
 (defun no-such-method (recipient mverb args)
-  (error 'no-such-method-error :recipient recipient 
+  (error 'no-such-method-error :recipient recipient
                                :mverb mverb
                                :args args))
 
@@ -383,7 +383,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (funcall fail))
 
 
-#+e.instrument.ref-shorten-uses 
+#+e.instrument.ref-shorten-uses
   (defvar *instrument-ref-shorten-kinds* (make-hash-table))
 
 (defun ref-shorten (x)
@@ -394,7 +394,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (typecase x
     ((not ref) x)
     (resolved-ref
-      (setf (resolved-ref-target x) 
+      (setf (resolved-ref-target x)
             (ref-shorten (resolved-ref-target x))))
     (t
       (%ref-shorten x))))
@@ -471,7 +471,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
       (when p
         (log-event '("org.cubik.cle.GettingCloser" "org.ref_send.log.Event")
                    `((condition . ,(promise-ref-log-id p))))))
-    nil)) 
+    nil))
 
 ;;; --- sugar cache ---
 
@@ -482,7 +482,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
   (let ((cache (sugar-cache *vat*)))
     (or (gethash key cache)
         (setf (gethash key cache)
-          (e. (e. (vat-safe-scope *vat*) |fetch| "import__uriGetter" +the-thrower+) 
+          (e. (e. (vat-safe-scope *vat*) |fetch| "import__uriGetter" +the-thrower+)
               |fetch| fqn fail)))))
 
 (declaim (inline sugar-cache-call))
@@ -492,7 +492,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
                    (return-from sugar-cache-call (funcall fail))))))
     (case mverb
       (:|__respondsTo/2|
-        (e. sugar |__respondsTo| 
+        (e. sugar |__respondsTo|
           (concatenate 'string "instance_" (e-coerce (first args) 'string))
           (1+ (e-coerce (second args) '(integer 0)))))
       ;; XXX __getAllegedType/0
@@ -507,7 +507,7 @@ If returning an unshortened reference is acceptable and the test doesn't behave 
 
 (declaim (ftype (function (t) t) type-specifier-to-guard))
 
-(declaim (ftype (function (t t) boolean) 
+(declaim (ftype (function (t t) boolean)
                 same-yet-p samep))
-(declaim (ftype (function (t) boolean) 
+(declaim (ftype (function (t) boolean)
                 settledp))

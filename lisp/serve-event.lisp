@@ -36,8 +36,8 @@
                        (with-simple-restart (abort "Abort delivering IO notification for ~A on ~S to ~S." direction target function)
                          (funcall function target2))))))))))
       (install))
-    (make-instance 'serve-event-deferred-io-handler 
-      :stopper (lambda () 
+    (make-instance 'serve-event-deferred-io-handler
+      :stopper (lambda ()
                   ;(format *trace-output* "~&vraih stopper ~S" (list runner target direction function))
                   (setf active nil)
                   (when handler
@@ -70,7 +70,7 @@
 
 (defmethod runner-loop ((runner serve-event-runner))
   (assert (eql runner *runner*))
-  (let ((sends (%runner-queue runner)) 
+  (let ((sends (%runner-queue runner))
         (time-queue (%ser-time-queue runner)))
     (loop
       (if (queue-null sends)

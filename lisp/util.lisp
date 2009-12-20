@@ -26,14 +26,14 @@
   (if (boundp name)
     (warn "Not recomputing ~A variable ~A." 'defconstantonce name)
     ;; sbcl emits bogus-or-irrelevant "redefining special as constant" warnings due to our declaim
-    (handler-bind ((warning #'muffle-warning)) 
+    (handler-bind ((warning #'muffle-warning))
       (eval `(defconstant ,name ',value
                ,@(when documentation (list documentation))))))
   name)
 
 ; --- misc ---
 
-(defglobal +the-asdf-system+ 
+(defglobal +the-asdf-system+
   (asdf:find-system :e-on-cl))
 
 (defun aan (s)
@@ -45,7 +45,7 @@
 
 (defmacro named-lambda (name &rest def)
   "Equivalent to the cl:lambda macro, except that it attempts to have 'name' show up in backtraces and function printing if possible. 'name' is not evaluated and must be a function name suitable for FLET/LABELS."
-  `(flet ((,name ,@def)) #',name))  
+  `(flet ((,name ,@def)) #',name))
 
 (declaim (inline map-from-hash)
          (ftype (function (t function hash-table) (or null vector list)) map-from-hash))
@@ -97,15 +97,15 @@
                                     while (> n 0)
                                     count t)
                               1))
-                 (mv-string (make-array (+ sep 1 digits) 
-                              :element-type 'character 
+                 (mv-string (make-array (+ sep 1 digits)
+                              :element-type 'character
                               :fill-pointer nil
                               :adjustable nil)))
             (replace mv-string verb :end1 sep)
             (setf (aref mv-string sep) #\/)
             (loop for pos from (1- (length mv-string)) above sep
                   for n of-type arity = arity then (floor n 10)
-                  do (setf (aref mv-string pos) 
+                  do (setf (aref mv-string pos)
                              (digit-char (mod n 10) 10)))
             mv-string)
           "KEYWORD"))
@@ -126,17 +126,17 @@
 (defun mverb-verb= (mverb verb)
   "Return whether the verb of MVERB is equal to VERB."
   (let ((mv-string (symbol-name mverb)))
-    (string= mv-string 
+    (string= mv-string
              verb
              :end1 (position #\/ mv-string :from-end t))))
-    
+
 (defun convention-capitalize (string)
   (string-upcase string :end (min 1 (length string))))
 
 (defun convention-uncapitalize (string)
   (if (and (plusp (length string))
            (string/= string (string-upcase string)))
-    (concatenate 'string (string (char-downcase (aref string 0))) 
+    (concatenate 'string (string (char-downcase (aref string 0)))
                          (subseq string 1))
     string))
 
@@ -153,10 +153,10 @@
   (if (and (>= without-len 0)
            (string= suffix string :start2 without-len))
     (subseq string 0 without-len)))
-  
+
 (declaim (inline without-prefix)
          (ftype (function (string string) (or null string)) without-prefix))
-(defun without-prefix (string prefix 
+(defun without-prefix (string prefix
     &aux (split-index (length prefix)))
   "Given a string and a prefix, return the string without the prefix, or NIL if the string does not have that prefix."
   (if (and (>= (length string) split-index)
@@ -169,7 +169,7 @@
     (cond
       ,@(loop for (keys . body) in cases collect
         (if (eql keys 'otherwise)
-          `(t 
+          `(t
             ,@body)
           `((member ,arg-sym ',(if (atom keys) (list keys) keys) :test #'equal)
             (pop ,list-sym)
@@ -184,11 +184,11 @@
   "Like HANDLER-CASE, but the handlers get second arguments which are as much backtrace information as the Lisp provides."
   `(let (,backtrace-var)
     (handler-case
-      (handler-bind (((or ,@(mapcar #'first clauses)) 
+      (handler-bind (((or ,@(mapcar #'first clauses))
                       #'(lambda (c) (declare (ignore c)) (setf ,backtrace-var (backtrace-value)))))
         ,form)
       ,@(loop for (type . lambda) in clauses collect
-         `(,type (,(caar lambda)) 
+         `(,type (,(caar lambda))
             ((lambda ,@lambda) ,(caar lambda) ,backtrace-var))))))
 
 
@@ -259,7 +259,7 @@
 &rest and &body result in the maximum being cl:call-arguments-limit. XXX there should be an option to return nil.
 
 XXX &key and &allow-other-keys are not yet supported, and will result in a too-low maximum."
-  (loop 
+  (loop
     with maxsofar = 0
     with minsofar = 0
     with optionally = nil
@@ -290,7 +290,7 @@ XXX &key and &allow-other-keys are not yet supported, and will result in a too-l
 
 (declaim (ftype function
   serve-event
-
+  
   native-pathname
   native-namestring
   

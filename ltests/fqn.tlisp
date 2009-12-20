@@ -14,17 +14,17 @@
 (defun fqn-of (x) (e. (e. x |__getAllegedType|) |getFQName|))
 
 (deftest fqn.default
-  (fqn-of (with-path nil 
+  (fqn-of (with-path nil
             (eval `(e-lambda "$hello" ()))))
   "<unknown-lisp>$hello")
-  
+
 (deftest fqn.path
-  (fqn-of (with-path (make-pathname :name "world") 
+  (fqn-of (with-path (make-pathname :name "world")
             (eval `(e-lambda "$hello" ()))))
   "world$hello")
 
 (deftest fqn.nest
   (fqn-of (efuncall
-            (with-path (make-pathname :name "world") 
+            (with-path (make-pathname :name "world")
               (eval `(e-lambda "$hello" () (:|run| () (e-lambda "$sub" ())))))))
   "world$hello$sub")

@@ -8,7 +8,7 @@
 ; --- Scope objects ---
 
 (defclass scope ()
-  ((fqn-prefix :initarg :fqn-prefix 
+  ((fqn-prefix :initarg :fqn-prefix
                :initform "__unnamed_outer"
                :type string
                :reader scope-fqn-prefix)
@@ -73,7 +73,7 @@
   (make-scope fqn-prefix
     (loop for record in init-list collect
       (destructuring-bind (varspec value) record
-        (list varspec value 
+        (list varspec value
               (make-instance 'same-guard :allowed
                 (if (eql 0 (position #\& varspec))
                   value
@@ -118,7 +118,7 @@
 
 (declaim (inline copy-hash-table-entries))
 (defun copy-hash-table-entries (source destination &key (test (constantly t)))
-  (loop for noun being each hash-key of source using (hash-value slot) 
+  (loop for noun being each hash-key of source using (hash-value slot)
         when (funcall test noun)
         do (setf (gethash noun destination) slot)))
 
@@ -130,16 +130,16 @@
   ; xxx support efficient accumulation?
   (let ((table (%scope-table scope))
         (local-definitions (local-definitions scope)))
-    (make-instance 'scope 
+    (make-instance 'scope
       :fqn-prefix (scope-fqn-prefix scope)
       'table
-        (let ((new-table (make-hash-table :test #'equal 
+        (let ((new-table (make-hash-table :test #'equal
                                           :size (1+ (hash-table-count table)))))
           (copy-hash-table-entries table new-table)
           (setf (gethash new-noun new-table) new-binding)
           new-table)
       'local-definitions
-        (let ((new-table (make-hash-table :test #'equal 
+        (let ((new-table (make-hash-table :test #'equal
                                           :size (1+ (hash-table-count local-definitions)))))
           (copy-hash-table-entries local-definitions new-table)
           (setf (gethash new-noun new-table) t)
@@ -165,8 +165,8 @@
   (:|or| (inner (outer 'scope))
     "Return a scope which maps all nouns either scope does, preferring this scope's bindings. The FQN prefix will be that of this scope."
     (flet ((overlay (accessor)
-             (let ((new-table (make-hash-table 
-                                :test #'equal 
+             (let ((new-table (make-hash-table
+                                :test #'equal
                                 :size (hash-table-count (funcall accessor outer)))))
           (loop for old-scope in (list outer inner)
                 for old-table = (funcall accessor old-scope)
@@ -188,18 +188,18 @@
     ;; loader setup before there is a vat for sugar-cache-call to use
     "Return this scope's slot for the given noun string, or throw if it has no slot."
     (block nil
-      (e. (e. scope |fetchSlot| noun 
+      (e. (e. scope |fetchSlot| noun
             (efun () (return (efuncall absent-thunk))))
           |get|)))
   (:|iterate| (scope afunc)
     "Iterate over the bindings in this scope, as \"&\" + noun => slot. Tentatively deprecated in favor of #slots/0."
     (let ((bindings (%scope-table scope)))
       (loop for noun across (scope-noun-ordering scope) do
-        (efuncall afunc (concatenate 'string "&" noun) 
+        (efuncall afunc (concatenate 'string "&" noun)
                         (eelt (gethash noun bindings))))
       nil))
   (:|bindings| (scope)
-    (e-lambda "$scopeBindings" () 
+    (e-lambda "$scopeBindings" ()
       (:|fetch| ((noun 'string) absent-thunk)
         "Return this scope's binding for the given noun string, or the result of absent-thunk if it has no such binding."
         (multiple-value-bind (binding present) (gethash noun (%scope-table scope))
@@ -211,7 +211,7 @@
               for noun across (scope-noun-ordering scope)
               do (efuncall f noun (gethash noun table))))))
   (:|nestOuter| (scope)
-    (make-instance 'scope 
+    (make-instance 'scope
       :fqn-prefix (scope-fqn-prefix scope)
       'table (%scope-table scope)
       'local-definitions (make-hash-table :test #'equal)))
@@ -223,7 +223,7 @@
     (with-binding scope new-noun new-binding))
   (:|withPrefix| (scope (new 'string))
     "Return a scope which is identical to this scope, except for having the given FQN prefix."
-    (make-instance 'scope 
+    (make-instance 'scope
       :fqn-prefix new
       'table (%scope-table scope)
       'local-definitions (local-definitions scope)))
@@ -232,16 +232,16 @@
   (:|without| (scope (removed-noun 'string))
     "Same as ConstMap#without/1. Added to support using Scopes in map-patterns."
     (let ((table (%scope-table scope)))
-      (make-instance 'scope 
+      (make-instance 'scope
         :fqn-prefix (scope-fqn-prefix scope)
         'table
-          (let ((new-table (make-hash-table :test #'equal 
+          (let ((new-table (make-hash-table :test #'equal
                                             :size (1+ (hash-table-count table)))))
             (copy-hash-table-entries table new-table
               :test (lambda (noun) (string/= noun removed-noun)))
             new-table)
         'local-definitions
-          (let ((new-table (make-hash-table :test #'equal 
+          (let ((new-table (make-hash-table :test #'equal
                                             :size (1+ (hash-table-count table)))))
             (copy-hash-table-entries (local-definitions scope) new-table
               :test (lambda (noun) (string/= noun removed-noun)))

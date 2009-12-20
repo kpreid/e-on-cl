@@ -50,25 +50,25 @@
             (translate-logical-pathname
               (or #+sbcl (ignore-errors
                            (sb-introspect:definition-source-pathname
-                             (sb-introspect:find-definition-source 
-                               (fdefinition fname)))) 
+                             (sb-introspect:find-definition-source
+                               (fdefinition fname))))
                   #p"")))
-        for name = 
+        for name =
           (cond
             ((gethash fname *omit-functions*)
              nil)
             ((mangled-verb-p (second frame))
-             (format nil "~S.~A(~{~S~^, ~})" 
+             (format nil "~S.~A(~{~S~^, ~})"
                      (first frame)
                      (unmangle-verb (second frame))
                      (cddr frame)))
             ((typep frame '(cons (cons (eql #.(sym-or-gen "FAST-METHOD" "SB-PCL"))
                                        (cons (member e-call-dispatch
-                                                     e-send-dispatch 
+                                                     e-send-dispatch
                                                      e-send-only-dispatch)))))
               (destructuring-bind ((fm op (rec-specializer mverb-specializer)) j1 j2 rec mverb &rest args) frame
                 (declare (ignore fm mverb-specializer j1 j2))
-                (format nil "~s ~S~A~A(~{~S~^, ~})" 
+                (format nil "~s ~S~A~A(~{~S~^, ~})"
                          rec-specializer
                          rec
                          (ecase op

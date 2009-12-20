@@ -78,7 +78,7 @@
                        (assert (eql target target*) () "buh?")
                        (with-turn (vat :label (format nil "IO handler ~A for ~A"
                                                       function
-                                                      target)) 
+                                                      target))
                          (funcall (ref-shorten function) target*)))))
 
 (declaim (inline queue-send-either))
@@ -90,7 +90,7 @@
     (enqueue-turn *vat* (lambda ()
       (log-event '("org.ref_send.log.Got" "org.ref_send.log.Event")
                  `((message . ,id)))
-      (e. resolver |resolve| 
+      (e. resolver |resolve|
         (handler-case-with-backtrace
           (apply #'e-call-dispatch rec mverb args)
           (error (problem backtrace)

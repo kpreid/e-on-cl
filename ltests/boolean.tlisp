@@ -7,7 +7,7 @@
 
 (deftest boolean.same-coercion
   ;; test that e-is-true coerces in the usual way
-  (collect-mismatches 
+  (collect-mismatches
     #'samep
     #'e-is-true
     (lambda (x) (e-is-true (e-coerce x 'e-boolean)))

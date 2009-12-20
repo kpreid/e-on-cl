@@ -25,7 +25,7 @@
   `(progn
      ,(when (member accessor '(fdefinition symbol-function))
         `(declaim (ftype function ,@(mapcar #'%define-if-available-parse-mapping symbols))))
-     (%define-if-available ',packages ',symbols 
+     (%define-if-available ',packages ',symbols
        (lambda (.out. .in.)
          (setf (,accessor .out.) (,accessor .in.))))))
 
@@ -36,8 +36,8 @@
 
 ;;; --- pathname handling ---
 
-(define-if-available 
-  (#+sbcl :sb-ext) 
+(define-if-available
+  (#+sbcl :sb-ext)
   ("NATIVE-PATHNAME" "NATIVE-NAMESTRING"))
 
 (default-alias 'native-pathname 'pathname)
@@ -104,7 +104,7 @@
       
       (multiple-value-bind (v1 v2 v3)
           (apply #'ext:run-program
-            program 
+            program
             :arguments arguments
             (let ((key-args (copy-seq key-args)))
               (remf key-args :error)
@@ -130,13 +130,13 @@
   ; xxx not the full set of args, but enough for our purposes
   (defun run-program (command args &key input output error (wait t))
     (labels ((pass ()
-               (system:run-shell-command 
+               (system:run-shell-command
                  (cons command args)
                  :input input
                  :output output
                  :error-output (if (eql error 't) nil error)
                  :wait wait)))
-      ; This condition written based on 
+      ; This condition written based on
       ; http://www.lispworks.com/documentation/lw44/LWRM/html/lwref-630.htm#pgfId-1011601
       (cond
         (wait
@@ -148,14 +148,14 @@
         (t
           (multiple-value-bind (io-stream error-stream pid) (pass)
             (declare (ignore error-stream pid))
-            (make-instance 'external-process 
+            (make-instance 'external-process
               :input-stream io-stream
               :output-stream io-stream))))))
   )
 
 #-(or lispworks clisp) (progn
 
-  (define-if-available 
+  (define-if-available
     (#+sbcl :sb-ext
      #+cmu  :extensions
      #+ccl  :ccl)
@@ -188,14 +188,14 @@
 (defun backtrace-value ()
   "Returns a value describing the stack in unspecified detail, suitable for printing."
   (or
-    #+sbcl 
+    #+sbcl
       (sb-debug:backtrace-as-list)
     #+abcl ; xxx untested
       (ext:backtrace-as-list)
     #+cmu ; xxx untested
       (with-output-to-string (*debug-io*)
         (debug:backtrace))
-    ;; xxx this makes OpenMCL 0.14.2-p1 die reliably: 
+    ;; xxx this makes OpenMCL 0.14.2-p1 die reliably:
     ;; Can't find active area, -> kernel debugger
     ;; #+openmcl
     ;;   (with-output-to-string (*debug-io*)
@@ -210,7 +210,7 @@
 
 ;;; --- MOP ---
 
-#+#.(cl:if (cl:eql (cl:symbol-package 'e.util:class-precedence-list) 
+#+#.(cl:if (cl:eql (cl:symbol-package 'e.util:class-precedence-list)
                    (cl:find-package :e.util)) :t :nil)
   (defun class-precedence-list (&rest args)
     (error "No MOP package known for this implementation, to retrieve class-precedence-list from."))

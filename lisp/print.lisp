@@ -13,13 +13,13 @@
 (defobject +the-text-writer-guard+
     "org.erights.e.elib.print.TextWriterGuard"
     (:stamped +deep-frozen-stamp+)
-  (:|coerce/2| (standard-coerce 
+  (:|coerce/2| (standard-coerce
     (lambda (specimen) (approvedp +text-writer-stamp+ specimen))
     (lambda () +the-text-writer-guard+)
     :error (lambda (specimen) (format nil "~A is not audited as a TextWriter" specimen))
     :test-shortened nil)))
 
-(defglobal +standard-syntax+ 
+(defglobal +standard-syntax+
   (e-lambda "org.erights.e.elib.print.baseSyntax"
       (:stamped +deep-frozen-stamp+)
     (:|run| (writer)
@@ -27,7 +27,7 @@
                 (e-lambda |instance| ()
                   (:|enterReference| ()
                     |instance|)
-                  (:|exitReference| () 
+                  (:|exitReference| ()
                     nil)
                   (:|cycle| ()
                     (e. writer |write| "<***CYCLE***>"))
@@ -61,12 +61,12 @@
 (defun trace-error-print-handler (thing)
   ; XXX printing the backtrace is too noisy for running the tests - we need a 'store-but-don't-print' trace facility, or a tracelog like E-on-Java.
   (lambda (raw-condition)
-    (efuncall 
-      (eelt (vat-safe-scope *vat*) "traceln") 
-      (format nil "problem while printing ~S: ~A (~S)~%~:W" 
-        thing 
-        (e-quote raw-condition) 
-        raw-condition 
+    (efuncall
+      (eelt (vat-safe-scope *vat*) "traceln")
+      (format nil "problem while printing ~S: ~A (~S)~%~:W"
+        thing
+        (e-quote raw-condition)
+        raw-condition
         (or #+(or) (backtrace-value))))))
 
 (defun do-print-syntax (tw thing syntax in-error-printing nest)
@@ -79,7 +79,7 @@
                 ; propagate.
                 (e. thing |__printOn| tw)
                 (handler-case
-                  (handler-bind 
+                  (handler-bind
                       ((e-catchable-condition (trace-error-print-handler thing)))
                     (e. thing |__printOn| tw))
                   (e-catchable-condition (condition)
@@ -113,7 +113,7 @@
                     (:stamped +text-writer-stamp+
                      :stamped +pass-by-construction+)
                   (:|__optUncall| ()
-                    `#(,+the-make-text-writer+ "makePresence" 
+                    `#(,+the-make-text-writer+ "makePresence"
                        #(,(e-lambda "forwarder" ()
                             (otherwise (mverb &rest args)
                               (apply #'e-call-dispatch tw mverb args))))))
@@ -227,11 +227,11 @@
         (check-type text string)
         (princ text stream)
         nil)
-      (:|flush| () 
+      (:|flush| ()
         (force-output stream)
         nil)
       (:|close| ()
-        (when should-close-underlying 
+        (when should-close-underlying
           (close stream))
         nil))))
 
@@ -240,7 +240,7 @@
   ((buffer :initarg :buffer
            :type string
            :reader string-buffer-buffer)))
-           
+
 (def-vtable string-buffer
   (:|__printOn| (this (tw +the-text-writer-guard+))
     ; XXX should we not print the brackets if not isQuoting?

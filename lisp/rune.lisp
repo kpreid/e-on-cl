@@ -59,10 +59,10 @@
     (lambda ()
       (let* ((scope (make-io-scope :stdout *standard-output* :stderr *error-output*))
              (Ref (eelt scope "Ref")))
-        (e. Ref |whenResolved| (efuncall (eelt scope "rune") 
+        (e. Ref |whenResolved| (efuncall (eelt scope "rune")
                                         (coerce args 'vector))
           (e-lambda "org.erights.e.elang.interp.runeTerminator" ()
-            (:|run| (outcome 
+            (:|run| (outcome
                 &aux (opt-problem (e. Ref |optProblem| outcome)))
               (when opt-problem
                 (format *error-output* "# problem: ~A" (e-quote (e-problem-unseal opt-problem))))
@@ -120,7 +120,7 @@
       it is compiled into."
   (assert (= 1 (length args)))
   (generic-toplevel "rune --translate toplevel"
-    (lambda () 
+    (lambda ()
       (print (e.elang:get-translation (e.syntax:parse-to-kernel (first args))))
       (fresh-line)
       (force-output)
@@ -157,8 +157,8 @@
     (save-flush)
     (setf *image-is-detached* nil)
     
-    #.(locally 
-        (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note)) 
+    #.(locally
+        (declare #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
         (or
           #+sbcl
           (quote
@@ -169,8 +169,8 @@
                    exec ~S --noinform --end-runtime-options \"$@\"~%"
                   (native-namestring (merge-pathnames secondary-file))))
               ;; XXX replace the below with sb-posix:chmod and a proper mode computation
-              (run-program "chmod" 
-                (list "+x" 
+              (run-program "chmod"
+                (list "+x"
                       (native-namestring (merge-pathnames executable-file)))
                 :wait t
                 :search t)
@@ -180,7 +180,7 @@
                 :toplevel #'%revive-start)))
           #+cmu
           (quote
-            (ext:save-lisp 
+            (ext:save-lisp
               executable-file
               :purify t
               :init-function #'%revive-start
@@ -208,7 +208,7 @@
               :keep-global-handlers nil ; XXX is this appropriate?
               :executable executable-p))
           '(error "Saving an executable/image is not supported for ~A." (lisp-implementation-type))))
-        
+    
     ;; depending on the implementation (e.g. sbcl's save-lisp-and-die) we may
     ;; or may not reach here
     (global-exit 0)))
@@ -217,7 +217,7 @@
 
 (defun save-flush ()
   (assert *vat*)
-
+  
   (setf *parse-cache-name* nil)
   
   ;; make sure we've loaded everything lispy, in order to simplify the
@@ -238,7 +238,7 @@
   
   #+sbcl
   (setf *sbcl-home-transport* (sb-ext:posix-getenv "SBCL_HOME"))
-
+  
   ;; XXX why is this a feature? why not an ordinary variable?
   (setf *features* (delete :e.saving-image *features*))
   
@@ -264,7 +264,7 @@
 ;;; --- Staleness testing ---
 
 (defun deep-operation-done-p (operation component)
-  (loop for (o . c) in (asdf::traverse operation component) 
+  (loop for (o . c) in (asdf::traverse operation component)
         always (asdf:operation-done-p o c)))
 
 (defun operation-used-p (operation component)
@@ -273,8 +273,8 @@
        t))
 
 (defun defined-systems ()
-  (map-from-hash 'list 
-                 (lambda (k v) (declare (ignore k)) (cdr v)) 
+  (map-from-hash 'list
+                 (lambda (k v) (declare (ignore k)) (cdr v))
                  asdf::*defined-systems*))
 
 
@@ -291,7 +291,7 @@
 
 (defun stale ()
   (or (let ((op (make-instance 'asdf:load-op :original-initargs nil)))
-        (not (every (lambda (system) 
+        (not (every (lambda (system)
                       (or (not (operation-used-p op system))
                           (deep-operation-done-p op system)))
                     (defined-systems))))
@@ -335,7 +335,7 @@
     &aux (*break-on-signals*   *break-on-signals*)
          (*break-on-ejections* *break-on-ejections*)
          (toplevel             #'script-toplevel)
-         parse-cache-name 
+         parse-cache-name
          do-usage)
   "Does not return until the initial vat is shut down."
   (declare (optimize (debug 2) (safety 3)))
@@ -377,9 +377,9 @@
   (when do-usage
     (format *query-io* "~
 Lisp-level options:
-  --help                  
+  --help
       Print this help.
-  --parse-cache|-p <file> 
+  --parse-cache|-p <file>
       Use <file> to cache data that otherwise requires starting a Java
       process.
   --causality <file>
@@ -405,7 +405,7 @@ Lisp-level options:
     ; the setting of *parse-cache-name* is deferred so that global-exit will not save a parse cache not including the current contents of the file
     (e.syntax:load-parse-cache-file parse-cache-name)
     (setf *parse-cache-name* parse-cache-name))
-
+  
   (unless *vat*
     (establish-vat :label "initial"))
   

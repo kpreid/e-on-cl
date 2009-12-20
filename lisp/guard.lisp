@@ -7,14 +7,14 @@
 (def-shorten-methods guard-to-type-specifier 1)
 
 (defmethod guard-to-type-specifier (guard)
-  (let ((sym (make-symbol (e-quote guard)))) 
-    (setf (symbol-function sym) 
-      (lambda (specimen) 
+  (let ((sym (make-symbol (e-quote guard))))
+    (setf (symbol-function sym)
+      (lambda (specimen)
         (block nil
-          (eql specimen 
+          (eql specimen
                (e. guard |coerce| specimen
-                                  (efun (c) 
-                                    (declare (ignore c)) 
+                                  (efun (c)
+                                    (declare (ignore c))
                                     (return nil)))))))
     (setf (get sym 'satisfies-type-specifier-guard) guard)
     `(satisfies ,sym)))
@@ -23,7 +23,7 @@
 
 (defun message-pairs-to-map-including-miranda-messages (pairs)
   "PAIRS may contain duplicate keys, in which case the later one takes precedence"
-  (e. (e. +the-make-const-map+ |fromIteratable| 
+  (e. (e. +the-make-const-map+ |fromIteratable|
         (e-lambda nil () (:|iterate| (f)
           (loop for pair in pairs do
             (efuncall f (aref pair 0) (aref pair 1)))))
@@ -37,9 +37,9 @@
 
 (defglobal +trivial-value-lists+
   (mapcar #'list
-          (list nil 
-                +e-false+ 
-                0 0d0 0.0 
+          (list nil
+                +e-false+
+                0 0d0 0.0
                 (code-char 0))))
 
 (def-vtable cl-type-guard
@@ -64,7 +64,7 @@
                  (error "No trivial value available")))))
   (:|getDocComment| (this)
     (coerce (documentation (guard-to-type-specifier this) 'type) 'doc-comment))
-  (:|getSupers| (this) 
+  (:|getSupers| (this)
     "Supertype information is not currently available for primitive types."
     (declare (ignore this))
     #())
@@ -103,7 +103,7 @@
 
 #+sbcl (progn
 
-(defun sbcl-derive-coerce-result (call) 
+(defun sbcl-derive-coerce-result (call)
   (declare (type sb-c::combination call)
            (optimize speed))
   (let* ((dargs (sb-c::basic-combination-args call))
@@ -119,7 +119,7 @@
             (let ((guard (sb-c::lvar-value guardl)))
               (when (typep guard 'cl-type-guard)
                 #+(or) (efuncall e.knot:+sys-trace+ (format nil "~&deriving guard call type ~S~%" (guard-to-type-specifier guard)))
-                (sb-c::ir1-transform-specifier-type 
+                (sb-c::ir1-transform-specifier-type
                   (guard-to-type-specifier guard))))))))))
 
 (pushnew 'sbcl-derive-coerce-result *sbcl-dispatch-result-derivers*)

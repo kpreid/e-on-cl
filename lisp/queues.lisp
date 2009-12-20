@@ -19,7 +19,7 @@
                        :reader %queue-nonempty-condition)
    (in  :initform () :accessor queue-in)
    (out :initform () :accessor queue-out)))
-   
+
 (defmethod enqueue ((queue queue) value)
   (with-recursive-lock-held ((%queue-lock queue))
     (push value (queue-in queue)))
@@ -37,7 +37,7 @@
   (with-recursive-lock-held ((%queue-lock queue))
     (or (dequeue queue)
         (progn
-          (condition-wait (%queue-nonempty-condition queue) 
+          (condition-wait (%queue-nonempty-condition queue)
                           (%queue-lock queue))
           (dequeue queue)))))
 
@@ -48,11 +48,11 @@
 ;;; --- priority queue ---
 
 (defclass priority-queue ()
-  ((elements :type list 
+  ((elements :type list
              :initform nil
              :accessor %priority-queue-elements))
   (:documentation "A mutable priority queue with numeric priorities."))
-  
+
 (defgeneric priority-queue-peek (q absent-thunk))
 (defgeneric priority-queue-snapshot (q))
 (defgeneric priority-queue-pop (q))
@@ -69,14 +69,14 @@
   (if (%priority-queue-elements q)
     (pop (%priority-queue-elements q))
     (error "empty queue")))
-      
+
 (defmethod priority-queue-snapshot ((q priority-queue))
   (copy-list (%priority-queue-elements q)))
-    
+
 (defmethod priority-queue-put ((q priority-queue) key value)
   #-sbcl (declare (real key)) ; apparent PCL bug triggered
   ;XXX more efficient than linear?
-  (if (or (null (%priority-queue-elements q)) 
+  (if (or (null (%priority-queue-elements q))
           (< key (car (first (%priority-queue-elements q)))))
     (push (cons key value) (%priority-queue-elements q))
     (loop for prev = (%priority-queue-elements q) then (rest prev)

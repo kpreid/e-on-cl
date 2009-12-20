@@ -77,7 +77,7 @@
     (call-next-method)))
 
 
-(defclass e-simple-slot () 
+(defclass e-simple-slot ()
   ((value :initarg :value :reader simple-slot-value))
   (:documentation "A normal immutable slot."))
 
@@ -111,10 +111,10 @@
     +e-true+))
 
 (defmethod make-load-form ((a e-simple-slot) &optional environment)
-  (make-load-form-saving-slots a :environment environment))  
+  (make-load-form-saving-slots a :environment environment))
 
 
-(defclass coerced-slot (initially-coercing-slot) 
+(defclass coerced-slot (initially-coercing-slot)
   ((value :initarg :value :reader coerced-slot-value)
    (guard :initarg :guard :reader coerced-slot-guard)))
 
@@ -164,7 +164,7 @@
     +e-true+))
 
 (defmethod make-load-form ((a coerced-slot) &optional environment)
-  (make-load-form-saving-slots a :environment environment))  
+  (make-load-form-saving-slots a :environment environment))
 
 
 (defclass base-closure-slot (vat-checking)
@@ -184,7 +184,7 @@
 
 (defmethod shared-initialize :after ((slot base-closure-slot) slot-names &key (value nil value-supplied) &allow-other-keys)
   (declare (ignore slot-names))
-  (with-accessors ((getter closure-slot-getter) 
+  (with-accessors ((getter closure-slot-getter)
                    (setter closure-slot-setter))
                   slot
     (when value-supplied
@@ -192,9 +192,9 @@
       (assert (not (slot-boundp slot 'setter)))
       (setf getter (lambda () value)
             setter (lambda (new) (setf value new))))))
-  
 
-(defclass e-var-slot (base-closure-slot) 
+
+(defclass e-var-slot (base-closure-slot)
   ())
 
 (def-vtable e-var-slot
@@ -217,7 +217,7 @@
 
 (def-vtable e-guarded-slot
   (:|__printOn| (this (tw +the-text-writer-guard+)) ; XXX move to e.syntax?
-    (with-accessors ((guard guarded-slot-guard) 
+    (with-accessors ((guard guarded-slot-guard)
                      (getter closure-slot-getter))
                     this
       (e. tw |print| "<var ")
@@ -226,14 +226,14 @@
       (e. tw |quote| guard)
       (e. tw |print| ">")))
   (:|put| (this new-value)
-    (funcall (closure-slot-setter this) 
+    (funcall (closure-slot-setter this)
       (e. (guarded-slot-guard this) |coerce| new-value nil))
     nil))
 
 (defmethod print-object ((slot e-guarded-slot) stream)
   (print-unreadable-object (slot stream :type nil :identity nil)
-    (format stream "var & ~W :~W" 
-      (if (slot-boundp slot 'getter) 
+    (format stream "var & ~W :~W"
+      (if (slot-boundp slot 'getter)
         (e. slot |get|)
         '#:<unbound-getter>)
       (ignore-errors (guarded-slot-guard slot)))))

@@ -20,8 +20,8 @@
 (defun property-name-to-get-verb (name)
   (if (string= name "")
     "get"
-    (concatenate 'string "get" 
-                         (string (aref name 0)) 
+    (concatenate 'string "get"
+                         (string (aref name 0))
                          (subseq name 1))))
 
 (def-vtable e-structure-exception
@@ -30,7 +30,7 @@
     (efuncall (se-printer condition) tw condition))
   (:|__getAllegedType| (condition)
     (efuncall +the-make-type-desc+
-      "StructureException instance type" 
+      "StructureException instance type"
       nil
       (map 'vector
            (lambda (type)
@@ -56,10 +56,10 @@
         (e. (se-properties rec) |fetch| pname (efun () (return-from e-call-match (call-next-method)))))
       (call-next-method))))
 
-(defobject +the-make-exception+ "org.cubik.cle.prim.makeException" 
+(defobject +the-make-exception+ "org.cubik.cle.prim.makeException"
     (:stamped +deep-frozen-stamp+)
-  (:|run| ((types 'vector) 
-           (properties +the-map-guard+) 
+  (:|run| ((types 'vector)
+           (properties +the-map-guard+)
            (printer (eelt (vat-safe-scope *vat*) "DeepFrozen")))
     (setf types (map 'vector (lambda (x) (e-coercef x 'string)) types))
     (make-condition
@@ -84,7 +84,7 @@
   (:|toQuote/1| 'e-quote)
   (:|toString/1| 'e-print))
 
-(defobject +the-looper+ "org.erights.e.elang.interp.loop" 
+(defobject +the-looper+ "org.erights.e.elang.interp.loop"
     (:stamped +deep-frozen-stamp+)
   (:|__printOn| ((tw +the-text-writer-guard+))
     (e. tw |print| "<__loop>")
@@ -110,7 +110,7 @@
   ;; In the future, this might become part of something for working with character sets in general, and Unicode character categories. Consider Cocoa's NSCharacterSet and NSScanner.
   (:|run| ((specials 'string))
     (flet ((match (ch) (position ch specials)))
-      (e-lambda "org.quasiliteral.text.makeFirstCharSplitter$firstCharSplitter" 
+      (e-lambda "org.quasiliteral.text.makeFirstCharSplitter$firstCharSplitter"
           (:stamped +deep-frozen-stamp+)
         (:|__printOn| ((out +the-text-writer-guard+))
           (e. out |write| "<finds any of ")
@@ -126,7 +126,7 @@
           (or (position-if #'match str :start start)
               -1))))))
 
-(defobject +the-get-character+ "org.cubik.cle.prim.getCharacter" 
+(defobject +the-get-character+ "org.cubik.cle.prim.getCharacter"
     (:stamped +deep-frozen-stamp+)
   (:|run| (codepoint)
     ;; XXX Unicode assumption

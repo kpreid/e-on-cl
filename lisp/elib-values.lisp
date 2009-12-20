@@ -28,21 +28,21 @@
   (e-coercef sep 'string)
   (when (string= sep "")
     (error "split: separator may not be empty"))
-  (let* ((nsep (loop for pos = (search sep pattern) 
+  (let* ((nsep (loop for pos = (search sep pattern)
                              then (search sep pattern :start2 (+ (length sep) pos))
                      while pos count t))
-         (result (make-array (1+ nsep) 
+         (result (make-array (1+ nsep)
                              :element-type (if (stringp source) 'string 'twine)
                              :initial-element ""))
          (start 0)
          (rfill 0))
     (labels ((output (&key (start 0) (end nil))
-               (setf (aref result rfill) 
+               (setf (aref result rfill)
                        (e. source |run| start (or end (length pattern))))
                (incf rfill))
              (pick ()
                (let ((pos (search sep pattern :start2 start)))
-                 (cond 
+                 (cond
                    ((null pos) (output :start start :end pos)
                                nil)
                    (t
@@ -75,7 +75,7 @@
       ((and (typep guard 'cl-type-guard)
             (subtypep 'simple-error (guard-to-type-specifier guard)))
         (make-condition 'simple-error
-          :format-control (format-control-quote this) 
+          :format-control (format-control-quote this)
           :format-arguments '()))
       (t this)))
   (:|op__cmp| (this (other 'string))
@@ -92,7 +92,7 @@
       (call-next-method)))
   (:|startsWith| (this (prefix 'vector))
     "Return whether 'prefix' is a prefix of this string."
-    (as-e-boolean (string= this prefix :end1 (min (length this) 
+    (as-e-boolean (string= this prefix :end1 (min (length this)
                                                   (length prefix)))))
   (:|endsWith| (this (suffix 'vector))
     "Return whether 'prefix' is a suffix of this string."
@@ -107,10 +107,10 @@
 
   (:|rjoin| (this items)
     "Return the strings in 'items' concatenated and separated by this string.
-    
+
 someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty string."
     (let* ((items (loop for item across (e-coerce items 'vector) collect (e-coerce item 'string)))
-           (string (make-array 
+           (string (make-array
                      (reduce #'+ items
                        :initial-value 0
                        :key #'length)
@@ -131,7 +131,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       (error "replaceAll: search string may not be empty"))
     (let* ((nreplace (loop for pos = (search old this) then (search old this :start2 (+ (length old) pos))
                            while pos count t))
-           (result (make-array (+ (length this) (* nreplace (- (length new) (length old)))) 
+           (result (make-array (+ (length this) (* nreplace (- (length new) (length old))))
                                :element-type 'character
                                :initial-element #\%))
            (start 0)
@@ -144,7 +144,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                  (incf rfill (- (or end (length this)) start)))
                (pick ()
                  (let ((pos (search old this :start2 start)))
-                   (cond 
+                   (cond
                      ((null pos) (output this :start start :end pos)
                                  nil)
                      (t
@@ -158,10 +158,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   
   ;; XXX all Twine methods
   (:|asFrom| (this uri)
-    (e. +the-make-twine+ |fromString| 
-      this 
+    (e. +the-make-twine+ |fromString|
+      this
       (e.tables::source-span-for-string this uri)))
-  (:|getOptSpan| (this) 
+  (:|getOptSpan| (this)
     (declare (ignore this))
     nil)
   (:|isBare| (this)
@@ -206,7 +206,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-class-opaque character)
 
 #| Disabling because making the delta inline triggers poor behavior from SBCL:
-   it derives that (char-nearby # 1), for example, can never produce #\Nul, 
+   it derives that (char-nearby # 1), for example, can never produce #\Nul,
    and represents this in the fasl by a structure which is effectively
    (MEMBER #\Soh #\Stx #\Etx ...). This greatly increases compilation and load
    times and fasl file size. |#
@@ -219,7 +219,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
            ;; constant deltas.
            #+sbcl (sb-ext:muffle-conditions sb-ext:code-deletion-note))
   (loop with code = (char-code char)
-        initially (assert (char= char (code-char code)) 
+        initially (assert (char= char (code-char code))
                           (char)
                           "~A is not a simple character" (e-quote char))
         do (incf code delta)
@@ -296,7 +296,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
         ; XXX this should really be a test for "is an eql-atomic type, as in def-atomic-sameness"
         #'eql)
       ; general comparison
-      (t 
+      (t
         #'samep))))
 
 (defun reprint (obj fqn printer)
@@ -335,7 +335,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
       +e-false+))
   (:|asSet| (vector)
     "Return a ConstSet with the elements of this list, omitting duplicates."
-    (e. (e-import "org.erights.e.elib.tables.makeConstSet") 
+    (e. (e-import "org.erights.e.elib.tables.makeConstSet")
         |fromKeysOf| (e. vector |asKeys|)))
   (:|asStream| (vector &aux (position 0))
     "Return a stream providing the elements of this list."
@@ -386,7 +386,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   (:|add| (this (other 'vector))
     "Return the concatenation of both lists."
     (concatenate `(vector (or ,(array-element-type this)
-                              ,(array-element-type other))) 
+                              ,(array-element-type other)))
                  this other))
   (:|multiply| (vector (times '(integer 0)))
     "Return a list containing the elements of this list repeated 'times' times."
@@ -422,9 +422,9 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
                                                         (array-element-type vector))
                               :from-end t)
         -1))
-  (:|run| (this 
+  (:|run| (this
            (start `(integer 0 ,(length this)))
-           (end `(integer ,start ,(length this)))) 
+           (end `(integer ,start ,(length this))))
     ; optimization
     (subseq this start end))
   (:|with| (vector elem)
@@ -449,7 +449,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (stable-sort (copy-seq vector)
                  (e.tables::comparer-adapter)))
   (:|sort| (vector comparer)
-    (stable-sort (copy-seq vector) 
+    (stable-sort (copy-seq vector)
                  (lambda (a b) (e-is-true (e. (efuncall comparer a b) |belowZero|))))))
 
 (defmethod e-call-match (fail (rec vector) mverb &rest args)
@@ -535,7 +535,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   
   (:|mod| (a (b 'number))
     (mod a b))
-  (:|remainder| (a (b 'number)) 
+  (:|remainder| (a (b 'number))
     (rem a b))
   
   (:|pow| (base (exponent 'number))
@@ -616,13 +616,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
           (t            (error "(~A).toOctetsUnsigned(): nonnegative numbers only" this))))
   (:|cryptoHash| (this)
     "Unsigned integer interpretation of the SHA-1 hash of the smallest possible octet array holding the big-endian two's complement representation of this integer."
-    (octets-to-unsigned-integer 1 
+    (octets-to-unsigned-integer 1
       (ironclad:digest-sequence :sha1
         (twos-complement-integer-to-octets this)))))
 
 (defun octets-to-unsigned-integer (signum octets)
   (* signum (reduce (lambda (n o) (+ (ash n 8) o)) octets :initial-value 0)))
-  
+
 (defun twos-complement-integer-to-octets (integer)
   (let ((octets (make-array (ceiling (1+ (integer-length integer)) 8)
                             :element-type '(unsigned-byte 8))))
@@ -635,7 +635,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (def-class-opaque integer)
 
 
-(defobject +the-make-int+ "org.cubik.cle.prim.makeInt" 
+(defobject +the-make-int+ "org.cubik.cle.prim.makeInt"
     (:stamped +deep-frozen-stamp+
      :doc "Operations for producing integers from other data such as strings.")
   (:|run| ((value 'string))
@@ -681,7 +681,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 (defun simple-condition-string-only-p (condition)
   (let ((fc (simple-condition-format-control condition)))
     (and (stringp fc)
-         (cl-ppcre:scan (load-time-value 
+         (cl-ppcre:scan (load-time-value
                           (cl-ppcre:create-scanner
                             "^(?:[^~]|~~)*$"))
                         fc)
@@ -711,7 +711,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   "Print an object with information about its alleged type. Originally written for type-errors."
   ;; XXX this should be exported
   (when (eql (ref-state specimen) 'near)
-    (let* ((observed-type (observable-type-of specimen))) 
+    (let* ((observed-type (observable-type-of specimen)))
       (e. tw |write| "the ")
       (if (eql observed-type 't)
         (e. tw |quote| (e. (e. specimen |__getAllegedType|) |getFQName|))
@@ -756,7 +756,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
   ; XXX should we really be doing this?
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| (format nil "problem: ~A" this))))
-                      
+
 ; A vtable for CL:UNBOUND-VARIABLE is defined in elang.lisp.
 
 (def-vtable local-throw-sealed-box
@@ -768,10 +768,10 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defun message-types-to-map (mtypes)
   (e. +the-make-const-map+ |fromColumns|
-    (map 'vector 
-      #'(lambda (md) 
-        (format nil "~A/~A" (message-desc-verb md) 
-                            (length (message-desc-params md)))) 
+    (map 'vector
+      #'(lambda (md)
+        (format nil "~A/~A" (message-desc-verb md)
+                            (length (message-desc-params md))))
       mtypes)
     (coerce mtypes 'vector)))
 
@@ -781,13 +781,13 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
 
 (defmethod shared-initialize :after ((this type-desc) slot-names &key &allow-other-keys)
   (declare (ignore slot-names))
-  (loop 
+  (loop
     with seen = (make-hash-table)
     for md across (type-desc-message-types-v this)
     for mverb = (message-desc-mverb md)
     do (when (gethash mverb seen)
          (error "duplicate message desc for ~A: ~A then ~A"
-           mverb 
+           mverb
            (e-quote (gethash mverb seen))
            (e-quote md)))
        (setf (gethash mverb seen) md)))
@@ -808,14 +808,14 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (setf mtypes (copy-seq mtypes))
     ; (vector TYPE) enforces only upgraded-type of elements
     ;; XXX write the coerces-elements for e-list
-    (loop 
+    (loop
       for i below (length mtypes)
       do (e-coercef (aref mtypes i) 'message-desc))
     (make-instance 'type-desc
-      :doc-comment doc-comment 
-      :fq-name fq-name 
-      :supers supers 
-      :auditors auditors 
+      :doc-comment doc-comment
+      :fq-name fq-name
+      :supers supers
+      :auditors auditors
       :message-types-v mtypes)))
 
 (defobject +the-make-message-desc+
@@ -880,7 +880,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     (or (eql auditor +selfless+)
         (eql auditor +transparent-stamp+)))
   (:|__printOn| (this (tw +the-text-writer-guard+))
-    (e. e.syntax:+e-printer+ |printMethodHeader| tw +e-false+ 
+    (e. e.syntax:+e-printer+ |printMethodHeader| tw +e-false+
       (message-desc-doc-comment this)
       (message-desc-verb this)
       (message-desc-params this)
@@ -955,7 +955,7 @@ someString.rjoin([\"\"]) and someString.rjoin([]) both result in the empty strin
     
     #-(or sbcl cmu ccl clisp allegro) (error "sorry, no weak reference implementation for this Lisp yet")))
 
-#+(or sbcl cmu ccl clisp) (def-vtable 
+#+(or sbcl cmu ccl clisp) (def-vtable
     #+sbcl sb-ext:weak-pointer
     #+cmu extensions:weak-pointer
     #+(or ccl clisp) weak-ref-impl

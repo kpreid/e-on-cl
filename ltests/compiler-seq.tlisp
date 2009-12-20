@@ -7,7 +7,7 @@
 
 (defun n (nt)
   (e.syntax::build-nodes nt))
-  
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *scope*
     (e.knot::make-scope "seqCompilerDemoScope"
@@ -17,16 +17,16 @@
         ("throw" ,e.knot::+the-thrower+))))
   (defparameter *layout*
     (list (cons "any"
-                (make-instance 'e.compiler:value-binding :value 
+                (make-instance 'e.compiler:value-binding :value
                   +the-any-guard+))
           (cons "true"
-                (make-instance 'e.compiler:value-binding :value 
+                (make-instance 'e.compiler:value-binding :value
                   +e-true+))
           (cons "nullOk"
-                (make-instance 'e.compiler:value-binding :value 
+                (make-instance 'e.compiler:value-binding :value
                   (type-specifier-to-guard 'null)))
           (cons "throw"
-                (make-instance 'e.compiler:value-binding :value 
+                (make-instance 'e.compiler:value-binding :value
                   e.knot::+the-thrower+)))))
 
 (deftest e.literal
@@ -45,7 +45,7 @@
   #.*layout*)
 
 (defun ev (expr)
-  (nth-value 0 (eval (e.compiler.seq::sequence-e-to-cl 
+  (nth-value 0 (eval (e.compiler.seq::sequence-e-to-cl
                        (n expr)
                        *layout*
                        `',*scope*))))

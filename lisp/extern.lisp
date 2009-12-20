@@ -5,14 +5,14 @@
 
 ; --- File access ---
 
-(defglobal +standard-external-format+ 
+(defglobal +standard-external-format+
   (labels ((f (k) (member k *features*)))
     (cond
       ((and (f :clisp) (f :unicode))
         #+clisp (ext:make-encoding :charset "UTF-8"))
       ((or (f :sb-unicode) (f :allegro))
         :utf-8)
-      (t 
+      (t
         :default)))
   "The :external-format OPEN keyword argument to use for text file access.")
 
@@ -29,7 +29,7 @@
     until (= pos (setf pos (read-sequence buf s :start pos))))
   (adjust-array buf pos)
   (coerce buf 'simple-string))
-    
+
 ; XXX this should be an internal symbol - external uses should be via make-file-getter
 (defun read-entire-file (path)
   (with-open-file (s path :direction :input)
@@ -47,30 +47,30 @@
          ;; XXX the following is right for SBCL (and we can use a sbcl routine for it if my patch for bug 296 goes through --kpreid) but possibly not for other lisps
          (end (first (last path-components)))
          (name-and-type (let ((dot (position #\. end :from-end t)))
-                          (cond 
+                          (cond
                             ((string= end "")
                              (list nil nil))
                             ((and dot (> dot 0))
-                             (list (subseq end 0 dot) 
+                             (list (subseq end 0 dot)
                                    (subseq end (1+ dot))))
                             (t
                              (list end nil))))))
-  (make-pathname 
-    :directory (cons :absolute 
+  (make-pathname
+    :directory (cons :absolute
                      (butlast path-components))
     :name (first name-and-type)
     :type (second name-and-type))))
 
-(defobject +file-pathname-brand+ "filePathnameBrand" 
+(defobject +file-pathname-brand+ "filePathnameBrand"
   (:stamped +deep-frozen-stamp+))
 
-(defclass cheap-sealed-box () 
+(defclass cheap-sealed-box ()
   ((value :initarg :value :accessor %cheap-sealed-box-value)))
 (defclass file-pathname-box (cheap-sealed-box) ())
 (defun unseal (box type)
   (%cheap-sealed-box-value (coerce box type)))
 (defun file-ref-pathname (file)
-  (unseal (e. file |__optSealedDispatch| +file-pathname-brand+) 
+  (unseal (e. file |__optSealedDispatch| +file-pathname-brand+)
           'file-pathname-box))
 
 (defun make-file-getter (path-components)
@@ -108,10 +108,10 @@
         "Return the pathname of this file in the host OS's syntax."
         (native-namestring pathname))
       
-      (:|exists| () 
+      (:|exists| ()
         "Return whether an actual file designated by this object currently exists."
         (as-e-boolean
-          (some #'probe-file 
+          (some #'probe-file
             (list pathname
                   (cl-fad:pathname-as-directory pathname)))))
       (:|get| ((subpath 'string))
@@ -132,7 +132,7 @@
         (read-entire-file pathname))
       (:|getTwine| ()
         (e. (e. |file| |getText|)
-            |asFrom| 
+            |asFrom|
             ;; XXX we should have a formal way to retrieve the URL
             (concatenate 'string "file://" (e. |file| |getPath|))))
       (:|textReader| (&aux (stream (open pathname :if-does-not-exist :error)))
@@ -156,9 +156,9 @@
       (:|createNewFile| (opt-ejector)
         "Creates the file, empty, if it does not already exist. Fails if it already exists as a directory."
         (handler-case
-            (progn 
+            (progn
               (with-open-file (stream pathname
-                               :direction :output 
+                               :direction :output
                                :element-type '(unsigned-byte 8) ; XXX OK assumption?
                                :if-exists nil
                                :if-does-not-exist :create
@@ -176,7 +176,7 @@
       (:|setText| (text) ; XXX ejector
         "..."
         (with-open-file (stream pathname
-                         :direction :output 
+                         :direction :output
                          :element-type 'character
                          :if-exists :supersede
                          :if-does-not-exist :create ; XXX correct?
@@ -247,26 +247,26 @@
       (:|compile(String)| ((s 'string))
         ;(print (list 'oro-compiling s))
         (make-instance 'ppcre-scanner-box :scanner (cl-ppcre:create-scanner s))))))
-  
+
 (defobject +rx-perl5-matcher+ "org.apache.oro.text.regex.makePerl5Matcher" ()
   (:|run| (&aux result-obj)
     (e-lambda "org.apache.oro.text.regex.perl5Matcher" ()
       (:|matches(PatternMatcherInput, Pattern)| ((input 'string) (pattern 'ppcre-scanner-box))
         (multiple-value-bind (match-start match-end reg-starts reg-ends)
             (cl-ppcre:scan (ppcre-scanner pattern) input)
-          (setf result-obj 
+          (setf result-obj
             ;; XXX this match range check is what the original
-            ;; Java code, but may not be what we actually want for 
+            ;; Java code, but may not be what we actually want for
             ;; the rx__quasiParser (as documented:
             ;; http://www.erights.org/javadoc/org/apache/oro/text/regex/Perl5Matcher.html#matches(org.apache.oro.text.regex.PatternMatcherInput,org.apache.oro.text.regex.Pattern)
             ;; ). Now that we've copied-and-modified
             ;; makePerlMatchMaker, do we "improve" this
             ;; and/or move to a more natural interface to cl-ppcre?
             (if (and match-start
-                     (= match-start 0) 
+                     (= match-start 0)
                      (= match-end (length input)))
               (e-lambda "$matchResult" ()
-                (:|groups| () 
+                (:|groups| ()
                   (1+ (length reg-starts)))
                 (:|group| ((index 'unsigned-byte))
                   (if (zerop index)
@@ -301,8 +301,8 @@
 
 (defun convert-stream (stream which)
   (when stream
-    (funcall 
-      (if (eql which :stdin) #'e.streams:cl-to-eio-out-stream 
+    (funcall
+      (if (eql which :stdin) #'e.streams:cl-to-eio-out-stream
                              #'e.streams:cl-to-eio-in-stream)
       stream
       (format nil "process ~(~A~)" which))))
@@ -325,8 +325,8 @@
                             :error (convert-stream-option err-o :stderr)
                             :status-hook
                               (lambda (u-process)
-                                ;; XXX this is a signal handler in sbcl - make safe 
-                                (when (member (external-process-status u-process) 
+                                ;; XXX this is a signal handler in sbcl - make safe
+                                (when (member (external-process-status u-process)
                                               '(:exited :signaled))
                                   (enqueue-turn vat (lambda ()
                                     (e. exit-resolver |resolve| (external-process-exit-code u-process))))))))

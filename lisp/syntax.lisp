@@ -33,13 +33,13 @@
         ((#\Linefeed) (out (list char)))
         ((#\\) (out "\\\\"))
         (otherwise
-          (cond 
+          (cond
             ((find char specials)
               (out (list #\\ char)))
             ((< (char-code char) (char-code #\Space))
               ; XXX should include some Unicode specials in the near-FFFF range, too
               (out (format nil "\\u~4,'0D" (char-code char)))) ; xxx Unicode/ASCII assumption
-            (t 
+            (t
               (out (list char)))))))
     (e. tw |write| (copy-seq buf))))
 
@@ -175,7 +175,7 @@
     (when (ref-shorten opt-guard)
       (e. tw |print| " :")
       (e. tw |print| opt-guard)))
-
+  
   (:|printExprBlock| (tw node)
     "Print the EExpr 'node' on 'tw' enclosed in braces."
     (e. tw |print| "{" #|}|#)
@@ -183,13 +183,13 @@
       (e. tw2 |println|)
       (e. node |welcome| (e. +e-printer+ |makePrintENodeVisitor| tw2 +precedence-outer+)))
     (e. tw |lnPrint| #|{|# "}"))
-
+  
   (:|makePrintENodeVisitor| (tw)
     (e. +e-printer+ |makePrintENodeVisitor| tw +precedence-outer+))
   
   (:|makePrintENodeVisitor| ((tw +the-text-writer-guard+)
                              (precedence '(or null integer)))
-    "Return an ETreeVisitor which prints nodes to 'tw' in standard E syntax. 'precedence' controls whether the expression is parenthesized. 
+    "Return an ETreeVisitor which prints nodes to 'tw' in standard E syntax. 'precedence' controls whether the expression is parenthesized.
 
 XXX make precedence values available as constants"
     ; XXX have an in-quasi argument - print the LiteralExpr "$" as "$$", and the ${n} as ${n}
@@ -264,7 +264,7 @@ XXX make precedence values available as constants"
                         do (e. tw |write| sep)
                            (subprint arg +precedence-outer+))
                   (e. tw |print| #|(|# ")")))))
-
+          
           (:|visitBindingExpr| (opt-original noun)
             (declare (ignore opt-original))
             (precedential (+precedence-slot-expr+)
@@ -319,7 +319,7 @@ XXX make precedence values available as constants"
               (subprint catch-patt nil)
               (e. tw |print| " ")
               (subprint-block catch-body)))
-                    
+          
           (:|visitFinallyExpr| (opt-original attempt unwinder)
             (declare (ignore opt-original))
             ; XXX don't call back to the node for printing
@@ -536,9 +536,9 @@ XXX make precedence values available as constants"
     :name nil
     :type nil
     :version nil
-    :defaults (first (asdf:output-files (make-instance 'asdf:compile-op) 
+    :defaults (first (asdf:output-files (make-instance 'asdf:compile-op)
                                         (asdf:find-component
-                                          (asdf:find-system 
+                                          (asdf:find-system
                                               :e-on-cl.antlr-parser)
                                           "e")))))
 
@@ -561,7 +561,7 @@ XXX make precedence values available as constants"
           "-cpa" (namestring (compute-antlr-class-location))
           "-De.onErrorExit=report"
           (format nil "-Dfile.encoding=~A" e.extern:+standard-external-format-common-name+)
-          "-") 
+          "-")
     :search t
     :input :stream
     :output :stream
@@ -607,7 +607,7 @@ XXX make precedence values available as constants"
         (make-instance (car tree) :elements
           (cons (string-trim " " (cadr tree))
                 (mapcar #'build-nodes (cddr tree)))))
-      (otherwise 
+      (otherwise
         (make-instance (car tree) :elements
           (mapcar #'build-nodes (cdr tree)))))
     tree))
@@ -627,7 +627,7 @@ XXX make precedence values available as constants"
       ((starts-with s "syntax error: ")
         (make-condition 'e-syntax-error :format-control "~A"
                                         :format-arguments (list (subseq s #.(length "syntax error: ")))))
-      (t 
+      (t
         (error "~A" s)))))
 
 #-e.syntax::local-parser
@@ -640,20 +640,20 @@ XXX make precedence values available as constants"
 (defun call-to-java (verb args &key trying-again)
   (ensure-parser)
 
-  (format (external-process-input-stream *parser-process*) 
+  (format (external-process-input-stream *parser-process*)
           "println(\"~S \" + parseEToSExpression(~S, ~A)); stdout.flush()~%"
-          (incf *parse-counter*) 
+          (incf *parse-counter*)
           verb
           (e-quote (coerce args 'vector)))
   (finish-output (external-process-input-stream *parser-process*))
   
-  (handler-case 
+  (handler-case
       (let ((return-serial
               (read (external-process-output-stream *parser-process*)))
-            (tree-expr 
+            (tree-expr
               (let ((*package* (find-package :e.kernel)))
                 (read (external-process-output-stream *parser-process*)))))
-        (unless (eql *parse-counter* return-serial) 
+        (unless (eql *parse-counter* return-serial)
           (error 'link-out-of-sync-error))
         tree-expr)
     ((or end-of-file link-out-of-sync-error) (condition)
@@ -667,7 +667,6 @@ XXX make precedence values available as constants"
 #-e.syntax::local-parser
 (defun query-to-java (verb &rest args)
   "Memoized version of call-to-java"
-  
   ;; This does two things:
   ;; 1. Only objects which print parseably in E may pass this point, since the objects are passed by sending (e-print object) over a pipe.
   ;; 2. Ensures that the arguments are printable under *print-readably*, and therefore won't hose the parse cache. In particular, strings must be general strings, not base-strings.
@@ -694,7 +693,7 @@ XXX make precedence values available as constants"
           cached
           (e. e.knot:+sys-trace+ |doing|
             (format nil "query-to-java: ~A(~{~A...~^, ~})"
-              verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg)) 
+              verb (mapcar (lambda (arg) (if (stringp arg) (subseq arg 0 (position #\Newline arg)) arg))
                            args))
             (efun ()
               (let ((answer (call-to-java verb args)))
@@ -751,15 +750,15 @@ XXX make precedence values available as constants"
   ;; XXX regularize this interface
   (:|run| (source quasi-info syntax-ejector)
     (elt (e. +prim-parser+ |parseWithProps| source (e. +the-make-const-map+ |fromPairs| #()) quasi-info syntax-ejector) 0))
-  (:|parseWithProps| ((source 'twine) 
+  (:|parseWithProps| ((source 'twine)
                       (props 'e.tables:const-map)
                       quasi-info
                       syntax-ejector)
     (setf quasi-info (ref-shorten quasi-info))
     (when quasi-info
       ;; vector of vectors of integers ([valueHoles, patternHoles])
-      (setf quasi-info 
-        (map-e-list (mapper-e-list (e-coercer 'integer)) 
+      (setf quasi-info
+        (map-e-list (mapper-e-list (e-coercer 'integer))
                     quasi-info)))
     (coerce (multiple-value-list (e-source-to-tree source :quasi-info quasi-info :syntax-ejector syntax-ejector :props props)) 'vector))
   (:|run| ((source 'twine))
@@ -856,13 +855,13 @@ XXX make precedence values available as constants"
         (mn '|NullExpr|))
       ((integer 1 1)
         (first enodes))
-      ((integer 2)  
+      ((integer 2)
         (apply #'mn '|SeqExpr| enodes)))))
 
 (defun build-antlr-nodes (ast-node &key uri path enclosing-doc-comment)
   (ast-node-bind (tag line column text in-children) ast-node
     (let* ((next-path (cons ast-node path))
-           (out-children 
+           (out-children
              (unless (eql tag 'e.grammar::|DocComment|)
                (mapcar (lambda (c) (build-antlr-nodes c :path next-path :uri uri))
                        in-children)))
@@ -877,45 +876,45 @@ XXX make precedence values available as constants"
               (pass () (apply #'make-from-tag out-children)))
       (case tag
         ;; -- misc. leaves and 'special' nodes --
-        ((e.grammar::|IDENT|) 
+        ((e.grammar::|IDENT|)
           (assert (null out-children))
           text)
-        ((e.grammar::|DOC_COMMENT|) 
+        ((e.grammar::|DOC_COMMENT|)
           (assert (null out-children))
           ; XXX the lexer should do this stripping
           (if (string= text "")
             nil ; absent doc comment
             (string-trim " 	
 " (subseq text 3 (- (length text) 2)))))
-        ((e.grammar::|DocComment|) 
+        ((e.grammar::|DocComment|)
           (destructuring-bind (comment-node body) in-children
-            (build-antlr-nodes body 
-              :path next-path 
+            (build-antlr-nodes body
+              :path next-path
               :uri uri
               :enclosing-doc-comment (build-antlr-nodes comment-node
                                        :uri uri
                                        :path next-path))))
-        ((e.grammar::|INT|) 
+        ((e.grammar::|INT|)
           (assert (null out-children))
           (parse-integer text :radix 10))
         ((e.grammar::|HEX|)
           (assert (null out-children))
           (parse-integer text :radix 16))
-        ((e.grammar::|FLOAT64|) 
+        ((e.grammar::|FLOAT64|)
           (assert (null out-children))
           (let ((*read-default-float-format* 'double-float)
-                (*read-eval* nil)) 
+                (*read-eval* nil))
             ;; this should be safe because the parser's already checked it for float syntax
             ;; XXX implement actual E float syntax
             (read-from-string text)))
         ((e.grammar::|STRING|)
           (assert (null out-children))
           text)
-        ((e.grammar::|CHAR_LITERAL|) 
+        ((e.grammar::|CHAR_LITERAL|)
           (assert (null out-children))
           (destructuring-bind (character) (coerce text 'list)
             character))
-        ((e.grammar::|URI|) 
+        ((e.grammar::|URI|)
           (assert (null out-children))
           text)
         (e.grammar::|Absent|
@@ -931,7 +930,7 @@ XXX make precedence values available as constants"
           (assert (null out-children))
           ;; XXX should be handled by the expansion layer instead
           "run")
-        (e.grammar::|URIGetter| 
+        (e.grammar::|URIGetter|
           (assert (null out-children))
           (cons tag text))
         ((e.grammar::|List|)
@@ -978,26 +977,26 @@ XXX make precedence values available as constants"
           (pass)))))))
 
 ; --- Parse cache files ---
- 
+
 (defun load-parse-cache (stream)
   ; XXX options to disable this output
-  (e. e.knot:+sys-trace+ |doing| 
+  (e. e.knot:+sys-trace+ |doing|
     (format nil "Loading parse cache from ~A" (enough-namestring (pathname stream)))
     (efun ()
       (loop
         for (source tree) in
           (with-standard-io-syntax
-            (let ((*package* (find-package :e.kernel))) 
+            (let ((*package* (find-package :e.kernel)))
               (read stream)))
         do (setf (hashref source *parse-cache-hash*) tree))
       (values))))
-    
+
 (defun save-parse-cache (stream)
-  (e. e.knot:+sys-trace+ |doing| 
+  (e. e.knot:+sys-trace+ |doing|
     (format nil "Writing parse cache to ~A" (enough-namestring (pathname stream)))
     (efun ()
       (let ((data '()))
-        (hashmap (lambda (source tree) 
+        (hashmap (lambda (source tree)
                    (push (list source tree) data))
                  *parse-cache-hash*)
         (with-standard-io-syntax
@@ -1008,7 +1007,7 @@ XXX make precedence values available as constants"
 (defun load-parse-cache-file (file)
   "Returns T if the file exists and therefore was loaded, or nil if it does not exist or could not be loaded."
   (with-simple-restart (continue "Skip loading parse cache ~S." file)
-    (with-open-file (s file :direction :input 
+    (with-open-file (s file :direction :input
                             :if-does-not-exist nil
                             :external-format e.extern:+standard-external-format+)
       (when s
@@ -1036,4 +1035,3 @@ XXX make precedence values available as constants"
   (:|__printOn| (this (tw +the-text-writer-guard+))
     (e. tw |print| "syntax error: ")
     (e. tw |print| (princ-to-string this))))
-    

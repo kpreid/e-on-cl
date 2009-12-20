@@ -5,7 +5,7 @@
 
 (defmacro defobject (symbol qualified-name (&rest options) &body methods)
   "The common pattern of a single-instance object, marked thread-sharable, stored in some global variable (or constant). Does not specify deep-frozen, as e.g. e.knot:+lisp+ is not."
-  `(defglobal ,symbol 
+  `(defglobal ,symbol
     (e-lambda ,qualified-name
               (:stamped +thread-sharable-stamp+ ,@options)
               ,@methods)))
@@ -54,7 +54,7 @@
         for shortening = (= i j)
         for sym = (gensym)
         collect `(,sym ,(if shortening 'e.elib::ref 't)) into params
-        collect (if shortening 
+        collect (if shortening
                   `(let ((v (ref-shorten ,sym)))
                     (assert (typep v '(not e.elib::ref)) (v)
                             "Argument ~A to ~S must be near." ',j ',gf-name)
@@ -68,7 +68,7 @@
 (defmacro escape ((ejector-var) &body forms)
   (let ((escape-block (gensym (symbol-name ejector-var))))
     `(block ,escape-block
-      (let ((,ejector-var (ejector ',(symbol-name ejector-var) 
+      (let ((,ejector-var (ejector ',(symbol-name ejector-var)
                                    (lambda (v) (return-from ,escape-block v)))))
         ,@forms))))
 
@@ -79,8 +79,8 @@
     `(block ,normal-block
       (let ((,result-var
               (block ,escape-block
-                (return-from ,normal-block 
-                  (let ((,ejector-var (ejector ',(symbol-name ejector-var) 
+                (return-from ,normal-block
+                  (let ((,ejector-var (ejector ',(symbol-name ejector-var)
                                                (lambda (v) (return-from ,escape-block v)))))
                     ,try-form)))))
         ,@catch-forms))))
@@ -129,7 +129,7 @@
   "Execute the body forms when the value of ref-form becomes resolved. Returns a promise for the value of the last form.
 
 The syntax is imitative of cl:multiple-value-bind - suggestions for better syntax welcome."
-  `(call-when-resolved ,ref-form 
+  `(call-when-resolved ,ref-form
                        (efun (,result-var)
                          ,@forms)))
 
@@ -142,7 +142,7 @@ The syntax is imitative of cl:multiple-value-bind - suggestions for better synta
   `(let* ((,map-var ,map-form)
           ,@(loop
               for (var key-form . default-cell) in entries
-              append 
+              append
               `((,key-var  ,key-form)
                 (,var      (escape-bind (,ej-var)
                                (e. ,map-var |fetch| ,key-var ,ej-var)

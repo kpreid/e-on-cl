@@ -94,8 +94,8 @@
 
 (define-node-class |TemporaryExpr| (|EExpr|)
   ((:|name| nil symbol)))
- 
-;; XXX make this less internal      
+
+;; XXX make this less internal
 (def-scope-rule |TemporaryExpr|
   (e.elang::! (e. +the-make-static-scope+ |scopeRead| e.elang::node)))
 
@@ -110,14 +110,14 @@
     (null nil)
     (vector (loop for sub across node append (find-names sub)))
     (|NounExpr| (node-elements node))
-    (|ENode| 
+    (|ENode|
       (loop for subnode-flag across (e. (get (class-name (class-of node)) 'static-maker) |getParameterSubnodeFlags|)
             for sub in (e.elang::node-visitor-arguments node)
             append (if (e-is-true subnode-flag)
                      (find-names sub)
                      '())))))
-    
-(defun reify-temporaries (node 
+
+(defun reify-temporaries (node
     &aux (names (e. (coerce (find-names node) 'vector) |asMap|))
          (seen (make-hash-table))
          (index 0))
@@ -126,20 +126,20 @@
     (etypecase node
       (null nil)
       (vector (map 'vector #'substitution node))
-      (|TemporaryExpr| 
+      (|TemporaryExpr|
         (let ((symbol (e. node |getName|)))
-          (or 
+          (or
             (gethash symbol seen)
             (setf (gethash symbol seen)
               (progn
                 (incf index)
-                (mn '|NounExpr| 
+                (mn '|NounExpr|
                   (loop with label = (symbol-name symbol)
                         for name = (format nil "~A__~A" label index)
                         while (e.tables::maps-no-sugar names name)
                         do (incf index)
                         finally (return name))))))))
-      (|ENode| 
+      (|ENode|
         ;; XXX duplicated code
         (let ((maker (get (class-name (class-of node)) 'static-maker)))
           (e-call maker "run"
@@ -183,10 +183,10 @@
     (if (not (typep node '|ENode|))
       (e-macroexpand-all node)
       (let* ((maker (get (class-name (class-of node)) 'e.elang::static-maker))
-             (new-node-args 
-              (progn 
+             (new-node-args
+              (progn
                 (assert maker () "maker not found for ~S" node)
-                (loop 
+                (loop
                   for subnode-flag across (e. maker |getParameterSubnodeFlags|)
                   for sub in (e.elang::node-visitor-arguments node)
                   collect (if (e-is-true subnode-flag)
@@ -250,7 +250,7 @@
                                    (|rest| t (e-list |EExpr|)))
                                   (:rest-slot t)
   (if (member |op| '(".." "..!") :test #'string=)
-    (mn '|RangeExpr| |first| 
+    (mn '|RangeExpr| |first|
                      (progn
                        (assert (= 1 (length |rest|)))
                        (elt |rest| 0))
@@ -316,11 +316,11 @@
 (defun conditional-op-p (x) (member x '("&&" "||") :test #'equal))
 
 (defun keys-to-nouns (map)
-  (map 'list (lambda (name) 
+  (map 'list (lambda (name)
                ;; XXX the need for this test demonstrates that /something/ is broken; most likely, that StaticScopes unwrap their Noun-or-TemporaryExprs
                (etypecase name
                  (string (mn '|NounExpr| name))
-                 (symbol (mn '|TemporaryExpr| name)))) 
+                 (symbol (mn '|TemporaryExpr| name))))
              (ref-shorten (e. map |getKeys|))))
 
 (defgeneric expand-conditional-core (node kernel-left kernel-right success-list failure-list left-map right-map))
@@ -335,7 +335,7 @@
          (right-map (e. (e. kernel-right |staticScope|) |outNames|))
          (both-nouns (keys-to-nouns (e. left-map |or| right-map)))
          (result-var (gennoun "ok"))
-         (success-list (apply #'mn '|ListExpr| 
+         (success-list (apply #'mn '|ListExpr|
                          (mn '|NounExpr| "true")
                          (map 'list (lambda (noun) (mn '|BindingExpr| noun))
                               both-nouns)))
@@ -370,10 +370,10 @@
 
 (defmethod expand-conditional-core ((e |OrExpr|) kernel-left kernel-right success-list failure-list left-map right-map)
   (let ((broken (mn '|CallExpr| (mn '|NounExpr| "__booleanFlow") "broken")))
-    (labels ((partial-failure (failed-nouns) 
-               (apply #'mn '|SeqExpr| 
+    (labels ((partial-failure (failed-nouns)
+               (apply #'mn '|SeqExpr|
                  (nconc
-                   (map 'list (lambda (noun) 
+                   (map 'list (lambda (noun)
                                 (mn '|DefineExpr| (mn '|BindingPattern| noun)
                                                   nil
                                                   broken))
@@ -381,7 +381,7 @@
                    (list success-list)))))
       (let ((left-only  (keys-to-nouns (e. left-map |butNot| right-map)))
             (right-only (keys-to-nouns (e. right-map |butNot| left-map))))
-        (mn '|IfExpr| kernel-left 
+        (mn '|IfExpr| kernel-left
                       (partial-failure right-only)
                       (mn '|IfExpr| kernel-right
                         (partial-failure left-only)
@@ -455,7 +455,7 @@
              resolver-nouns
              replacement-nouns
              forward-exprs)
-        (loop for name across common-names 
+        (loop for name across common-names
               for resolver-noun = (gennoun (format nil "~AR" name))
               for replacement-noun = (gennoun name)
               do
@@ -473,12 +473,12 @@
           (apply #'mn '|SeqExpr|
             `(,@forward-exprs
               ,(mn '|DefineExpr| (mn '|FinalPattern| result-noun nil) nil
-                 (mn '|DefineExpr| kernel-pattern 
+                 (mn '|DefineExpr| kernel-pattern
                                    (substitute-recursions
                                      kernel-ejector)
                                    (substitute-recursions
                                      kernel-r-value)))
-              ,@(loop for vn across common-nouns 
+              ,@(loop for vn across common-nouns
                       for rn in resolver-nouns
                       collect (mn '|CallExpr| rn "resolve" vn))
               ,result-noun))))
@@ -511,16 +511,15 @@
               nil
               (mn '|IgnorePattern|)
               +no-auditors+
-              (mn '|EScript| 
-                (vector (mn '|EMethod| 
+              (mn '|EScript|
+                (vector (mn '|EMethod|
                   nil "run" (vector (mn '|FinalPattern| key-var nil)
-                                    (mn '|FinalPattern| value-var nil)) 
+                                    (mn '|FinalPattern| value-var nil))
                   nil
                   (mn '|SeqExpr|
                     (mn '|FunCallExpr| (mn '|NounExpr| "__validateFor") valid-flag-var)
                     (mn '|EscapeExpr| (mn '|FinalPattern|
-                                        (mn '|NounExpr| "__continue") nil) 
-                                          
+                                        (mn '|NounExpr| "__continue") nil)
                       (mn '|SeqExpr|
                         (mn '|EscapeExpr| (mn '|FinalPattern|
                                             pattern-escape-var nil)
@@ -533,12 +532,12 @@
                           nil nil)
                         ;; this null-expr prevents the pattern failures or the loop body's final expression from being returned from the iterate callback; only __continue can return non-null
                         (mn '|NullExpr|))
-                      nil nil)))) 
+                      nil nil))))
                 #())))
           (mn '|AssignExpr| valid-flag-var (mn '|NounExpr| "false")))
         ;; this null-expr prevents the return value of 'iterate' from being returned from the for expr; only __break can return non-null
         (mn '|NullExpr|))
-      (when |optBreakCatch| (e. |optBreakCatch| |getPattern|)) 
+      (when |optBreakCatch| (e. |optBreakCatch| |getPattern|))
       (when |optBreakCatch| (e. |optBreakCatch| |getBody|)))))
 
 (defmethod expand-accum-body ((node |ForExpr|) accum-var)
@@ -559,25 +558,25 @@
       nil
       (mn '|IgnorePattern|)
       +no-auditors+
-      (mn '|EScript| (vector (mn '|EMethod| nil "run" |patterns| nil |body|)) 
+      (mn '|EScript| (vector (mn '|EMethod| nil "run" |patterns| nil |body|))
                              #())))
 
-(defemacro |FunCallExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+(defemacro |FunCallExpr| (|EExpr|) ((|recipient| t |EExpr|)
                                     (|args| t (e-list |EExpr|)))
                                (:rest-slot t)
   (apply #'mn '|CallExpr| |recipient| "run" |args|))
 
-(defemacro |FunSendExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+(defemacro |FunSendExpr| (|EExpr|) ((|recipient| t |EExpr|)
                                     (|args| t (e-list |EExpr|)))
                                (:rest-slot t)
   (apply #'mn '|SendExpr| |recipient| "run" |args|))
 
-(defemacro |GetExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+(defemacro |GetExpr| (|EExpr|) ((|recipient| t |EExpr|)
                                 (|args| t (e-list |EExpr|)))
                                (:rest-slot t)
   (apply #'mn '|CallExpr| |recipient| "get" |args|))
 
-(defemacro |If1Expr| (|EExpr|) ((|test| t |EExpr|) 
+(defemacro |If1Expr| (|EExpr|) ((|test| t |EExpr|)
                                 (|then| t |EExpr|))
                                ()
   (mn '|IfExpr| |test| |then| (mn '|NullExpr|)))
@@ -591,7 +590,7 @@
                                       (|name| t (or null |Pattern| |LiteralExpr|))
                                       (|optStamp| t (or null |Pattern|))
                                       (|parents| t (e-list |EExpr|))
-                                      (|auditors| t (e-list |EExpr|)) 
+                                      (|auditors| t (e-list |EExpr|))
                                       (|messages| t (e-list |MessageDescExpr|)))
                                      ()
   (labels ((whatever-to-qn (whatever)
@@ -639,7 +638,7 @@
         (make-expr (whatever-to-qn |name|) "run")))
     ((typep |name| '(or null |LiteralExpr|))
       (make-expr (whatever-to-qn |name|) "run")))))
-  
+
 (defemacro |ListExpr| (|EExpr|) ((|subs| t (e-list |EExpr|))) (:rest-slot t)
   (apply #'mn '|CallExpr|
       (mn '|NounExpr| "__makeList")
@@ -673,8 +672,8 @@
                              pattern-nouns)))
               (mn '|FinalPattern| problem nil)
               (mn '|SeqExpr|
-                (kdef (mn '|CallExpr| (mn '|NounExpr| "Ref") "broken" problem) 
-                      nil 
+                (kdef (mn '|CallExpr| (mn '|NounExpr| "Ref") "broken" problem)
+                      nil
                       (mn '|SlotPattern| broken nil))
                 (apply #'mn '|ListExpr|
                   (node-quote +e-false+)
@@ -764,9 +763,9 @@
             (value-noun (gennoun "ares"))
             (definer (mn '|DefineExpr| (mn '|FinalPattern| value-noun nil) nil |value|)))
        (flet ((make-call (out-verb)
-                (apply #'mn '|CallExpr| (e. |place| |getRecipient|) 
+                (apply #'mn '|CallExpr| (e. |place| |getRecipient|)
                                         out-verb
-                                        `(,@(coerce (e. |place| |getArgs|) 
+                                        `(,@(coerce (e. |place| |getArgs|)
                                                     'list)
                                           ,definer))))
          (mn '|SeqExpr|
@@ -806,7 +805,7 @@
     (|BindPattern|
       (mn '|DefrecExpr| |name| nil
         (mn '|HideExpr|
-          (mn '|NKObjectExpr| 
+          (mn '|NKObjectExpr|
             |docComment|
             (mn '|FinalPattern| (e. |name| |getNoun|) nil)
             |parent|
@@ -815,7 +814,7 @@
     ((or |FinalPattern| |IgnorePattern|)
       (if |parent|
         (mn '|DefrecExpr|
-          |name| 
+          |name|
           nil
           (mn '|HideExpr|
             (mn '|SeqExpr|
@@ -847,7 +846,7 @@
       (if (typep |tail| '|OneMethodObject|)
         (values nil (e. |tail| |withFunctionDocumentation| |docComment|))
         (values |docComment| |tail|))
-    (destructuring-bind (parent auditors script) 
+    (destructuring-bind (parent auditors script)
         (coerce (e-macroexpand #| NOT -all |# tail) 'list)
       (mn '|NKObjectExpr| doc |name| parent auditors script))))
 
@@ -873,19 +872,19 @@
         (:- "negate")
         (otherwise |op|))))
 
-(defemacro |PropertyExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+(defemacro |PropertyExpr| (|EExpr|) ((|recipient| t |EExpr|)
                                      (|key| nil string))
                                     ()
   (mn '|CallExpr| (mn '|PropertySlotExpr| |recipient| |key|) "get"))
 
-(defemacro |PropertySlotExpr| (|EExpr|) ((|recipient| t |EExpr|) 
+(defemacro |PropertySlotExpr| (|EExpr|) ((|recipient| t |EExpr|)
                                          (|key| nil string))
                                     ()
   (mn '|CallExpr| (mn '|NounExpr| "__getPropertySlot") "run" |recipient| (node-quote |key|)))
 
-(defemacro |QuasiExpr| (|EExpr|) 
+(defemacro |QuasiExpr| (|EExpr|)
     ((|optParser| t (or null |EExpr|))
-     (|parts| t (e-list (and |QuasiPart| 
+     (|parts| t (e-list (and |QuasiPart|
                              (not |QuasiPatternHole|)))))
     (:rest-slot t)
   (mn '|CallExpr|
@@ -911,7 +910,7 @@
 (defemacro |ExitExpr| (|EExpr|) ((|label| nil string)
                                  (|value| t (or null |EExpr|))) ()
   (apply #'mn '|CallExpr| (mn '|NounExpr| (format nil "__~A" |label|))
-                          "run" 
+                          "run"
                           (when |value| (list |value|))))
 
 (defemacro |SameExpr| (|EExpr|) ((|left| t |EExpr|)
@@ -923,13 +922,13 @@
     (mn '|CallExpr| (mn '|NounExpr| "__equalizer") "sameEver" |left| |right|)))
 
 (defemacro |SendExpr| (|EExpr|) ((|recipient| t |EExpr|)
-                                 (|verb| nil string) 
+                                 (|verb| nil string)
                                  (|args| t (e-list |EExpr|)))
                                 (:rest-slot t)
   (mn '|CallExpr|
     (mn '|NounExpr| "E")
     "send"
-    |recipient| 
+    |recipient|
     (mn '|LiteralExpr| |verb|)
     (apply #'mn '|CallExpr| (mn '|NounExpr| "__makeList") "run" (coerce |args| 'list))))
 
@@ -954,7 +953,7 @@
     (mn '|HideExpr|
       (mn '|SeqExpr|
         (mn '|DefineExpr| (mn '|FinalPattern| specimen-var nil) nil |specimen|)
-        (labels ((match-chain (matchers-sofar fail-vars-sofar) 
+        (labels ((match-chain (matchers-sofar fail-vars-sofar)
                   (if matchers-sofar
                     (let ((matcher (first matchers-sofar)))
                       (mn '|EscapeExpr|
@@ -968,7 +967,7 @@
                                             nil)
                         (match-chain (rest matchers-sofar)
                                      (rest fail-vars-sofar))))
-                    (apply #'mn '|CallExpr| 
+                    (apply #'mn '|CallExpr|
                       (mn '|NounExpr| "__switchFailed") "run"
                       specimen-var failure-vars))))
           (match-chain (coerce |matchers| 'list) failure-vars))))))
@@ -980,7 +979,7 @@
       nil
       (mn '|IgnorePattern|)
       +no-auditors+
-      (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|)) 
+      (mn '|EScript| (vector (mn '|EMethod| |docComment| "run" #() nil |body|))
                              #())))
 
 (defemacro |TryExpr| (|EExpr|) ((|body| t |EExpr|)
@@ -996,8 +995,8 @@
                (let ((catcher (first c)))
                  (do-catchers (rest c) (mn '|CatchExpr| e (e. catcher |getPattern|) (e. catcher |getBody|))))
                e)))
-    (do-finally 
-      (do-catchers (coerce |catchers| 'list) 
+    (do-finally
+      (do-catchers (coerce |catchers| 'list)
         |body|))))
 
 (defemacro |UpdateExpr| (|EExpr|) ((|call| t (or |CallExpr| |BinaryExpr|)))
@@ -1016,10 +1015,10 @@
                      (let ((temp (gennoun label)))
                        (push (mn '|DefineExpr| (mn '|FinalPattern| temp nil) nil node) defs)
                        temp)))
-              (let* ((onceized (apply #'mn '|CallExpr| 
-                                 (nsub (e. target |getRecipient|) "recip") 
+              (let* ((onceized (apply #'mn '|CallExpr|
+                                 (nsub (e. target |getRecipient|) "recip")
                                  (e. target |getVerb|)
-                                 (map 'list (lambda (x) (nsub x "arg")) 
+                                 (map 'list (lambda (x) (nsub x "arg"))
                                             (e. target |getArgs|)))))
                 (apply #'mn '|SeqExpr|
                   `(,@(nreverse defs)
@@ -1087,7 +1086,7 @@
     (mn '|ObjectHeadExpr|
       nil |name|
       (mn '|FunctionObject| (vector (mn '|FinalPattern| resolution nil)) |optResultGuard| +no-auditors+
-        (mn '|TryExpr| 
+        (mn '|TryExpr|
           (mn '|SeqExpr|
             (mn '|DefineExpr|
               (if (= 1 (length |params|))
@@ -1114,25 +1113,25 @@
         nil
         (mn '|IgnorePattern|)
         +no-auditors+
-        (mn '|EScript| 
-          (vector (mn '|EMethod| 
+        (mn '|EScript|
+          (vector (mn '|EMethod|
             nil "run" #() (mn '|NounExpr| "boolean")
             (mn '|IfExpr|
               |test|
               (mn '|SeqExpr|
                 (mn '|EscapeExpr| (mn '|FinalPattern|
-                                    (mn '|NounExpr| "__continue") nil) 
+                                    (mn '|NounExpr| "__continue") nil)
                                   |body| nil nil)
                 (mn '|NounExpr| "true"))
-              (mn '|NounExpr| "false")))) 
+              (mn '|NounExpr| "false"))))
           #())))
-    (when |optBreakCatch| (e. |optBreakCatch| |getPattern|)) 
+    (when |optBreakCatch| (e. |optBreakCatch| |getPattern|))
     (when |optBreakCatch| (e. |optBreakCatch| |getBody|))))
 
 (defmethod expand-accum-body ((node |WhileExpr|) accum-var)
   (destructuring-bind (test body catch) (node-visitor-arguments node)
     (mn '|WhileExpr| test (expand-accum-body body accum-var) catch)))
-    
+
 (defemacro |BindPattern| (|Pattern|) ((|noun| t |EExpr|)
                                       (|optGuard| t (or null |EExpr|)))
                                      ()
@@ -1156,7 +1155,7 @@
       (e. kernel-noun |getName|))))
 
 (defemacro |CallPattern| (|Pattern|) ((|recipient| t |EExpr|)
-                                      (|verb| nil string) 
+                                      (|verb| nil string)
                                       (|args| t (e-list |Pattern|)))
                                      (:rest-slot t)
   (mn '|ViaPattern|
@@ -1166,7 +1165,7 @@
         (format nil "match__~A/~A" |verb| (length |args|))))
     (apply #'mn '|ListPattern| |args|)))
 
-(defemacro |CdrPattern| (|Pattern|) ((|listPatt| t |ListPattern|) 
+(defemacro |CdrPattern| (|Pattern|) ((|listPatt| t |ListPattern|)
                                      (|restPatt| t |Pattern|))
                                     ()
   (let ((lefts (e. |listPatt| |getSubs|)))
@@ -1237,11 +1236,11 @@
 
 (define-node-class |MapPatternRequired| (|MapPatternPart|)
   ((:|keyer| t |MapPatternKeyer|)))
-   
+
 (defmethod build-incremental-map-pattern ((first |MapPatternRequired|) rest)
   (let ((assoc (e. first |getKeyer|)))
     (mn '|ViaPattern|
-      (mn '|FunCallExpr| (mn '|NounExpr| "__mapExtract") 
+      (mn '|FunCallExpr| (mn '|NounExpr| "__mapExtract")
                          (map-pattern-key assoc))
       (mn '|ListPattern|
         (map-pattern-value assoc)
@@ -1254,7 +1253,7 @@
 (defmethod build-incremental-map-pattern ((first |MapPatternOptional|) rest)
   (let ((assoc (e. first |getKeyer|)))
     (mn '|ViaPattern|
-      (mn '|CallExpr| (mn '|NounExpr| "__mapExtract") 
+      (mn '|CallExpr| (mn '|NounExpr| "__mapExtract")
                       "default"
                       (map-pattern-key assoc)
                       (e. first |getDefault|))
@@ -1283,10 +1282,10 @@
   (expand-map-pattern (coerce |pairs| 'list)))
 
 
-(defglobal +values-reject-des+ 
+(defglobal +values-reject-des+
   (list "value holes"
         (lambda (node) (quasi-value-list      (e. node |getParts|)))))
-(defglobal +patterns-reject-des+ 
+(defglobal +patterns-reject-des+
   (list "pattern holes"
         (lambda (node) (quasi-subpattern-list (e. node |getParts|)))))
 
@@ -1314,7 +1313,7 @@
                     |value|)
     (mn '|IgnorePattern|)))
 
-(defemacro |SlotPattern| (|NounPattern|) ((|noun| t |EExpr|) 
+(defemacro |SlotPattern| (|NounPattern|) ((|noun| t |EExpr|)
                                           (|optGuardExpr| t (or null |EExpr|)))
                                          ()
   (mn '|ViaPattern|
@@ -1326,7 +1325,7 @@
 (defmethod map-pattern-import-literal ((kv |SlotPattern|))
   (format nil "&~A" (noun-expr-name (e. kv |getNoun|))))
 
-(defemacro |SuchThatPattern| (|Pattern|) ((|pattern| t |Pattern|) 
+(defemacro |SuchThatPattern| (|Pattern|) ((|pattern| t |Pattern|)
                                           (|test| t |EExpr|))
                                          ()
   (mn '|ViaPattern|
@@ -1358,7 +1357,7 @@
                                          ()
   (vector |parent| |auditors| (mn '|EScript| |methods| |matchers|)))
 
-(defemacro |OneMethodObject| (|ObjectTail|) 
+(defemacro |OneMethodObject| (|ObjectTail|)
     ((|verb| nil string)
      (|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
@@ -1373,7 +1372,7 @@
   (:|withFunctionDocumentation| (this (doc 'doc-comment))
     (expand-one-method-object this doc)))
 
-(defemacro |FunctionObject| (|OneMethodObject|) 
+(defemacro |FunctionObject| (|OneMethodObject|)
     ((|patterns| t (e-list |Pattern|))
      (|optResultGuard| t (or null |EExpr|))
      (|auditors| t |Auditors|)
@@ -1392,9 +1391,9 @@
   "Using conventional property access, retrieve the properties of OBJECT named by the names of the symbols PROPS and bind them to those symbols."
   (let ((object-temp (gensym "PROPS-FROM")))
     `(let* ((,object-temp ,object)
-            ,@(mapcar (lambda (p) 
-                        `(,p (e. ,object-temp 
-                                 ,(format nil "get~A" 
+            ,@(mapcar (lambda (p)
+                        `(,p (e. ,object-temp
+                                 ,(format nil "get~A"
                                     (convention-capitalize (string p))))))
                       props))
        ,@body)))
@@ -1421,7 +1420,7 @@
                                            ()
   (vector nil |auditors| |matcher|))
 
-(defemacro |ETo| (|EMethodoid|) 
+(defemacro |ETo| (|EMethodoid|)
     ((|docComment| nil doc-comment)
      (|verb| nil string)
      (|patterns| t (e-list |Pattern|))
@@ -1429,13 +1428,13 @@
      (|body| t |EExpr|)
      (|isEasyReturn| nil e-boolean))
     ()
-  (mn '|EMethod| |docComment| |verb| |patterns| 
+  (mn '|EMethod| |docComment| |verb| |patterns|
                  (or |optResultGuard|
                    (if (e-is-true |isEasyReturn|)
                      (mn '|NounExpr| "any")
                      (mn '|NounExpr| "void")))
-                 (mn '|EscapeExpr| 
-                   (mn '|FinalPattern| (mn '|NounExpr| "__return") nil) 
+                 (mn '|EscapeExpr|
+                   (mn '|FinalPattern| (mn '|NounExpr| "__return") nil)
                    (if (e-is-true |isEasyReturn|)
                      (mn '|SeqExpr| |body| (mn '|NullExpr|))
                      |body|)
@@ -1475,7 +1474,7 @@
 
 (defmethod quasi-part-description ((part |QuasiText|) value-index pattern-index)
   ;; xxx icky/inefficient
-  (values (e. (e. (e. part |getText|) |replaceAll| "$" "$$") |replaceAll| "@" "@@") 
+  (values (e. (e. (e. part |getText|) |replaceAll| "$" "$$") |replaceAll| "@" "@@")
           value-index
           pattern-index))
 

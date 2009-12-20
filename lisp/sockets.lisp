@@ -14,15 +14,15 @@
 #+sbcl
 (def-vtable sb-bsd-sockets:socket
   ;; This vtable imitates a fd-ref as well as being a socket, because a SOCKET handles closing upon GC and so we need to keep it around.
-
+  
   (:|getFD/0| 'socket-file-descriptor)
-
+  
   (:|close| (this opt-ejector)
     (handler-case
         (socket-close this)
       (socket-error (condition)
         (eject-or-ethrow opt-ejector condition))))
-
+  
   (:|connect| (this host port opt-ejector)
     (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))
     (e-coercef port '(unsigned-byte 16))
@@ -59,7 +59,7 @@
 (defun in-progress-socket-error-p (error)
   "xxx:sb-bsd-sockets fails to provide a condition class for EINPROGRESS, so we implement it ourselves using internal stuff"
   (and (typep error 'socket-error)
-       (eql (sb-bsd-sockets::socket-error-errno error) 
+       (eql (sb-bsd-sockets::socket-error-errno error)
             #.sb-posix:einprogress)))
 
 #+openmcl
@@ -73,7 +73,7 @@
 
 (defmethod socket-shorten ((socket t))
   socket)
-  
+
 #+sbcl
 (defun foo-make-socket (domain type)
   (check-type domain (member :internet))
@@ -98,7 +98,7 @@
     (or (deferred-socket-socket socket)
         (error "~S is not yet a native socket" socket))))
 
-#+openmcl 
+#+openmcl
 (defun foo-make-socket (domain type)
   (check-type domain (member :internet))
   (check-type type (member :stream))
@@ -116,7 +116,7 @@
                   (host-ent-address (addr-info-host-ent addr-info))
                   (addr-info-port addr-info)))
 
-#+openmcl 
+#+openmcl
 (defun foo-connect-socket (socket addr-info)
   (setf (deferred-socket-socket socket)
         ;; OpenMCL happens to use the same keywords we do
@@ -144,7 +144,7 @@
   ;; XXX submit patch for sb-bsd-sockets
   (handler-case
       (if (= (sb-alien:alien-funcall
-               (sb-alien:extern-alien "shutdown" 
+               (sb-alien:extern-alien "shutdown"
                  (function sb-alien:int sb-alien:int sb-alien:int))
                (socket-file-descriptor socket)
                (ecase (ref-shorten direction)
@@ -158,7 +158,7 @@
 
 ; --- ---
 
-#+sbcl 
+#+sbcl
 (defun %convert-handler-target (target)
   (e. target |getFD|))
 
@@ -172,7 +172,7 @@
     (%convert-handler-target target)
     :input
     (named-lambda e-receive-handler (x)
-      (declare (ignore x)) 
+      (declare (ignore x))
       (efuncall e-function))))
 
 (defun foo-remove-receive-handler (handler)
@@ -207,7 +207,7 @@
 
 (defun foo-socket-name (socket)
   (setf socket (socket-shorten socket))
-  (form-or 
+  (form-or
     #+sbcl (socket-name socket)
     #+openmcl (values (ip4-number-to-vector
                         (openmcl-socket:local-host socket))
@@ -216,7 +216,7 @@
 
 (defun foo-socket-peername (socket)
   (setf socket (socket-shorten socket))
-  (form-or 
+  (form-or
     #+sbcl (socket-peername socket)
     #+openmcl (values (ip4-number-to-vector
                         (openmcl-socket:remote-host socket))
@@ -227,15 +227,15 @@
 ; --- ---
 
 (defun ip4-number-to-vector (ip4-number)
-  (coerce 
-    (nreverse 
+  (coerce
+    (nreverse
       (loop repeat 4
-            for x = ip4-number then (ash x -8) 
-            collect (logand x #xFF))) 
+            for x = ip4-number then (ash x -8)
+            collect (logand x #xFF)))
     'vector))
 
 #+(or sbcl openmcl)
-(progn 
+(progn
   (defclass pseudo-addr-info ()
     (#+sbcl
      (host-ent :initarg :host-ent :accessor addr-info-host-ent :type host-ent)
@@ -268,8 +268,8 @@
   (e-coercef service '(or null string))
   (e-coercef hints 'null)
   ;; XXX needs a failure ejector
-  (e<- (efun () 
-         (or 
+  (e<- (efun ()
+         (or
           #+sbcl (make-instance 'pseudo-addr-info
                    :host-ent (if host
                                (get-host-by-name host)
@@ -280,8 +280,8 @@
                                  :aliases nil
                                  :addresses (list #(0 0 0 0))))
                    :port (if service (parse-integer service) 0))
-                             
-          #+openmcl 
+          
+          #+openmcl
           (make-instance 'pseudo-addr-info
             :ip-number (if host (openmcl-socket:lookup-hostname host) nil)
             ;; XXX hints should be supported to choose "udp" instead
@@ -325,7 +325,7 @@
                        #+sbcl (sb-posix:close opt-fd)
                        #-sbcl (warn "leaking fd ~A; XXX need non-SBCL shutdown implementation" opt-fd))
                      (setf opt-fd nil)))
-         (fd-ref 
+         (fd-ref
            (e-lambda |FDRef| ()
              (:|__printOn| ((out +the-text-writer-guard+))
                (if opt-fd
@@ -334,15 +334,15 @@
                    (e. out |print| opt-fd)
                    (e. out |write| ">"))
                  (e. out |write| "<closed file descriptor>")))
-       
+             
              (:|getFD| () (or opt-fd (error "this fd-ref has been closed.")))
-       
+             
              (:|shutdown| (direction ejector)
                (declare (ignore direction ejector))
                ;; XXX this is wrong; the clients need to know when to use close vs. shutdown, and this should attempt shutdown and fail
                (funcall do-close)
                nil)
-       
+             
              #+sbcl
              (:|write| ((vector 'vector) error-ejector (start 'integer) (length '(or null integer)))
                (setf vector (coerce vector '(vector (unsigned-byte 8))))
@@ -355,7 +355,7 @@
                  (if (zerop errno)
                    n
                    (eject-or-ethrow error-ejector (errno-to-condition errno)))))
-       
+             
              #+sbcl
              (:|read| ((max-octets '(integer 0)) error-ejector eof-ejector)
                "Read up to 'max-octets' currently available octets from the FD, and return them as a ConstList. Blocks if read(2) would block."

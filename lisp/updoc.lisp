@@ -17,7 +17,7 @@
 
 (defun read-updoc-line (stream &aux line)
   (setf line (read-line stream nil nil))
-  (unless line 
+  (unless line
     (return-from read-updoc-line nil))
   (setf line (string-left-trim '(#\Space #\Tab) line))
   (if (and (string/= line "") (member (aref line 0) '(#\? #\> #\#)))
@@ -34,12 +34,12 @@
       line)))
 
 (defun read-updoc (stream &aux script expression answers answer-key answer-value)
-  (labels ((finish-answer () 
-             (when answer-key 
+  (labels ((finish-answer ()
+             (when answer-key
                (push (list answer-key answer-value) answers)
                (setf answer-key nil)
                (setf answer-value nil)))
-           (finish-testcase () 
+           (finish-testcase ()
              (finish-answer)
              (when expression
                (push (list expression (reverse answers)) script)
@@ -59,11 +59,11 @@
              ; read # lines iff we saw a ? line
              (when expression
                (if answer-value
-                 (setf answer-value 
+                 (setf answer-value
                    (concatenate 'string
                      answer-value
                      '(#\Newline)
-                     (subseq line (min (+ (length answer-key) 2) 
+                     (subseq line (min (+ (length answer-key) 2)
                                        (length line)))))
                  (let ((point (position #\: line)))
                    (when point
@@ -115,7 +115,7 @@
                   :initarg :failures
                   :initform 0
                   :reader result-failure-count)
-   (step-count :type integer 
+   (step-count :type integer
                :initarg :steps
                :initform 0
                :reader result-step-count)
@@ -127,7 +127,7 @@
 (defgeneric result+ (a b))
 
 (defmethod result+ ((a result) (b result))
-  (make-instance 'result 
+  (make-instance 'result
     :failures (+ (result-failure-count a) (result-failure-count b))
     :steps    (+ (result-step-count a)    (result-step-count b))
     :dead     (or (result-dead a) (result-dead b))))
@@ -142,7 +142,7 @@
 (defun print-answer (answer)
   (format t "~&# ~A: ~A~%" (first answer) (second answer)))
 
-(defun make-updoc-handler (&key file out err print-steps 
+(defun make-updoc-handler (&key file out err print-steps
                                 (dead-names +empty-const-map+))
   ;; XXX too much state - ick
   (let ((new-answers nil)
@@ -163,7 +163,7 @@
                 skipping nil
                 backtrace nil)
           
-          ;; must happen after vars are set, in case of syntax errors 
+          ;; must happen after vars are set, in case of syntax errors
           (multiple-value-bind (node new-props)
               (e.syntax:parse-to-kernel expr :props props)
             (setf props new-props)
@@ -172,8 +172,8 @@
             #+#:debug (print (e. dead-names |getKeys|))
             (unwind-protect
               (if skipping
-                (progn 
-                  (princ "x") 
+                (progn
+                  (princ "x")
                   (load-time-value (make-instance 'e.kernel:|LiteralExpr| :elements '(0))))
                 (progn
                   (if print-steps
@@ -187,7 +187,7 @@
         (loop for stream in (list out err)
               for label in '("stdout" "stderr")
               for string = (get-output-stream-string stream)
-              unless (string= string "") 
+              unless (string= string "")
                 do (e. |updocHandler| |answer| (list label string))))
       (:|answer| (answer)
         (push (ref-shorten answer) new-answers)
@@ -197,7 +197,7 @@
         (setf backtrace (ref-shorten bt)))
       (:|finish| ()
         (when print-steps
-          (format t "~&step in ~Ss~%" 
+          (format t "~&step in ~Ss~%"
             (when starting-time
               (float (/ (- (get-internal-run-time) starting-time)
                         internal-time-units-per-second)))))
@@ -206,8 +206,8 @@
                  "updates whether names set by this step are guessed to not
                   match the expectations of the updoc script"
                  #+#:debug (print `(adjusting-liveness ,live ,(e. (e. step-scope |outNames|) |getKeys|)))
-                 (setf dead-names 
-                   (e-call dead-names 
+                 (setf dead-names
+                   (e-call dead-names
                            (if live
                              "butNot"
                              "or")
@@ -236,7 +236,7 @@
                      future steps' expectations) iff this step had an unexpected
                      problem |#
                   (flet ((has-problem (answers)
-                           (member "problem" answers :test #'equal 
+                           (member "problem" answers :test #'equal
                                                      :key #'first)))
                     (adjust-liveness (or (not (has-problem new-answers))
                                          (has-problem expected-answers))))
@@ -250,10 +250,10 @@
       (values
         (lambda (step)
           (multiple-value-bind (result-promise result-resolver) (make-promise)
-                
+            
             ((lambda (f) (e<- f |run|)) (efun (&aux new-result)
               (block attempt
-                (handler-bind ((error #'(lambda (condition) 
+                (handler-bind ((error #'(lambda (condition)
                                           (e. handler |takeStreams|)
                                           (e. handler |answer| (make-problem-answer condition))
                                           (e. handler |backtrace| (backtrace-value))
@@ -301,13 +301,13 @@
 (defun updoc-file (file &key print-steps confine)
   (with-open-file (s file
       :external-format e.extern:+standard-external-format+)
-    (multiple-value-let* 
+    (multiple-value-let*
           ((script (read-updoc s))
            (capture-out eval-out-stream (make-capturing-stream print-steps *standard-output*))
            (capture-err eval-err-stream (make-capturing-stream print-steps *error-output*))
-           (stepper scope-slot base-interp 
+           (stepper scope-slot base-interp
              (make-stepper :props e.knot::+eprops+ ;; XXX internal
-                           :handler (make-updoc-handler :out capture-out 
+                           :handler (make-updoc-handler :out capture-out
                                                         :err capture-err
                                                         :print-steps print-steps
                                                         :file file)))
@@ -340,9 +340,9 @@
                                       :should-close-underlying nil))
                           ("props"  ,e.knot::+eprops+)
                           #||#)))
-                    (e. (make-io-scope :stdout eval-out-stream 
+                    (e. (make-io-scope :stdout eval-out-stream
                                        :stderr eval-err-stream
-                                       :interp updoc-interp) 
+                                       :interp updoc-interp)
                         |withPrefix| "__main$")))
            ; XXX option to run updoc scripts in unprivileged-except-for-print scope
            )
@@ -353,8 +353,8 @@
                (make-instance 'result)
                (lambda () script)
                (lambda () (funcall stepper (pop script)))
-               (lambda (result) 
-                 (format t " ~A in ~Gs~%" 
+               (lambda (result)
+                 (format t " ~A in ~Gs~%"
                          (result-step-count result)
                          (/ (- (get-internal-run-time) starting-time)
                             internal-time-units-per-second))))))))
@@ -372,7 +372,7 @@
     #+sbcl :sb-sprof
     :ecall-counter))
 
-(defparameter *profile-package-names* 
+(defparameter *profile-package-names*
   '("E.UTIL"
     "E.ELIB"
     "E.KNOT"
@@ -383,7 +383,7 @@
     "E.RUNE"
     "E.UPDOC"))
 
-#+sbcl 
+#+sbcl
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :sb-sprof))
 
@@ -404,7 +404,7 @@
 
 #+sbcl
 (defmethod profile-finish ((profiler (eql :sb-sprof)))
-  (sb-sprof:stop-profiling) 
+  (sb-sprof:stop-profiling)
   (sb-sprof:report))
 
 
@@ -434,7 +434,7 @@
                            0)))))
 
 (defmethod profile-finish ((profiler (eql :ecall-counter)))
-  (remove-method #'e-call-dispatch *call-counter-method*) 
+  (remove-method #'e-call-dispatch *call-counter-method*)
   (format *trace-output* "~&--- Call count profile ---~%")
   (loop for (name . count) in (sort (map-from-hash 'list #'cons *call-counts*)
                                   #'< :key #'cdr)
@@ -451,8 +451,8 @@
   (flet ((collect (pathname)
           (push pathname file-paths)
           (values)))
-
-    ; XXX use e.extern routines for file access  
+    
+    ; XXX use e.extern routines for file access
     (loop for path in paths do
       (if #-clisp (cl-fad:directory-exists-p path)
           ; otherwise "UNIX error 20 (ENOTDIR): Not a directory"
@@ -467,7 +467,7 @@
     
     (nreverse-here file-paths)
     
-    (profile-start profiler)    
+    (profile-start profiler)
     (chain
       #'result+
       (make-instance 'result)
@@ -481,12 +481,12 @@
 
 (defun describe-result (result)
   (format nil "~&~[~D test~:P passed.~:;~:*~D failure~:P in ~D test~:P.~]"
-    (result-failure-count result) 
+    (result-failure-count result)
     (result-step-count result)))
 
 (defun updoc-rune-entry (&rest args
     &aux profiler print-steps confine)
-  (loop while args do 
+  (loop while args do
     (popping-equal-case args
       (("--profile")
         (assert args (args) "--profile requires an argument")
@@ -501,7 +501,7 @@
         (setf confine t))
       (otherwise
         (loop-finish))))
-    
+  
   (call-when-resolved
       (updoc-start (mapcar #'native-pathname args) :profiler profiler :print-steps print-steps :confine confine)
     (efun (result)
@@ -524,7 +524,7 @@
                       (list (merge-pathnames
                               (make-pathname :directory '(:relative "tests"))
                               (asdf:component-pathname system))))
-                  (efun (result) 
+                  (efun (result)
                     (return-from test result)))))))
       (when (eql (ref-state result) 'broken)
         (cerror "Ignore failures." "Tests for ~A did not execute properly: ~A" system (ref-opt-problem result)))
@@ -544,11 +544,11 @@
     (:|answer| () nil)))
 
 (defun repl-start ()
-  (multiple-value-let* 
+  (multiple-value-let*
       ((stepper scope-slot interp (make-stepper :handler (make-repl-handler)))
        (scope (e. (make-io-scope :stdout *standard-output*
                                  :stderr *error-output*
-                                 :interp interp) 
+                                 :interp interp)
                   |withPrefix| "__main$"))
        (split-in (e-import "org.cubik.cle.io.splitIn"))
        (lines (efuncall split-in

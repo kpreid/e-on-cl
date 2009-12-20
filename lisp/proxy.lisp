@@ -10,7 +10,7 @@
                    :reader %proxy-ref-resolution-box))
   (:documentation "A reference which has a handler and resolution promise, but doesn't necessarily use them for anything."))
 
-(defclass resolved-handler-ref (handler-ref) 
+(defclass resolved-handler-ref (handler-ref)
   ((resolution-identity :reader %resolution-identity
                         :writer set-resolution-identity
                         :type traversal-key))
@@ -45,7 +45,7 @@
     (make-unconnected-ref (transform-condition-for-e-catch condition))))
 
 (defun verify-resolution-box (ref box)
-  (handler-case 
+  (handler-case
     (progn
       (setf box (ref-shorten box))
       (check-type box e-simple-slot)
@@ -58,8 +58,8 @@
 (defun verify-broken-resolution (ref resolution-ref)
   (if (eql (ref-state resolution-ref) 'broken)
     resolution-ref
-    (bogus-resolution "Attempt to resolve a Far ref handled by ~A to another identity (~A)." 
-      (e-quote (%proxy-ref-handler ref)) 
+    (bogus-resolution "Attempt to resolve a Far ref handled by ~A to another identity (~A)."
+      (e-quote (%proxy-ref-handler ref))
       (e-quote resolution-ref))))
 
 (defgeneric %resolve-proxy (proxy resolution))
@@ -113,7 +113,7 @@
 
 (defmethod weak-when-more-resolved ((ref proxy-ref) weak-reactor action)
   (declare (ignore weak-reactor action))
-  ;; XXX implement this to invoke the handler. until then, multivat 
+  ;; XXX implement this to invoke the handler. until then, multivat
   ;; tail-recursive loops may leak resolved-refs.
   (values))
 

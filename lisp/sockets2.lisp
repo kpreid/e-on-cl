@@ -59,7 +59,7 @@
                      (typecase condition
                        ((or #+sbcl sb-bsd-sockets:not-connected-error)
                         nil)
-                       (t 
+                       (t
                         (e. e.knot:+trace+ |run| (format nil "Error from attempted shutdown of ~A for writing at end of stream: ~A" (e-quote fd-ref) condition))))
                      (e. ignore |run|)))))
              (done-chunk ()
@@ -99,7 +99,7 @@
                    (loop for resolver = (dequeue reservations)
                          while resolver
                          do (e. resolver |resolve| terminator)))
-                 (t 
+                 (t
                    (unless is-waiting
                      (let ((resolver (dequeue reservations)))
                        (when resolver
@@ -184,13 +184,13 @@
               (progn
                 (foo-bind-socket impl-socket addr-info)
                 nil)
-              (socket-error (c) 
+              (socket-error (c)
                 (make-unconnected-ref c)))))
         
         (:|close| (ejector)
           (loop while cleanups do (funcall (pop cleanups)))
           (e. impl-socket |close| ejector))
-                
+        
         (:|connect| ((peer-ref +peer-ref-guard+))
           "connect() this socket eventually. Resolves to nil for no error, true for EINPROGRESS, and a broken reference (XXX specify errno access) for all other errors."
           ;; XXX correct handling of EINTR
@@ -208,14 +208,14 @@
               ((satisfies in-progress-socket-error-p) (condition)
                 (declare (ignore condition))
                 +e-true+)
-              (socket-error (c) 
+              (socket-error (c)
                 (make-unconnected-ref c)))))
         
         (:|listen| ((opt-backlog '(or null integer)) handler)
           (assert listen-ok)
           (foo-listen impl-socket opt-backlog)
           (let ((handler (foo-add-receive-handler impl-socket (efun ()
-            (efuncall handler (make-socket-wrapper 
+            (efuncall handler (make-socket-wrapper
                                 (foo-accept impl-socket nil)
                                 domain
                                 type
@@ -229,7 +229,7 @@
         
         (:|setSockoptSendBuffer| ((new '(integer 0)))
           (setf (foo-sockopt-send-buffer impl-socket) new))
-        (:|setSockoptReceiveBuffer| ((new '(integer 0))) 
+        (:|setSockoptReceiveBuffer| ((new '(integer 0)))
           (setf (foo-sockopt-receive-buffer impl-socket) new))
         
         (:|getSockoptSendBuffer/0| ()
@@ -260,9 +260,9 @@
         (:|getHostName| () host-spec)
         (:|getServiceName| () service-spec)))))
 
-(defglobal +the-get-socket-local-ref+ 
+(defglobal +the-get-socket-local-ref+
   (socket-address-ref-maker +local-ref-guard+ "local"))
-(defglobal +the-get-socket-peer-ref+ 
+(defglobal +the-get-socket-peer-ref+
   (socket-address-ref-maker +peer-ref-guard+ "peer"))
 
 (defmacro with-ejection ((ejector) &body body &aux (condition (gensym)))
@@ -279,18 +279,18 @@
   (fd-ref-to-eio-in-stream (stream-to-fd-ref stream :input)
                            name
                            +converted-stream-buffer-size+))
-                        
+
 
 ;; NOTE: used by e.extern:+spawn+
 (defun cl-to-eio-out-stream (stream name)
   (make-fd-out-stream name
                       (stream-to-fd-ref stream :output)))
-                      
+
 
 (defun fd-ref-to-eio-in-stream (fd-ref name buffer)
   ;; XXX avoid reimporting the author
   (efuncall (efuncall (e-import "org.cubik.cle.io.makeFDInStreamAuthor")
-                      e.knot::+lisp+) 
+                      e.knot::+lisp+)
     name
     fd-ref
     buffer))
@@ -316,13 +316,13 @@
   (:|run| (ejector)
     #-sbcl (error "makePipe not yet implemented for ~A" (lisp-implementation-type))
     (multiple-value-bind (read write)
-        (with-ejection (ejector) 
+        (with-ejection (ejector)
           #+sbcl (sb-posix:pipe)
           #-sbcl nil)
       (set-fd-non-blocking-mode read t)
       (set-fd-non-blocking-mode write t)
       (vector
-        (fd-ref-to-eio-in-stream (make-fd-ref read :close t) 
+        (fd-ref-to-eio-in-stream (make-fd-ref read :close t)
                                  (e-lambda "system pipe" ())
                                  4096)
         (make-fd-out-stream (e-lambda "system pipe" ())

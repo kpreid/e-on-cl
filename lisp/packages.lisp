@@ -6,7 +6,7 @@
 (cl:defpackage :e.util
   (:use :cl :bordeaux-threads)
   
-  #.(cl:let ((cl:package (cl:some #'cl:find-package '( 
+  #.(cl:let ((cl:package (cl:some #'cl:find-package '(
                #+sbcl :sb-mop
                #+openmcl :openmcl-mop
                #+ccl :ccl
@@ -22,12 +22,12 @@
     :defglobals
     :defglobal
     :defconstantonce
-  
+    
     :aan
     :named-lambda
     :map-from-hash
     :system-symbol
-
+    
     :native-pathname
     :native-namestring
     
@@ -133,7 +133,7 @@
     
     :sugar-cache-get 
     :sugar-cache-call
-  
+    
     :e-call :e-call-dispatch :e.
     :e-send :e-send-dispatch :e<-
     :e-send-only-dispatch
@@ -286,28 +286,28 @@
     :ejerror
     :with-vat :call-when-resolved :when-resolved
     :mapping-bind
-
+    
     :e-import
     :import-uncall
-
+    
     :eelt :efuncall))
 
 (e.util:defglobals
   e.elib:+the-make-simple-slot+
   e.elib:+the-make-var-slot+
   e.elib:+the-make-guarded-slot+
-
+  
   e.elib:+the-make-coercion-failure+
-
+  
   e.elib:+the-any-map-guard+
   e.elib:+the-make-const-map+
   e.elib:+the-make-twine+
   e.elib:+the-text-writer-guard+
-
+  
   e.elib:+the-make-type-desc+
   e.elib:+the-make-param-desc+
   e.elib:+the-make-message-desc+
-
+  
   #-sbcl e.elib:+e-false+
   #-sbcl e.elib:+e-true+
   e.elib:+the-exception-guard+
@@ -316,14 +316,14 @@
   e.elib:+the-thrower+
   e.elib:+the-make-coercion-failure+
   e.elib:+the-make-string-error+
-
+  
   e.elib:+the-make-flex-map+
   e.elib:+the-make-text-writer+
   e.elib:+the-make-list+
   e.elib:+the-make-int+
   e.elib:+the-make-float64+
   e.elib:+the-make-priority-queue+
-
+  
   e.elib:+the-audit-checker+
   e.elib:+deep-frozen-stamp+
   
@@ -387,7 +387,7 @@
     :+lisp+
     :+trace+
     :+sys-trace+))
-  
+
 (e.util:defglobals
   e.knot:+sharable-importer+
   e.knot:+the-e+
@@ -395,7 +395,7 @@
   e.knot:+trace+
   e.knot:+sys-trace+
   e.knot:+the-make-path-loader+)
-  
+
 (cl:defvar e.knot:*emaker-search-list*)
 
 (cl:defpackage :e.grammar
@@ -410,7 +410,7 @@
     :error)
   (:export
     :|null|
-
+    
     :|.tuple.|
     :|.AtHole.|
     :|.DollarHole.|
@@ -475,7 +475,7 @@
     :e-macroexpand
     :e-macroexpand-all
     :kernelize
-
+    
     :+the-make-static-scope+
     
     :mn :mnp :node-quote
@@ -525,7 +525,7 @@
   e.syntax:+prim-parser+
   e.syntax:+e-printer+)
 
-(declaim (ftype function 
+(declaim (ftype function
   e.syntax:e-source-to-tree
   e.syntax:load-parse-cache
   e.syntax:save-parse-cache

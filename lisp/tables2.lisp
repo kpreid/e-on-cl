@@ -17,15 +17,15 @@
   (if (typep iteratable accept-type)
     iteratable
     (if (typep iteratable 'sequence)
-      (map `(vector ,element-type) 
-           (lambda (v) (e-coerce v element-type)) 
+      (map `(vector ,element-type)
+           (lambda (v) (e-coerce v element-type))
            iteratable)
       (let ((a (make-array '(1) :element-type element-type
-                                :fill-pointer 0 
+                                :fill-pointer 0
                                 :adjustable t)))
         (e. iteratable |iterate| (efun (k v)
           (declare (ignore k))
-          (vector-push-extend (e-coerce v element-type)                   
+          (vector-push-extend (e-coerce v element-type)
             (or a (error "vector accumulation iterator called too late")))))
         (shiftf a nil)))))
 
@@ -50,9 +50,9 @@
 (defun moved-text-position (line column text &optional (newline-op #'all-newline-op))
   (flet ()
     (cond
-      ((= (length text) 0) 
+      ((= (length text) 0)
        (values line column))
-      ((not (funcall newline-op #'find text)) 
+      ((not (funcall newline-op #'find text))
        (values line (+ column (length text))))
       (t
        (values (+ line (funcall newline-op #'count text))
@@ -62,7 +62,7 @@
   (when (plusp (length text))
     (multiple-value-bind (end-line end-col)
         (moved-text-position 1 0 text #'drop-newline-op)
-      (efuncall +the-make-source-span+ 
+      (efuncall +the-make-source-span+
         uri
         (as-e-boolean (not (drop-newline-op #'find text)))
         1        0
@@ -116,7 +116,7 @@
                                                    (as-e-boolean one-to-one)
                                                    start-line
                                                    start-col
-                                                   end-line 
+                                                   end-line
                                                    end-col))))
   (:|getUri/0| 'span-uri)
   (:|isOneToOne/0| (span) (as-e-boolean (span-one-to-one-p span)))
@@ -140,7 +140,7 @@
 (defobject +the-make-source-span+ "org.erights.e.elib.base.makeSourceSpan"
     (:stamped +deep-frozen-stamp+
      :stamped +standard-graph-exit-stamp+)
-  (:|asType| () 
+  (:|asType| ()
     (type-specifier-to-guard 'source-span))
   (:|run| ((uri        'string)
            (one-to-one 'e-boolean)
@@ -162,7 +162,7 @@
   "Print a SourceSpan, if present, preceded by \" @\". For use in format strings."
   (declare (ignore colon at))
   (let ((tw (make-text-writer-to-cl-stream stream)))
-    (unwind-protect 
+    (unwind-protect
       (when (ref-shorten arg)
         (e. tw |write| " @ ")
         (e. tw |print| arg))
@@ -182,13 +182,13 @@
   (:|__conformTo| (this guard)
     (declare (ignore guard))
     (twine-string this))
-  (:|isBare| (this) 
+  (:|isBare| (this)
     (declare (ignore this))
     (error "twine type not implementing isBare"))
-  (:|getParts| (this) 
+  (:|getParts| (this)
     (declare (ignore this))
     (error "twine type not implementing getParts"))
-  (:|getOptSpan| (this) 
+  (:|getOptSpan| (this)
     (declare (ignore this))
     (error "twine type not implementing getOptSpan"))
   (:|run| (this start end)
@@ -209,14 +209,14 @@
 
 (deftype twine ()
   '(or string %twine))
-  
+
 (def-fqn twine "org.erights.e.elib.tables.twine")
 
 
 (defun coalesce (t1 t2)
   (flet ((strings () (concatenate 'string (twine-string t1)
                                           (twine-string t2))))
-    (if (and (e-is-true (e. t1 |isBare|)) 
+    (if (and (e-is-true (e. t1 |isBare|))
              (e-is-true (e. t2 |isBare|)))
       ;; plain strings
       (strings)
@@ -234,9 +234,9 @@
                      (= (e. span1 |getEndCol|)
                         (1- (e. span2 |getStartCol|))))
               ;; one-to-one and adjacent
-              (make-instance 'leaf-twine 
+              (make-instance 'leaf-twine
                 :string (strings)
-                :span (efuncall +the-make-source-span+ 
+                :span (efuncall +the-make-source-span+
                         (e. span1 |getUri|)
                         +e-true+
                         (e. span1 |getStartLine|)
@@ -247,7 +247,7 @@
               nil)
             (if (samep span1 span2)
               ;; blob and identical
-              (make-instance 'leaf-twine 
+              (make-instance 'leaf-twine
                 :string (strings)
                 :span span1)
               ;; blob and not identical
@@ -277,7 +277,7 @@
 
 
 (defclass composite-twine (%twine)
-  ((parts :initarg :parts 
+  ((parts :initarg :parts
           :type list
           :reader %twine-parts)))
 
@@ -287,10 +287,10 @@
 (def-vtable composite-twine
   (:|__optUncall| (this)
     (vector +the-make-twine+ "fromParts" (vector (coerce (%twine-parts this) 'vector))))
-  (:|isBare| (this) 
+  (:|isBare| (this)
     (declare (ignore this))
     +e-false+)
-  (:|getOptSpan| (this) 
+  (:|getOptSpan| (this)
     (declare (ignore this))
     nil)
   (:|getParts| (this) (coerce (%twine-parts this) 'vector)))
@@ -304,7 +304,7 @@
   (:|__optUncall| (this)
     (with-accessors ((string twine-string) (span twine-opt-span)) this
       (vector +the-make-twine+ "fromString" (vector string span))))
-  (:|isBare| (this) 
+  (:|isBare| (this)
     (declare (ignore this))
     +e-false+)
   (:|getOptSpan/0| 'twine-opt-span)
@@ -320,14 +320,14 @@
                (string (twine-string this))
                (drun (displaced-subseq string start end)))
           (multiple-value-bind (run-start-line run-start-col)
-              (moved-text-position (span-start-line span) 
-                                   (span-start-col span) 
+              (moved-text-position (span-start-line span)
+                                   (span-start-col span)
                                    (displaced-subseq string 0 start))
             (multiple-value-bind (run-end-line run-end-col)
                 (moved-text-position run-start-line run-start-col drun)
               ;(print (list run-start-line run-start-col run-end-line run-end-col))
               ;(force-output)
-              (efuncall +the-make-source-span+ 
+              (efuncall +the-make-source-span+
                 (e. span |getUri|)
                 (as-e-boolean (not (all-newline-op #'find drun)))
                 run-start-line run-start-col
@@ -336,7 +336,7 @@
 
 (defobject +the-make-twine+ "org.erights.e.elib.tables.makeTwine"
     (:stamped +deep-frozen-stamp+)
-  (:|fromValuesOf| (iteratable) 
+  (:|fromValuesOf| (iteratable)
     "Return a Twine composed of the characters in the given EIteratable (object that provides iterate/1).
 
 If the sequence is a Twine itself, it is returned unchanged (preserving source spans)."
@@ -344,11 +344,11 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
   (:|fromString| ((string 'string)
                   (span '(or null source-span)))
     (if span
-      (progn 
+      (progn
         (unless (plusp (length string))
           (error "an empty twine may not have a source span"))
         (unless (or (not (span-one-to-one-p span))
-                    (= (length string) (- (1+ (span-end-col span)) 
+                    (= (length string) (- (1+ (span-end-col span))
                                           (span-start-col span))))
           (error "the source span, ~A, must match the size of the string, ~S, or be not one-to-one" (e-quote span) (length string)))
         (make-instance 'leaf-twine :string string :span span))
@@ -368,7 +368,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
     (:|__optSealedDispatch| (brand)
       (if (eql brand +the-flex-array-array-brand+)
         (make-instance 'flex-array-array-sealed-box :array array)))
-  
+    
     (:|elt| ((i '(integer 0)))
       (elt array i))
     (:|setElt| ((i 'integer) new)
@@ -378,11 +378,11 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
       (aref array i)) ; XXX support n-ary aref
     (:|length| () (length array))
     (:|getFillPointer| () (fill-pointer array))
-    (:|setFillPointer| ((new 'integer)) 
+    (:|setFillPointer| ((new 'integer))
       (setf (fill-pointer array) new))
-
+    
     (:|getAdjustable| () (as-e-boolean (adjustable-array-p array)))
-    (:|getDimension| ((i 'integer)) 
+    (:|getDimension| ((i 'integer))
       (array-dimension array i))
     
     (:|snapshotVector| ()
@@ -394,16 +394,15 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
       ; XXX leaves undefined elements in any extra-extension area
       (vector-push-extend new array)) ; XXX will this fail safely if the array is >1-dimensional?
     
-    (:|fill| (value)           
+    (:|fill| (value)
       (setf value (ref-shorten value))
       (fill array value))
     (:|fill| (value (start 'integer))
       (setf value (ref-shorten value))
       (fill array value :start start))
-    (:|fill| (value (start 'integer) (end 'integer)) 
+    (:|fill| (value (start 'integer) (end 'integer))
       (setf value (ref-shorten value))
       (fill array value :start start :end end))
-
     (:|replace| (seq
                  (start1 'integer)
                  (end1   'integer)
@@ -421,7 +420,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
     
     (:|adjust| (new-dimensions initial-element)
       ; NOTE: Exposing the ability to create displaced arrays, or access to displaced-to arrays, is unsafe: "If A is displaced to B, the consequences are unspecified if B is adjusted in such a way that it no longer has enough elements to satisfy A." -- CLHS
-      (setf new-dimensions 
+      (setf new-dimensions
         (map 'list #'(lambda (d) (e-coerce d 'integer))
           (e-coerce new-dimensions 'vector)))
       ; unspecified behavior otherwise:
@@ -432,11 +431,11 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
           new-dimensions
           :initial-element initial-element)))))
 
-(defobject +the-make-array+ "org.cubik.cle.prim.makeArray" 
+(defobject +the-make-array+ "org.cubik.cle.prim.makeArray"
     (:stamped +deep-frozen-stamp+)
   (:|fromSequence| ((seq 'sequence) adjustable)
     "Makes a one-dimensional array with a fill pointer at the end and an element type of any."
-    (make-flex-array (make-array (length seq) 
+    (make-flex-array (make-array (length seq)
                                  :initial-contents seq
                                  :adjustable (e-is-true adjustable)
                                  :fill-pointer t))))
@@ -447,8 +446,8 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 
 (defmethod print-object ((map const-map) stream)
   (if (and *print-readably* *read-eval*)
-    (format stream "#.~S" 
-      `(e. +the-make-const-map+ :|fromColumns| 
+    (format stream "#.~S"
+      `(e. +the-make-const-map+ :|fromColumns|
          ,@(coerce (e. map |getPair|) 'list)))
     (print-unreadable-object (map stream :type t :identity nil)
       (loop for sep = "" then " "
@@ -486,12 +485,12 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
   
   (:|with| (map new-key new-value)
     (make-instance 'const-map-with-node :base map :key new-key :value new-value))
-
+  
   ; xxx using more complicated and slow version to imitate Java-E's ordering behavior
   (:|without| (map key-to-remove)
     "Return a ConstMap including all entries in this map except for the given key, which is replaced in the ordering with the last element of the map."
     (if (maps-no-sugar map key-to-remove)
-      (let (last-pair 
+      (let (last-pair
             removing-nonlast)
         (e. map |iterate| (efun (k v) (setf last-pair (list k v))))
         (setf removing-nonlast (not (samep (first last-pair) key-to-remove)))
@@ -543,7 +542,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 
   (:|butNot| (map (mask +the-any-map-guard+))
     (let* ((map-keys (e-coerce (e. map |getKeys|) 'vector))
-           (ordering (make-array (length map-keys) 
+           (ordering (make-array (length map-keys)
                                  :initial-contents map-keys
                                  :fill-pointer t)))
       (loop with i = 0
@@ -566,7 +565,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
     (cond
       ((eql 0 (e. front  |size|)) (e. behind |snapshot|))
       ((eql 0 (e. behind |size|)) (e. front |snapshot|))
-      (t 
+      (t
         (e. +the-make-const-map+ |fromIteratable|
           (e-lambda "org.cubik.cle.prim.mapOrIterator" () (:|iterate| (f)
             (e. behind |iterate| f)
@@ -574,7 +573,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
             nil))
           strict opt-ejector))))
 
-  ;; XXX move this into mapSugar  
+  ;; XXX move this into mapSugar
   (:|iterate| (map func)
     (let* ((pair (ref-shorten (e. map |getPair|))))
       (loop for key   across (aref pair 0)
@@ -647,7 +646,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 
 (def-vtable genhash-const-map-impl
   (:|getPair| (this)
-    (vector (%genhash-const-map-keys this) 
+    (vector (%genhash-const-map-keys this)
             (%genhash-const-map-values this)))
   (:|snapshot/0| 'identity)
   (:|fetch| (this key absent-thunk)
@@ -683,7 +682,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
                 :initform (make-generic-hash-table :test 'samep)
                 :accessor %genhash-flex-map-impl-table)
    (keys        :initform (make-array 0 :fill-pointer 0 :adjustable t)
-                :type (or null (and vector 
+                :type (or null (and vector
                                     (satisfies adjustable-array-p)
                                     (satisfies array-has-fill-pointer-p)))
                 :accessor %genhash-flex-map-impl-keys)
@@ -695,7 +694,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 
 
 (defmethod ensure-storage ((this genhash-flex-map-impl))
-  (with-accessors ((table    %genhash-flex-map-impl-table) 
+  (with-accessors ((table    %genhash-flex-map-impl-table)
                    (keys     %genhash-flex-map-impl-keys)
                    (values   %genhash-flex-map-impl-values)
                    (snapshot %genhash-flex-map-impl-snapshot)) this
@@ -733,7 +732,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
 
   (:|put| (this key value strict opt-ejector)
     (ensure-storage this)
-    (with-accessors ((table       %genhash-flex-map-impl-table) 
+    (with-accessors ((table       %genhash-flex-map-impl-table)
                      (keys        %genhash-flex-map-impl-keys)
                      (values      %genhash-flex-map-impl-values)
                      (key-guard   %genhash-flex-map-impl-key-guard)
@@ -745,7 +744,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
           (if (e-is-true strict)
             (ejerror opt-ejector "~A already in map" (e-quote key))
             (setf (aref values index) value))
-          (progn 
+          (progn
             (setf (hashref key table) (length keys))
             (vector-push-extend key   keys)
             (vector-push-extend value values)))))
@@ -754,7 +753,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
   ; XXX need to change the protocol to have an ejector
   (:|removeKey| (this key strict &aux opt-ejector)
     (ensure-storage this)
-    (with-accessors ((table       %genhash-flex-map-impl-table) 
+    (with-accessors ((table       %genhash-flex-map-impl-table)
                      (keys        %genhash-flex-map-impl-keys)
                      (values      %genhash-flex-map-impl-values)
                      (key-guard   %genhash-flex-map-impl-key-guard)) this
@@ -780,7 +779,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
   (:|valueType| (this) (%genhash-flex-map-impl-value-guard this))
 
   (:|fetch| (this key absent-thunk)
-    (with-accessors ((table       %genhash-flex-map-impl-table) 
+    (with-accessors ((table       %genhash-flex-map-impl-table)
                      (values      %genhash-flex-map-impl-values)
                      (snapshot    %genhash-flex-map-impl-snapshot)
                      (key-guard   %genhash-flex-map-impl-key-guard)) this
@@ -860,7 +859,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
            (keys   (make-array 4 :adjustable t :fill-pointer 0))
            (values (make-array 4 :adjustable t :fill-pointer 0))
            (table  (make-generic-hash-table :test 'samep)))
-      (e. iteratable |iterate| 
+      (e. iteratable |iterate|
         (e-lambda "org.cubik.cle.prim.ConstMapConstructionIterator" ()
           (:|run| (key value)
             (cond
@@ -892,7 +891,7 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
     ;     "If the guards coerce to primitive-type guards, then the map will use the coercion result instead of the provided guard, and may be able to transparently use a more efficient internal representation."
     ; XXX specialize columns when possible
     (with-result-promise (map)
-      (let* ((impl 
+      (let* ((impl
               (make-instance 'e.elib.tables::genhash-flex-map-impl
                 :self map
                 :key-guard key-guard
@@ -913,9 +912,9 @@ If the sequence is a Twine itself, it is returned unchanged (preserving source s
                              (snapshot    %genhash-flex-map-impl-snapshot)) impl
               (unless snapshot
                 ; The principle here is that the most common use of snapshotting is to build a collection and then make it immutable. XXX benchmark such decisions.
-                (setf snapshot (make-instance 'genhash-const-map-impl 
+                (setf snapshot (make-instance 'genhash-const-map-impl
                                   :table table
-                                  :keys keys 
+                                  :keys keys
                                   :values values))
                 (setf table nil
                       keys nil

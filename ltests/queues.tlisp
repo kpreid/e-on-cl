@@ -5,7 +5,7 @@
   (:use :cl :e.lisp-test :bordeaux-threads :e.util))
 (in-package :e.test.util)
 
-(when (handler-case 
+(when (handler-case
         (progn (make-thread (lambda ()) :name "threading existence test")
                t)
         (error () nil))

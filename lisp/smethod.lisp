@@ -15,10 +15,10 @@
   ;; http://paste.lisp.org/display/10050
   (let (not)
     (values
-      (apply #'remove-if-not 
+      (apply #'remove-if-not
              #'(lambda (element)
                (not
-                 (unless (funcall test element) 
+                 (unless (funcall test element)
                    (push element not))))
              sequence
              options)
@@ -57,7 +57,7 @@ If there are two or more further elements, then they are a lambda list and impli
 
 prefix-args is a list of forms which will be prepended to the arguments of the method body."
   (assert (not (eq (first smethod) 'otherwise)))
-  `((,mverb) 
+  `((,mverb)
     ,(smethod-body (rest smethod) args-sym prefix-args :type-name type-name :verb-name mverb)))
 
 (defun smethod-function-case-entry (smethod prefix-arity &key type-name
@@ -122,8 +122,8 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
               (reffify-args ,args-sym)
               ,args-sym)
            args-sym)))
-    #+e.method-lambdas 
-      `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name) 
+    #+e.method-lambdas
+      `(apply ,(smethod-function-form body :type-name type-name :verb-name verb-name)
               ,@prefix-args ,args-form)
     #-e.method-lambdas
       (if (functional-smethod-body-p body)
@@ -144,10 +144,10 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
              #-e.intern-vtable-methods
                (make-symbol name)
              #+e.intern-vtable-methods
-               (loop 
+               (loop
                  for i from 1
                  for free = name then (format nil "~A-dup-~A" name i)
-                 while (find-symbol name :e.elib.vtable-methods) 
+                 while (find-symbol name :e.elib.vtable-methods)
                  finally (intern free :e.elib.vtable-methods))))
       `(named-lambda ,name-sym ,@(convert-coercing-lambda-list (first body) (rest body))))))
 
@@ -183,18 +183,18 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
     &aux (end (or (position '&aux list) (length list))))
   (unless (= end (+ arity prefix-arity))
     (error "arity ~A + prefix-arity ~A doesn't match lambda list ~S" arity prefix-arity list))
-  (coerce (loop 
+  (coerce (loop
     for i below arity
     for sym in (nthcdr prefix-arity list)
     do
       (when (member sym lambda-list-keywords)
         (error "constructing param-desc vector from lambda list ~S with keyword ~s not possible" list sym))
-    collect 
+    collect
       (coercing-lambda-list-item-to-param-desc sym)) 'vector))
 
 (defun smethod-message-desc-pair (smethod &rest keys &key (prefix-arity 0) &allow-other-keys
     &aux (mverb (smethod-mverb smethod prefix-arity)))
-  (vector (symbol-name mverb) 
+  (vector (symbol-name mverb)
           (apply #'smethod-message-desc smethod keys)))
 
 (defun smethod-message-desc (smethod &key (prefix-arity 0)
@@ -207,7 +207,7 @@ prefix-args is a list of forms which will be prepended to the arguments of the m
         :doc-comment (find-if #'stringp impl-desc) ; XXX too lenient
       :params (if (rest impl-desc) ; therefore inline
                 (coercing-lambda-list-to-param-desc-vector (first impl-desc) arity prefix-arity)
-                (make-array arity :initial-element 
+                (make-array arity :initial-element
                   (make-instance 'param-desc))))))
 
 (defun smethod-maybe-describe-fresh (function smethod &rest options)

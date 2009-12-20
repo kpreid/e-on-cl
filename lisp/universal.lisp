@@ -2,6 +2,6 @@
 
 (in-package :e.compiler)
 
-(macrolet ((it () 
-             *efasl-program*)) 
+(macrolet ((it ()
+             *efasl-program*))
   (it))

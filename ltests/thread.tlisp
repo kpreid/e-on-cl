@@ -6,7 +6,7 @@
 (in-package :e.test.util)
 
 (deftest t-current-thread
-  (collect-mismatches #'equal #'identity #'identity 
+  (collect-mismatches #'equal #'identity #'identity
     (list (list (current-thread)
                 (current-thread))))
   nil)

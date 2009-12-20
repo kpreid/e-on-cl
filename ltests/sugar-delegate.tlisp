@@ -32,7 +32,7 @@
 ;; XXX test existant sugar __getAllegedType
 
 (deftest sugar-call.fail.simple
-  (with-vat-1 
+  (with-vat-1
     (handler-case
       (e. (make-instance 'sugar-fail-test) |foo| "bar")
       (no-such-method-error () 'no-such-method)))

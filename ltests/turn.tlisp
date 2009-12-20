@@ -16,7 +16,7 @@
     (label *vat*)
     (setf *vat* nil *runner* nil))
   "initiative")
-  
+
 (deftest vat-label.with-vat
   (block nil
     (with-vat (:label "potato")
@@ -26,7 +26,7 @@
 
 (defun stream-handler-target (stream &key strict)
   ;; XXX this belongs in e.util with the rest of the serve-event layer
-  #+sbcl 
+  #+sbcl
     (etypecase stream
       (synonym-stream
         (if strict
@@ -41,7 +41,7 @@
          (vat (make-instance 'vat :label "exclusive-io-handler-pound test"))
          (*vat* vat)
          (seen 0)
-         (streams 
+         (streams
            (loop for i below 20 collect
              (external-process-output-stream (run-program "/bin/sh" (list "-c" (format nil "sleep 1; echo ~S" i)) :output :stream :wait nil))))
          (handlers (mapcar
@@ -80,17 +80,17 @@
          (*vat* vat)
          (unseen 3)
          (handler (vr-add-io-handler runner
-                    (stream-handler-target *standard-output* #|XXX assuming *standard-output* is always writable - bad assumption|#) 
-                    :output 
-                    (lambda (target) 
-                      (declare (ignore target)) 
+                    (stream-handler-target *standard-output* #|XXX assuming *standard-output* is always writable - bad assumption|#)
+                    :output
+                    (lambda (target)
+                      (declare (ignore target))
                       (with-turn (vat)
                         #+(or) (warn "in io turn with ~S" unseen)
                         #| nothing |#)))))
     (unwind-protect
       (block done
         (loop repeat unseen do
-          (enqueue-turn vat 
+          (enqueue-turn vat
             (lambda ()
               #+(or) (warn "in send turn with ~S" unseen)
               (#+sbcl sb-sys:serve-event

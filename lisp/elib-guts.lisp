@@ -112,14 +112,14 @@
     (otherwise (class-name (class-of specimen)))))
 
 (defmethod observable-type-of ((a function))
-  (declare (ignore a)) 
+  (declare (ignore a))
   't)
 
 ; - fqn/parameters base cases - 
 
 (defmethod cl-type-fq-name ((type-sym t))
   (with-standard-io-syntax
-    (format nil "org.cubik.cle.native.~A.~A" 
+    (format nil "org.cubik.cle.native.~A.~A"
       (guess-lowercase-string (package-name (symbol-package type-sym)))
       (guess-lowercase-string (symbol-name type-sym)))))
 
@@ -184,9 +184,9 @@
 
 (defmethod cl-type-parameters ((type (eql 'vector)) parameters)
   (destructuring-bind (&optional (element-type 't) (length '*)) parameters
-    (setf element-type 
+    (setf element-type
       (upgraded-array-element-type
-        (if (eql element-type '*) 
+        (if (eql element-type '*)
           't
           element-type)))
     (cond
@@ -194,7 +194,7 @@
         (format nil "[~A, ~A]" (cl-type-simple-expr element-type) length))
       ((not (eql element-type 't))
         (format nil "[~A]" (cl-type-simple-expr element-type)))
-      (t 
+      (t
         ""))))
 
 (defun cl-type-simple-expr (type)
@@ -225,7 +225,7 @@
   (:|put| (this (key 'real) value)
     (priority-queue-put this key value))
   (:|asList| (this)
-    (map 'vector 
+    (map 'vector
          #'(lambda (c) (vector (car c) (cdr c)))
          (priority-queue-snapshot this))))
 

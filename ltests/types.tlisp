@@ -2,7 +2,7 @@
 ; found at http://www.opensource.org/licenses/mit-license.html ................
 
 (deftest guard->type-specifier->guard
-  (collect-mismatches 
+  (collect-mismatches
     #'samep
     #'identity
     (lambda (guard)
@@ -11,7 +11,7 @@
   nil)
 
 (deftest type-specifier->guard->type-specifier
-  (collect-mismatches 
+  (collect-mismatches
     #'equal
     #'identity
     (lambda (ts)

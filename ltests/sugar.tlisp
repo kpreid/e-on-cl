@@ -47,7 +47,7 @@
 
 (deftest mapping-bind.various
   (let ((x 0))
-    (mapping-bind (e. +the-make-const-map+ |fromPairs| 
+    (mapping-bind (e. +the-make-const-map+ |fromPairs|
                     #(#("a" "alpha") #(#\c "gamma")))
                   ((a "a")
                    (b :b (incf x))
@@ -64,7 +64,7 @@
 (deftest mapping-bind.missing
   (with-vat-1
     (mapcar #'e-print (multiple-value-list (ignore-errors
-      (mapping-bind (e. +the-make-const-map+ |fromPairs| 
+      (mapping-bind (e. +the-make-const-map+ |fromPairs|
                       #(#(1 2)))
                     ((a 3))
         a)))))
@@ -73,7 +73,7 @@
 (deftest mapping-bind.too-many
   (with-vat-1
     (mapcar #'e-print (multiple-value-list (ignore-errors
-      (mapping-bind (e. +the-make-const-map+ |fromPairs| 
+      (mapping-bind (e. +the-make-const-map+ |fromPairs|
                       #(#(1 2)))
                     ()
         "nok")))))

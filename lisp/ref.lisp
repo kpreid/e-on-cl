@@ -34,7 +34,7 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 #+sbcl
 (defun sbcl-derive-dispatch-result (call)
   (some (lambda (f) (funcall f call)) *sbcl-dispatch-result-derivers*))
-#+sbcl 
+#+sbcl
 (sb-c:defknown e-call-dispatch (t t &rest t) t
   (sb-c:any)
   :derive-type #'sbcl-derive-dispatch-result)
@@ -58,7 +58,7 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 
 (defmacro def-atomic-sameness (type eq-func-form hash-func-form
     &aux (left (gensym)) (right (gensym)))
-  `(progn 
+  `(progn
     (defmethod opt-same-dispatch ((,left ,type) (,right ,type))
       (as-e-boolean (,eq-func-form ,left ,right)))
     (defmethod opt-same-dispatch ((,left ,type) (,right t))
@@ -77,8 +77,8 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
   (setf auditor (ref-shorten auditor))
   (assert (eql (ref-state auditor) 'near)) ;; XXX better way to write this?
   (and (eql (ref-state specimen) 'near) ;; XXX is E auditing potentially applicable to non-near refs?
-       (e-call-dispatch specimen 
-                        'audited-by-magic-verb 
+       (e-call-dispatch specimen
+                        'audited-by-magic-verb
                         auditor)
        t))
 
@@ -87,7 +87,7 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 (defun e-call (rec verb args)
   (declare (string verb) (type (or list vector) args))
   (apply #'e-call-dispatch rec (mangle-verb verb (length args)) (coerce args 'list)))
-  
+
 (defun e-send (rec verb args)
   (declare (string verb) (type (or list vector) args))
   (apply #'e-send-dispatch rec (mangle-verb verb (length args)) (coerce args 'list)))
@@ -101,14 +101,14 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
 
 (defgeneric %ref-shorten (ref)
   (:documentation "Implementation of reference shortening. Usage should call REF-SHORTEN instead, which optimizes common cases."))
-  
+
 ;; REF-SHORTEN is defined *later* so that sbcl may "open-code test of type REF". This is here to declare the existence of the function.
 (declaim (ftype (function (t) t) ref-shorten))
 
 
 (defgeneric ref-state (ref)
   (:documentation "Returns 'near, (values 'eventual is-resolved), or (values 'broken problem)"))
-  
+
 (declaim (inline ref-opt-problem))
 (defun ref-opt-problem (ref) ; XXX move this out of the protocol section
   "ref-state wrapper: returns the reference's problem iff the reference is broken."
@@ -142,7 +142,7 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
   (:report (lambda (condition stream)
              (format stream "not synchronously callable: ~A.~A(~{~A~^, ~})"
                (e-quote (message-condition-recipient condition))
-               (unmangle-verb (message-condition-mverb condition)) 
+               (unmangle-verb (message-condition-mverb condition))
                (map 'list #'e-quote (message-condition-args condition))))))
 
 (define-condition no-such-method-error (error message-condition)
@@ -152,8 +152,8 @@ Implementations must REF-SHORTEN the ARGS if they want shortened arguments, and 
              ;; xxx should report the args, since they're available
              (format stream "no such method: ~A#~A"
                (e-coerce
-                 (e. (e. (message-condition-recipient condition) 
-                         |__getAllegedType|) 
+                 (e. (e. (message-condition-recipient condition)
+                         |__getAllegedType|)
                      |getFQName|)
                  'string)
                (message-condition-mverb condition)))))
@@ -181,10 +181,10 @@ The 'values slot contains a list of the unsettled references.")
                  (e-quote (second values)))
                (format stream "not sufficiently settled: ~A"
                  (with-text-writer-to-string (tw)
-                   (e. (coerce values 'vector) |printOn| 
+                   (e. (coerce values 'vector) |printOn|
                      "" ", " "" tw)))))))
 
-(define-condition not-settled-error (settling-error) 
+(define-condition not-settled-error (settling-error)
   ((name :initarg :name
          :type string
          :reader not-settled-error-name)
@@ -202,7 +202,7 @@ The 'name slot gives a label for the value which was not settled, such as the na
 
 (defvar *vat* nil)
 
-(defclass vat-checking () 
+(defclass vat-checking ()
   ((vat-checking-expected-vat :type vat
                               :accessor vat-checking-expected-vat))
   (:documentation "Remembers the current vat and checks that it is correct upon later opportunities (currently e-call-dispatch). Should not be relied upon, as it may be made a noop in an optimized mode.
@@ -227,16 +227,16 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defclass ref () ())
 
-(defmethod %ref-shorten ((x t)) 
+(defmethod %ref-shorten ((x t))
   ; NOTE: this is also implemented in REF-SHORTEN
   x)
 (defmethod ref-state ((x t))
   (declare (ignore x))
   'near)
-  
+
 (macrolet ((defunimplemented (symbol (&rest other-args))
              `(defmethod ,symbol ((x ref) ,@other-args)
-                (declare (ignore ,@(set-difference other-args 
+                (declare (ignore ,@(set-difference other-args
                                                    lambda-list-keywords)))
                 (error "~S not implemented for ~W" ',symbol (type-of x)))))
   (defunimplemented %ref-shorten ())
@@ -244,7 +244,7 @@ If there is no current vat at initialization time, captures the current vat at t
   (defunimplemented ref-opt-sealed-dispatch (brand))
   (defunimplemented e-call-dispatch (mverb &rest args))
   (defunimplemented e-send-dispatch (mverb &rest args)))
-  
+
 (defmethod print-object ((ref ref) stream)
   (let ((state (ref-state ref))
         (*print-circle* t))      ; !!
@@ -255,7 +255,7 @@ If there is no current vat at initialization time, captures the current vat at t
       ((broken) ; XXX multiple-value-bind the state
         (print-unreadable-object (ref stream :type t)
           (format stream "broken by ~A" (ref-opt-problem ref))))
-      ((near)     
+      ((near)
         (call-next-method)))))
 
 ; XXX declare this inline
@@ -265,12 +265,12 @@ If there is no current vat at initialization time, captures the current vat at t
 
 
 ; XXX should weakly reference buffer
-(defclass promise-ref (ref) 
+(defclass promise-ref (ref)
   ((buffer :initform (make-array 0 :fill-pointer 0 :adjustable t)
            :type (array list)
            :documentation "Messages are pushed on the end of this vector."
            :reader promise-ref-buffer)
-   (weak-when-more-resolved 
+   (weak-when-more-resolved
      :initform (make-weak-hash-table :weakness :key :test #'eq)
      :type hash-table
      :documentation "Stores weak when-more-resolved messages for reference shortening."
@@ -330,7 +330,7 @@ If there is no current vat at initialization time, captures the current vat at t
             :type t
             :accessor %broken-ref-problem))
   (:documentation "Abstract. Make a DISCONNECTED-REF or an UNCONNECTED-REF instead of this."))
- 
+
 (defmethod shared-initialize :after ((this broken-ref) slot-names &key &allow-other-keys)
   (declare (ignore slot-names))
   (when *compatible-catch-leakage*
@@ -436,7 +436,7 @@ If there is no current vat at initialization time, captures the current vat at t
 
 (defmethod %ref-shorten ((ref resolved-ref))
   ; NOTE: this is also implemented in REF-SHORTEN
-  (setf (resolved-ref-target ref) 
+  (setf (resolved-ref-target ref)
         (ref-shorten (resolved-ref-target ref))))
 
 

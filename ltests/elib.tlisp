@@ -18,8 +18,8 @@
     (with-unexternalizable-optimization (x)))
   t)
 
-(deftest vtable-prefix-enough 
-  (princ-to-string (nth-value 1 (ignore-errors 
+(deftest vtable-prefix-enough
+  (princ-to-string (nth-value 1 (ignore-errors
     (eval `(def-vtable for-test
              (:|run| ()
                :hi))))))
