@@ -267,6 +267,7 @@ Ref
   # stdout: ["handleSendOnly", ["run", [1]]]
   
   XXX write tests for waiting behavior
+  XXX the above two tests look similar but do completely different things; this should be clarified and other tests written
 
 Bugfix test: promise ref not propagating opt-problem correctly
 

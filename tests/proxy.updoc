@@ -130,6 +130,7 @@ The current implementation checks for the resolution promise becoming resolved e
   ? Ref.state(makeJustResolved(Ref.broken("fb")))
   # value: "BROKEN"
   
+  XXX what does this test have to do with its surroundings?
   ? Ref.optSealedDispatch(def _ match msg { msg }, 1)
   # value: ["__optSealedDispatch", [1]]
   
