@@ -947,7 +947,7 @@ keywordError:   k:ERROR_QUASI_KEYWORD
 reserved:     "fn" | "fun" | "datatype" | "guards" | "interface" | "meta"
             | "pragma" | "thunk"
             | "accum" | "delegate" | "module" | "select" | "throws"
-            | "abstract" | "an" | "as" | "assert"
+            | "abstract" | "an" | "assert"
             | "attribute" | "be" | "begin" | "behalf" | "belief" | "believe"
             | "believes" | "case" | "class"
             | "const" | "constructor" | "declare" | "default" | "define"
