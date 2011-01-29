@@ -148,7 +148,7 @@
   ;; This system actually depends on E-on-CL, but E-on-CL needs to load it
   ;; midway through its own loading, which asdf doesn't understand sufficiently.
   :depends-on (#+(or) :e-on-cl)
-  :pathname (merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
+  :pathname #.(merge-pathnames #p"antlr/" (component-pathname (find-system :e-on-cl)))
   :components
     ((:antlr-java-source-file "ExtAST")
      (:antlr-java-source-file "ExtToken"
