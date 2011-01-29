@@ -189,7 +189,8 @@
         
         (:|close| (ejector)
           (loop while cleanups do (funcall (pop cleanups)))
-          (e. impl-socket |close| ejector))
+          (e. impl-socket |close| ejector)
+          nil)
         
         (:|connect| ((peer-ref +peer-ref-guard+))
           "connect() this socket eventually. Resolves to nil for no error, true for EINPROGRESS, and a broken reference (XXX specify errno access) for all other errors."

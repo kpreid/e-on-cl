@@ -298,9 +298,9 @@ Float parsing
   ? makeFloat64("-Infinity")
   # value: -Infinity
   ? makeFloat64("Inf")
-  # problem: <yacc-parse-error: Unexpected terminal YACC:YACC-EOF-SYMBOL (value NIL)Expected one of: (:|i|)>
+  # problem: <yacc-parse-error: Unexpected terminal NIL (value NIL). Expected one of: (:|i|)>
   ? makeFloat64("Irgle")
-  # problem: <yacc-parse-error: Unexpected terminal :|r| (value #\r)Expected one of: (:|n|)>
+  # problem: <yacc-parse-error: Unexpected terminal :|r| (value #\r). Expected one of: (:|n|)>
 
 XXX the above errors are not pretty
 

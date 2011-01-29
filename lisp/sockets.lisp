@@ -21,7 +21,8 @@
     (handler-case
         (socket-close this)
       (socket-error (condition)
-        (eject-or-ethrow opt-ejector condition))))
+        (eject-or-ethrow opt-ejector condition)))
+    nil)
   
   (:|connect| (this host port opt-ejector)
     (setf host (coerce-typed-vector host '(vector (unsigned-byte 8) 4)))

@@ -65,7 +65,7 @@ def makeLALR1ParserAuthor implements ExitViaHere { # implements DeepFrozen
        
     def ypeTerminal := lisp["YACC", "YACC-PARSE-ERROR-TERMINAL"].getFunction()
     def ypeExpectedTerminals := lisp["YACC", "YACC-PARSE-ERROR-EXPECTED-TERMINALS"].getFunction()
-    def EOF := l`yacc:yacc-eof-symbol` # XXX internal symbol
+    def EOF := null
 
     def unmapSymbol(sym) {
       return if (sym == EOF) { sym } else { symbolValue(sym) }
